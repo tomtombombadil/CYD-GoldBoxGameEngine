@@ -3630,6 +3630,7 @@ bool ai_ready_weapon(int i)
     return true;
 }
 
+void fight_turn_undead(pic::Canvas& c);
 void ai_step(pic::Canvas& c)
 {
     combat::Battle& b = fg->b;
@@ -3721,6 +3722,23 @@ void ai_step(pic::Canvas& c)
                 fg->sp_n = nt;
                 for (int k = 0; k < nt; ++k) fg->sp_t[k] = tg[k];
                 cast_now(c, true);
+                return;
+            }
+        }
+        // (Pool: a cleric on Quick - or any computer fighter with cleric
+        // levels - that hasn't turned yet turns undead when an enemy undead
+        // is in sight, before fighting: ovr10 +0x203; DOSBox, Sokal Keep -
+        // Brother Sean's first act)
+        if (pool_files() && !f.fleeing && f.rec[0x109] > 0 && !f.turned_undead && fg->t.turn_known) {
+            bool undead = false;
+            for (int e = 0; e < b.n && !undead; ++e) {
+                const combat::Fighter& o = b.f[e];
+                undead = o.up() && o.size && !o.fleeing && (o.team() ? 1 : 0) != (f.team() ? 1 : 0) && o.rec[0xE9] &&
+                         combat::range(b, fg->t, i, e, false, nullptr);
+            }
+            if (undead) {
+                fg->cur = i;
+                fight_turn_undead(c);
                 return;
             }
         }
