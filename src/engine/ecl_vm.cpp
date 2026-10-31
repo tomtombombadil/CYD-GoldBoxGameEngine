@@ -1775,6 +1775,10 @@ Stop Vm::step()
             if (set_.pool_map) set(0x7EC8, 0);
             return wait_for(Wait::Treasure);
         }
+        // (Pool: after a fight the encounter's picture is no longer up - the
+        // next SETUP MONSTER / APPROACH shows it again; DOSBox, Kuto's Well
+        // 7,8: "A BAND OF KOBOLDS CLIMBS FROM THE WELL" over the picture)
+        if (set_.pool_map) reset_encounter();
         return wait_for(Wait::Combat);
     case 0x25:                                  // ON GOTO
     case 0x26: {                                // ON GOSUB
