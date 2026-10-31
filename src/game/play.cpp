@@ -4460,11 +4460,19 @@ void draw_camp(pic::Canvas& c)
 }
 
 // Back at the camp from one of its screens: Pool's text window stays empty
-// - no "The party makes camp..." (DOSBox: after a rest, Magic's Exit)
-void draw_camp_back(pic::Canvas& c)
+// - no "The party makes camp..." (DOSBox: after a rest, View, Memorize) -
+// but the Magic menu is on the camp's own screen: its Exit leaves the text
+// window as it was (DOSBox: the camp's words still there when nothing had
+// covered them, empty after a rest or a spell list)
+void draw_camp_back(pic::Canvas& c, bool from_menu = false)
 {
+    bool kept = false;
+    if (pool_files() && from_menu)
+        for (int x = 8; x < 38 * 8 && !kept; ++x)
+            for (int y = 18 * 8; y < 19 * 8 && !kept; ++y)
+                if (c.get(x, y)) kept = true;
     draw_camp(c);
-    if (pool_files()) {
+    if (pool_files() && !kept) {
         text::clear(c, text::kTextArea);
         dirty_rows(17, 22);
     }
@@ -9442,7 +9450,7 @@ void magic_tap(int x, int y, pic::Canvas& c)
         case 'R': open_rest(c, true); break;
         case 'E':
             screen = Screen::Camp;
-            draw_camp_back(c);
+            draw_camp_back(c, true);
             break;
         case 0: break;
         default: error(c, "Not in the engine yet."); break;
@@ -13217,7 +13225,7 @@ void back_from_view(pic::Canvas& c)
         return;
     }
     if (screen == Screen::Camp) {
-        draw_camp(c);
+        draw_camp_back(c);                  // (Pool: the text window empty - DOSBox)
         return;
     }
     if (screen != Screen::Game) {
@@ -16910,7 +16918,7 @@ bool back_from_magic(pic::Canvas& c)
     switch (screen) {
     case Screen::Magic:
         screen = Screen::Camp;
-        draw_camp_back(c);
+        draw_camp_back(c, true);
         return true;
     case Screen::SpellList:
         if (sl.reading >= 0) {
