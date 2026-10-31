@@ -134,6 +134,9 @@ struct OpSet {
     // selected member alone against a copy of itself ("ROLF") / against the
     // monsters loaded next (Pool START.EXE ovr8 +0x1A6F, Curse ovr8 +0x1BA0)
     bool duels = false;
+    // Curse / Pool: PARLAY's menu has the prompt " " - its words from column
+    // 1 (Pool START.EXE ovr4 +0x25DA, Curse's overlay the same code)
+    bool parlay_space = false;
     // Gateway (its CALL handler, interpreter overlay +0x3320): the sound call
     // plays the effect 0x03DE holds by the game's own number (0x80 up: its
     // music - not played); Curse's: a step, or the fireball's roar for 10

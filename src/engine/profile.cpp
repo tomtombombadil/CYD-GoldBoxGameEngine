@@ -1319,6 +1319,7 @@ constexpr ecl::OpSet kCurseEcl = [] {
     s.on_goto = 0x25; s.on_gosub = 0x26; s.if_first = 0x16; s.if_last = 0x1B;
     s.load_files = 0x21; s.load_pieces = 0x37;
     s.duels = true;
+    s.parlay_space = true;
     return s;
 }();
 
@@ -1471,6 +1472,7 @@ constexpr TitleStep kSecretTitle[] = {
 constexpr ecl::OpSet kSecretEcl = [] {
     ecl::OpSet s = kCurseEcl;
     s.duels = false;
+    s.parlay_space = false;
     s.sizes[0x3C] = 0;
     s.sizes[0x41] = 2;
     s.area_by_block = true;
@@ -1502,6 +1504,7 @@ constexpr TitleStep kChampionsTitle[] = {
 constexpr ecl::OpSet kChampionsEcl = [] {
     ecl::OpSet s = kCurseEcl;
     s.duels = false;
+    s.parlay_space = false;
     s.sizes[0x3C] = 0;
     s.sizes[0x41] = 2;
     s.area_by_block = true;
@@ -1519,6 +1522,7 @@ constexpr ecl::OpSet kChampionsEcl = [] {
 constexpr ecl::OpSet kDarknessEcl = [] {
     ecl::OpSet s = kCurseEcl;
     s.duels = false;
+    s.parlay_space = false;
     s.sizes[0x0C] = 4;
     s.sizes[0x1D] = 0;
     s.sizes[0x1F] = 1;
@@ -1608,6 +1612,7 @@ constexpr TitleStep kGatewayTitle[] = {
 constexpr ecl::OpSet kGatewayEcl = [] {
     ecl::OpSet s = kCurseEcl;
     s.duels = false;
+    s.parlay_space = false;
     s.sizes[0x32] = 4;
     s.sizes[0x40] = 4;
     s.sizes[0x41] = 2;
