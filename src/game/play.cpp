@@ -3846,7 +3846,7 @@ void sell_item(int i, pic::Canvas& c)
     item_name(i, nm, sizeof nm);
     snprintf(t, sizeof t, "%s%d%s%s", iw(profile::kGiveYou), rules::sell_value(pt->sel()->items[i], d->facts),
              iw(profile::kGoldFor), nm);
-    gw_unlight(c);
+    gw_unlight(c, true);                // (Pool's list unlit too - DOSBox, the shop at 9,11)
     say_item(c, t);
     item_at = i;
     ask_yes_no(c, Ask::SellDeal, iw(profile::kDeal));
