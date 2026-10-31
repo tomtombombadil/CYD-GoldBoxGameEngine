@@ -4875,8 +4875,38 @@ const FightSpell* fight_spell(const FightSpell* table, int n, int spell)
     return nullptr;
 }
 
+int heal_target(const Battle& b, int i)
+{
+    static const int8_t kDx[9] = {0, 1, 1, 1, 0, -1, -1, -1, 0}, kDy[9] = {-1, -1, 0, 1, 1, 1, 0, -1, 0};
+    const Fighter& f = b.f[i];
+    int lowest = -1, low_hp = 0xFF, body = -1;
+    for (int dir = 0; dir < 9; ++dir) {
+        const int x = f.x + kDx[dir], y = f.y + kDy[dir];
+        if (!on_field(x, y)) continue;
+        if (const int w = b.who[y][x]) {
+            const int c = w - 1;
+            const Fighter& o = b.f[c];
+            if (o.team() != f.team() || o.hp() >= o.hp_max()) continue;
+            if (o.hp() < low_hp || (c == i && o.hp() < o.hp_max() / 2)) {
+                lowest = c;
+                low_hp = o.hp();
+            }
+        } else if (b.ground[y][x] == kBody) {
+            for (int c = 0; c < b.n; ++c) {
+                const Fighter& o = b.f[c];
+                const int s = o.status();
+                if (o.member < 0 || o.size || o.x != x || o.y != y) continue;
+                if (s == party::Dead || s == party::Stoned || s == party::Gone) continue;
+                if (rules::fixes() && o.team() != f.team()) continue;
+                body = c;
+            }
+        }
+    }
+    return low_hp < 8 || body < 0 ? lowest : body;
+}
+
 bool spell_targets(Battle& b, const Tables& t, const classes::Tables& st, int i, const FightSpell& fs, int sp, int pw,
-                   create::Dice& d, int* targets, int* n_targets)
+                   create::Dice& d, int* targets, int* n_targets, int judge)
 {
     *n_targets = 0;
     Fighter& f = b.f[i];
@@ -4887,6 +4917,27 @@ bool spell_targets(Battle& b, const Tables& t, const classes::Tables& st, int i,
     if (reach < 1) reach = 1;
     const int aim = e.aim & 0x0F;
     if (fs.does == SpellDoes::Youth || fs.does == SpellDoes::Unstone) return false;      // (never the computer's)
+    const bool by_foe = b.fx && b.fx->foe_byte;
+    const int jd = judge > 0 ? judge : sp;
+    if (by_foe && spells::entry(st, jd).foe == 0) {
+        // At itself / its side, no further check (Facts::foe_byte)
+        if (fs.does == SpellDoes::Teleport) return false;
+        if (jd == 3) {
+            const int c = heal_target(b, i);
+            if (c < 0) return false;
+            targets[(*n_targets)++] = c;
+            return true;
+        }
+        if (e.targets == spells::kParty && fs.does != SpellDoes::Theirs) {
+            for (int c = 0; c < b.n && *n_targets < kMaxFighters; ++c)
+                if (b.f[c].up() && b.f[c].size && (b.f[c].team() ? 1 : 0) == my) targets[(*n_targets)++] = c;
+            return *n_targets > 0;
+        }
+        if (aim >= 8 && aim <= 14) *n_targets = in_area(b, t, f.x, f.y, e.aim & 7, targets, kMaxFighters);
+        else targets[(*n_targets)++] = i;
+        return *n_targets > 0;
+    }
+    if (by_foe) goto enemy;
     // For their own good
     if (fs.does == SpellDoes::Heal || fs.does == SpellDoes::FullHeal) {
         if (f.hp() * 2 >= f.hp_max()) return false;
@@ -4912,6 +4963,7 @@ bool spell_targets(Battle& b, const Tables& t, const classes::Tables& st, int i,
         }
         return true;
     }
+enemy:
     // Against the enemy: one in reach and sight
     int cand[kMaxFighters], nc = 0;
     for (int c = 0; c < b.n; ++c) {
@@ -5040,7 +5092,7 @@ int choose_item(Battle& b, const Tables& t, const classes::Tables& st, int i, co
             const int judge = sp > 0x38 ? sp - 0x17 : sp;
             const spells::Entry e = spells::entry(st, judge);
             if (spells::entry(st, sp).when == 0 || e.priority < level) continue;
-            if (spell_targets(b, t, st, i, *fs, sp, power_of(f.rec, st, sp, true), d, targets, n_targets)) return k;
+            if (spell_targets(b, t, st, i, *fs, sp, power_of(f.rec, st, sp, true), d, targets, n_targets, judge)) return k;
         }
     *n_targets = 0;
     return -1;

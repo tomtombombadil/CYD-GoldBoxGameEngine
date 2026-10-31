@@ -342,6 +342,12 @@ struct Facts {
     // level / 4 + 2 (Curse: (level - 1) / 4 + 2)
     uint8_t backstab_armour = 0;
     bool    backstab_plain = false;
+    // The computer's spells by their row's byte 14 (Curse: coab's
+    // ShouldCastSpellX / sub_4001C; Pool: GAME.OVR ovr10 +0x2EB, ovr14
+    // +0x1BF8): 0 = at itself / its side, usable with no further check (an
+    // effect already on is cast again); spell 3 (Cure Light Wounds) only at
+    // a hurt one next to it (heal_target); else at the enemy
+    bool    foe_byte = false;
     // Secret's spell rules (secret_facts_2.md 29.spells): its "persons" by
     // race (Charm Person: Secret's race under 7 or flags 2 & 2; Hold Person:
     // never its races 0 / 7), no size or type rule for Faerie Fire and Charm
@@ -1221,7 +1227,15 @@ const FightSpell* fight_spell(const FightSpell* table, int n, int spell);
 // The targets for a spell the computer thinks of casting (as choose_spell):
 // false when it has no use now
 bool spell_targets(Battle& b, const Tables& t, const classes::Tables& st, int i, const FightSpell& fs, int spell,
-                   int pw, create::Dice& d, int* targets, int* n_targets);
+                   int pw, create::Dice& d, int* targets, int* n_targets, int judge = 0);
+// Cure Light Wounds by the computer (Facts::foe_byte; coab's
+// find_healing_target, Pool ovr14 +0x1BF8): in the 3 x 3 squares round
+// fighter i's square (the 8 directions, then its own) the hurt one of its
+// side with the fewest hit points (itself first when under half); with
+// none under 8 a body lying there (a party member down, not dead / stoned /
+// gone - the original asks no side; rules::fixes(): its own side only)
+// comes first. -1: no one
+int heal_target(const Battle& b, int i);
 // The computer's magic items (before its spells): d7 rounds from priority
 // 7 down, the readied items that cast a spell (not scrolls) in order, each
 // judged by the spell table's line 0x17 back for spells past 0x38 (the

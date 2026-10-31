@@ -5676,6 +5676,55 @@ static void test_class_rules()
     CHECK(tried);
 }
 
+// The computer's Cure Light Wounds (Curse / Pool, Facts::foe_byte): the hurt
+// one of its side with the fewest hit points in the 3 x 3 round it (itself
+// first under half); with none under 8 a body lying there, any side (the
+// original's) - its own side only with the fixes
+static void test_heal_target()
+{
+    static combat::Battle b;
+    fresh_battle(b);
+    static uint8_t rec[4][party::kRecordSize];
+    memset(rec, 0, sizeof rec);
+    const int pos[4][2] = {{10, 10}, {11, 10}, {9, 11}, {10, 12}};
+    for (int i = 0; i < 4; ++i) {
+        uint8_t* r = rec[i];
+        r[0x196] = 1; r[0x197] = i == 3 ? 0 : 1;     // 0-2 the computer's side, 3 the party's
+        r[0x78] = 20; r[0x1A4] = 20;
+        b.f[i].rec = r;
+        b.f[i].member = i == 3 ? 0 : -1;
+        b.f[i].size = 1;
+        b.f[i].x = static_cast<int16_t>(pos[i][0]);
+        b.f[i].y = static_cast<int16_t>(pos[i][1]);
+    }
+    b.n = 4;
+    combat::occupancy(b);
+    CHECK(combat::heal_target(b, 0) == -1);         // no one hurt
+    rec[1][0x1A4] = 15; rec[2][0x1A4] = 12;
+    CHECK(combat::heal_target(b, 0) == 2);          // the fewest
+    rec[0][0x1A4] = 9;                              // itself under half: itself
+    CHECK(combat::heal_target(b, 0) == 0);
+    rec[0][0x1A4] = 20;
+    // A party member down (unconscious) two squares away: not in reach; then next to it
+    rec[3][0x196] = 0; rec[3][0x195] = party::Unconscious; b.f[3].size = 0;
+    b.ground[12][10] = 0x1F;
+    combat::occupancy(b);
+    CHECK(combat::heal_target(b, 0) == 2);
+    b.ground[12][10] = 0x37; b.f[3].y = 11; b.f[3].x = 11; b.ground[11][11] = 0x1F;
+    const bool was = rules::fixes();
+    rules::set_fixes(false);
+    CHECK(combat::heal_target(b, 0) == 3);          // none under 8: the body (any side)
+    rec[2][0x1A4] = 7;
+    CHECK(combat::heal_target(b, 0) == 2);          // one under 8 first
+    rec[2][0x1A4] = 12;
+    rules::set_fixes(true);
+    CHECK(combat::heal_target(b, 0) == 2);          // the fixes: not the enemy's body
+    rec[3][0x195] = party::Dead;
+    rules::set_fixes(false);
+    CHECK(combat::heal_target(b, 0) == 2);          // not the dead
+    rules::set_fixes(was);
+}
+
 // The items' rules in fights (behaviour_facts.md items, coab's facts): a
 // missile weapon's rate of fire and its pile, the range's penalty, the magic
 // weapons' bonuses by the target's kind, displacement, the ring's
@@ -8723,6 +8772,7 @@ static void test_thumb()
 int main()
 {
     test_rle_known_bytes();
+    test_heal_target();
     test_thumb();
     test_round_trip();
     test_bad_files();

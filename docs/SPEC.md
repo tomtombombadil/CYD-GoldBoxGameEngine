@@ -2600,6 +2600,12 @@ the game's Settings (As Original: all of them).
 - **Game Fixes** (switch `CYD_ITEM_FIXES`, Tom, v0.90.0; named Item Fixes until v0.139.0 - Tom, 2026-10-23: the originals' behaviour stays in the game, every fix behind this switch): Pool's Flame
   Tongue is the AD&D sword (Long Sword +1 Flame Tongue, as Curse's); the
   original's is a plain +2 sword whose Use casts Find Traps.
+- **A computer's Cure Light Wounds on a body** (Game Fixes; Curse and
+  Pool - coab's find_healing_target, Pool GAME.OVR ovr14 +0x1BF8): with
+  no one of its side under 8 hit points next to it, the original's
+  healer takes a body lying beside it (a party member down) whatever its
+  side - a monster cleric heals a fallen hero. With Game Fixes on only
+  its own side's (`combat::heal_target`).
 - **Money** (Game Fixes, `rules::fixes()`; Tom, 2026-10-31: "All money is
   convertible ... the innkeeper should accept any combination of coins";
   Pool, Curse, Secret, Gateway - the games with AD&D's five coins at the
