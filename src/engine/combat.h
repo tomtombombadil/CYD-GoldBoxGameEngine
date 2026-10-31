@@ -859,6 +859,31 @@ int sweep(const Battle& b, int a, int target, int* out, int cap);
 // (the large dice against large targets), applied at once. The target turns
 // to face the attacker (fewer than 2 attacks received).
 Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& d, bool from_behind = false);
+
+// ---- The rolls just made, for the screen (the engine comfort
+// CYD_COMBAT_ROLLS, Tom 2026-10-31): each d20 to hit, saving throw and
+// damage roll as the dice came up and its modifiers' total, written down
+// only while g_rolls is set (the fight's front end, the switch on). Nothing
+// in the engine reads them back: play is the same either way.
+enum class RollKind : uint8_t { None, Hit, Save, Damage };
+struct Roll {
+    uint8_t  who = 0;                   // the fighter rolled against (a blow's / a spell's target) or saving
+    RollKind kind = RollKind::None;
+    uint8_t  blow = 0xFF;               // a weapon attack's Hit / Damage: its number in Attack::hits (0xFF: other)
+    int8_t   need = 0;                  // Hit / Save: the result needed. Hit: 20 - the target's AC as it
+                                        // stood against the blow, the modifiers counted from THAC0 20
+                                        // (20 - THAC0 + the fight's); Save: -1 made whatever (immune)
+    int16_t  nat = 0;                   // the d20 / the damage dice as they came up
+    int16_t  mod = 0;                   // the modifiers' total (the result is nat + mod)
+};
+static_assert(sizeof(Roll) == 8, "a roll kept small: a page holds two");
+constexpr int kRollLog = 32;           // (at most 32: RollLog::taken's bits)
+struct RollLog {
+    Roll     r[kRollLog];
+    int      n = 0;                     // (full: later rolls aren't written down)
+    uint32_t taken = 0;                 // (the front end's: bit i - roll i is on a page already)
+};
+extern RollLog* g_rolls;                // nullptr: nothing written down
 // Pool's holds at a fighter's turn start (its effect group 15): a stirge
 // sucks 1d4 blood from its victim ("Sucks some Blood"; full - its effect's
 // time / 16 not over the blood - or either out of the fight: it lets go);

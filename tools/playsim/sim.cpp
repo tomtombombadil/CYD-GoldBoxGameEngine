@@ -624,6 +624,8 @@ int main(int argc, char** argv)
     if (e) { printf("open: %s\n", e); return 1; }
     // NOGALLERY=1: the icon editor opens as the original's (the gallery comfort off)
     if (getenv("NOGALLERY")) { play::Options o = play::opts; o.gallery = false; play::set_options(o); }
+    // NOROLLS=1: fights without the rolls shown (the CYD_COMBAT_ROLLS comfort off)
+    if (getenv("NOROLLS")) { play::Options o = play::opts; o.rolls = false; play::set_options(o); }
     // SOUNDTEST=a-b: the game's own effects a to b, one after another, then out
     if (const char* st = getenv("SOUNDTEST")) {
         int a = 2, z = 14;

@@ -8,6 +8,11 @@ the Project as claude/TODO.md.
 ## Tom
 
 - [x] Spell lists open on the first spell with Memorize lit, the highlight stays after Memorize, "Memorize these spells?" on Yes, Pool's rest menu lit by whole words, a menu left by Exit starts on its first word (the shop's Buy) - Tom, 2026-10-31 (v0.161.2)
+- [ ] Show Rolls (2026-10-31, Settings, on by default): in a fight the
+      panel's last rows show "To Hit: 17+2=19" / "Needed: 14" /
+      "Damage: 4+3=7", spells' saves and damage. Is the light grey
+      readable on your screens? Is "Needed" (20 - AC, modifiers counted
+      from THAC0 20) the form you want, or the THAC0 / AC themselves?
 - [ ] Pool's journal references (2026-10-31 fix): tap **Rescan** once
       (JOURNAL.DAT gets the 18 City Hall proclamations), then try the
       City Hall's postings, a tavern tale and the cabinet's "ENTRIES 23
