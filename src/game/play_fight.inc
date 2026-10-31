@@ -767,6 +767,7 @@ struct Fight {
     int      pick_budget = -1;          // spell aim 5: picked one by one against this (-1: not that kind)
     bool     pick_size = false;         // ... costs by size (Faerie Fire), else by Hit Dice
     bool     page_dropped = false;      // the last add_page found no room (its pictures / sound aren't set)
+    int8_t   yielding = -1;             // the one whose "Surrenders" is on the pages (leaves the field after them)
     bool     arena = false;             // an arena fight (CALL 0x8000 / 0x8001): the selected member alone
     // Thrown weapons used up (a dagger, a spear, darts): onto the treasure after the fight
     uint8_t  thrown[6][items::kRecordSize];
@@ -1409,13 +1410,28 @@ void fighter_name(const combat::Fighter& f, char* out, size_t cap)
     snprintf(out, cap, "%.*s", len, nm);
 }
 
-void draw_icon(pic::Canvas& c, int i, bool attack = false)
+void draw_square(pic::Canvas& c, int x, int y);
+
+// A fighter's icon. The attack pose goes on the field's ground: the
+// fighter's squares drawn again first (the original's 0x74572 before its
+// attack icon - the ready pose and the turn's box under it go; Tom's board:
+// both poses at once). `bare`: the ready pose on the ground alone (no turn
+// box - the original's 0x75356 before "Surrenders")
+void draw_icon(pic::Canvas& c, int i, bool attack = false, bool bare = false)
 {
     const combat::Fighter& f = fg->b.f[i];
     if (!f.size) return;
     const Pic4& ic = fg->icon[f.icon];
     const uint8_t* p = ic.px[attack && ic.px[1] ? 1 : 0];
     if (!p) return;
+    if (attack || bare) {
+        int sx[4], sy[4];
+        const int n = combat::squares(f.size, sx, sy);
+        for (int k = 0; k < n; ++k) {
+            const int gx = f.x + sx[k], gy = f.y + sy[k];
+            if (gx >= fg->b.vx && gx < fg->b.vx + 7 && gy >= fg->b.vy && gy < fg->b.vy + 7) draw_square(c, gx, gy);
+        }
+    }
     const int x = kViewX + (f.x - fg->b.vx) * kSq, y = kViewY + (f.y - fg->b.vy) * kSq;
     blit4(c, p, ic.w, ic.h, x, y, f.facing >= 4, true, kViewX, kViewY, kViewX + 7 * kSq, kViewY + 7 * kSq);
 }
@@ -3795,10 +3811,11 @@ void ai_step(pic::Canvas& c)
         b.morale_base = vm->get(0x7EC6) & 0xFF;
         const combat::Morale mo = combat::morale(b, fg->t, i);
         if (mo == combat::Morale::Surrender) {
-            f.rec[0x195] = party::Unconscious;
-            f.rec[0x196] = 0;
-            f.size = 0;
-            combat::occupancy(b);
+            // (the original's 0x644A7: "Surrenders" shown while it still
+            // stands - its icon, its panel - then it's unconscious, HP 0, off
+            // the field: `yielding`, at the pages' end. Tom's board: the
+            // panel said unconscious beside "Surrenders")
+            fg->yielding = static_cast<int8_t>(i);
             add_page(i, fw(profile::kSurrenders));
             // (Gateway's black dragon: its script counts it - area word 0x4D03)
             if (b.yielded && b.fx && b.fx->gw.surrender_word) {
@@ -3806,7 +3823,9 @@ void ai_step(pic::Canvas& c)
                 vm->set(w, static_cast<uint16_t>(vm->get(w) + 1));
             }
             b.yielded = false;
+            focus(i, 3);
             draw_fight(c);
+            draw_icon(c, i, false, true);
             say(c, FSt::Next);
             return;
         }
@@ -4800,6 +4819,15 @@ void fight_tick(uint32_t now, pic::Canvas& c)
             break;
         }
         page_over(c);
+        if (fg->yielding >= 0) {
+            combat::Fighter& y = fg->b.f[fg->yielding];
+            fg->yielding = -1;
+            y.rec[0x195] = party::Unconscious;
+            y.rec[0x196] = 0;
+            y.size = 0;
+            combat::occupancy(fg->b);
+            draw_field(c);
+        }
         fg->pages = fg->at = 0;
         fg->ptext_used = 0;
         clear_panel(c, 10, 21);
