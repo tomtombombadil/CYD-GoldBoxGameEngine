@@ -3651,6 +3651,14 @@ void ai_step(pic::Canvas& c)
         fg->ai_checked = true;
         // The holds it had (engulfing, hugging) let go, as the original does
         combat::release_holds(b, i);
+        // (Pool: one already fleeing - turned undead, panic - says so at
+        // each of its turns, then runs: "is forced to flee" - ovr10
+        // +0x10D7; DOSBox, Sokal Keep's undead)
+        if (pool_files() && f.fleeing) {
+            add_page(i, fw(profile::kForcedFlee));
+            say(c, FSt::Ai);
+            return;
+        }
         b.morale_base = vm->get(0x7EC6) & 0xFF;
         const combat::Morale mo = combat::morale(b, fg->t, i);
         if (mo == combat::Morale::Surrender) {
