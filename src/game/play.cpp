@@ -8735,7 +8735,12 @@ void draw_spells(pic::Canvas& c)
     if (!sl.learning || gw_preview >= 0) {
         mw(profile::kChooseSpell, prompt, sizeof prompt);
         if (gw_preview >= 0) prompt[0] = k1[0] = 0;
-        else if (sl.viewing) k1[0] = 0;
+        else if (sl.viewing) {
+            k1[0] = 0;
+            // (Pool's View - Spells: "Exit" alone, no "Choose Spell:" - DOSBox;
+            // coab's spell list puts the prompt only before a word)
+            if (pool_files()) prompt[0] = 0;
+        }
         else if (sl.casting || sl.reading >= 0) cw(profile::kCastKey, k1, sizeof k1);
         else if (sl.scrolls) cw(profile::kScribeKey, k1, sizeof k1);
         else if (sl.choosing) cw(profile::kLearnKey, k1, sizeof k1);
