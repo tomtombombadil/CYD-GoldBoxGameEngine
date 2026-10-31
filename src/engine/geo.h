@@ -53,6 +53,11 @@ struct Map {
     uint8_t* big = nullptr;
     uint8_t  w = kSize, h = kSize;
     bool     wraps = true;            // (the DAX games' maps)
+    // Pool (START ovr30 +0x47B / +0x350 / +0x57A, its map lookups): a square
+    // past an edge is the far edge's first one (16 or more -> 0, under 0 ->
+    // 15 - not modulo), and in its ECL blocks 0 and 10 (Phlan's streets) no
+    // square past the edge at all (no walls there): 1 / 2; 0 = wraps / not
+    uint8_t  pool_edge = 0;
     uint8_t  head[6] = {};            // HLIB maps: the header's wall set ids
     bool loaded = false;
 

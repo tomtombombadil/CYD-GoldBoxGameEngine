@@ -1911,6 +1911,16 @@ bool animation_on();
 
 // An event picture: PIC<area> block id, drawn in the view; it animates
 // while the game waits at a menu
+// Pool: how its map lookups treat a square past the map's edge - the
+// current script block 0 or 10: none, else the far edge's first square
+// (geo::Map::pool_edge; START ovr30 +0x47B, [0x84DC] = the block)
+void pool_map_edge()
+{
+    if (!d || d->prof->game != games::Game::PoolOfRadiance) return;
+    const int b = d->gs.script;
+    d->map.pool_edge = static_cast<uint8_t>(b == 0 || b == 10 ? 2 : 1);
+}
+
 // Whether the area's PIC file has picture id (Pool)
 bool pic_in_file(int id)
 {
@@ -12015,6 +12025,7 @@ struct Host : ecl::Host {
             geo::load(src, d->idx, static_cast<uint8_t>(geo_block), d->map);
             f.close();
         }
+        pool_map_edge();
         plat::log("[play] map %s #%d: %s\n", name, geo_block, d->map.loaded ? "ok" : "missing");
     }
     void load_walls(int set, int block) override
@@ -13006,6 +13017,7 @@ void handle(ecl::Stop r)
         break;
     case Then::NewFirst:
         vm->set(0x4BF2, d->gs.script);
+        pool_map_edge();
         after_move_redraw();
         run_entry(0, Then::NewStep);
         return;
@@ -13024,6 +13036,7 @@ void handle(ecl::Stop r)
             return;
         }
         vm->set(0x4BF2, d->gs.script);
+        pool_map_edge();
         // (Pool: a load's walls come from the entry's LOAD FILES / PIECES -
         // the view shows them at once, as the original's)
         if (pool_files() && screen == Screen::Game && !pic_shown && vm->get(0x4BE6)) draw_view(c);

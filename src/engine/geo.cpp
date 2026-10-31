@@ -12,7 +12,11 @@ const int8_t kDy[8] = {-1, -1, 0, 1, 1, 1, 0, -1};
 // The square's byte in each plane; -1: off a map that doesn't wrap
 int at(const Map& m, int x, int y)
 {
-    if (m.wraps) {
+    if (m.pool_edge == 2 && !m.on(x, y)) return -1;
+    if (m.pool_edge) {
+        x = x >= m.w ? 0 : x < 0 ? m.w - 1 : x;
+        y = y >= m.h ? 0 : y < 0 ? m.h - 1 : y;
+    } else if (m.wraps) {
         x %= m.w;
         y %= m.h;
         if (x < 0) x += m.w;
