@@ -4947,10 +4947,21 @@ bool spell_targets(Battle& b, const Tables& t, const classes::Tables& st, int i,
             else targets[(*n_targets)++] = c;
         }
     } else {
-        const int want = aim >= 1 && aim <= 4 ? (e.aim & 3) + 1 : 1;
-        targets[(*n_targets)++] = tg;
-        for (int k = 0; k < nc && *n_targets < want; ++k)
-            if (cand[k] != tg) targets[(*n_targets)++] = cand[k];
+        // (every other aim - 1-4, Hold Person's 6, 7: the low nibble's
+        // two bits + 1 picks, each one at random among those in reach; a
+        // repeat uses a pick up; one held already stops a hold / sleep -
+        // coab's ovr014 target() for the computer. Pool's Grishnak: Hold
+        // Person on up to three, DOSBox "BAKSHI is held", "BROTHER SEAN is
+        // unaffected" from one cast)
+        int picks = (e.aim & 3) + 1;
+        int c = tg;
+        while (picks > 0) {
+            if ((fs.does == SpellDoes::Hold || fs.does == SpellDoes::Sleep) && helpless(b, b.f[c])) break;
+            bool again = false;
+            for (int k = 0; k < *n_targets; ++k) again = again || targets[k] == c;
+            if (!again) targets[(*n_targets)++] = c;
+            if (--picks > 0) c = cand[d.roll(nc, 1) - 1];
+        }
     }
     return *n_targets > 0;
 }

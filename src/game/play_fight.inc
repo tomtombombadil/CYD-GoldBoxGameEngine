@@ -3005,7 +3005,11 @@ void start_turn(pic::Canvas& c)
 void next_turn(pic::Canvas& c)
 {
     combat::Battle& b = fg->b;
-    if (combat::standing(b, 0) == 0 || (combat::standing(b, 1) == 0 && !fg->continuing)) {
+    // (the last enemy gone - surrendered, fled, down - the round goes on:
+    // those still to act have their turns, the Quick ones guard, then the
+    // round's end asks "Continue Battle" - coab's MainCombatLoop; DOSBox,
+    // the slums' orcs: Brother Sean's panel at the question)
+    if (combat::standing(b, 0) == 0) {
         fg->cur = -1;
         fg->st = FSt::RoundEnd;
         fg->until = 1;
@@ -4819,7 +4823,13 @@ void fight_tick(uint32_t now, pic::Canvas& c)
             break;
         }
         page_over(c);
+        fg->pages = fg->at = 0;
+        fg->ptext_used = 0;
+        clear_panel(c, 10, 21);
+        if (fg->cur >= 0) draw_panel_for(c, fg->cur);
         if (fg->yielding >= 0) {
+            // (off the field; its panel stays as it was - the original
+            // clears only the message rows)
             combat::Fighter& y = fg->b.f[fg->yielding];
             fg->yielding = -1;
             y.rec[0x195] = party::Unconscious;
@@ -4828,10 +4838,6 @@ void fight_tick(uint32_t now, pic::Canvas& c)
             combat::occupancy(fg->b);
             draw_field(c);
         }
-        fg->pages = fg->at = 0;
-        fg->ptext_used = 0;
-        clear_panel(c, 10, 21);
-        if (fg->cur >= 0) draw_panel_for(c, fg->cur);
         switch (fg->after) {
         case FSt::Next:
             end_turn(c);
