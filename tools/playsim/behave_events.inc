@@ -446,7 +446,11 @@ static void b_ops()
         a.op(kSave).b(0x21).m(0x7C25);
         a.op(kSave).b(0x87).m(0x7D00);
         a.op(kExit);
+        // (the original's writes: Game Fixes would leave the gold as the highest coins at the end)
+        const bool fixes_were = rules::fixes();
+        rules::set_fixes(false);
         b_run(a, 0x8000 + 20);
+        rules::set_fixes(fixes_were);
         const party::Character& cc = pt->m[1];
         expect(P, "writes: gold word, control - 0x32 over 0xB2, spell slot = record off - 1, 0x87 to 0x7D00 stones",
                (cc.rec[0x101] | cc.rec[0x102] << 8) == 1234 && cc.rec[0xF7] == 0xC0 - 0x32 && cc.rec[0x24] == 0x21 && cc.rec[0x196] == 0 &&
