@@ -4514,6 +4514,10 @@ void fight_done(pic::Canvas& c)
 // COMBAT with no monsters: the treasure the script set out
 void fight_treasure_only(pic::Canvas& c)
 {
+    // (Pool: the first member selected here too - its treasure step, ovr6
+    // +0x1527, runs +0x11AC (+0x1296) first, fight or none: DOSBox, Sokal
+    // Keep's hammer)
+    if (pool_files() && pt->count) pt->selected = 0;
     if (!ground->any_money() && !ground->n) {
         waiting = false;
         handle(vm->resume());
