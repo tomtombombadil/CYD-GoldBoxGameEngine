@@ -1911,6 +1911,24 @@ bool animation_on();
 
 // An event picture: PIC<area> block id, drawn in the view; it animates
 // while the game waits at a menu
+// Whether the area's PIC file has picture id (Pool)
+bool pic_in_file(int id)
+{
+    char name[24];
+    area_file(name, sizeof name, "PIC");
+    plat::File f;
+    if (!open_file(name, f)) return false;
+    dax::Index* idx = new (std::nothrow) dax::Index;
+    bool found = true;                          // (no memory: as before)
+    if (idx) {
+        plat::FileSource src(f);
+        found = dax::read_index(src, *idx) == dax::Status::Ok && idx->find(static_cast<uint8_t>(id));
+        delete idx;
+    }
+    f.close();
+    return found;
+}
+
 bool anim_start(int id, const char* stem = "PIC", int x = 24, int y = 24)
 {
     anim_stop();
@@ -12261,6 +12279,10 @@ struct Host : ecl::Host {
             if (!monster_pics_on() && !pool_overland()) return;
             kr_marker_lost();
             // (Pool's wilderness: the 3D view's frame drawn over the map first)
+            // (Pool: a picture its area's PIC file doesn't have draws nothing -
+            // the sprite stays in the view; DOSBox, the Textile House's
+            // courtyard 4,10: SETUP MONSTER 6,0,6 and PIC4.DAX has no 6)
+            if (d->prof->game == games::Game::PoolOfRadiance && !pic_in_file(id)) return;
             if (pool_overland()) layout::box(c, d->tables, d->frame_tiles, 2, 2, 14, 14);
             c.fill(24, 24, 88, 88, 0);
             anim_start(id);
