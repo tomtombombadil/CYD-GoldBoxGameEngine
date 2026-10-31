@@ -121,7 +121,11 @@ the Project as claude/TODO.md.
       Cadorna's reward (the box in hand: Phlan's watch takes it), Valjevo,
       the cemetery, the Kovel mansion, the council's later commissions;
       Scribe (no scroll); a cleric level-up with 2nd-level spells. Pool
-      has no Fix. Check in Curse's play test: PARLAY's prompt, Knock at a door's second locked
+      has no Fix. Tom's "pushed back out onto the street after a
+      merchant": not in Pool - DOSBox, the general store 9,11, the arms
+      shop 8,11 and the Temple of Tyr: Exit (or No) leaves the party on
+      the shop's square, same facing, as the engine; check it in Curse /
+      Secret / Darkness. Check in Curse's play test: PARLAY's prompt, Knock at a door's second locked
       kind, the DAMAGE lines' look, the Quick cleric's turning, the
       flee way, "is forced to flee", Curse's payments (Buy / Id / cures),
       the press words, word wrap,
