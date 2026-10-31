@@ -4330,6 +4330,17 @@ void draw_camp(pic::Canvas& c)
     show_menu_line(c);
 }
 
+// Back at the camp from one of its screens: Pool's text window stays empty
+// - no "The party makes camp..." (DOSBox: after a rest, Magic's Exit)
+void draw_camp_back(pic::Canvas& c)
+{
+    draw_camp(c);
+    if (pool_files()) {
+        text::clear(c, text::kTextArea);
+        dirty_rows(17, 22);
+    }
+}
+
 bool camp_from_script = false;     // PROGRAM 9: breaking camp lets the script go on
 
 // Secret's day of rest counts from the camp's start, not each Rest
@@ -9021,13 +9032,7 @@ void end_rest(pic::Canvas& c)
     if (rest.from_magic) back_to_magic(c);
     else {
         screen = Screen::Camp;
-        draw_camp(c);
-        // (Pool: back from a rest the text window stays empty - no "The
-        // party makes camp..." - DOSBox, the inn at 4,12)
-        if (pool_files()) {
-            text::clear(c, text::kTextArea);
-            dirty_rows(17, 22);
-        }
+        draw_camp_back(c);
     }
 }
 
@@ -9263,7 +9268,7 @@ void magic_tap(int x, int y, pic::Canvas& c)
         case 'R': open_rest(c, true); break;
         case 'E':
             screen = Screen::Camp;
-            draw_camp(c);
+            draw_camp_back(c);
             break;
         case 0: break;
         default: error(c, "Not in the engine yet."); break;
@@ -16689,7 +16694,7 @@ bool back_from_magic(pic::Canvas& c)
     switch (screen) {
     case Screen::Magic:
         screen = Screen::Camp;
-        draw_camp(c);
+        draw_camp_back(c);
         return true;
     case Screen::SpellList:
         if (sl.reading >= 0) {
