@@ -1894,7 +1894,7 @@ Stop Vm::step()
         static const char* const kItems[5] = {"Haughty", "Sly", "Nice", "Meek", "Abusive"};
         n_items_ = 5;
         for (int i = 0; i < 5; ++i) item_[i] = kItems[i];
-        prompt_ = "";
+        prompt_ = set_.parlay_space ? " " : "";
         return wait_for(Wait::Menu);
     }
     case 0x2D: {                                // CALL
