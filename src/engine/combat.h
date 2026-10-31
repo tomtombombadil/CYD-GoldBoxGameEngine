@@ -595,6 +595,10 @@ struct Battle {
     bool    duel = false;                   // an arena fight (Curse / Pool's CALL 0x8000 / 0x8001)
     int     round = 0, no_action = 15;
     int     surprise = 0;               // 1: our side surprised, 2: the enemies (the script's word 0x7ECB)
+    // Pool: the way the monsters run when they flee (0-7; the party's the
+    // other way), from the party's facing as the fight began (ovr10 +0x8C7:
+    // facing - ((facing + 2) % 4) / 2) - -1: away from the nearest enemy
+    int     flee_dir = -1;
     // Treasures' weather (game byte 0x52; its ovl 0x105 +0x1528): 0 snow -
     // everyone's moves x 3 / 5, 1 rain - x 2 / 5, others none; a fighter
     // with effect weather_free (0x9E) isn't slowed (0: no weather)

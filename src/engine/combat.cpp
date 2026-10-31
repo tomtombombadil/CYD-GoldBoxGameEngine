@@ -3260,7 +3260,17 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
         int base = near >= 0 ? (direction(f.x, f.y, b.f[near].x, b.f[near].y) + 4) & 7 : 0;
         if (base > 7) base = 0;
         static const int kAway[5] = {0, 1, -1, 2, -2};
-        for (int k : kAway) {
+        // (Pool, ovr10 +0x8C7 / +0x675: one way for the whole side - the
+        // party's the other way - tried straight, then the left two or the
+        // right two first by a d2, DS 0x2AE's rows 8 7 6 1 2 / 8 1 2 7 6)
+        static const int kPoolAway[2][5] = {{0, -1, -2, 1, 2}, {0, 1, 2, -1, -2}};
+        const int* tries = kAway;
+        if (b.flee_dir >= 0) {
+            base = (b.flee_dir + (f.team() ? 0 : 4)) & 7;
+            tries = kPoolAway[d.roll(2, 1) - 1];
+        }
+        for (int j = 0; j < 5; ++j) {
+            const int k = tries[j];
             const int dir = (base + k + 8) & 7;
             bool edge;
             const int cost = step_cost(b, t, i, dir, &edge, nullptr);
