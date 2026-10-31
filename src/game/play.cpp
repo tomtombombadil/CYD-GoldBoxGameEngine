@@ -3480,6 +3480,16 @@ void items_keys(char* out, size_t cap)
 void say_item(pic::Canvas& c, const char* t, uint8_t colour = 14, int row0 = 21)
 {
     c.fill(8, row0 * 8, 38 * 8, (23 - row0) * 8, 0);
+    if (pool_files()) {
+        // (Pool: its text routine's wrap - a word and the space after it
+        // must fit, its punctuation excepted - START 0x78AA; DOSBox, the
+        // shop's "...I'LL IDENTIFY / YOUR MACE")
+        text::Writer tw;
+        text::begin(tw, c, t, text::Region{1, row0, 38, 22}, colour, false);
+        text::step(tw, c, d->font, -1);
+        dirty_rows(row0, 22);
+        return;
+    }
     int row = row0;
     const char* s = t;
     while (*s && row <= 22) {
@@ -3829,7 +3839,7 @@ void identify_item(int i, pic::Canvas& c)
     char nm[48], t[120];
     item_name(i, nm, sizeof nm);
     snprintf(t, sizeof t, "%s%s", iw(profile::kIdentify), nm);
-    gw_unlight(c);
+    gw_unlight(c, true);                // (Pool's list unlit too - DOSBox, the shop at 9,11)
     say_item(c, t);
     item_at = i;
     ask_yes_first(c, Ask::IdDeal, iw(profile::kDeal));
