@@ -127,6 +127,17 @@
 #define CYD_MENU_HIGHLIGHT 1
 #endif
 
+// Spells chosen to memorize stay chosen when the camp breaks before they
+// are learnt (Tom, 2026-10-31: a rest interrupted by the watch or monsters
+// left them to be chosen again) - the next camp's Memorize asks "Memorize
+// these spells?" with them, its Rest learns them (its time worked out
+// again). The originals forget them as the camp breaks. Built in (no
+// Settings key: it changes no play). 0: as the originals. Where: play.cpp
+// leave_camp.
+#ifndef CYD_KEEP_MEMORIZING
+#define CYD_KEEP_MEMORIZING 1
+#endif
+
 // Each comfort compiled in can also be switched off by the player: the
 // game's Settings page (Tom, 2026-10-11, v0.72.0; one set for all games,
 // settings.h comforts_off), the one Settings screen (Home, a game's page, the

@@ -2476,7 +2476,10 @@ the game's Settings (As Original: all of them).
   by Exit starts on its first word when shown again (the shop's Buy, not
   Exit). Pool's rest
   menu "Rest daYs Hours ..." lights each whole word (the original: from
-  capital to capital).
+  capital to capital). Spells chosen to memorize stay chosen when the
+  camp breaks before they are learnt - an interrupted rest - and the next
+  camp's Memorize asks "Memorize these spells?" with them (the originals
+  forget them; features.h `CYD_KEEP_MEMORIZING`, Tom 2026-10-31).
 
 - **Secret of the Silver Blades** (v0.94.0): its party menu's Initialize
   Mouse/Joystick isn't shown (nothing to set up: taps are the mouse);

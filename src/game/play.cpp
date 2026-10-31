@@ -4440,9 +4440,12 @@ void fix_party(pic::Canvas& c);
 
 void leave_camp(pic::Canvas& c)
 {
-    // Spells not yet memorized are forgotten when the camp breaks (the games)
+    // Spells not yet memorized are forgotten when the camp breaks (the
+    // games); kept to memorize at the next camp with CYD_KEEP_MEMORIZING
+    // (Tom, 2026-10-31) - the rest's time is worked out again when a rest
+    // starts (rest_minutes), so the time spent on them is lost
     for (int i = 0; i < pt->count; ++i) {
-        magic::cancel(pt->m[i]);
+        if (!CYD_KEEP_MEMORIZING) magic::cancel(pt->m[i]);
         magic::cancel_scribes(pt->m[i], scroll_facts());
     }
     end_magic();
