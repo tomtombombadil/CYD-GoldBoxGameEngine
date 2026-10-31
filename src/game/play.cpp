@@ -3870,6 +3870,25 @@ void add_coins(party::Character& ch, int kind, int n)
     ch.rec[0xFC + kind * 2] = static_cast<uint8_t>(v >> 8);
 }
 
+// Pool's payments - a shop's Buy, Id, a temple's cure (ovr7 +0x3F3, ovr20
+// +0x1FDA, ovr5 +0x18F): the coins' worth in gold less the price, set back
+// as all platinum and the odd gold (ovr22 +0x130 / +0x185; gems and
+// jewellery kept). The character's, else the counter's
+void pool_pay(party::Character& ch, int cost)
+{
+    const int left = rules::gold_worth(ch) - cost;
+    for (int m = 0; m < 5; ++m) {
+        const int v = m == 4 ? left / 5 : m == 3 ? left % 5 : 0;
+        ch.rec[0xFB + m * 2] = static_cast<uint8_t>(v);
+        ch.rec[0xFC + m * 2] = static_cast<uint8_t>(v >> 8);
+    }
+}
+void pool_pay(int money[7], int cost)
+{
+    const int left = rules::gold_worth(money) - cost;
+    for (int m = 0; m < 5; ++m) money[m] = m == 4 ? left / 5 : m == 3 ? left % 5 : 0;
+}
+
 // The answers to Drop It? / Is It a Deal?
 bool items_yes_no(Ask what, char k, pic::Canvas& c)
 {
@@ -3976,20 +3995,9 @@ bool items_yes_no(Ask what, char k, pic::Canvas& c)
     }
     // Id: 200 gold, from the character or the counter
     if (pool_files() && (rules::gold_worth(ch) >= 200 || rules::gold_worth(ground->money) >= 200)) {
-        // (Pool, ovr20 +0x1FDA: the coins' worth less 200 becomes all
-        // platinum and the odd gold - ovr22 +0x130; the counter's the same
-        // way; DOSBox: Brother Sean's 2000 gold -> platinum 360)
-        const bool own = rules::gold_worth(ch) >= 200;
-        const int left = (own ? rules::gold_worth(ch) : rules::gold_worth(ground->money)) - 200;
-        for (int m = 0; m < 5; ++m) {
-            const int v = m == 4 ? left / 5 : m == 3 ? left % 5 : 0;
-            if (own) {
-                ch.rec[0xFB + m * 2] = static_cast<uint8_t>(v);
-                ch.rec[0xFC + m * 2] = static_cast<uint8_t>(v >> 8);
-            } else {
-                ground->money[m] = v;
-            }
-        }
+        // (DOSBox: Brother Sean's 2000 gold -> platinum 321 gold 2 after two Ids and a sale)
+        if (rules::gold_worth(ch) >= 200) pool_pay(ch, 200);
+        else pool_pay(ground->money, 200);
     } else if (rules::gold_worth(ch) >= 200) {
         rules::pay(ch, 200);
     } else if (rules::gold_worth(ground->money) >= 200) {
@@ -6712,7 +6720,10 @@ void buy(int i, pic::Canvas& c)
         return;
     }
     rules::add_item(*ch, it);
-    if (own) rules::pay(*ch, cost);
+    if (pool_files()) {
+        if (own) pool_pay(*ch, cost);
+        else pool_pay(ground->money, cost);
+    } else if (own) rules::pay(*ch, cost);
     else rules::pay(ground->money, cost);
     rules::recalc(*ch, *names, d->facts);
     char nm[48];
@@ -7854,10 +7865,12 @@ bool shop_yes_no(Ask what, char k, pic::Canvas& c)
     const int cost = d->prof->cures.cost[cure_at];
     bool paid = false;
     if (cost <= rules::gold_worth(ch)) {
-        rules::pay(ch, cost);
+        if (pool_files()) pool_pay(ch, cost);
+        else rules::pay(ch, cost);
         paid = true;
     } else if (cost <= rules::gold_worth(ground->money)) {
-        rules::pay(ground->money, cost);
+        if (pool_files()) pool_pay(ground->money, cost);
+        else rules::pay(ground->money, cost);
         paid = true;
     }
     draw_heal(c);
