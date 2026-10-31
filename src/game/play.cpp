@@ -9061,7 +9061,11 @@ void rest_tap(int x, int y, pic::Canvas& c)
     default: return;
     }
     if (rest.left > 99 * 1440) rest.left = 99 * 1440;
-    if (screen == Screen::Rest) draw_rest_time(c);
+    if (screen == Screen::Rest) {
+        draw_rest_time(c);
+        // (the highlight on the word picked - Pool's original lights it: DOSBox)
+        if (!rest.running) show_menu_line(c);
+    }
 }
 
 // Resting: a few steps each tick, the messages as they come
