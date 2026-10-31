@@ -748,15 +748,33 @@ bool gbc_trim(const char* t, size_t* from, size_t* to)
 
 } // namespace
 
-bool make_gbc(dax::ByteSource& dat, GbcPictures& pics, const char* id, Output& out, Progress progress, void* ctx)
+bool make_gbc(dax::ByteSource& dat, GbcPictures& pics, const char* id, Output& out, Progress progress, void* ctx,
+              ExtraText* extra)
 {
     GbcEntry* es = new (std::nothrow) GbcEntry[kMaxGbcEntries];
     uint8_t* plan = static_cast<uint8_t*>(calloc(kMaxGbcEntries, 1));   // per entry: 1 its picture's there
     uint8_t* table = nullptr;
     char* text = static_cast<char*>(malloc(16384));
     uint8_t* pool = static_cast<uint8_t*>(malloc(jpeg::kPoolSize));
-    const int n = es ? gbc_entries(dat, es, kMaxGbcEntries) : 0;
-    bool ok = es && plan && text && pool && n > 0;
+    const int n = es && dat.size() ? gbc_entries(dat, es, kMaxGbcEntries) : 0;
+    // The PDF's sections Game.dat doesn't have (its tavern tales,
+    // proclamations ...; a journal entry only when Game.dat lacks it)
+    uint8_t* use = nullptr;
+    int nx = 0;
+    if (extra && extra->n > 0) {
+        use = static_cast<uint8_t*>(calloc(static_cast<size_t>(extra->n), 1));
+        for (int i = 0; use && i < extra->n; ++i) {
+            const Section& x = extra->items[i];
+            bool have = x.len == 0;
+            for (int k = 0; k < n && !have; ++k) have = x.kind == 'J' && es[k].number == x.number;
+            for (int k = 0; k < i && !have; ++k)
+                have = use[k] && extra->items[k].kind == x.kind && extra->items[k].number == x.number;
+            use[i] = have ? 0 : 1;
+            nx += use[i];
+        }
+    }
+    const int ne = n + nx;
+    bool ok = es && plan && text && pool && ne > 0 && (!extra || !extra->n || use);
     // First the pieces' count: a note whose picture opens splits the entry
     int pieces = 0;
     for (int i = 0; ok && i < n; ++i) {
@@ -775,17 +793,19 @@ bool make_gbc(dax::ByteSource& dat, GbcPictures& pics, const char* id, Output& o
         }
         pieces += np;
     }
-    if (ok) table = static_cast<uint8_t*>(calloc(static_cast<size_t>(n + pieces), 8));
+    pics.close();
+    pieces += nx;
+    if (ok) table = static_cast<uint8_t*>(calloc(static_cast<size_t>(ne + pieces), 8));
     ok = ok && table;
     // The data after the header and the tables
-    uint32_t at = kHeader + 8u * static_cast<uint32_t>(n + pieces);
+    uint32_t at = kHeader + 8u * static_cast<uint32_t>(ne + pieces);
     int pi = 0;
     auto put_text = [&](const char* t, size_t len) {
         if (len == 0) {
             t = " ";
             len = 1;
         }
-        uint8_t* pr = table + 8 * n + 8 * pi++;
+        uint8_t* pr = table + 8 * ne + 8 * pi++;
         if (!out.write_at(at, reinterpret_cast<const uint8_t*>(t), len)) return false;
         put16(pr, 0);
         put16(pr + 2, static_cast<unsigned>(len));
@@ -793,6 +813,28 @@ bool make_gbc(dax::ByteSource& dat, GbcPictures& pics, const char* id, Output& o
         at += static_cast<uint32_t>(len);
         return true;
     };
+    // The PDF's sections first (their text file open alone - Game.dat and
+    // JOURNAL.DAT beside it: the card's 3 file slots)
+    if (ok && nx) {
+        dax::ByteSource* xs = extra->open();
+        int k = n;
+        for (int i = 0; ok && i < extra->n; ++i) {
+            if (!use[i]) continue;
+            const Section& x = extra->items[i];
+            uint8_t* er = table + 8 * k++;
+            er[0] = static_cast<uint8_t>(x.kind);
+            put16(er + 2, x.number);
+            put16(er + 4, static_cast<unsigned>(pi));
+            put16(er + 6, 1);
+            size_t len = x.len < 16383 ? x.len : 16383;
+            ok = xs && xs->read_at(x.at, reinterpret_cast<uint8_t*>(text), len) == len;
+            size_t f = 0, t = len;
+            if (ok && !gbc_trim(text, &f, &t)) f = t = 0;
+            ok = ok && put_text(text + f, t - f);
+            if (progress) progress(k - n, ne, ctx);
+        }
+        extra->close();
+    }
     for (int i = 0; ok && i < n; ++i) {
         const GbcEntry& e = es[i];
         uint8_t* er = table + 8 * i;
@@ -814,7 +856,7 @@ bool make_gbc(dax::ByteSource& dat, GbcPictures& pics, const char* id, Output& o
                 int pw = 0, ph = 0;
                 ok = write_whole(*js, pool, out, at, &pw, &ph);
                 if (ok) {
-                    uint8_t* pr = table + 8 * n + 8 * pi++;
+                    uint8_t* pr = table + 8 * ne + 8 * pi++;
                     put16(pr, static_cast<unsigned>(pw));
                     put16(pr + 2, static_cast<unsigned>(ph));
                     put32(pr + 4, at);
@@ -828,20 +870,21 @@ bool make_gbc(dax::ByteSource& dat, GbcPictures& pics, const char* id, Output& o
             ok = put_text(text, len);
         }
         put16(er + 6, static_cast<unsigned>(pi - first));
-        if (progress) progress(i + 1, n, ctx);
+        if (progress) progress(nx + i + 1, ne, ctx);
     }
     if (ok) {
         uint8_t h[kHeader] = {};
         h[4] = 2;
         h[5] = kRevision;
-        put16(h + 6, static_cast<unsigned>(n));
+        put16(h + 6, static_cast<unsigned>(ne));
         put16(h + 8, static_cast<unsigned>(pi));
         const size_t il = strlen(id);
         memcpy(h + 12, id, il < 32 ? il : 32);
         for (int i = 0; i < 256; ++i) palette_rgb(i, h + 44 + 3 * i, h + 45 + 3 * i, h + 46 + 3 * i);
-        ok = out.write_at(0, h, sizeof h) && out.write_at(kHeader, table, static_cast<size_t>(n + pi) * 8);
+        ok = pi == pieces && out.write_at(0, h, sizeof h) && out.write_at(kHeader, table, static_cast<size_t>(ne + pi) * 8);
     }
     if (ok) ok = out.write_at(0, reinterpret_cast<const uint8_t*>("GBJ2"), 4);
+    free(use);
     free(table);
     free(pool);
     free(text);
@@ -1011,6 +1054,8 @@ bool journal_before(const char* text, const char* s)
 }
 
 } // namespace
+
+int roman_number(const char* s, int n) { return n > 0 && n < 16 ? roman_value(s, n) : -1; }
 
 int find_mentions(const char* text, Mention* out, int max)
 {

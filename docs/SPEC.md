@@ -2226,6 +2226,51 @@ How it works (v0.12.0, Curse):
   Whole (a tap on the whole page shows the column there); taps on the
   column's left / right quarter go to the column before / after.
 
+- 2026-10-31 (Tom, on his 5.0" S3 with SNEG Pool of Radiance: a tavern
+  tale said "an edition the engine doesn't know", and the book view
+  refused the typeset PDF): **the typeset journals' text, read on the
+  board**. Game.dat has only the `<journal N>` entries - no tavern
+  tales, no proclamations (Pool: 23 tales, 18 proclamations; Curse SNEG:
+  62 tavern tales), no Introduction - so those mentions found nothing.
+  The scan now reads the player's own SNEG PDF's text (`engine/pdf_text.*`:
+  each page's content streams in order, fonts' /ToUnicode CMaps, else
+  /Differences glyph names, else WinAnsi; composite Identity-H fonts with
+  /W widths; q / Q keep the text state; dingbat / ornament fonts - the
+  check boxes - dropped; ASCII out: quotes, dashes, ligatures, accents
+  folded). `pdf::open_large` takes the tagged books' 2,000 - 11,400
+  objects (a table of (size - 1024) x 4 bytes, ~41 KB for Darkness, only
+  while the scan reads). `journal::make_book` (engine/journal_book.cpp),
+  two passes a page (the page's text sizes, then its lines): **BOOK.TXT**
+  (`_CYD/<folder>/`, "GBB1": the pages' paragraphs) and the **sections**
+  - a line at a paragraph's start reading "Journal Entry N", "Tale N:",
+  "Tavern Tale N", "Proclamation <numeral>", "Introduction", then the
+  lines of the page's body size that go on from it (same column below -
+  under a picture too -, the next column's / page's top when it stopped
+  at its column's bottom or short of it), other sizes (titles, captions)
+  passed over, ended by the next heading or text that doesn't go on.
+  No table: nothing from the journal in the firmware. JOURNAL.DAT (id
+  `gbc4:<Game.dat size>:<PDF size>`) = Game.dat's entries plus the PDF's
+  sections Game.dat lacks, as text pieces (`make_gbc`'s ExtraText; SECT.TMP
+  while it's made). A typeset PDF without the Companion (no table for it):
+  JOURNAL.DAT from its sections alone (`text1:<size>`). Checked against
+  pdftotext on the four SNEG PDFs here: every tale and proclamation word
+  for word (Pool 23 + 18, Curse 62); the PDF's entries match Game.dat's
+  except where a map / picture splits them (Game.dat's are kept). A
+  JOURNAL.DAT made by v0.161 or before (`gbc3`) is made again at the
+  next start ("Preparing Journals" - no Rescan needed). Untested here:
+  the Savage Frontier and Krynn SNEG PDFs (not in this session's files).
+  **The book view for a typeset PDF**: BOOK.TXT a PDF page at a time in
+  the text-entry viewer (Zoom = Small / Medium / Large text; Prev / Next
+  a screenful, then the page before / after; the label "3 of 21" - the
+  PDF's pages, each a spread of two book pages), not page pictures: the
+  pages are vector text and art (rasterising them needs a font renderer
+  and far more memory), and text reads better on these screens anyway.
+  Its pictures and maps aren't in it (the maps are the Companion's
+  JE_NNN.jpg entries). Messages (Tom: never "unknown edition" for a
+  known one): a reference the prepared journal lacks says "Tavern Tale
+  9 isn't in this edition's journal (...)"; no JOURNAL.DAT says the scan
+  hasn't prepared it (tap Rescan; its log says why).
+
 ## 8. Copy protection (Tom, 2026-10-06)
 
 Skipped. The player supplies their own game files, so the journal word

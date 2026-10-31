@@ -181,6 +181,26 @@ bool gbc_marker(const char* t, size_t len, size_t* a, size_t* b);
 struct GbcPictures {
     virtual ~GbcPictures() = default;
     virtual dax::ByteSource* open(int number) = 0;
+    virtual void close() {}                // the last one opened (a file slot back)
+};
+
+// A section of a typeset journal's text (make_book): what it is and where
+// its text is (in the text file make_book wrote them to)
+struct Section {
+    char     kind = 'J';                   // as Mention: 'J', 'T', 'P', 'I'
+    uint16_t number = 0;
+    uint32_t at = 0, len = 0;
+};
+constexpr int kMaxSections = 400;
+
+// Sections for make_gbc to add: items[0, n) and their text file (opened
+// when make_gbc copies them, closed after - the card's file slots)
+struct ExtraText {
+    virtual ~ExtraText() = default;
+    virtual dax::ByteSource* open() = 0;
+    virtual void close() = 0;
+    const Section* items = nullptr;
+    int n = 0;
 };
 
 // Writes JOURNAL.DAT (version 2) from Game.dat: text pieces for the text
@@ -189,7 +209,58 @@ struct GbcPictures {
 // its text after (up to 3 pieces); without the JE file the note stays in
 // the text. id: what read_info's pdf_id gets (to know the file is
 // ready on the next scan).
-bool make_gbc(dax::ByteSource& dat, GbcPictures& pics, const char* id, Output& out, Progress progress, void* ctx);
+// extra (optional): the PDF's own sections - each a text entry, unless
+// Game.dat has that journal entry (an empty dat: the sections only).
+bool make_gbc(dax::ByteSource& dat, GbcPictures& pics, const char* id, Output& out, Progress progress, void* ctx,
+              ExtraText* extra = nullptr);
+
+// ---- typeset journals: the Steam / SNEG PDFs' text -----------------------------
+// Their PDFs are books typeset in InDesign (no page pictures): the scan
+// reads the text from the player's PDF (pdf_text.h) and keeps it as
+// BOOK.TXT in the game's _CYD folder - the book view shows it as text
+// (Tom, 2026-10-31: the book wanted on the board) - and finds the
+// numbered sections in it ("Tale 12:", "Proclamation CXIV", "Journal Entry
+// 7", "Tavern Tale 3", "Introduction") for the entries Game.dat lacks.
+//
+// BOOK.TXT (little-endian):
+//   "GBB1", u8 version (1), u8 0, u16 pages
+//   u32 offset[pages + 1]          page i's text: offset[i] .. offset[i + 1]
+//   the pages' text                ASCII, paragraphs with '\n' between
+// The sections' text goes to a second file (sect): each section's
+// paragraphs ('\n' between), at Section::at.
+//
+// How a page's lines become paragraphs, and a section's end: the lines
+// come in the content's order (each story's text in reading order); a
+// line goes on its paragraph when it's the same size, in the same column
+// within about a line and a half below, or at the top of the next column
+// / page when the paragraph's last line was at the bottom of its column;
+// an indented line starts one. A section: its heading's paragraph, then
+// the lines of the page's body size that go on from its last one (other
+// sizes - pictures' captions, a page's heading - passed over); it ends at
+// the next heading or where the text doesn't go on.
+struct BookInfo {
+    int  pages = 0;                        // pages read
+    int  failed = 0;                       // pages that couldn't be read
+    int  sections = 0;                     // into the caller's list
+    int  count[4] = {};                    // 'J', 'T', 'P', 'I' found
+    uint32_t chars = 0;                    // the book's text
+    bool no_memory = false;
+};
+bool make_book(dax::ByteSource& pdf, Output& book, Output& sect, Section* sections, int max, BookInfo& info,
+               Progress progress, void* ctx);
+constexpr int kBookHeader = 8;
+// A BOOK.TXT's pages (0: not one)
+int book_pages(dax::ByteSource& book);
+// Page p's (from 1) text: where and how long. False: not there.
+bool book_page(dax::ByteSource& book, int p, uint32_t* at, uint32_t* len);
+
+// A line of the book that starts a section: its kind and number (tests;
+// make_book's own check). "Journal Entry 12:", "JOURNAL ENTRY 12", "Tale
+// 3:", "Tavern Tale 3", "Tavern Tale #3", "Proclamation CXIV",
+// "Introduction".
+bool section_heading(const char* line, int len, char* kind, int* number);
+// A Roman numeral's value (n letters at s), or -1
+int roman_number(const char* s, int n);
 
 // ---- the game's text ----------------------------------------------------------
 
