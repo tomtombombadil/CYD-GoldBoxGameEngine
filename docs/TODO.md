@@ -175,8 +175,33 @@ the Project as claude/TODO.md.
       engine resets at Begin); (b) a computer's spell with no target:
       the original loses it ("Spell Aborted"?), the engine tries the
       next; (c) 2nd-level cleric spells need cleric 3 (Sean at the 3000
-      cap). Not reached: Valjevo, the cemetery, the Kovel mansion, the
-      later commissions, Sokal Keep's reward, Scribe. Check in Curse's play test: View - Spells' prompt, PARLAY's prompt, Knock at a door's second locked
+      cap). Part 10: (a) settled - the original keeps the selected
+      member at Begin (cleric and magic-user halls, after training /
+      learning / Create; the engine's reset undone); its "first member
+      lit" is a display lag: after a script's LOAD CHARACTER loop (the
+      proclamations at 4,3) its panel lights Bakshi while the selection
+      is still the old one (Home / End move from it) - not copied (the
+      engine lights the real one). (c) done: cleric 3 by training and by
+      poked records; Memorize works a 2nd+ level caster's counts out
+      again (level 1 keeps the record's); Wisdom 18 cleric: level 1 -> 3,
+      2 -> 4, 3 -> 4 + 3 - the original's exactly (Tom's question). Also
+      fixed: a spell list's Next stops at the last full page, the
+      highlight keeping its line; the camp's text after View (empty) /
+      Magic's Exit (kept when nothing covered it); Create's pick lists
+      (heading hidden under the shared top line, "Exit" alone, Return /
+      a tap takes the line). Matched: Create (race ... "Keep this
+      character?", name, icon, saved .CHA), Remove / Add, Modify (DOSBox
+      moves with Up / Down, not Home / End), the commissions list.
+      (b) still open - Pool's ovr10 +0x2EB judges a computer's spell
+      usable without a target check when its row's byte 14 is 0 (its
+      own side), and with a target count otherwise; whether the cast
+      then finds none and is lost needs a fight. Not reached: Valjevo,
+      the cemetery, the Kovel mansion, the later commissions, Sokal
+      Keep's reward (this party's keep not cleared), Scribe (no scroll
+      in DOS). The Add list's order (DOSBox: the newest .CHA first) not
+      checked further. Check in Curse's play test: spell-list paging,
+      the camp text after View / Magic, Create's lists (Curse has the
+      same list routine?), Begin's selection, View - Spells' prompt, PARLAY's prompt, Knock at a door's second locked
       kind, the DAMAGE lines' look, the Quick cleric's turning, the
       flee way, "is forced to flee", Curse's payments (Buy / Id / cures),
       the press words, word wrap,
