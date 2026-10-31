@@ -86,14 +86,23 @@ the Project as claude/TODO.md.
       rest highlights, the camp text after a rest / Magic, the camp
       picture at Cast's on-whom, the shop's wrap / Id's
       timed word, payments as platinum + odd gold (Buy, Id, cures), yes/no
-      questions not carrying a highlight. Open: Pool record 0x113 left by
-      a fight (original keeps the attacks left); undead fights' XP still
-      differs by the dice (rules now the same); Kuto's Well / Podol Plaza
-      and on not reached (the slums' west exit -> ECL8 block 29: the
-      original met lizardmen at once and the HP-60 party died - needs a
-      stronger party or a told encounter: block 29's wandering roll is
-      RANDOM 10 at 0x82BB); Scribe (no scroll in the party). Pool has no
-      Fix. Check in Curse's play test: the Quick cleric's turning, the
+      questions not carrying a highlight. Part 7 (HP 250 party): Kuto's
+      Well (lizardmen 31, the buildings' kobolds, the well, the
+      catacombs, Norris the Gray's bandits), ECL1 block 18 (Bane's
+      shrine, the robed orc, the Pitt, a locked door), Stojanow Gate
+      (wagon, bugbears, the volleys), into ECL4 block 2 - all matched
+      after fixes: record 0x113 / 0x114 after a fight (every round's
+      start sets them for all, the fallen keep them), the encounter
+      picture comes back after a fight, Knock at a passage-3 door with a
+      magic-user in the party, a script DAMAGE's lines (white, from
+      column 38, HP line by line, position line off) and its PRESS
+      <ENTER>/<RETURN> wait. Undead fights' XP still differs by the
+      dice (rules now the same). Not reached: the Textile House,
+      Mendor's Library, Valjevo, the cemetery, the Kovel mansion, the
+      council's later commissions; Scribe (no scroll in the party); a
+      level-up with a new spell. Pool has no
+      Fix. Check in Curse's play test: Knock at a door's second locked
+      kind, the DAMAGE lines' look, the Quick cleric's turning, the
       flee way, "is forced to flee", Curse's payments (Buy / Id / cures),
       the press words, word wrap,
       load path, camp picture / Quit to DOS, View prompt, shop and temple
