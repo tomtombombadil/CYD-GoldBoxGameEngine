@@ -126,7 +126,12 @@ the Project as claude/TODO.md.
       merchant": not in Pool - DOSBox, the general store 9,11, the arms
       shop 8,11 and the Temple of Tyr: Exit (or No) leaves the party on
       the shop's square, same facing, as the engine; check it in Curse /
-      Secret / Darkness. Check in Curse's play test: PARLAY's prompt, Knock at a door's second locked
+      Secret / Darkness. Part 9 (Tom's board, goblin fights; every
+      game): the attack pose drawn over the ready pose and the turn's
+      box (both icons at once) - now on the ground, as the original's
+      0x74572; "Surrenders" with the panel already saying unconscious -
+      now shown while it stands (no turn box), then off the field (the
+      original's 0x644A7; coab read, not yet seen in DOSBox). Check in Curse's play test: PARLAY's prompt, Knock at a door's second locked
       kind, the DAMAGE lines' look, the Quick cleric's turning, the
       flee way, "is forced to flee", Curse's payments (Buy / Id / cures),
       the press words, word wrap,
