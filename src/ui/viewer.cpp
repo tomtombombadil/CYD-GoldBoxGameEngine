@@ -1035,7 +1035,7 @@ struct GbcJpegs : journal::GbcPictures {
     fs::File f;
     library::FileSource* src = nullptr;
     ~GbcJpegs() { close(); }
-    void close()
+    void close() override
     {
         delete src;
         src = nullptr;
@@ -1064,57 +1064,312 @@ void gbc_progress(int done, int total, void* ctx)
     delay(1);
 }
 
+// The typeset journals (the Steam / SNEG PDFs - Tom, 2026-10-31): the
+// PDF's own text, read by the scan into BOOK.TXT (the book view) and its
+// numbered sections (tavern tales, proclamations, entries) into SECT.TMP
+// for JOURNAL.DAT
+struct SectText : journal::ExtraText {
+    char path[160] = {};
+    fs::File f;
+    library::FileSource* src = nullptr;
+    ~SectText() { close(); }
+    dax::ByteSource* open() override
+    {
+        close();
+        f = sd_fs().open(path, "r");
+        if (!f) return nullptr;
+        src = new (std::nothrow) library::FileSource(f);
+        return src;
+    }
+    void close() override
+    {
+        delete src;
+        src = nullptr;
+        if (f) f.close();
+    }
+};
+
+struct NoGameDat : dax::ByteSource {
+    uint32_t size() const override { return 0; }
+    size_t read_at(uint32_t, uint8_t*, size_t) override { return 0; }
+};
+
+void book_progress(int done, int total, void* ctx)
+{
+    char line[100];
+    snprintf(line, sizeof line, "Reading the %s journal's text: page %d of %d", static_cast<JournalProgress*>(ctx)->title,
+             done, total);
+    scan_say(line, true, nullptr);
+    delay(1);
+}
+
+// Whether the game's BOOK.TXT is there and whole
+bool book_ready(const library::GameDir& g)
+{
+    char path[160];
+    library::cache_path(g, "BOOK.TXT", path, sizeof path);
+    fs::File f = sd_fs().open(path, "r");
+    if (!f) return false;
+    library::FileSource src(f);
+    const bool ok = journal::book_pages(src) > 0;
+    f.close();
+    return ok;
+}
+
+// Why the book view can't open (open_book failed)
+const char* book_missing_text()
+{
+    const library::GameDir& g = game_dirs[game_sel];
+    if (!g.journal[0])
+        return "There is no journal PDF in this game's folder. GOG's install folder has one (the Steam / SNEG "
+               "release's is in Documentation): copy the whole folder to the card, then Rescan.";
+    bool scanned = false;                 // (a scanned edition the tables know: by its size)
+    for (int i = 0; i < journal::kTableCount; ++i) scanned = scanned || journal::kTables[i]->pdf_size == g.journal_size;
+    if (g.gbc[0] || !scanned)
+        return "The journal PDF's text isn't on the card yet (or couldn't be read - the scan's log says why): tap "
+               "Rescan on the library page to read it.";
+    return "The journal PDF couldn't be read as a book of scanned pages (or there wasn't the memory just now).";
+}
+
+// The id JOURNAL.DAT has ("" when there's none)
+void journal_id(const library::GameDir& g, char* out, size_t cap)
+{
+    out[0] = 0;
+    char path[160];
+    library::cache_path(g, "JOURNAL.DAT", path, sizeof path);
+    fs::File f = sd_fs().open(path, "r");
+    if (!f) return;
+    library::FileSource src(f);
+    journal::Info info;
+    if (journal::read_info(src, info)) strlcpy(out, info.pdf_id, cap);
+    f.close();
+}
+
+// The id a Steam / SNEG journal's JOURNAL.DAT is made with: Game.dat's and
+// the PDF's sizes ("gbc4": v0.162's, with the PDF's sections; "gbc3":
+// v0.161's, Game.dat's entries only - made again)
+bool gbc_journal_id(const library::GameDir& g, char* id, size_t cap)
+{
+    char path[200];
+    if (!library::gbc_path(g, "Game.dat", path, sizeof path)) return false;
+    fs::File f = sd_fs().open(path, "r");
+    if (!f) return false;
+    const unsigned dat = static_cast<unsigned>(f.size());
+    f.close();
+    snprintf(id, cap, "gbc4:%u:%u", dat, g.journal[0] ? static_cast<unsigned>(g.journal_size) : 0u);
+    return true;
+}
+
+// A journal made by an older version, to make again at the start (no
+// Rescan needed): a Steam / SNEG one without the PDF's text
+bool journal_stale(const library::GameDir& g)
+{
+    if (!g.gbc[0]) return false;
+    char want[32], have[36];
+    if (!gbc_journal_id(g, want, sizeof want)) return false;
+    journal_id(g, have, sizeof have);
+    // (none at all: never made, or a failure the log reported - the next
+    // Rescan tries; not every start)
+    // ... and only one an older version made: a "gbc4" one without its
+    // book (the text couldn't be read - memory) waits for a Rescan rather
+    // than slowing every start
+    if (!have[0]) return false;
+    return strncmp(have, "gbc4:", 5) != 0;
+}
+
+// The PDF's text into BOOK.TXT, its sections into SECT.TMP (sect_path)
+bool read_book(const library::GameDir& g, journal::Section* secs, journal::BookInfo& info, char* sect_path,
+               size_t sect_cap)
+{
+    char pdf_path[200], book_path[160];
+    snprintf(pdf_path, sizeof pdf_path, "%s/%s", games::kRootDir, g.journal);
+    library::cache_path(g, "BOOK.TXT", book_path, sizeof book_path);
+    library::cache_path(g, "SECT.TMP", sect_path, sect_cap);
+    if (!library::make_cache_dirs(g)) return false;
+    fs::File pf = sd_fs().open(pdf_path, "r");
+    if (!pf) return false;
+    SdOutput bo, so;
+    bo.f = sd_fs().open(book_path, "w");
+    so.f = sd_fs().open(sect_path, "w");
+    JournalProgress jp{games::title(g.game)};
+    library::FileSource src(pf);
+    bool ok = bo.f && so.f && journal::make_book(src, bo, so, secs, journal::kMaxSections, info, book_progress, &jp);
+    if (bo.f) bo.f.close();
+    if (so.f) so.f.close();
+    pf.close();
+    // (a scanned book has no text: not a book to show as text)
+    if (ok && info.chars < 400) ok = false;
+    if (!ok) {
+        sd_fs().remove(book_path);
+        sd_fs().remove(sect_path);
+    }
+    memlog::note(ok ? "journal: the PDF's text read" : "journal: the PDF's text not read");
+    return ok;
+}
+
+// What read_book found, for the log
+void say_book(const library::GameDir& g, const journal::BookInfo& info, bool ok, uint32_t ms)
+{
+    char line[220];
+    const char* title = games::title(g.game);
+    if (ok) {
+        char what[96] = "";
+        size_t o = 0;
+        static const char* const kNames[4] = {"journal entries", "tavern tales", "proclamations", "introduction"};
+        for (int i = 0; i < 4; ++i)
+            if (info.count[i] && o < sizeof what)
+                o += static_cast<size_t>(snprintf(what + o, sizeof what - o, ", %d %s", info.count[i],
+                                                  i == 3 ? "the introduction" : kNames[i]));
+        snprintf(line, sizeof line, "Read the %s journal's text: %d pages%s (%lu s)", title, info.pages, what,
+                 static_cast<unsigned long>(ms / 1000));
+    } else if (info.no_memory) {
+        snprintf(line, sizeof line, "The %s journal PDF's text couldn't be read: not enough memory (free %u KB, largest "
+                 "block %u KB). Tap Rescan to try again.", title,
+                 (unsigned)(heap_caps_get_free_size(MALLOC_CAP_8BIT) / 1024),
+                 (unsigned)(heap_caps_get_largest_free_block(MALLOC_CAP_8BIT) / 1024));
+    } else {
+        snprintf(line, sizeof line, "The %s journal PDF's text couldn't be read (%d of its pages read).", title,
+                 info.pages);
+    }
+    scan_say(line, true, nullptr);
+}
+
 void prepare_journal_gbc(const library::GameDir& g)
 {
     char line[200], path[200], id[32];
     const char* title = games::title(g.game);
-    if (!library::gbc_path(g, "Game.dat", path, sizeof path)) return;
-    fs::File f = sd_fs().open(path, "r");
-    if (!f) return;
-    library::FileSource src(f);
-    // ("gbc3": v0.160.x's scans made it with SCAN.TXT open - no file slot
-    // left for the pictures, every entry its text only: those are made again)
-    snprintf(id, sizeof id, "gbc3:%u", static_cast<unsigned>(src.size()));
+    if (!gbc_journal_id(g, id, sizeof id)) return;
     char out_path[160];
     library::cache_path(g, "JOURNAL.DAT", out_path, sizeof out_path);
     {
-        fs::File old = sd_fs().open(out_path, "r");
-        if (old) {
-            library::FileSource os(old);
-            journal::Info info;
-            const bool ready = journal::read_info(os, info) && strcmp(info.pdf_id, id) == 0;
-            old.close();
-            if (ready) {
-                snprintf(line, sizeof line, "The %s journal is ready (made by an earlier scan)", title);
-                scan_say(line, false, nullptr);
-                f.close();
-                return;
-            }
+        char have[36];
+        journal_id(g, have, sizeof have);
+        if (strcmp(have, id) == 0 && (!g.journal[0] || book_ready(g))) {
+            snprintf(line, sizeof line, "The %s journal is ready (made by an earlier scan)", title);
+            scan_say(line, false, nullptr);
+            return;
         }
+    }
+    // The PDF's text first (its tavern tales and the like aren't in
+    // Game.dat; the book view shows the rest)
+    journal::Section* secs = g.journal[0] ? new (std::nothrow) journal::Section[journal::kMaxSections] : nullptr;
+    journal::BookInfo binfo;
+    SectText sect;
+    bool have_book = false;
+    if (secs) {
+        snprintf(line, sizeof line, "Reading the %s journal's text...", title);
+        scan_say(line, false, nullptr);
+        scan_log_pause();
+        const uint32_t t0 = millis();
+        have_book = read_book(g, secs, binfo, sect.path, sizeof sect.path);
+        scan_log_resume();
+        say_book(g, binfo, have_book, millis() - t0);
+        sect.items = secs;
+        sect.n = have_book ? binfo.sections : 0;
+    } else if (g.journal[0]) {
+        scan_say("Not enough memory to read the journal PDF's text now.", false, nullptr);
     }
     snprintf(line, sizeof line, "Processing the %s journal (the Gold Box Companion's)...", title);
     scan_say(line, false, nullptr);
     scan_log_pause();
+    bool ok = library::gbc_path(g, "Game.dat", path, sizeof path);
+    fs::File f = ok ? sd_fs().open(path, "r") : fs::File();
     SdOutput out;
-    bool ok = library::make_cache_dirs(g);
+    ok = ok && f && library::make_cache_dirs(g);
     if (ok) out.f = sd_fs().open(out_path, "w");
     GbcJpegs pics;
     pics.g = &g;
     JournalProgress jp{title};
     const uint32_t t0 = millis();
-    ok = ok && out.f && journal::make_gbc(src, pics, id, out, gbc_progress, &jp);
+    if (ok && out.f) {
+        library::FileSource src(f);
+        ok = journal::make_gbc(src, pics, id, out, gbc_progress, &jp, have_book ? &sect : nullptr);
+    } else {
+        ok = false;
+    }
     pics.close();
+    sect.close();
     if (out.f) out.f.close();
-    f.close();
+    if (f) f.close();
+    if (sect.path[0]) sd_fs().remove(sect.path);
+    delete[] secs;
     scan_log_resume();
     if (ok)
-        snprintf(line, sizeof line, "Prepared the %s journal from the Gold Box Companion (%lu s)", title,
-                 static_cast<unsigned long>((millis() - t0) / 1000));
+        snprintf(line, sizeof line, "Prepared the %s journal from the Gold Box Companion%s (%lu s)", title,
+                 have_book ? " and the PDF" : "", static_cast<unsigned long>((millis() - t0) / 1000));
     else {
         sd_fs().remove(out_path);
         snprintf(line, sizeof line, "The %s journal couldn't be processed (card full, or not enough memory).", title);
     }
     scan_say(line, true, nullptr);
+}
+
+// A typeset journal PDF without the Gold Box Companion (no table for it:
+// not a scanned edition the engine knows): its text, its sections the
+// journal's entries
+void prepare_journal_text(const library::GameDir& g)
+{
+    char line[200], id[32];
+    const char* title = games::title(g.game);
+    snprintf(id, sizeof id, "text1:%u", static_cast<unsigned>(g.journal_size));
+    char out_path[160];
+    library::cache_path(g, "JOURNAL.DAT", out_path, sizeof out_path);
+    {
+        char have[36];
+        journal_id(g, have, sizeof have);
+        if (strcmp(have, id) == 0 && book_ready(g)) {
+            snprintf(line, sizeof line, "The %s journal is ready (made by an earlier scan)", title);
+            scan_say(line, false, nullptr);
+            return;
+        }
+    }
+    journal::Section* secs = new (std::nothrow) journal::Section[journal::kMaxSections];
+    if (!secs) {
+        scan_say("Not enough memory to read the journal PDF's text now.", false, nullptr);
+        return;
+    }
+    journal::BookInfo binfo;
+    SectText sect;
+    snprintf(line, sizeof line, "Reading the %s journal's text...", title);
+    scan_say(line, false, nullptr);
+    scan_log_pause();
+    uint32_t t0 = millis();
+    const bool have_book = read_book(g, secs, binfo, sect.path, sizeof sect.path);
+    scan_log_resume();
+    if (!have_book && !binfo.no_memory) {
+        // Neither a scanned edition this engine knows nor typeset text
+        snprintf(line, sizeof line,
+                 "The %s journal is an edition this engine doesn't know yet (size %u): its entries can't be shown.",
+                 title, static_cast<unsigned>(g.journal_size));
+        scan_say(line, true, nullptr);
+        delete[] secs;
+        return;
+    }
+    say_book(g, binfo, have_book, millis() - t0);
+    bool ok = have_book && binfo.sections > 0;
+    if (ok) {
+        scan_log_pause();
+        SdOutput out;
+        out.f = sd_fs().open(out_path, "w");
+        sect.items = secs;
+        sect.n = binfo.sections;
+        NoGameDat none;
+        GbcJpegs pics;
+        pics.g = &g;
+        JournalProgress jp{title};
+        ok = out.f && journal::make_gbc(none, pics, id, out, gbc_progress, &jp, &sect);
+        sect.close();
+        if (out.f) out.f.close();
+        if (!ok) sd_fs().remove(out_path);
+        scan_log_resume();
+    }
+    if (sect.path[0]) sd_fs().remove(sect.path);
+    delete[] secs;
+    if (have_book) {
+        snprintf(line, sizeof line, ok ? "Prepared the %s journal from its PDF's text" :
+                 "The %s journal's entries couldn't be found in its PDF's text: the book view shows it", title);
+        scan_say(line, false, nullptr);
+    }
 }
 
 void prepare_journal_now(const library::GameDir& g)
@@ -1132,6 +1387,14 @@ void prepare_journal_now(const library::GameDir& g)
     pdf::Doc* doc = new (std::nothrow) pdf::Doc;
     const bool readable = doc && pdf::open(src, *doc);
     const journal::Table* t = readable ? journal::find_table(src.size(), doc->id) : nullptr;
+    if (!t && readable) {
+        // Not a scanned edition the tables know: typeset text? (the Steam /
+        // SNEG PDFs copied without their Gold Box Companion)
+        delete doc;
+        f.close();
+        prepare_journal_text(g);
+        return;
+    }
     if (!t) {
         snprintf(line, sizeof line,
                  readable ? "The %s journal is an edition this engine doesn't know yet (size %u, id %s): its entries "
@@ -1386,11 +1649,11 @@ void rescan()
 // by an older version, or in a board of another size): the scan's picture
 // step for the missing ones, its lines shown and added to the scan log -
 // the library page itself only ever shows the files (Tom, v0.103.1)
-void make_missing_pictures()
+void make_missing_pictures(bool pictures, bool journals)
 {
     scr = new (std::nothrow) ScanScreen;
     ui::clear();
-    ui::header("Preparing Pictures", false);
+    ui::header(pictures ? "Preparing Pictures" : "Preparing Journals", false);
     if (scr) {
         char path[160];
         library::cache_path("SCAN.TXT", path, sizeof path);
@@ -1399,12 +1662,23 @@ void make_missing_pictures()
             scr->log.printf("\nCYD BYOG Gold Box Engine %s (%s), %s - the library's pictures for %dx%d\n\n", env_.version,
                             env_.build, BOARD_NAME, ui::width(), ui::height());
     }
-    scan_say("Making the library's pictures for this screen (once)...", false, nullptr);
     struct Job {
         int failed;
-    } job{-1};
-    if (!run_on_big_stack([](void* p) { static_cast<Job*>(p)->failed = prepare_pictures(true); }, &job))
-        scan_say("Not enough memory to make the pictures now: the next start tries again.", false, nullptr);
+        bool pictures, journals;
+    } job{-1, pictures, journals};
+    if (pictures) scan_say("Making the library's pictures for this screen (once)...", false, nullptr);
+    // A journal an older version made (a Steam / SNEG one without the PDF's
+    // tavern tales and book - v0.162): made again now, so no Rescan is needed
+    if (journals) scan_say("Bringing the journals up to date (once)...", false, nullptr);
+    if (!run_on_big_stack(
+            [](void* p) {
+                Job& j = *static_cast<Job*>(p);
+                j.failed = j.pictures ? prepare_pictures(true) : 0;
+                for (int i = 0; j.journals && i < n_games; ++i)
+                    if (journal_stale(game_dirs[i])) prepare_journal(game_dirs[i]);
+            },
+            &job))
+        scan_say("Not enough memory to make the pictures and journals now: the next start tries again.", false, nullptr);
     if (scr) {
         scan_flush_log();
         if (scr->log) scr->log.close();
@@ -3294,15 +3568,7 @@ void tap_game_menu(const ui::Tap& t)
     if (tab == kTabPdf) {
         menu_tab = kTabPdf;
         if (!open_book()) {
-            strlcpy(menu_note,
-                    game_dirs[game_sel].gbc[0]
-                        ? "This edition's journal PDF is typeset text, not scanned pages: the book view can't show it. "
-                          "Its entries are in the Journal tab."
-                    : game_dirs[game_sel].journal[0]
-                        ? "The journal PDF couldn't be read as a book of scanned pages."
-                        : "There is no journal PDF in this game's folder. GOG's install folder has one: copy the "
-                          "whole folder to the card, then Rescan.",
-                    sizeof menu_note);
+            strlcpy(menu_note, book_missing_text(), sizeof menu_note);
             dirty = true;
         }
         return;
@@ -3414,6 +3680,10 @@ struct JournalView {
     int      n_lines = 0;
     uint16_t line_at[700], line_len[700];  // line_len 0: a paragraph's gap
     int      line_px = 16;
+    // The book as text (a typeset journal PDF - the Steam / SNEG releases):
+    // BOOK.TXT's page book_page of book_pages, one text piece
+    bool     book = false;
+    int      book_page = 0, book_pages = 0;
     ~JournalView()
     {
         free(text);
@@ -3593,6 +3863,7 @@ bool open_journal(char kind, int number)
     if (!jv) return false;
     jv->kind = kind;
     jv->number = number;
+    jv->book = false;
     jv->top = 0;
     jv->zoom = kZoomColumn;
     jv->turn = false;
@@ -3607,16 +3878,30 @@ bool open_journal(char kind, int number)
     char named[40];
     if (kind == 'I') snprintf(named, sizeof named, "the Introduction");
     else journal::mention_name(kind, number, named, sizeof named);
+    // (Tom, 2026-10-31: say plainly which reference and why - never guess
+    // at an unknown edition)
+    const bool any_journal = g.journal[0] || g.gbc[0];
     snprintf(jv->why, sizeof jv->why, "Read %s in your Adventurer's Journal.%s", named,
-             !g.journal[0] ? ""
-                           : " The journal PDF in this game's folder isn't prepared (an edition the engine doesn't know, "
-                             "or the card needs a rescan): Open Journal PDF shows its pages.");
+             !any_journal ? ""
+                          : " This game's journal hasn't been prepared on the card (the scan's log says why): tap "
+                            "Rescan on the library page.");
     fs::File f;
     if (journal_source(f)) {
         library::FileSource src(f);
         int first = 0;
-        if (journal::read_info(src, jv->info) && journal::find(src, jv->info, kind, number, &first, &jv->count) &&
-            jv->count <= kMaxJournalPieces) {
+        const bool dat = journal::read_info(src, jv->info);
+        const bool found = dat && journal::find(src, jv->info, kind, number, &first, &jv->count);
+        if (dat && !found) {
+            // Prepared, without this one: the edition's journal doesn't have it
+            char what[24];
+            snprintf(what, sizeof what, "%s", named);
+            if (what[0] >= 'a' && what[0] <= 'z') what[0] = static_cast<char>(what[0] - 32);
+            snprintf(jv->why, sizeof jv->why, "%s isn't in this edition's journal (%s).%s", what,
+                     g.gbc[0] ? "the Gold Box Companion's entries and the journal PDF's text"
+                              : "what the card scan found in the journal PDF",
+                     jv->has_pdf ? " Journal PDF shows the whole book." : "");
+        }
+        if (found && jv->count <= kMaxJournalPieces) {
             bool ok = true;
             jv->maxw = 0;
             free(jv->text);
@@ -3671,9 +3956,73 @@ bool open_journal(char kind, int number)
                 jv->have = true;
                 journal_layout();
             }
-            if (!ok) memlog::note("journal entry: not enough memory");
+            if (!ok) {
+                memlog::note("journal entry: not enough memory");
+                snprintf(jv->why, sizeof jv->why, "Not enough memory to show %s just now (free %u KB, largest block %u KB).",
+                         named, (unsigned)(heap_caps_get_free_size(MALLOC_CAP_8BIT) / 1024),
+                         (unsigned)(heap_caps_get_largest_free_block(MALLOC_CAP_8BIT) / 1024));
+            }
         }
         f.close();
+    }
+    go(Screen::Journal);
+    return true;
+}
+
+// The book as text (Tom, 2026-10-31: the typeset Steam / SNEG journal
+// shown on the board): BOOK.TXT, the text the card scan read from the
+// player's own PDF, page p laid out as a text entry (Zoom: Small / Medium
+// / Large text); Prev / Next go on to the page before / after. at_end: the
+// page's end in view (Prev from the next page). False: no BOOK.TXT.
+bool open_text_book(int p, bool at_end)
+{
+    const library::GameDir& g = game_dirs[game_sel];
+    char path[160];
+    library::cache_path(g, "BOOK.TXT", path, sizeof path);
+    fs::File f = sd_fs().open(path, "r");
+    if (!f) return false;
+    library::FileSource src(f);
+    const int n = journal::book_pages(src);
+    uint32_t at = 0, len = 0;
+    bool ok = n > 0 && journal::book_page(src, p, &at, &len);
+    if (len > 16000) len = 16000;
+    if (ok && !jv) jv = new (std::nothrow) JournalView;
+    static const char kNoText[] = "(This page has only pictures.)";
+    char* t = ok && jv ? static_cast<char*>(malloc(len + sizeof kNoText)) : nullptr;
+    if (t) {
+        if (src.read_at(at, reinterpret_cast<uint8_t*>(t), len) != len) len = 0;
+        t[len] = 0;
+        if (len == 0) memcpy(t, kNoText, sizeof kNoText);
+    }
+    f.close();
+    if (!t) {
+        if (ok) memlog::note("journal book (text): not enough memory");
+        return false;
+    }
+    const bool was_book = jv->book;
+    free(jv->text);
+    jv->text = t;
+    free(jv->cache);
+    jv->cache = nullptr;
+    jv->book = true;
+    jv->book_page = p;
+    jv->book_pages = n;
+    jv->kind = 0;
+    jv->number = 0;
+    jv->count = 1;
+    jv->piece[0] = journal::PieceInfo{};
+    jv->piece[0].h = static_cast<int>(strlen(t));
+    jv->text_at[0] = 0;
+    jv->maxw = 0;
+    jv->map = jv->turn = false;
+    jv->have = jv->text_mode = jv->has_pdf = true;
+    jv->sc_piece = -1;
+    if (!was_book) jv->zoom = 1;                // (Medium; kept from page to page)
+    jv->top = 0;
+    journal_layout();
+    if (at_end) {
+        jv->top = jv->total_h;
+        journal_layout();                      // (kept in range: the page's last screenful)
     }
     go(Screen::Journal);
     return true;
@@ -3744,9 +4093,11 @@ void draw_journal()
         at = jv->top + a.h >= jv->total_h ? pages : jv->top / journal_step() + 1;
     }
     snprintf(page, sizeof page, "%d of %d", at, pages);
+    if (jv && jv->book) snprintf(page, sizeof page, "%d of %d", jv->book_page, jv->book_pages);   // (the PDF's pages)
     const int nk = journal_keys();
     if (nk >= 5) {
-        const bool more = jv->top + a.h < jv->total_h;
+        const bool more = jv->top + a.h < jv->total_h || (jv->book && jv->book_page < jv->book_pages);
+        const bool less = jv->top > 0 || (jv->book && jv->book_page > 1);
         for (int c = 0; c < nk; ++c) {
             const ui::Rect r = slim_key(c, nk);
             switch (journal_key_at(c)) {
@@ -3756,7 +4107,7 @@ void draw_journal()
                         jv->zoom != (jv->text_mode ? 1 : kZoomColumn) ? ui::KeyStyle::Lit : ui::KeyStyle::Normal);
                 break;
             case kJTurn: ui::key(r, "Turn", jv->turn ? ui::KeyStyle::Lit : ui::KeyStyle::Normal); break;
-            case kJPrev: ui::key(r, "Prev", jv->top > 0 ? ui::KeyStyle::Normal : ui::KeyStyle::Dim); break;
+            case kJPrev: ui::key(r, "Prev", less ? ui::KeyStyle::Normal : ui::KeyStyle::Dim); break;
             case kJLabel: slim_label(r, page, nullptr); break;
             case kJNext: ui::key(r, "Next", more ? ui::KeyStyle::Normal : ui::KeyStyle::Dim); break;
             default: break;
@@ -3855,6 +4206,8 @@ void leave_journal()
 bool open_book()
 {
     if (!game_dirs[game_sel].journal[0]) return false;
+    // A typeset journal: its text, as the scan read it
+    if (book_ready(game_dirs[game_sel])) return open_text_book(1, false);
     char path[200];
     snprintf(path, sizeof path, "%s/%s", games::kRootDir, game_dirs[game_sel].journal);
     struct Job {
@@ -3906,23 +4259,30 @@ void tap_journal(const ui::Tap& t)
     if (cell < 0) return;
     const JournalKey k = journal_key_at(cell);
     if (k == kJBack) {
+        if (jv && jv->book && from_menu) {
+            // The Menu's book tab: back to the Menu (its journal list)
+            menu_tab = kTabJournal;
+            menu_note[0] = 0;
+        }
         leave_journal();
         return;
     }
     if (k == kJPdf) {
         if (!open_book()) {
-            strlcpy(jv->why,
-                    game_dirs[game_sel].gbc[0] ? "This edition's journal PDF is typeset text, not scanned pages: the book "
-                                                 "view can't show it."
-                                               : "The journal PDF couldn't be read as a book of scanned pages.",
-                    sizeof jv->why);
+            strlcpy(jv->why, book_missing_text(), sizeof jv->why);
             dirty = true;
         }
         return;
     }
     if (!jv || !jv->have || k == kJLabel) return;
     const ui::Rect a = view_area();
-    if (k == kJPrev && jv->top > 0) {
+    if (k == kJPrev && jv->top == 0 && jv->book && jv->book_page > 1) {
+        if (!open_text_book(jv->book_page - 1, true)) memlog::note("journal book (text): page not shown");
+        dirty = true;
+    } else if (k == kJNext && jv->top + a.h >= jv->total_h && jv->book && jv->book_page < jv->book_pages) {
+        if (!open_text_book(jv->book_page + 1, false)) memlog::note("journal book (text): page not shown");
+        dirty = true;
+    } else if (k == kJPrev && jv->top > 0) {
         journal_prev(a);
         dirty = true;
     } else if (k == kJNext && jv->top + a.h < jv->total_h) {
@@ -5045,10 +5405,12 @@ void begin(const Env& env, Settings& settings)
         memlog::note(line);
         // The pictures the scan makes, for this screen: made now if they're
         // missing (never while the library page shows - Tom, v0.103.1)
-        int missing = 0;
-        for (int i = 0; i < n_games; ++i)
+        int missing = 0, stale = 0;
+        for (int i = 0; i < n_games; ++i) {
             if (!picture_ready(game_dirs[i])) ++missing;
-        if (missing) make_missing_pictures();
+            if (journal_stale(game_dirs[i])) ++stale;
+        }
+        if (missing || stale) make_missing_pictures(missing > 0, stale > 0);
         else go(Screen::Home);
     } else {
         rescan();            // ends at its log (Continue -> the library)

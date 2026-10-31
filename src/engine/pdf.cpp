@@ -1,6 +1,7 @@
 #include "pdf.h"
 
 #include "inflate.h"
+#include "pdf_internal.h"
 
 #include <cstdlib>
 #include <cstring>
@@ -8,31 +9,17 @@
 
 namespace pdf {
 
-namespace {
+namespace detail {
 
-constexpr size_t kObjBuf = 4096;
-constexpr int kNodes = 256;
+constexpr uint32_t kStreamMask = 0x7FFFF;      // (an object stream's number: bits 12-30)
 
-enum class T : uint8_t { None, Null, Bool, Num, Name, Str, Ref, Array, Dict, Keyword };
-
-struct Node {
-    T        t = T::None;
-    int32_t  v = 0;            // number, ref object number, bool
-    uint16_t s = 0, n = 0;     // span in the buffer (names, strings, keywords)
-    int16_t  first = -1;       // arrays and dicts: first child (dicts: key, value, key, ...)
-    int16_t  next = -1;        // next sibling
-};
-
-// One object (or the trailer) read into a buffer and parsed
-struct Obj {
-    char     buf[kObjBuf];
-    size_t   len = 0;
-    uint32_t file_at = 0;      // where buf starts in the file
-    Node     node[kNodes];
-    int      nn = 0;
-    int      root = -1;        // the object's value
-    uint32_t stream_at = 0;    // data after "stream" (0 = none)
-};
+uint32_t* slot_ptr(Doc& doc, int num)
+{
+    if (num < 0) return nullptr;
+    if (num < kMaxObjects) return &doc.offset[num];
+    if (doc.more && num - kMaxObjects < doc.more_n) return &doc.more[num - kMaxObjects];
+    return nullptr;
+}
 
 bool is_ws(char c) { return c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '\f' || c == 0; }
 bool is_delim(char c)
@@ -111,16 +98,38 @@ struct Parser {
             }
         }
         if (c == '[') {
-            ++p;
+            const size_t s0 = p++;
             const int a = add(T::Array);
             if (a < 0) return -1;
+            o.node[a].s = static_cast<uint16_t>(s0);
             int last = -1, count = 0;
             for (;;) {
                 skip();
                 if (p < o.len && o.buf[p] == ']') {
                     ++p;
                     o.node[a].v = count;
+                    o.node[a].n = static_cast<uint16_t>(p - s0);
                     return a;
+                }
+                // (a long list of numbers - a font's /Widths, /W - past
+                // what the node table holds: counted, its text in the span)
+                int32_t num = 0;
+                size_t end = 0;
+                if (o.nn > kNodes - 48 && number_at(p, &num, &end)) {
+                    size_t q = end;
+                    while (q < o.len && is_ws(o.buf[q])) ++q;
+                    int32_t g2 = 0;
+                    size_t e2 = 0;
+                    const bool ref = number_at(q, &g2, &e2) && [&] {
+                        size_t r = e2;
+                        while (r < o.len && is_ws(o.buf[r])) ++r;
+                        return r < o.len && o.buf[r] == 'R';
+                    }();
+                    if (!ref) {
+                        p = end;
+                        ++count;
+                        continue;
+                    }
                 }
                 const int v = value(depth + 1);
                 if (v < 0) return -1;
@@ -355,10 +364,10 @@ bool load_at_depth(dax::ByteSource& src, const Doc& doc, int num, Obj& o, int de
 
 bool load_packed(dax::ByteSource& src, const Doc& doc, int num, Obj& o, int depth)
 {
-    const uint32_t e = doc.offset[num];
-    const int stm = static_cast<int>((e >> 12) & 0x3FF), index = static_cast<int>(e & 0xFFF);
-    if (stm <= 0 || stm >= kMaxObjects || !doc.offset[stm] || (doc.offset[stm] & kInStream) ||
-        !parse_at(src, doc.offset[stm], stm, o) || !o.stream_at)
+    const uint32_t e = slot(doc, num);
+    const int stm = static_cast<int>((e >> 12) & kStreamMask), index = static_cast<int>(e & 0xFFF);
+    const uint32_t se = slot(doc, stm);
+    if (stm <= 0 || !se || (se & kInStream) || !parse_at(src, se, stm, o) || !o.stream_at)
         return false;
     const int fi = get(o, o.root, "First"), ln = get(o, o.root, "Length");
     if (!name_is(o, get(o, o.root, "Type"), "ObjStm") || !name_is(o, get(o, o.root, "Filter"), "FlateDecode") || fi < 0 ||
@@ -373,12 +382,12 @@ bool load_packed(dax::ByteSource& src, const Doc& doc, int num, Obj& o, int dept
         length = o.node[o.root].v;
     if (first <= 0 || static_cast<size_t>(first) >= kObjBuf || length <= 2 || from + static_cast<uint32_t>(length) > src.size())
         return false;
-    uint8_t* window = static_cast<uint8_t*>(malloc(inflate::kWindow));
+    uint8_t* window = doc.window ? doc.window : static_cast<uint8_t*>(malloc(inflate::kWindow));   // (the caller's, lent)
     if (!window) return false;
     StreamIn in(src, from + 2, from + static_cast<uint32_t>(length));      // (past the zlib header)
     PackedOut out(o, static_cast<uint32_t>(first), num, index);
     inflate::raw(in, out, window);
-    free(window);
+    if (window != doc.window) free(window);
     if (!out.found || !out.n) return false;
     o.len = out.n;
     o.file_at = 0;
@@ -391,9 +400,10 @@ bool load_packed(dax::ByteSource& src, const Doc& doc, int num, Obj& o, int dept
 
 bool load_at_depth(dax::ByteSource& src, const Doc& doc, int num, Obj& o, int depth)
 {
-    if (num <= 0 || num >= kMaxObjects || !doc.offset[num] || depth > kMaxLoadDepth) return false;
-    if (doc.offset[num] & kInStream) return load_packed(src, doc, num, o, depth);
-    return parse_at(src, doc.offset[num], num, o);
+    const uint32_t e = slot(doc, num);
+    if (num <= 0 || !e || depth > kMaxLoadDepth) return false;
+    if (e & kInStream) return load_packed(src, doc, num, o, depth);
+    return parse_at(src, e, num, o);
 }
 
 // Object `num`
@@ -468,6 +478,8 @@ void trailer(const Obj& o, int t, Doc& doc, uint32_t* prev)
             doc.id[k] = 0;
         }
     }
+    const int sz = get(o, t, "Size");
+    if (sz >= 0 && o.node[sz].t == T::Num && o.node[sz].v > doc.size && o.node[sz].v < 1000000) doc.size = o.node[sz].v;
     const int pv = get(o, t, "Prev");
     if (pv >= 0 && o.node[pv].t == T::Num) *prev = static_cast<uint32_t>(o.node[pv].v);
 }
@@ -520,10 +532,11 @@ struct XrefOut : inflate::Output {
         for (int j = 0; j < 3; ++j)
             for (int q = 0; q < w[j]; ++q) f[j] = f[j] << 8 | x[p++];
         const uint32_t type = w[0] ? f[0] : 1;
-        if (num >= 0 && num < kMaxObjects && doc.offset[num] == 0) {
-            if (type == 1 && f[1] > 0 && f[1] < kInStream) doc.offset[num] = f[1];
-            else if (type == 2 && f[1] > 0 && f[1] < 1024 && f[2] < 4096) doc.offset[num] = kInStream | f[1] << 12 | f[2];
-            if (doc.offset[num] && num + 1 > doc.objects) doc.objects = num + 1;
+        uint32_t* at = num >= 0 ? slot_ptr(doc, num) : nullptr;
+        if (at && *at == 0) {
+            if (type == 1 && f[1] > 0 && f[1] < kInStream) *at = f[1];
+            else if (type == 2 && f[1] > 0 && f[1] <= kStreamMask && f[2] < 4096) *at = kInStream | f[1] << 12 | f[2];
+            if (*at && num + 1 > doc.objects) doc.objects = num + 1;
         }
         ++num;
         --left;
@@ -608,8 +621,9 @@ bool read_xref(dax::ByteSource& src, uint32_t at, Doc& doc, Obj& o, uint32_t* pr
             char off[24], gen[24], kind[8];
             if (!r.word(off, sizeof off) || !r.word(gen, sizeof gen) || !r.word(kind, sizeof kind)) return false;
             const long num = start + i;
-            if (num < kMaxObjects && kind[0] == 'n' && doc.offset[num] == 0) {
-                doc.offset[num] = static_cast<uint32_t>(strtoul(off, nullptr, 10));
+            uint32_t* at = slot_ptr(doc, static_cast<int>(num));
+            if (at && kind[0] == 'n' && *at == 0) {
+                *at = static_cast<uint32_t>(strtoul(off, nullptr, 10));
                 if (num + 1 > doc.objects) doc.objects = static_cast<int>(num + 1);
             }
         }
@@ -624,11 +638,91 @@ bool read_xref(dax::ByteSource& src, uint32_t at, Doc& doc, Obj& o, uint32_t* pr
     return true;
 }
 
-} // namespace
+// A stream's bytes through out (FlateDecode or none)
+bool stream(dax::ByteSource& src, const Doc& doc, const Obj& o, Obj& tmp, inflate::Output& out, uint8_t* window)
+{
+    if (!o.stream_at || o.root < 0) return false;
+    const int ln = get(o, o.root, "Length"), f = get(o, o.root, "Filter");
+    int32_t length = -1;
+    if (ln >= 0 && o.node[ln].t == T::Num) length = o.node[ln].v;
+    const uint32_t from = o.stream_at;
+    bool flate = name_is(o, f, "FlateDecode");
+    if (f >= 0 && o.node[f].t == T::Array) {
+        if (o.node[f].v != 1) return false;             // (a chain of filters: not in the journals)
+        flate = name_is(o, o.node[f].first, "FlateDecode");
+    }
+    const bool none = f < 0;
+    if (!flate && !none) return false;
+    const bool parms = get(o, o.root, "DecodeParms") >= 0;    // (predictors: not for content)
+    if (ln >= 0 && o.node[ln].t == T::Ref && load(src, doc, o.node[ln].v, tmp) && tmp.node[tmp.root].t == T::Num)
+        length = tmp.node[tmp.root].v;
+    if (length <= 0 || from + static_cast<uint32_t>(length) > src.size() || parms) return false;
+    if (flate) {
+        if (length <= 2 || !window) return false;
+        StreamIn in(src, from + 2, from + static_cast<uint32_t>(length));      // (past the zlib header)
+        return inflate::raw(in, out, window);
+    }
+    uint8_t buf[64];
+    for (uint32_t at = 0; at < static_cast<uint32_t>(length);) {
+        const size_t want = static_cast<uint32_t>(length) - at < sizeof buf ? static_cast<uint32_t>(length) - at : sizeof buf;
+        const size_t got = src.read_at(from + at, buf, want);
+        if (got != want) return false;
+        for (size_t i = 0; i < got; ++i)
+            if (!out.put(buf[i])) return false;
+        at += static_cast<uint32_t>(got);
+    }
+    return true;
+}
+
+} // namespace detail
+
+using namespace detail;
+
+uint32_t slot(const Doc& doc, int num)
+{
+    uint32_t* p = slot_ptr(const_cast<Doc&>(doc), num);
+    return p ? *p : 0;
+}
+
+namespace {
+bool open_doc(dax::ByteSource& src, Doc& doc);
+}
 
 bool open(dax::ByteSource& src, Doc& doc)
 {
     doc = Doc{};
+    return open_doc(src, doc);
+}
+
+bool open_large(dax::ByteSource& src, Doc& doc, uint32_t** more, bool* no_memory)
+{
+    *more = nullptr;
+    if (no_memory) *no_memory = false;
+    if (!open(src, doc)) return false;
+    if (doc.size <= kMaxObjects) return true;
+    const int n = doc.size - kMaxObjects;
+    uint32_t* t = static_cast<uint32_t*>(calloc(static_cast<size_t>(n), sizeof(uint32_t)));
+    if (!t) {
+        if (no_memory) *no_memory = true;
+        return false;
+    }
+    doc = Doc{};
+    doc.more = t;
+    doc.more_n = n;
+    if (!open_doc(src, doc)) {
+        free(t);
+        doc.more = nullptr;
+        doc.more_n = 0;
+        return false;
+    }
+    *more = t;
+    return true;
+}
+
+namespace {
+
+bool open_doc(dax::ByteSource& src, Doc& doc)
+{
     const uint32_t size = src.size();
     uint8_t head[8];
     if (src.read_at(0, head, 5) != 5 || memcmp(head, "%PDF-", 5) != 0) return false;
@@ -657,8 +751,6 @@ bool open(dax::ByteSource& src, Doc& doc)
     delete o;
     return ok && doc.root > 0;
 }
-
-namespace {
 
 // (`budget`: objects that may still be loaded - a damaged tree that refers
 // back to itself stops)

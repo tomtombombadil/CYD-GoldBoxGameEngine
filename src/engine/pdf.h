@@ -5,7 +5,8 @@
 // Classic xref tables (PDF 1.4 and the like) and, since Champions of Krynn's
 // GOG journal (PDF 1.6, OmniPage), cross-reference streams with objects kept
 // in object streams (FlateDecode, PNG predictors); /Prev sections are
-// followed. Not a general PDF reader: no content streams, no fonts.
+// followed. Not a general PDF reader: page pictures here; the typeset
+// journals' text (content streams, fonts) in pdf_text.h.
 //
 // Plain C++, host-tested in tools/host_tests/test_dax.cpp.
 #pragma once
@@ -27,6 +28,16 @@ struct Doc {
     int      objects = 0;
     int      root = 0;                     // the catalog's object number
     char     id[33] = {};                  // the trailer's first /ID string, hex (lower case)
+    int      size = 0;                     // the trailer's /Size (the largest seen)
+    // Objects from kMaxObjects on (the Steam / SNEG journals, typeset with
+    // tagged structure: 2,000 - 11,400 objects): the caller's table, not
+    // owned (open_large) - none: those objects can't be read
+    uint32_t* more = nullptr;
+    int      more_n = 0;
+    // A 32 KB inflate window the caller lends for reading object streams
+    // (pdf_text's reader: one window, not a second); none - each read
+    // takes its own while it runs
+    uint8_t* window = nullptr;
 };
 
 struct Image {
@@ -40,6 +51,13 @@ struct Image {
 // Reads the cross-reference table and trailer. False if it isn't a PDF this
 // can read.
 bool open(dax::ByteSource& src, Doc& doc);
+// The same with a table for the objects past kMaxObjects when the file has
+// them: (doc.size - kMaxObjects) x 4 bytes from malloc, *more (the
+// caller frees it when done with doc; nullptr when not needed). False also
+// when that table couldn't be had (*no_memory set).
+bool open_large(dax::ByteSource& src, Doc& doc, uint32_t** more, bool* no_memory = nullptr);
+// Where object num is (Doc::offset's form; 0 = none)
+uint32_t slot(const Doc& doc, int num);
 
 // The page objects in reading order; returns how many (at most max).
 int pages(dax::ByteSource& src, const Doc& doc, int* page_obj, int max);

@@ -104,11 +104,18 @@ HAL, CI, flasher and UI rules come from there; copy from it freely.
   v0.13.0), `journal_tables.cpp` from
   `tools/journal/make_table.py` (run on the player's PDF in scratch space;
   check every entry by eye; renders stay in scratch).
-  SNEG (Tom, 2026-10-10, v0.70.0): its PDFs are typeset text the board
-  can't take apart, so the journal comes from the Gold Box Companion's
+  SNEG (Tom, 2026-10-10, v0.70.0): its PDFs are typeset text, so the
+  journal entries come from the Gold Box Companion's
   `GBC/Games/<nn. Game>/Game.dat` (`<journal N>` text) + `JE_NNN.jpg`
   (`journal::make_gbc`); text entries are laid out by the viewer (Zoom =
-  Small / Medium / Large text). No book view for those PDFs.
+  Small / Medium / Large text). Since 2026-10-31 (Tom: tavern tales said
+  "unknown edition"; he wants the book) the scan also reads the PDF's
+  own text on the board (`engine/pdf_text.*`, `journal::make_book`):
+  BOOK.TXT (the book view shows it as text, a PDF page at a time) and
+  the numbered sections Game.dat lacks (tavern tales, proclamations,
+  Introduction) as text entries in JOURNAL.DAT - no tables, nothing
+  from the journal in the firmware (SPEC 7). Never say "unknown
+  edition" for a known journal; name the reference and why.
 - Settings / logs (Tom, 2026-10-09; SPEC 5c): the card scan ends at its
   scrolling log until Continue; Settings has a brightness slider, Swap
   Red/Blue with red / green / blue blocks, a Logs key (Card Scan, Restarts,

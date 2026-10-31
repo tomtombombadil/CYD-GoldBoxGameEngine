@@ -15,6 +15,19 @@ the Project as claude/TODO.md.
       "Read Tavern Tale N ...": is the card's Pool the GOG or the Steam /
       SNEG release? (SNEG's journal comes from the Gold Box Companion,
       which has no tales or proclamations.)
+      Answered (Tom, 2026-10-31: SNEG Pool on the 5.0" S3 - a tale said
+      "unknown edition"): the next build reads the SNEG PDF's own text.
+- [ ] SNEG journals from the PDF's text (2026-10-31, not pushed yet): start
+      the board once (it shows "Preparing Journals" and reads each SNEG
+      journal PDF - a minute or two each; or tap Rescan); then in Pool:
+      a tavern tale, the City Hall's proclamations, and the Game menu's
+      Journal PDF tab (the book as text, Prev / Next through the pages,
+      Zoom = text size). Also Curse SNEG's tavern tales. Send Logs if
+      the scan log says the text couldn't be read (memory).
+- [ ] Claude: the Savage Frontier and Krynn SNEG journal PDFs (Project
+      zips) through `journal::make_book` on the PC - their sections
+      (Introduction, tavern tales) checked against pdftotext, as done
+      for Pool / Curse / Secret / Darkness.
 - [ ] The 5.0" boards (`TTB-CYD-GBGE_5.0in_Capacitive_ESP32-S3`, the
       FNK0115Q first; then the Hosyond - its back / box against the
       Freenove's): (1) the picture: 640x480 in the middle, black bars at

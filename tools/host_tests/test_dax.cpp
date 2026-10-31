@@ -2,6 +2,7 @@
 // tests build their own DAX files).
 // CI builds it with g++ -std=c++17 -Wall -Werror -fsanitize=address,undefined
 // -Isrc tools/host_tests/test_dax.cpp src/engine/*.cpp (see build.yml).
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -24,6 +25,7 @@
 #include "engine/journal.h"
 #include "engine/jpeg.h"
 #include "engine/pdf.h"
+#include "engine/pdf_text.h"
 #include "engine/resample.h"
 #include "jpeg_vectors.h"
 #include "thumb_vectors.h"
@@ -3567,6 +3569,259 @@ static void test_journal_gbc()
     const char* tx = "Text.\n(map)\nMore (x).";
     CHECK(journal::gbc_marker(tx, strlen(tx), &ma, &mb) && ma == 6 && mb == 11);
     CHECK(!journal::gbc_marker("Plain (text) here.", 18, &ma, &mb));
+}
+
+// A typeset journal (the Steam / SNEG PDFs' way, synthetic): objects past
+// pdf::kMaxObjects (the tagged books have thousands), content streams in
+// FlateDecode (stored blocks here), a simple font with /Differences and a
+// /ToUnicode CMap, a composite (Type0, Identity-H) font with /W widths, q / Q
+// keeping the font, TJ's spacing, a dingbat font's check boxes
+static std::string stored_zlib(const std::string& data)
+{
+    // zlib header, one stored (BTYPE 00) final block, a dummy Adler-32
+    std::string z = "\x78\x01";
+    z += '\x01';
+    const uint16_t n = static_cast<uint16_t>(data.size());
+    z += static_cast<char>(n & 0xFF);
+    z += static_cast<char>(n >> 8);
+    z += static_cast<char>(~n & 0xFF);
+    z += static_cast<char>((~n >> 8) & 0xFF);
+    z += data;
+    z += std::string("\0\0\0\0", 4);
+    return z;
+}
+
+static Bytes make_typeset_pdf()
+{
+    std::string s = "%PDF-1.4\n";
+    std::vector<std::pair<int, size_t>> off;
+    auto obj = [&](int n, const std::string& body) {
+        off.push_back({n, s.size()});
+        s += std::to_string(n) + " 0 obj\n" + body + "\nendobj\n";
+    };
+    auto stream = [&](int n, const std::string& dict, const std::string& data, bool flate) {
+        off.push_back({n, s.size()});
+        const std::string d = flate ? stored_zlib(data) : data;
+        s += std::to_string(n) + " 0 obj\n<<" + dict + (flate ? "/Filter/FlateDecode" : "") + "/Length " +
+             std::to_string(d.size()) + ">>stream\r\n" + d + "\r\nendstream\nendobj\n";
+    };
+    // Font F1 (1501): codes 1 and 2 by /Differences (T, a), 3 by its
+    // ToUnicode (a right quote), the rest WinAnsi; every glyph 500 wide
+    std::string widths = "[";
+    for (int c = 1; c <= 126; ++c) widths += " 500";
+    widths += "]";
+    obj(1, "<</Type/Catalog/Pages 2 0 R>>");
+    obj(2, "<</Type/Pages/Kids[3 0 R 4 0 R]/Count 2>>");
+    obj(3, "<</Type/Page/Parent 2 0 R/MediaBox[0 0 400 500]/Contents 1510 0 R"
+           "/Resources<</Font<</F1 1501 0 R/F2 1502 0 R/F3 1505 0 R>>>>>>");
+    obj(4, "<</Type/Page/Parent 2 0 R/MediaBox[0 0 400 500]/Contents[1511 0 R 1512 0 R]"
+           "/Resources<</Font<</F1 1501 0 R/F2 1502 0 R>>>>>>");
+    obj(1501, "<</Type/Font/Subtype/Type1/BaseFont/ABCDEF+Body/FirstChar 1/LastChar 126/Widths " + widths +
+                  "/Encoding<</Type/Encoding/BaseEncoding/WinAnsiEncoding/Differences[1/T/a]>>/ToUnicode 1503 0 R>>");
+    stream(1503, "", "/CIDInit /ProcSet findresource begin\n1 begincodespacerange <00> <FF> endcodespacerange\n"
+                     "1 beginbfchar\n<03> <2019>\nendbfchar\nendcmap\n", true);
+    // Font F2 (1502): Identity-H, CIDs 5.. "Journal Entry 3" by a bfrange
+    // and a bfchar; widths from /W
+    obj(1502, "<</Type/Font/Subtype/Type0/BaseFont/GHIJKL+Head/Encoding/Identity-H/DescendantFonts[1504 0 R]"
+              "/ToUnicode 1506 0 R>>");
+    obj(1504, "<</Type/Font/Subtype/CIDFontType2/BaseFont/GHIJKL+Head/DW 1000/W[5[600 600 600]8 40 550]>>");
+    // (CIDs 5-16: J o u r n a l, space, E t y 3; 32-34: A B C by an incrementing range)
+    stream(1506, "", "1 begincodespacerange <0000> <FFFF> endcodespacerange\n2 beginbfrange\n"
+                     "<0005> <0010> [<004A> <006F> <0075> <0072> <006E> <0061> <006C> <0020> <0045> <0074> <0079> <0033>]\n"
+                     "<0020> <0022> <0041>\nendbfrange\n", true);
+    obj(1505, "<</Type/Font/Subtype/TrueType/BaseFont/MNOPQR+ZapfDingbats/FirstChar 32/LastChar 126/Widths " + widths +
+                  ">>");
+    // Page 1: two tavern tales down the first column (a word broken over
+    // two lines, a big heading between them in the content), a
+    // proclamation at the top of the second (its first line indented)
+    std::string c1 =
+        "/Span <</MCID 1>>BDC BT /F1 9 Tf 1 0 0 1 20 400 Tm (\\001ale 1: Far to the north-)Tj ET EMC\n"
+        "BT /F1 9 Tf 1 0 0 1 20 390 Tm (east lies a swamp.)Tj ET\n"
+        "q BT /F2 16 Tf 1 0 0 1 20 450 Tm <0005000600070008>Tj ET Q\n"         // (a title: "Jour" at 16 pt)
+        "BT 1 0 0 1 20 372 Tm (\\001ale 2: Wells hide)Tj ET\n"                  // (F1 again after Q)
+        "BT 1 0 0 1 20 362 Tm [(old)-300(dens)] TJ ET\n"
+        "BT /F3 9 Tf 1 0 0 1 200 410 Tm (o)Tj /F1 9 Tf 1 0 0 1 210 410 Tm (Proclamation CXIV)Tj ET\n"
+        "BT /F1 1 Tf 9 0 0 9 228 400 Tm 0 Tc (Be it known that)Tj ET\n"
+        "BT /F1 9 Tf 10 TL 1 0 0 1 200 400 Tm (the council p\\141ys)' ET\n";
+    // (the last line by ' : the next line down from the line matrix)
+    stream(1510, "", c1, true);
+    // Page 2, two content streams: a heading in the composite font, its
+    // entry's text in two paragraphs, then "13" (a page number)
+    std::string c2a = "BT /F2 11 Tf 1 0 0 1 20 450 Tm <0005000600070008>Tj [<0009000A>]TJ ";
+    std::string c2b = "<000B000C000D0009000E0008000F000C0010>Tj ET\nBT /F1 9 Tf 12 TL 1 0 0 1 20 436 Tm (\\001he book\\003s end.)Tj T* T* (More.)Tj ET\n"
+                      "BT /F1 9 Tf 1 0 0 1 200 20 Tm (13)Tj ET\n";
+    stream(1511, "", c2a, false);
+    stream(1512, "", c2b, true);
+    // The cross-reference table in sections (0-4, 1501-1512)
+    const size_t xref = s.size();
+    s += "xref\n0 5\n0000000000 65535 f \n";
+    auto at = [&](int n) {
+        for (auto& o : off)
+            if (o.first == n) return o.second;
+        return static_cast<size_t>(0);
+    };
+    for (int n = 1; n <= 4; ++n) {
+        char e[24];
+        snprintf(e, sizeof e, "%010zu 00000 n \n", at(n));
+        s += e;
+    }
+    s += "1501 12\n";
+    for (int n = 1501; n <= 1512; ++n) {
+        char e[24];
+        if (at(n)) snprintf(e, sizeof e, "%010zu 00000 n \n", at(n));
+        else snprintf(e, sizeof e, "0000000000 00001 f \n");
+        s += e;
+    }
+    s += "trailer\n<</Size 1513/Root 1 0 R/ID[<00000000000000000000000000000077><00>]>>\n";
+    s += "startxref\n" + std::to_string(xref) + "\n%%EOF\n";
+    return Bytes(s.begin(), s.end());
+}
+
+static void test_journal_typeset()
+{
+    // Headings
+    char k = 0;
+    int n = 0;
+    CHECK(journal::section_heading("Tale 12: A bedraggled adventurer", 32, &k, &n) && k == 'T' && n == 12);
+    CHECK(journal::section_heading("Tavern Tale 3", 13, &k, &n) && k == 'T' && n == 3);
+    CHECK(journal::section_heading("TAVERN TALE #7", 14, &k, &n) && k == 'T' && n == 7);
+    CHECK(journal::section_heading("Journal Entry 44:", 17, &k, &n) && k == 'J' && n == 44);
+    CHECK(journal::section_heading("JOURNAL ENTRY 2", 15, &k, &n) && k == 'J' && n == 2);
+    CHECK(journal::section_heading("Proclamation CXIV", 17, &k, &n) && k == 'P' && n == 114);
+    CHECK(journal::section_heading("Introduction", 12, &k, &n) && k == 'I' && n == 1);
+    CHECK(!journal::section_heading("tale 3 of the city", 18, &k, &n));
+    CHECK(!journal::section_heading("Journal Entry 52) You are", 25, &k, &n));
+    CHECK(!journal::section_heading("Proclamation I have heard", 25, &k, &n));
+    CHECK(!journal::section_heading("Journal Entries", 15, &k, &n));
+    char f[4];
+    CHECK(pdf::fold(0x2019, f) == 1 && f[0] == '\'' && pdf::fold(0xFB01, f) == 2 && strcmp(f, "fi") == 0 &&
+          pdf::fold(0xE9, f) == 1 && f[0] == 'e' && pdf::fold(0x2014, f) == 2 && pdf::fold(0x2610, f) == 0);
+
+    const Bytes pdfb = make_typeset_pdf();
+    dax::MemorySource src(pdfb.data(), pdfb.size());
+    // The plain open sees nothing past kMaxObjects; open_large does
+    static pdf::Doc doc;
+    uint32_t* more = nullptr;
+    CHECK(pdf::open(src, doc) && doc.size == 1513 && pdf::slot(doc, 1501) == 0);
+    CHECK(pdf::open_large(src, doc, &more) && more && doc.more_n == 1513 - pdf::kMaxObjects && pdf::slot(doc, 1501) != 0);
+    int pages[4];
+    CHECK(pdf::pages(src, doc, pages, 4) == 2);
+    struct Lines : pdf::TextSink {
+        std::vector<std::string> t;
+        std::vector<pdf::TextLine> l;
+        bool line(const pdf::TextLine& x) override
+        {
+            t.emplace_back(x.text, static_cast<size_t>(x.len));
+            l.push_back(x);
+            return true;
+        }
+    } lines;
+    {
+        pdf::TextReader tr;
+        CHECK(tr.ok());
+        CHECK(tr.page(src, doc, pages[0], lines) == 8);
+        CHECK(lines.t.size() == 8);
+        if (lines.t.size() == 8) {
+            CHECK(lines.t[0] == "Tale 1: Far to the north-" && lines.l[0].x == 20 && lines.l[0].y == 400 &&
+                  lines.l[0].size == 9);
+            CHECK(lines.t[2] == "Jour" && lines.l[2].size == 16);
+            CHECK(lines.t[3] == "Tale 2: Wells hide");
+            CHECK(lines.t[4] == "old dens");                           // (TJ's -300: a word space)
+            CHECK(lines.t[5] == "Proclamation CXIV" && lines.l[5].x == 210);     // (the check box dropped)
+            CHECK(lines.t[6] == "Be it known that" && lines.l[6].x == 228 && lines.l[6].size == 9);
+            CHECK(lines.t[7] == "the council pays" && lines.l[7].y == 390);
+            // (the line's end: 16 glyphs of 500 at 9 pt from 228)
+            CHECK(std::fabs(lines.l[6].x_end - (228 + 16 * 4.5f)) < 0.01f);
+        }
+        lines.t.clear();
+        lines.l.clear();
+        CHECK(tr.page(src, doc, pages[1], lines) == 4);
+        if (lines.t.size() == 4) {
+            CHECK(lines.t[0] == "Journal Entry 3" && lines.l[0].size == 11);
+            CHECK(lines.t[1] == "The book's end." && lines.l[1].y == 436);
+            CHECK(lines.t[2] == "More." && lines.l[2].y == 412);
+            CHECK(lines.t[3] == "13");
+        }
+    }
+    free(more);
+
+    // The book and its sections
+    MemOut book, sect;
+    static journal::Section secs[journal::kMaxSections];
+    journal::BookInfo info;
+    CHECK(journal::make_book(src, book, sect, secs, journal::kMaxSections, info, nullptr, nullptr));
+    CHECK(info.pages == 2 && info.failed == 0 && info.sections == 4 && info.count[0] == 1 && info.count[1] == 2 &&
+          info.count[2] == 1);
+    dax::MemorySource bs(book.b.data(), book.b.size());
+    uint32_t a = 0, len = 0;
+    CHECK(journal::book_pages(bs) == 2 && journal::book_page(bs, 1, &a, &len));
+    const std::string p1(reinterpret_cast<const char*>(book.b.data()) + a, len);
+    CHECK(p1 == "Tale 1: Far to the northeast lies a swamp.\nJour\nTale 2: Wells hide old dens\nProclamation CXIV\n"
+                "Be it known that the council pays");
+    CHECK(journal::book_page(bs, 2, &a, &len));
+    const std::string p2(reinterpret_cast<const char*>(book.b.data()) + a, len);
+    CHECK(p2 == "Journal Entry 3\nThe book's end.\nMore.");             // (the page number left out)
+    CHECK(!journal::book_page(bs, 3, &a, &len));
+    auto sec = [&](char kind, int num) {
+        for (int i = 0; i < info.sections; ++i)
+            if (secs[i].kind == kind && secs[i].number == num)
+                return std::string(reinterpret_cast<const char*>(sect.b.data()) + secs[i].at, secs[i].len);
+        return std::string("(none)");
+    };
+    CHECK(sec('T', 1) == "Tale 1: Far to the northeast lies a swamp.");      // (not the 16 pt title)
+    CHECK(sec('T', 2) == "Tale 2: Wells hide old dens");
+    CHECK(sec('P', 114) == "Proclamation CXIV\nBe it known that the council pays");
+    CHECK(sec('J', 3) == "Journal Entry 3\nThe book's end.\nMore.");
+
+    // JOURNAL.DAT: Game.dat's entries and the PDF's sections it lacks
+    const std::string dat = "<journal 3>\r\nThe Companion's own text.\r\n</journal>\r\n"
+                            "<journal 4>\r\nFour.\r\n</journal>\r\n";
+    dax::MemorySource ds(reinterpret_cast<const uint8_t*>(dat.data()), dat.size());
+    struct NoPics : journal::GbcPictures {
+        dax::ByteSource* open(int) override { return nullptr; }
+    } pics;
+    struct Extra : journal::ExtraText {
+        dax::MemorySource* src = nullptr;
+        int opened = 0, closed = 0;
+        dax::ByteSource* open() override
+        {
+            ++opened;
+            return src;
+        }
+        void close() override { ++closed; }
+    } extra;
+    dax::MemorySource ss(sect.b.data(), sect.b.size());
+    extra.src = &ss;
+    extra.items = secs;
+    extra.n = info.sections;
+    MemOut out;
+    CHECK(journal::make_gbc(ds, pics, "gbc4:1:2", out, nullptr, nullptr, &extra));
+    CHECK(extra.opened == 1 && extra.closed == 1);
+    dax::MemorySource js(out.b.data(), out.b.size());
+    journal::Info ji;
+    CHECK(journal::read_info(js, ji) && ji.entries == 5 && ji.pieces == 5 && strcmp(ji.pdf_id, "gbc4:1:2") == 0);
+    int first = 0, count = 0;
+    journal::PieceInfo pi;
+    CHECK(journal::find(js, ji, 'J', 3, &first, &count) && journal::piece(js, ji, first, pi) && pi.text() &&
+          memcmp(out.b.data() + pi.offset, "The Companion's", 15) == 0);        // (Game.dat's, not the PDF's)
+    CHECK(journal::find(js, ji, 'T', 2, &first, &count) && count == 1 && journal::piece(js, ji, first, pi) && pi.text() &&
+          pi.h == 27 && memcmp(out.b.data() + pi.offset, "Tale 2: Wells hide old dens", 27) == 0);
+    CHECK(journal::find(js, ji, 'P', 114, &first, &count) && journal::piece(js, ji, first, pi) && pi.text());
+    CHECK(journal::find(js, ji, 'J', 4, &first, &count));
+    // Without Game.dat: the sections alone
+    dax::MemorySource none(nullptr, 0);
+    MemOut out2;
+    CHECK(journal::make_gbc(none, pics, "text1:9", out2, nullptr, nullptr, &extra));
+    dax::MemorySource js2(out2.b.data(), out2.b.size());
+    CHECK(journal::read_info(js2, ji) && ji.entries == 4 && journal::find(js2, ji, 'J', 3, &first, &count) &&
+          journal::piece(js2, ji, first, pi) && memcmp(out2.b.data() + pi.offset, "Journal Entry 3\nThe book", 24) == 0);
+    // A scanned book (no text): nothing found, a book without characters
+    const Bytes scanned = make_pdf();
+    dax::MemorySource sc(scanned.data(), scanned.size());
+    MemOut b3, s3;
+    journal::BookInfo i3;
+    CHECK(!journal::make_book(sc, b3, s3, secs, journal::kMaxSections, i3, nullptr, nullptr) && i3.sections == 0 &&
+          i3.chars == 0 && i3.failed == 2);
 }
 
 // The journal viewers' scaling (synthetic pictures): 1:1 copies, halving
@@ -8504,6 +8759,7 @@ int main()
     test_journal();
     test_journal_view();
     test_journal_gbc();
+    test_journal_typeset();
     test_icon_looks();
     test_gbc_icons();
     test_geo_view();
