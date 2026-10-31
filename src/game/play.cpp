@@ -3975,7 +3975,22 @@ bool items_yes_no(Ask what, char k, pic::Canvas& c)
         return true;
     }
     // Id: 200 gold, from the character or the counter
-    if (rules::gold_worth(ch) >= 200) {
+    if (pool_files() && (rules::gold_worth(ch) >= 200 || rules::gold_worth(ground->money) >= 200)) {
+        // (Pool, ovr20 +0x1FDA: the coins' worth less 200 becomes all
+        // platinum and the odd gold - ovr22 +0x130; the counter's the same
+        // way; DOSBox: Brother Sean's 2000 gold -> platinum 360)
+        const bool own = rules::gold_worth(ch) >= 200;
+        const int left = (own ? rules::gold_worth(ch) : rules::gold_worth(ground->money)) - 200;
+        for (int m = 0; m < 5; ++m) {
+            const int v = m == 4 ? left / 5 : m == 3 ? left % 5 : 0;
+            if (own) {
+                ch.rec[0xFB + m * 2] = static_cast<uint8_t>(v);
+                ch.rec[0xFC + m * 2] = static_cast<uint8_t>(v >> 8);
+            } else {
+                ground->money[m] = v;
+            }
+        }
+    } else if (rules::gold_worth(ch) >= 200) {
         rules::pay(ch, 200);
     } else if (rules::gold_worth(ground->money) >= 200) {
         rules::pay(ground->money, 200);
