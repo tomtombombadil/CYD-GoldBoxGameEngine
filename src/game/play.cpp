@@ -13226,9 +13226,8 @@ void begin_adventuring()
         // PROGRAM 0's party menu: back to the game where the script was
         in_game_menu = false;
         screen = Screen::Game;
-        // (Pool: the first member is the selected one again - DOSBox, out
-        // of the training hall after Darkstar trained)
-        if (pool_files() && pt->count) pt->selected = 0;
+        // (the selected member stays - DOSBox, Pool's cleric and magic-user
+        // halls: Begin with Darkstar / Brother Sean / a new member selected)
         draw_frame(c);
         draw_view(c);
         draw_panel(c);
