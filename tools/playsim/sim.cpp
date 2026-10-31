@@ -1418,7 +1418,7 @@ int main(int argc, char** argv)
                 for (int i = 0; i < b.n; ++i) printf("  at %d,%d fighter %d facing %d\n", b.f[i].x, b.f[i].y, i, b.f[i].facing);
             }
             char l1[48], l2[48]; play::describe(l1, l2, 48);
-            printf("   now %d,%d %s | %s | %s\n", play::pos_x(), play::pos_y(), geo::dir_name(play::dir()), l1, l2);
+            printf("   now %d,%d %s | %s | %s | sel %d\n", play::pos_x(), play::pos_y(), geo::dir_name(play::dir()), l1, l2, play::pt ? play::pt->selected : -1);
             continue;
         }
         play::Act a = play::Act::Forward;
@@ -1500,7 +1500,7 @@ int main(int argc, char** argv)
         }
 #endif
         char l1[48], l2[48]; play::describe(l1, l2, 48);
-        printf("   now %d,%d %s | %s | %s\n", play::pos_x(), play::pos_y(), geo::dir_name(play::dir()), l1, l2);
+        printf("   now %d,%d %s | %s | %s | sel %d\n", play::pos_x(), play::pos_y(), geo::dir_name(play::dir()), l1, l2, play::pt ? play::pt->selected : -1);
         if (play::q_overland())      // (the Dark Queen's overland: its square, the whole map's, the picture)
             printf("   overland %d,%d (map %d,%d) picture %d clock %d %d %d %d %d\n", play::vm->get(0x25), play::vm->get(0x26),
                    play::vm->get(0x111), play::vm->get(0x112), play::vm->get(0x3E), play::vm->get(0x4BC6),
