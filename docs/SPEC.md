@@ -2452,7 +2452,12 @@ the game's Settings (As Original: all of them).
   CONTINUE" menu goes on with any key or a tap, movement keys included
   (the originals wait for Return); after a script moves the party, the
   position line shows the new square at once (the originals keep the old
-  one until the next step).
+  one until the next step). Also (Tom, 2026-10-31): every fight starts
+  without Quick (Pool keeps it in record byte 0x198 for the next fight);
+  typed fields show a cursor (Pool's script questions, the coin
+  questions show none); the highlight stays on a list while a question
+  asks about its line (the originals - Pool, Gateway, Darkness's vault -
+  draw the list unlit then).
 
 - **Secret of the Silver Blades** (v0.94.0): its party menu's Initialize
   Mouse/Joystick isn't shown (nothing to set up: taps are the mouse);

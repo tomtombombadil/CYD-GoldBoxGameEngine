@@ -3977,9 +3977,10 @@ void fight_start(pic::Canvas& c)
         f.n_items = ch.n_items;
         f.member = i;
         f.icon = i;
-        // (Pool: Quick is the record's own byte, kept after the fight and
-        // saved - its next fight starts on Quick; ovr9 +0x122B / +0x50F)
-        f.quick = pool_files() && ch.rec[0x198] != 0;
+        // (every fight starts without Quick - Tom, 2026-10-31: Pool's own
+        // keeps it in record byte 0x198 for the next fight; not followed,
+        // SPEC 12)
+        f.quick = false;
         f.max_aff = party::kMaxAffects;
         f.flags2 = ch.ext[party::kExtFlags2];
         f.magic_res = ch.ext[party::kExtMagicRes];
@@ -5410,7 +5411,6 @@ void fight_menu_key(pic::Canvas& c, char key)
         break;
     case 'Q':
         f.quick = true;
-        if (pool_files()) f.rec[0x198] = 1;
         fg->st = FSt::Ai;
         fg->until = plat::now_ms() + 200;
         clear_menu_line(c);
@@ -5518,7 +5518,6 @@ void fight_tap(int x, int y, pic::Canvas& c)
             if (o.member < 0 || o.rec[0xF7] >= 0x80 || o.status() == party::Animated || !o.quick || o.fleeing)
                 continue;
             o.quick = false;
-            if (pool_files()) o.rec[0x198] = 0;
             any = true;
         }
         if (any && fg->cur >= 0 && fg->b.f[fg->cur].member >= 0 && !fg->b.f[fg->cur].quick && fg->b.f[fg->cur].up())

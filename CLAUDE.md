@@ -477,7 +477,11 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   taps too - Tom, 2026-10-31, though the originals wait for Return).
   After a script moves the party the position line shows the new square
   at once (Tom, 2026-10-31; the originals show the old one until the
-  next step).
+  next step). Also kept as ours (Tom, 2026-10-31): Quick lasts one fight
+  (Pool's own keeps it for the next); typed fields (a script's question,
+  "How much will you take?") show the cursor; the highlight is on every
+  menu and list, also while a question asks about the item / coin line
+  (the originals unlight the list) - never take it away to match.
   The game's questions (INPUT NUMBER / STRING) use an on-screen keyboard
   in the viewer (`play::input()` / `play::input_key()`); event pictures
   animate only while a menu waits (as in the games).

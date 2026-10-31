@@ -3559,16 +3559,6 @@ void draw_items(pic::Canvas& c)
     draw_list(c, "", keys);
 }
 
-// Gateway's item questions (Drop It?, Is It a Deal?) show the list unlit
-// (DOSBox); Pool's Drop It? too (DOSBox: Brother Sean's mace)
-void gw_unlight(pic::Canvas& c, bool pool = false)
-{
-    if (!(gateway() || (pool && pool_files())) || screen != Screen::Items) return;
-    list_unlit = true;
-    draw_items(c);
-    list_unlit = false;
-}
-
 void open_items(pic::Canvas& c)
 {
     if (!pt->sel() || !pt->sel()->n_items) return;
@@ -3668,7 +3658,6 @@ void drop_item(int i, pic::Canvas& c)
     char nm[48], t[96];
     item_name(i, nm, sizeof nm);
     snprintf(t, sizeof t, "%s%s %s", iw(profile::kYour), nm, iw(profile::kGoneForever));
-    gw_unlight(c, true);
     say_item(c, t);
     item_at = i;
     ask_yes_no(c, Ask::DropItem, iw(profile::kDropIt));
@@ -3846,7 +3835,6 @@ void sell_item(int i, pic::Canvas& c)
     item_name(i, nm, sizeof nm);
     snprintf(t, sizeof t, "%s%d%s%s", iw(profile::kGiveYou), rules::sell_value(pt->sel()->items[i], d->facts),
              iw(profile::kGoldFor), nm);
-    gw_unlight(c, true);                // (Pool's list unlit too - DOSBox, the shop at 9,11)
     say_item(c, t);
     item_at = i;
     ask_yes_no(c, Ask::SellDeal, iw(profile::kDeal));
@@ -3857,7 +3845,6 @@ void identify_item(int i, pic::Canvas& c)
     char nm[48], t[120];
     item_name(i, nm, sizeof nm);
     snprintf(t, sizeof t, "%s%s", iw(profile::kIdentify), nm);
-    gw_unlight(c, true);                // (Pool's list unlit too - DOSBox, the shop at 9,11)
     say_item(c, t);
     item_at = i;
     ask_yes_first(c, Ask::IdDeal, iw(profile::kDeal));
@@ -4016,7 +4003,7 @@ bool items_yes_no(Ask what, char k, pic::Canvas& c)
     }
     rules::recalc(ch, *names, d->facts);
     if (pool_files()) {
-        // (Pool: the word under the unlit list, Is It a Deal? still on the
+        // (Pool: the word under the list, Is It a Deal? still on the
         // menu line, for the game's delay - then the items again: START
         // ovr20 +0x20F8 -> 0x709:0xDBE; DOSBox, the shop at 9,11)
         say_item(c, t);
@@ -6874,10 +6861,9 @@ void offer_cure(pic::Canvas& c)
     sw(profile::kGoldPieces, b, sizeof b);
     snprintf(t, sizeof t, "%s%s%d%s", hw->name[cure_at], a, d->prof->cures.cost[cure_at], b);
     if (gateway()) {
-        // (Gateway: the list unlit, the price from row 17 - DOSBox)
-        list_unlit = true;
+        // (Gateway: the price from row 17 - DOSBox; its list goes unlit
+        // there, the engine keeps it lit - Tom, 2026-10-31)
         draw_heal(c);
-        list_unlit = false;
         say_item(c, t, 10, 17);
     } else {
         say_item(c, t, 10, pool_temple() ? 17 : 21);       // (Pool: under the bar at row 16 - DOSBox)
@@ -7392,8 +7378,9 @@ void ask_take(int i, pic::Canvas& c)
     } else {
         snprintf(take_prompt, sizeof take_prompt, "%s%s%s%s", a, d->money[take_coin], b[0] == ' ' ? "" : " ", b);
     }
-    if (dk_vault_coins() || (gateway() && secret_coin_panel()) || pool_files()) {
-        // (the line's highlight goes while it asks - DOSBox; Pool's too)
+    if (false) {
+        // (the originals' coin line goes unlit while it asks - Darkness's
+        // vault, Gateway, Pool; the engine keeps it lit: Tom, 2026-10-31)
         char line[32];
         take_line(i, line, sizeof line);
         const int row = plist.row0 + i - plist.top;
@@ -12502,8 +12489,8 @@ void draw_input(pic::Canvas& c)
     const bool name_after = engine_ask == EngineAsk::Name && screen == Screen::CreateName && (darkness_files() || gateway());
     // (Pool's scripts' INPUT STRING / NUMBER - START 0x709:0x9E3 / 0xB66:
     // the (empty) prompt at column 0, each letter typed a column further -
-    // the first in column 1 - in white, no cursor: DOSBox, Sokal Keep's
-    // "WHAT DO YOU SAY?")
+    // the first in column 1 - in white: DOSBox, Sokal Keep's "WHAT DO YOU
+    // SAY?"; the original shows no cursor, the engine does - Tom, 2026-10-31)
     const bool pool_in = pool_files() && !input_engine;
     const int x = (input_engine ? static_cast<int>(strlen(input_prompt)) + (name_after ? 1 : 0) : 0) + (pool_in ? 1 : 0);
     // (Darkness's coin questions: the prompt green, the number white - DOSBox)
@@ -12514,7 +12501,7 @@ void draw_input(pic::Canvas& c)
     // (Darkness's typed name is white - DOSBox)
     put(c, input_buf, x, text::kMenuRow,
         dk || pool_in ? 15 : input_engine ? (name_after ? 15 : 13) : 10);
-    if (x + input_len < 40 && !pool_in) {
+    if (x + input_len < 40) {
         if (gateway()) font::draw_glyph(c, d->font, 0, (x + input_len) * 8, text::kMenuRow * 8, 15, 0);
         else c.fill((x + input_len) * 8, text::kMenuRow * 8, 8, 8, 15);     // the cursor
     }

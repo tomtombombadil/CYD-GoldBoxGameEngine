@@ -56,7 +56,7 @@ the Project as claude/TODO.md.
       40, leaders 11); Pool gets its own placement (ovr11 +0x1577). Every
       slums fight fought side by side (kobolds, goblins, orcs, hobgoblins,
       large orc, guards, leaders, wandering orcs x3): XP totals and coins
-      equal. Fixed: Quick kept in the record (0x10F), SURPRISE's result,
+      equal. Fixed: SURPRISE's result,
       the first member selected after a fight (Detect), the treasure's
       coin list (order, no Select, Exit -> Take menu, green prompt), the
       3D view after a treasure, THE END screen and the game's end, a
@@ -73,18 +73,18 @@ the Project as claude/TODO.md.
       the same, its scripts never call them) and matched side by side; the
       treasure menu after every fight; spell lists open on the page's last
       line; training keeps weight / movement; Pool's delay x 225 ms;
-      Trade's picker / Overloaded; Drop It? unlit; an engine save loaded by
+      Trade's picker / Overloaded; an engine save loaded by
       the original; the boat to Sokal Keep and its undead packs (placement,
       XP by the rules). Part 6: Sokal Keep finished (pale form / Ferran -
       LUX, the orc and hobgoblin force: 56 placed identically, the
       illusionary wall, the equipment, the frogs, the smithy's hammer,
       the boat back), the inn's rest, Cast in camp, Sell / Id / Buy, Halve
       / Join - all matched after fixes: the encounter picture at once,
-      typed answers (column 1, white, no cursor), Quick clerics turn
+      typed answers (column 1, white; the cursor kept - Tom), Quick clerics turn
       undead, fleeing fighters' way and "is forced to flee", "has found
       Treasure!" when all ran, first member at any treasure, Search /
       rest highlights, the camp text after a rest / Magic, the camp
-      picture at Cast's on-whom, the shop's wrap / unlit lists / Id's
+      picture at Cast's on-whom, the shop's wrap / Id's
       timed word, payments as platinum + odd gold (Buy, Id, cures), yes/no
       questions not carrying a highlight. Open: Pool record 0x113 left by
       a fight (original keeps the attacks left); undead fights' XP still
@@ -98,10 +98,14 @@ the Project as claude/TODO.md.
       the press words, word wrap,
       load path, camp picture / Quit to DOS, View prompt, shop and temple
       layouts, the list routine, movement keys at the Locked menu,
-      monsters' valueless items, part 3's: Quick kept across fights, the
+      monsters' valueless items, part 3's: the
       selected member after a fight, SURPRISE's result, the coin list,
       the placement routine, copies' item order; and part 4's: yes/no
       start / colours, Loot / Take Exits, 0x7EC0 / 0x7EC1, 0x7EC8.
+      Decided (Tom, 2026-10-31, v0.160.9; SPEC 12): Quick lasts one fight
+      (part 3's carry-over undone), typed fields keep the cursor ("How
+      much", script questions), lists stay lit while a question asks
+      (the unlit lists of parts 3-6 and Gateway's / Darkness's undone).
 
 - [ ] Code review follow-ups (branch review-fixes-engine, 2026-10-31):
       (a) Dark Queen reroll - the engine's queen_roll keeps spells a
