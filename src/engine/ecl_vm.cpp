@@ -72,10 +72,15 @@ bool Vm::show_encounter()
         enc_.sprite_on = drew_sprite = true;
     }
     const uint8_t head = static_cast<uint8_t>(get(0x7EE1) & 0xFF);
-    if ((!enc_.pic_on || enc_.head != head) && enc_.distance == 0 && dungeon && !enc_.in_menu) {
+    // Pool: the ENCOUNTER MENU itself shows the picture next to the party
+    // (its ovr8 +0x54E: drawn at distance 0 in a dungeon unless the menu's
+    // flag 0x84E9 is up and Monster pictures - DS 0x49F6, here area word
+    // 0x4BFF bit 1 - are off), straight after the sprite, no pause
+    const bool pool_now = set_.pool_map && enc_.in_menu && (get(0x4BFF) & 2);
+    if ((!enc_.pic_on || enc_.head != head) && enc_.distance == 0 && dungeon && (!enc_.in_menu || pool_now)) {
         enc_.head = head;
         enc_.pic_on = true;
-        if (drew_sprite) {
+        if (drew_sprite && !pool_now) {
             enc_.pic_due = true;
             return true;
         }
