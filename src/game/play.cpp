@@ -12524,7 +12524,7 @@ void begin_wait(pic::Canvas& c)
 {
     waiting = true;
     switch (vm->wait()) {
-    case ecl::Wait::Print:
+    case ecl::Wait::Print: {
         heard(vm->text());
         if (strcmp(vm->text(), "\n") == 0) {          // PRINT RETURN
             w.col = w.r.x0;
@@ -12533,7 +12533,17 @@ void begin_wait(pic::Canvas& c)
             handle(vm->resume());
             return;
         }
-        text::begin(w, c, vm->text(), script_area(), script_text_colour(), vm->clear());
+        // (Pool: a DAMAGE's lines in white, and the position line taken away
+        // until the exploring menu draws it again - START ovr8 +0x20CC prints
+        // in colour 15 and redraws the party list (0xBA:0x767) without it;
+        // DOSBox, Stojanow Gate's volley of rocks)
+        const bool pool_dmg = pool_files() && vm->in_damage();
+        if (pool_dmg) {
+            c.fill(17 * 8, 15 * 8, 22 * 8, 8, 0);
+            dirty_rows(15, 15);
+            w.col = script_area().x1;
+        }
+        text::begin(w, c, vm->text(), script_area(), pool_dmg ? 15 : script_text_colour(), vm->clear());
         if (d->prof->variant.tr) {
             // Treasures: its colour codes ("%" + a hex digit); the last one
             // stays the scripts' colour (game byte 0x38 - img 0x6765)
@@ -12547,6 +12557,7 @@ void begin_wait(pic::Canvas& c)
         t_started = false;
         page_prompt = false;
         break;
+    }
     case ecl::Wait::Menu: {
         journal_ready();
         // "~Yes ~No": each choice's first letter is its key; the rest shows
@@ -12641,6 +12652,14 @@ void begin_wait(pic::Canvas& c)
             text::build(menu, "", vm->prompt());
             menu.selected = 0;
             show_menu_line(c);
+            break;
+        }
+        // (Pool: a DAMAGE's wait shows its own "PRESS <ENTER>/<RETURN> TO
+        // CONTINUE" in white - o8 +0x20A9, the press words' second;
+        // DOSBox, Stojanow Gate's bugbear punch)
+        if (pool_files() && vm->in_damage() && d->w_press[1][0]) {
+            clear_menu_line(c);
+            put(c, d->w_press[1], 0, text::kMenuRow, 15);
             break;
         }
         press_line(c, 15);
@@ -12847,7 +12866,17 @@ void door_prompt(pic::Canvas& c)
         ow(dw.pick, w, sizeof w);
         strlcat(words, w, sizeof words);
     }
-    if (can_knock && dw.knock_spell && rules::knock_member(*pt, dw.knock_spell) >= 0) {
+    // (Pool: a door of the second locked kind (passage 3) offers Knock when
+    // a member has magic-user levels - the spell is looked for only when
+    // chosen; the first kind (2) when one has it memorized - o15 +0xF4C /
+    // +0xE0D, class test +0x236; DOSBox, Podol Plaza 2,13 W)
+    bool knock = dw.knock_spell && rules::knock_member(*pt, dw.knock_spell) >= 0;
+    if (pool_files() && geo::passage(d->map, d->gs.x, d->gs.y, step_dir) == 3) {
+        knock = false;
+        for (int i = 0; i < pt->count; ++i)
+            if (pt->m[i].rec[0x109 + 5] > 0) knock = true;
+    }
+    if (can_knock && knock) {
         ow(dw.knock, w, sizeof w);
         strlcat(words, w, sizeof words);
     }

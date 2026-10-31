@@ -4316,6 +4316,27 @@ void end_fight(pic::Canvas& c)
     }
     fg->out = combat::finish(b, ml ? ml->m : nullptr);
     combat::Result r = fg->out.result;
+    // (Pool: a member's attacks left this round live in its record, 0x113 /
+    // 0x114 - set at each round's start (ovr14 +0xD23), used up attack by
+    // attack (+0x16A4), cleared when the turn ends early (+0x14E4) - and stay
+    // there after the fight, in the saved game: the fighter's own count. The
+    // round's start sets them for every fighter, down or not (ovr14 +0x0 ->
+    // +0xD23, +0xE52), so a member down keeps the round's count unused -
+    // dosbox-debug after Kuto's Well's lizardmen: the fallen 1, the standing
+    // who had attacked 0)
+    if (pool_files())
+        for (int i = 0; i < b.party_size; ++i)
+            if (uint8_t* rec = b.f[i].rec.whole()) {
+                const combat::Fighter& f = b.f[i];
+                int a1 = f.attacks[0], a2 = f.attacks[1];
+                if (!f.up()) {
+                    bool ranged = false;
+                    a1 = combat::slot1_attacks(b, f, &ranged);
+                    a2 = combat::attacks_this_round(rec[0x11D], b.round);
+                }
+                rec[0x19C] = static_cast<uint8_t>(a1);
+                rec[0x19D] = static_cast<uint8_t>(a2);
+            }
     // (Pool: a fight none of the enemies stayed in - every one ran off -
     // ends "The party has found Treasure!": its won flag DS 0x443A is set
     // only by a monster not running away - ovr6 +0x88 / +0x9D7; DOSBox,
