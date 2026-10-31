@@ -3503,7 +3503,7 @@ void say_item(pic::Canvas& c, const char* t, uint8_t colour = 14, int row0 = 21)
         // must fit, its punctuation excepted - START 0x78AA; DOSBox, the
         // shop's "...I'LL IDENTIFY / YOUR MACE")
         text::Writer tw;
-        text::begin(tw, c, t, text::Region{1, row0, 38, 22}, colour, false);
+        text::begin(tw, c, t, text::Region{1, static_cast<int8_t>(row0), 38, 22}, colour, false);
         text::step(tw, c, d->font, -1);
         dirty_rows(row0, 22);
         return;
