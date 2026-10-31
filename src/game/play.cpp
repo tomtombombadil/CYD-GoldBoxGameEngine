@@ -1595,6 +1595,17 @@ void hl_remember(int at)
 }
 // The player moved the highlight: theirs from now on
 void hl_moved() { hl_hold_sig = -1; }
+// A question about to be shown: it starts on the word its game starts it
+// on, never where the same question was answered before (CLAUDE.md's kept
+// exception; DOSBox, Pool's shop: Is It a Deal? on No after an Id's Yes)
+void hl_fresh()
+{
+#if CYD_MENU_HIGHLIGHT
+    hl_shown_sig = hl_sig();
+    hl_after_pick = false;
+    hl_hold_sig = -1;
+#endif
+}
 // A menu about to be drawn: the place it was picked at last, if it was
 void hl_apply()
 {
@@ -4967,6 +4978,7 @@ void ask_yes_no(pic::Canvas& c, Ask what, const char* prompt)
         default: break;
         }
     }
+    hl_fresh();
     show_menu_line(c);
 }
 
