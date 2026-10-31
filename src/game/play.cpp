@@ -9022,6 +9022,12 @@ void end_rest(pic::Canvas& c)
     else {
         screen = Screen::Camp;
         draw_camp(c);
+        // (Pool: back from a rest the text window stays empty - no "The
+        // party makes camp..." - DOSBox, the inn at 4,12)
+        if (pool_files()) {
+            text::clear(c, text::kTextArea);
+            dirty_rows(17, 22);
+        }
     }
 }
 
