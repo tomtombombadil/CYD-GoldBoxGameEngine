@@ -16430,6 +16430,7 @@ void tap(int x, int y, pic::Canvas& c)
         case 'S':
             vm->set(0x7ECA, static_cast<uint16_t>(vm->get(0x7ECA) ^ 1));
             draw_position(c);
+            show_menu_line(c);          // (the highlight on Search now - the original lights it: DOSBox, Pool)
             break;
         case 'V':
             view_character(c);
