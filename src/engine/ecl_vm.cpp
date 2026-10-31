@@ -786,19 +786,37 @@ uint8_t Vm::roll(int sides, int n)
 Stop Vm::damage_step()
 {
     if (dmg_at_ < 0) return Stop::Running;
+    if (dmg_pending_ >= 0) {
+        // (Pool: the line just printed - its hit taken off now)
+        const DmgLine& l = dmg_[dmg_pending_];
+        dmg_pending_ = -1;
+        if (party_ && l.who < party_->count) {
+            party::Character& c = party_->m[l.who];
+            c.rec[0x1A4] = l.hp;
+            c.rec[0x195] = l.st;
+            c.rec[0x196] = l.inc;
+            h_.party_changed();
+        }
+    }
     if (dmg_at_ < 2 * n_dmg_) {
+        // (Pool: no new line - each line is printed from column 38, where
+        // its two spaces wrap it to the window's left; START ovr8 +0x20CC;
+        // DOSBox, Stojanow Gate's volley of rocks)
+        if (set_.pool_map && !(dmg_at_ & 1)) ++dmg_at_;
         const int k = dmg_at_++;
         text_ = "\n";
         if (k & 1) {
             const DmgLine& l = dmg_[k / 2];
             char nm[20] = {};
             if (party_ && l.who < party_->count) party_->m[l.who].name(nm, sizeof nm);
+            const char* ind = "  ";
             if (l.dies) {
-                snprintf(dmg_text_, sizeof dmg_text_, "  %s%s", nm, word(kWDies));
+                snprintf(dmg_text_, sizeof dmg_text_, "%s%s%s", ind, nm, word(kWDies));
                 h_.sound(5);                                // (the death sound)
             }
-            else snprintf(dmg_text_, sizeof dmg_text_, "  %s%s%d%s", nm, word(kWIsHitFor), l.amount, word(kWPointsOfDamage));
+            else snprintf(dmg_text_, sizeof dmg_text_, "%s%s%s%d%s", ind, nm, word(kWIsHitFor), l.amount, word(kWPointsOfDamage));
             text_ = dmg_text_;
+            if (dmg_stepwise_) dmg_pending_ = k / 2;
         }
         clear_ = false;
         return wait_for(Wait::Print);
@@ -1954,9 +1972,21 @@ Stop Vm::step()
         if (!party_ || !party_->count) return Stop::Running;
         const int before = party_->selected;
         n_dmg_ = 0;
+        // (Pool: each hit's line is printed, then that hit taken off and the
+        // party list drawn again - START ovr8 +0x20CC -> 0xBA:0x2228, 0x767;
+        // DOSBox, Stojanow Gate's volley: the HP go down line by line)
+        uint8_t was[8][3] = {};
+        bool all_kept = true;
+        for (int i = 0; i < party_->count && i < 8; ++i) {
+            was[i][0] = party_->m[i].rec[0x1A4];
+            was[i][1] = party_->m[i].rec[0x195];
+            was[i][2] = party_->m[i].rec[0x196];
+        }
         auto hurt = [&](int i, int dmg) {
             party::Character& c = party_->m[i];
             if (c.health() == party::Dead) return;
+            const int line = n_dmg_ < kMaxDamageLines ? n_dmg_ : -1;
+            if (line < 0) all_kept = false;
             if (n_dmg_ < kMaxDamageLines)
                 dmg_[n_dmg_++] = DmgLine{static_cast<uint8_t>(i), static_cast<uint8_t>(dmg), dmg > c.hp() + 10};
             const int hp = c.hp();
@@ -1975,6 +2005,11 @@ Stop Vm::step()
             } else {
                 c.rec[0x1A4] = 0;
                 c.rec[0x196] = 0;
+            }
+            if (line >= 0) {
+                dmg_[line].hp = c.rec[0x1A4];
+                dmg_[line].st = c.rec[0x195];
+                dmg_[line].inc = c.rec[0x196];
             }
         };
         auto saves = [&](int i, int type, int bonus) {
@@ -2013,6 +2048,13 @@ Stop Vm::step()
         for (int i = 0; i < count; ++i)
             if (party_->m[i].in_combat()) any = true;
         party_->selected = before;
+        dmg_stepwise_ = set_.pool_map && all_kept && n_dmg_ > 0 && party_->count <= 8;
+        if (dmg_stepwise_)
+            for (int i = 0; i < party_->count; ++i) {
+                party_->m[i].rec[0x1A4] = was[i][0];
+                party_->m[i].rec[0x195] = was[i][1];
+                party_->m[i].rec[0x196] = was[i][2];
+            }
         h_.party_changed();
         dmg_killed_ = !any;
         dmg_at_ = 0;

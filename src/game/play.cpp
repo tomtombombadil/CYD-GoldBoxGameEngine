@@ -12513,7 +12513,7 @@ void begin_wait(pic::Canvas& c)
 {
     waiting = true;
     switch (vm->wait()) {
-    case ecl::Wait::Print:
+    case ecl::Wait::Print: {
         heard(vm->text());
         if (strcmp(vm->text(), "\n") == 0) {          // PRINT RETURN
             w.col = w.r.x0;
@@ -12522,7 +12522,17 @@ void begin_wait(pic::Canvas& c)
             handle(vm->resume());
             return;
         }
-        text::begin(w, c, vm->text(), script_area(), script_text_colour(), vm->clear());
+        // (Pool: a DAMAGE's lines in white, and the position line taken away
+        // until the exploring menu draws it again - START ovr8 +0x20CC prints
+        // in colour 15 and redraws the party list (0xBA:0x767) without it;
+        // DOSBox, Stojanow Gate's volley of rocks)
+        const bool pool_dmg = pool_files() && vm->in_damage();
+        if (pool_dmg) {
+            c.fill(17 * 8, 15 * 8, 22 * 8, 8, 0);
+            dirty_rows(15, 15);
+            w.col = script_area().x1;
+        }
+        text::begin(w, c, vm->text(), script_area(), pool_dmg ? 15 : script_text_colour(), vm->clear());
         if (d->prof->variant.tr) {
             // Treasures: its colour codes ("%" + a hex digit); the last one
             // stays the scripts' colour (game byte 0x38 - img 0x6765)
@@ -12536,6 +12546,7 @@ void begin_wait(pic::Canvas& c)
         t_started = false;
         page_prompt = false;
         break;
+    }
     case ecl::Wait::Menu: {
         journal_ready();
         // "~Yes ~No": each choice's first letter is its key; the rest shows

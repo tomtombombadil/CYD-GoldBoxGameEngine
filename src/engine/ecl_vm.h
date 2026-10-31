@@ -320,7 +320,10 @@ private:
         uint8_t who;
         uint8_t amount;
         bool    dies;
+        uint8_t hp = 0, st = 0, inc = 0;   // (Pool: the member's HP / health / in-fight after this hit)
     } dmg_[kMaxDamageLines] = {};
+    bool dmg_stepwise_ = false;         // (Pool: each hit's HP put in once its line is printed)
+    int  dmg_pending_ = -1;             // (the line printed last, its hit not yet put in)
     char dmg_text_[64] = {};
     int  n_dmg_ = 0, dmg_at_ = -1;
     bool xp_pause_ = false;             // (Secret's 0x41: its words stay up for the game's delay)
