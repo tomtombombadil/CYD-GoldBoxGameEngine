@@ -75,10 +75,27 @@ the Project as claude/TODO.md.
       line; training keeps weight / movement; Pool's delay x 225 ms;
       Trade's picker / Overloaded; Drop It? unlit; an engine save loaded by
       the original; the boat to Sokal Keep and its undead packs (placement,
-      XP by the rules). Open: an uninterrupted rest (an inn), Cast outside
-      fights, Scribe, Fix, Halve / Join, Sell / Id; Sokal's pale form,
-      orcs, chapel and on; Pool record 0x113 left by a fight (original
-      keeps the attacks left). Check in Curse's play test: the press words, word wrap,
+      XP by the rules). Part 6: Sokal Keep finished (pale form / Ferran -
+      LUX, the orc and hobgoblin force: 56 placed identically, the
+      illusionary wall, the equipment, the frogs, the smithy's hammer,
+      the boat back), the inn's rest, Cast in camp, Sell / Id / Buy, Halve
+      / Join - all matched after fixes: the encounter picture at once,
+      typed answers (column 1, white, no cursor), Quick clerics turn
+      undead, fleeing fighters' way and "is forced to flee", "has found
+      Treasure!" when all ran, first member at any treasure, Search /
+      rest highlights, the camp text after a rest / Magic, the camp
+      picture at Cast's on-whom, the shop's wrap / unlit lists / Id's
+      timed word, payments as platinum + odd gold (Buy, Id, cures), yes/no
+      questions not carrying a highlight. Open: Pool record 0x113 left by
+      a fight (original keeps the attacks left); undead fights' XP still
+      differs by the dice (rules now the same); Kuto's Well / Podol Plaza
+      and on not reached (the slums' west exit -> ECL8 block 29: the
+      original met lizardmen at once and the HP-60 party died - needs a
+      stronger party or a told encounter: block 29's wandering roll is
+      RANDOM 10 at 0x82BB); Scribe (no scroll in the party). Pool has no
+      Fix. Check in Curse's play test: the Quick cleric's turning, the
+      flee way, "is forced to flee", Curse's payments (Buy / Id / cures),
+      the press words, word wrap,
       load path, camp picture / Quit to DOS, View prompt, shop and temple
       layouts, the list routine, movement keys at the Locked menu,
       monsters' valueless items, part 3's: Quick kept across fights, the
