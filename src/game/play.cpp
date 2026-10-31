@@ -8607,6 +8607,25 @@ int list_rows()
     return sl.learning || sl.casting || sl.scrolls || sl.choosing || sl.reading >= 0 ? 22 - 5 + 1 : 15 - 5 + 1;
 }
 
+// A spell list's page turned (Next: dir 1, Prev: -1). Pool: the list
+// routine's own paging (ovr26 +0xC33, as the item lists') - Next goes no
+// further than the last full page (DOSBox: a cleric's 17 lines, page two
+// from line 6) and the highlight keeps its line of the page
+void sl_page(int dir)
+{
+    const int rows = list_rows(), old = sl.top;
+    if (dir > 0) sl.top += rows;
+    else sl.top = sl.top > rows ? sl.top - rows : 0;
+    if (!pool_files()) return;
+    if (sl.top > sl.n - rows) sl.top = sl.n > rows ? sl.n - rows : 0;
+    if (sl.sel >= old && sl.sel < old + rows) {
+        int s = sl.top + (sl.sel - old);
+        if (s >= sl.n) s = sl.n - 1;
+        while (s < sl.n - 1 && !sl.id[s]) ++s;     // (a level's heading: the spell under it)
+        sl.sel = s;
+    }
+}
+
 // "NAME can memorize:" and the counts a kind (cleric, druid, magic-user)
 void draw_counts(pic::Canvas& c)
 {
@@ -8937,8 +8956,8 @@ void learn_tap(char k, pic::Canvas& c)
         train_note(profile::kCongrats, c);
         return;
     }
-    if (k == 'N' && sl.top + list_rows() < sl.n) sl.top += list_rows();
-    else if (k == 'P' && sl.top > 0) sl.top = sl.top > list_rows() ? sl.top - list_rows() : 0;
+    if (k == 'N' && sl.top + list_rows() < sl.n) sl_page(1);
+    else if (k == 'P' && sl.top > 0) sl_page(-1);
     else if (k != 'E' || !hl()) return;     // (the Dark Queen's Exit: the list again - a spell must be picked)
     draw_spells(c);
 }
@@ -8961,8 +8980,8 @@ void scribe_tap(char k, pic::Canvas& c)
         else back_to_magic(c);
         return;
     }
-    if (k == 'N' && sl.top + list_rows() < sl.n) sl.top += list_rows();
-    else if (k == 'P' && sl.top > 0) sl.top = sl.top > list_rows() ? sl.top - list_rows() : 0;
+    if (k == 'N' && sl.top + list_rows() < sl.n) sl_page(1);
+    else if (k == 'P' && sl.top > 0) sl_page(-1);
     else return;
     draw_spells(c);
 }
@@ -9035,8 +9054,8 @@ void spells_tap(int x, int y, pic::Canvas& c)
     }
     if (sl.viewing) {
         // View Character's Spells: only paged through
-        if (k == 'N' && sl.top + list_rows() < sl.n) sl.top += list_rows();
-        else if (k == 'P' && sl.top > 0) sl.top = sl.top > list_rows() ? sl.top - list_rows() : 0;
+        if (k == 'N' && sl.top + list_rows() < sl.n) sl_page(1);
+        else if (k == 'P' && sl.top > 0) sl_page(-1);
         else if (k == 'E') {
             sl.viewing = false;
             end_magic();
@@ -9052,8 +9071,8 @@ void spells_tap(int x, int y, pic::Canvas& c)
     if (sl.fighting) {
         if (k == 'C' && sl.sel >= 0) fight_spell_chosen(sl.id[sl.sel], c);
         else if (k == 'E') fight_spell_chosen(0, c);
-        else if (k == 'N' && sl.top + list_rows() < sl.n) sl.top += list_rows();
-        else if (k == 'P' && sl.top > 0) sl.top = sl.top > list_rows() ? sl.top - list_rows() : 0;
+        else if (k == 'N' && sl.top + list_rows() < sl.n) sl_page(1);
+        else if (k == 'P' && sl.top > 0) sl_page(-1);
         else return;
         if (screen == Screen::SpellList) draw_spells(c);
         return;
@@ -9069,8 +9088,8 @@ void spells_tap(int x, int y, pic::Canvas& c)
     if (sl.casting) {
         if (k == 'C' && sl.sel >= 0) choose_spell(sl.id[sl.sel], c);
         else if (k == 'E') cast_done(c);
-        else if (k == 'N' && sl.top + list_rows() < sl.n) sl.top += list_rows();
-        else if (k == 'P' && sl.top > 0) sl.top = sl.top > list_rows() ? sl.top - list_rows() : 0;
+        else if (k == 'N' && sl.top + list_rows() < sl.n) sl_page(1);
+        else if (k == 'P' && sl.top > 0) sl_page(-1);
         else return;
         if (screen == Screen::SpellList && k != 'C') draw_spells(c);
         return;
@@ -9083,10 +9102,10 @@ void spells_tap(int x, int y, pic::Canvas& c)
         draw_counts(c);
         draw_spells(c);
     } else if (k == 'N' && sl.top + list_rows() < sl.n) {
-        sl.top += list_rows();
+        sl_page(1);
         draw_spells(c);
     } else if (k == 'P' && sl.top > 0) {
-        sl.top = sl.top > list_rows() ? sl.top - list_rows() : 0;
+        sl_page(-1);
         draw_spells(c);
     } else if (k == 'E') {
         if (magic::memorizing(*pt->sel())) confirm_memorize(c, profile::kMemorizeThese2);
@@ -10016,8 +10035,8 @@ void reading_tap(char k, pic::Canvas& c)
         back_to_items(c);
         return;
     }
-    if (k == 'N' && sl.top + list_rows() < sl.n) sl.top += list_rows();
-    else if (k == 'P' && sl.top > 0) sl.top = sl.top > list_rows() ? sl.top - list_rows() : 0;
+    if (k == 'N' && sl.top + list_rows() < sl.n) sl_page(1);
+    else if (k == 'P' && sl.top > 0) sl_page(-1);
     else return;
     draw_spells(c);
 }
@@ -16032,6 +16051,7 @@ bool nav_list(int step, pic::Canvas& c)
         sl.sel = i;
         while (sl.sel < sl.top) sl.top = sl.top >= rows ? sl.top - rows : 0;
         while (sl.sel >= sl.top + rows) sl.top += rows;
+        if (pool_files() && sl.top > sl.n - rows) sl.top = sl.n > rows ? sl.n - rows : 0;
         draw_spells(c);
         keep_menu_choice(keep, c);
         return true;
