@@ -5,6 +5,13 @@
 
 #include "hal/storage.h"
 
+// A board whose usual way up is the engine's Rotate 180 (Tom, 2026-10-31:
+// the 5.0" board, its USB port the other way round otherwise) - the
+// setting's start before the player sets it (platformio.ini)
+#ifndef BOARD_FLIPPED_DEFAULT
+#define BOARD_FLIPPED_DEFAULT 0
+#endif
+
 namespace {
 
 constexpr const char* kPath  = "/settings.bin";
@@ -23,6 +30,7 @@ static_assert(sizeof(File1) == 20, "the settings file's size");
 Settings settings_load()
 {
     Settings s;
+    s.flipped = BOARD_FLIPPED_DEFAULT;
     if (!storage_begin() || !LittleFS.exists(kPath)) return s;
     File f = LittleFS.open(kPath, "r");
     File1 d{};

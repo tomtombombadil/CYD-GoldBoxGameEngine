@@ -212,6 +212,10 @@ void close_file()
 int wrap_text(int x, int y, int w, const char* s, ui::Font font, uint16_t col, bool draw, int max_lines = 0);
 
 void rescan();
+// Rescan makes everything again (Tom, 2026-10-31: "a manual rescan should
+// force rebuilding of things") - the journals, the programs' copies, the
+// pictures - never "ready (made by an earlier scan)"
+bool scan_forced = false;
 
 // An animation block in either format (the 4-bit games', Gateway's)
 bool any_anim(const dax::Entry& en, pic::Anim& a)
@@ -1244,7 +1248,7 @@ void prepare_journal_gbc(const library::GameDir& g)
     {
         char have[36];
         journal_id(g, have, sizeof have);
-        if (strcmp(have, id) == 0 && (!g.journal[0] || book_ready(g))) {
+        if (!scan_forced && strcmp(have, id) == 0 && (!g.journal[0] || book_ready(g))) {
             snprintf(line, sizeof line, "The %s journal is ready (made by an earlier scan)", title);
             scan_say(line, false, nullptr);
             return;
@@ -1317,7 +1321,7 @@ void prepare_journal_text(const library::GameDir& g)
     {
         char have[36];
         journal_id(g, have, sizeof have);
-        if (strcmp(have, id) == 0 && book_ready(g)) {
+        if (!scan_forced && strcmp(have, id) == 0 && book_ready(g)) {
             snprintf(line, sizeof line, "The %s journal is ready (made by an earlier scan)", title);
             scan_say(line, false, nullptr);
             return;
@@ -1432,7 +1436,7 @@ void prepare_journal_now(const library::GameDir& g)
             journal::Info info;
             // (made the same way: this table, the colours of revision 1 on,
             // the Companion's pictures there are now)
-            const bool ready = journal::read_info(os, info) && strcmp(info.pdf_id, t->pdf_id) == 0 &&
+            const bool ready = !scan_forced && journal::read_info(os, info) && strcmp(info.pdf_id, t->pdf_id) == 0 &&
                                info.entries == t->n_entries && info.revision >= journal::kRevision &&
                                info.maps == maps;
             old.close();
@@ -1565,6 +1569,11 @@ void prepare_programs()
         snprintf(cdir, sizeof cdir, "%s/%s/%s", games::kRootDir, library::kCacheDir, g.folder);
         const uint32_t t0 = millis();
         bool made = false;
+        if (scan_forced) {
+            char old[200];
+            snprintf(old, sizeof old, "%s/PROGRAM.BIN", cdir);
+            if (sd_fs().exists(old)) sd_fs().remove(old);
+        }
         const bool ok = library::make_cache_dirs(g) && play::prepare_program(g.data_dir, g.game, cdir, &made);
         if (ok)
             snprintf(line, sizeof line, "%s the %s program (%lu ms)", made ? "Prepared" : "Checked",
@@ -1615,7 +1624,10 @@ void rescan()
     }
     // What the board makes from the player's files, once (icons, journals:
     // PNG / PDF / JPEG decoding, on a stack of its own)
-    if (!run_on_big_stack(prepare_made, nullptr))
+    scan_forced = true;
+    const bool made_ok = run_on_big_stack(prepare_made, nullptr);
+    scan_forced = false;
+    if (!made_ok)
         scan_say("Not enough memory to make the icons and journal pictures now: tap Rescan to try again.", false,
                  nullptr);
     scan_say("Done. Look through the list, then tap Continue.", false, nullptr);

@@ -332,8 +332,10 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   ST7789 resistive C5 (Tom, 2026-10-12, v0.94.1: both of his - the yellow
   and the "colorful" one - Home, scan and a Secret Play Test); the 4.0"
   ST7796 capacitive S3 (Tom, 2026-10-16, v0.103.3: Pool, Curse, Secret
-  play); a new board starts at `no`. Untested: the 5.0" 800x480 IPS
-  capacitive S3 (`cyd50s3_cap`, 2026-10-30).
+  play); the 5.0" 800x480 IPS capacitive S3 (`cyd50s3_cap`; Tom,
+  2026-10-31, the Hosyond board - Rotate 180 is its default,
+  `BOARD_FLIPPED_DEFAULT`, so the USB port is the right way); a new
+  board starts at `no`.
 - **5.0" 800x480 S3 board** (FNK0115Q; `src/boards/esp32s3_50_rgb.hpp`,
   SPEC 5d): an RGB parallel panel; the engine sees **320x240** - the
   board's `Panel_Double` (a LovyanGFX frame-buffer panel in PSRAM) copies

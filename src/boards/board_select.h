@@ -89,7 +89,7 @@
   #define BOARD_PSRAM 1
   // The engine sees 320x240 (drawn at 2x, centred on the 800x480 panel)
   #define BOARD_PORTRAIT_W 240
-  // Not yet tested on hardware
+  // Tested by Tom (2026-10-31, the Hosyond board; Rotate 180 its default)
   class LGFX : public LGFX_S3_50_Rgb {};
 
 #elif defined(CYD_BOARD_28_ST7789_RES_C5)
