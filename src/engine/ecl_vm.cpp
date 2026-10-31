@@ -751,6 +751,7 @@ void Vm::restore_selected()
     if (!restore_) return;
     restore_ = false;
     sel_mon_ = -1;
+    not_found_ = false;                 // (the member selected again: a LOAD CHARACTER past the party is forgotten)
     if (party_ && start_sel_ >= 0 && start_sel_ < party_->count) party_->selected = start_sel_;
 }
 
@@ -1051,7 +1052,11 @@ Stop Vm::answer(int v)
         set(dest_, static_cast<uint16_t>(v));
         break;
     case 0x39:                          // WHO: that member is selected
-        if (party_ && v >= 0 && v < party_->count) party_->selected = v;
+        if (party_ && v >= 0 && v < party_->count) {
+            party_->selected = v;
+            sel_mon_ = -1;
+            not_found_ = false;
+        }
         break;
     case 0x2D:                          // (Gateway's CALL 0x80C: Yes 0, No 1)
         set(dest_, static_cast<uint16_t>(v ? 1 : 0));

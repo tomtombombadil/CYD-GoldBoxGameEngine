@@ -71,6 +71,8 @@ static int shot_n = 0;
 static std::vector<std::pair<int, int>> g_die_once, g_die_always;
 static int die_fix(int n)
 {
+    static const bool dlog = getenv("DICELOG") != nullptr;     // DICELOG=1: every die's faces
+    if (dlog) printf("  (die %d)\n", n);
     for (size_t i = 0; i < g_die_once.size(); ++i)
         if (g_die_once[i].first == n) {
             const int v = g_die_once[i].second;
@@ -1540,6 +1542,12 @@ int main(int argc, char** argv)
         const bool ok = play::save_game(getenv("SAVENOW")[0]);
         printf("  saved now (%c): %s, area %d at %d,%d script %d\n", getenv("SAVENOW")[0], ok ? "ok" : "failed",
                play::d->gs.game_area, play::pos_x(), play::pos_y(), play::vm->get(0x4BF2));
+    }
+    if (getenv("PEEKEND")) for (const char* q = getenv("PEEKEND"); q && *q;) {      // PEEKEND=addr,...: after the moves
+        const unsigned a = (unsigned)strtol(q, nullptr, 16);
+        printf("  PEEKEND %04X = %04X (selected %d)\n", a, play::vm->get((uint16_t)a), play::pt ? play::pt->selected : -1);
+        q = strchr(q, ',');
+        if (q) ++q;
     }
     shot("end");
     save_wav();
