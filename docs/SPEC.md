@@ -2524,6 +2524,33 @@ the game's Settings (As Original: all of them).
 - **Game Fixes** (switch `CYD_ITEM_FIXES`, Tom, v0.90.0; named Item Fixes until v0.139.0 - Tom, 2026-10-23: the originals' behaviour stays in the game, every fix behind this switch): Pool's Flame
   Tongue is the AD&D sword (Long Sword +1 Flame Tongue, as Curse's); the
   original's is a plain +2 sword whose Use casts Find Traps.
+- **Money** (Game Fixes, `rules::fixes()`; Tom, 2026-10-31: "All money is
+  convertible ... the innkeeper should accept any combination of coins";
+  Pool, Curse, Secret, Gateway - the games with AD&D's five coins at the
+  games' own rates, copper 1, silver 10, electrum 100, gold 200, platinum
+  1000 copper - Pool's 2:9 payer, Gateway's CALL 0x80F / DS 0x104C; 1e's
+  20 silver a gold, not 2e's 10). The originals: some script prices
+  compare the paying member's platinum alone (Phlan's inns and harbour,
+  the tavern's wager, Curse's ECL4 block 35 "THAT'LL BE 1 PLATINUM
+  PIECE", Gateway's platinum prices - it trades up first itself; Secret's
+  vault takes platinum only) - 30 gold and no platinum is "YOU DON'T
+  HAVE ENOUGH PLATINUM."; Pool's shops pay from
+  the coins' worth but set the rest back as platinum and odd gold,
+  dropping what's under a gold piece; a payer pays from their own coins
+  or the counter's, not both; selling a gem drops the odd gold. With Game
+  Fixes on: a script's first look at a member's coins (0x7CBB-0x7CC3)
+  finds them made the highest coins worth the same (`ecl::Vm::coins_touch`;
+  a first write only marks them - a script setting a coin outright keeps
+  the rest), and the coins a script touched are made the highest again
+  when it ends (`coins_done`: a reward in copper becomes gold); shops,
+  temples, Id and training (`play::shop_pay`, `rules::pay_any`) take the
+  price from the payer's coins, what they lack from the counter's, with
+  exact change; after a buy / sale / take / share the coins are the
+  highest (`rules::coins_up` - never more coins, the carried weight goes
+  down by the coins saved; gems and jewellery as they are); Take weighs
+  coins as they will be. Off: as the originals. Not for Champions
+  (copper, bronze, steel, platinum - their worths not known: TODO) and
+  the one-coin games (Darkness, Treasures, Death Knights, Dark Queen).
 - **Pool's race checks** (Tom, v0.85.1): Pool's program never gives its
   scripts the character's race (they read a memory word nothing sets: 0),
   so two checks never matched. The engine gives the race, so they work as

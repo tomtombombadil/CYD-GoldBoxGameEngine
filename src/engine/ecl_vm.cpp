@@ -492,6 +492,7 @@ uint16_t Vm::get(uint16_t a) const
             return 0;
         }
         const uint16_t off = static_cast<uint16_t>(a - 0x7C00);
+        coins_touch(a, false);
         if (const uint8_t* mr = sel_rec()) {
             // a loaded monster LOAD CHARACTER chose (its place: after the party)
             const int at = (party_ ? party_->count : 0) + sel_mon_;
@@ -537,6 +538,7 @@ void Vm::set(uint16_t a, uint16_t v)
         return;
     }
     if (a >= 0x7C00 && a <= 0x7FFF) {
+        coins_touch(a, true);
         word_to(s_.area2, (a - 0x7C00u) * 2, v);
         if (a == 0x7C00 && v == 0) cleared_name_ = true;
         if (a == 0x7D00 && v == 0) cleared_status_ = true;
@@ -754,6 +756,30 @@ void Vm::restore_selected()
     if (party_ && start_sel_ >= 0 && start_sel_ < party_->count) party_->selected = start_sel_;
 }
 
+// Game Fixes: a member's coins (0x7CBB copper ... 0x7CC3 platinum) as the
+// script first looks at them are the highest coins worth the same - a price
+// in platinum then takes gold, electrum ... (the original compares the
+// platinum alone: Phlan's inn refused a member with 30 gold). A first
+// write only marks them (a script setting a coin outright keeps the rest).
+void Vm::coins_touch(uint16_t a, bool write) const
+{
+    if (!set_.five_coins || a < 0x7CBB || a > 0x7CC3 || ((a - 0x7CBB) & 1) || !rules::fixes()) return;
+    if (sel_mon_ >= 0 || !party_ || !party_->sel() || party_->selected >= 16) return;
+    const uint16_t bit = static_cast<uint16_t>(1u << party_->selected);
+    if (coins_seen_ & bit) return;
+    coins_seen_ |= bit;
+    if (!write) rules::coins_up(*party_->sel());
+}
+
+// The script ended: the coins it touched made the highest (a reward in
+// copper becomes gold and platinum)
+void Vm::coins_done()
+{
+    for (int i = 0; coins_seen_ && party_ && i < party_->count && i < 16; ++i)
+        if (coins_seen_ & (1u << i)) rules::coins_up(party_->m[i]);
+    coins_seen_ = 0;
+}
+
 void Vm::party_size()
 {
     if (party_) set(0x7F3E, static_cast<uint16_t>(party_->count));
@@ -878,6 +904,7 @@ Stop Vm::run(uint16_t address)
     wait_ = Wait::None;
     budget_ = kBudget;
     if (party_) start_sel_ = party_->selected;
+    coins_done();                                      // (one left by a script never finished)
     return resume();
 }
 
@@ -917,11 +944,16 @@ Stop Vm::resume()
         if (--budget_ <= 0) {
             h_.log("script ran too long; stopped");
             stop_script();
+            coins_done();
             return Stop::Error;
         }
         const Stop r = step();
-        if (r != Stop::Running) return r;
+        if (r != Stop::Running) {
+            if (r != Stop::Waiting) coins_done();
+            return r;
+        }
     }
+    coins_done();
     return new_script_ ? Stop::NewScript : Stop::Stopped;
 }
 

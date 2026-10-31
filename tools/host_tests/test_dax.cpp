@@ -3042,6 +3042,82 @@ static void test_vm_and()
     }
 }
 
+// Game Fixes' money (Tom, 2026-10-31): any coins worth a price pay it, the
+// change exact, the money then in the highest coins - the rules' part, and
+// a script that reads a member's platinum (Phlan's inn) and writes a reward
+// in copper
+static void test_coin_fixes()
+{
+    party::Character ch{};
+    auto set = [&](std::initializer_list<int> v) {
+        int i = 0;
+        for (int n : v) { ch.rec[0xFB + i * 2] = static_cast<uint8_t>(n); ch.rec[0xFC + i * 2] = static_cast<uint8_t>(n >> 8); ++i; }
+    };
+    auto is = [&](std::initializer_list<int> v) {
+        int i = 0;
+        for (int n : v) if (ch.money(i++) != n) return false;
+        return true;
+    };
+    set({7, 50, 4, 3, 0, 2, 1});               // 7 + 500 + 400 + 600 copper's worth
+    ch.rec[0x187] = 100;                        // carried: 64 coins + 36
+    CHECK(rules::copper_worth(ch) == 1507);
+    rules::coins_up(ch);
+    CHECK(is({7, 0, 1, 2, 1, 2, 1}) && ch.encumbrance() == 100 - (64 - 11));   // (gems, jewels kept)
+    CHECK(rules::pay_any(ch, nullptr, 5) && is({7, 0, 1, 2, 0}));             // 1 platinum's worth paid
+    int counter[7] = {0, 0, 0, 0, 1, 0, 0};
+    CHECK(!rules::pay_any(ch, counter, 8) && is({7, 0, 1, 2, 0}) && counter[4] == 1);   // 1507: not enough
+    CHECK(rules::pay_any(ch, counter, 6) && is({0, 0, 0, 0, 0}));             // 507 + 1000 - 1200
+    CHECK(counter[0] == 7 && counter[1] == 0 && counter[2] == 1 && counter[3] == 1 && counter[4] == 0);
+    int up[7] = {0, 0, 0, 0, 0xFFFF, 0, 0};
+    up[3] = 10;
+    rules::coins_up(up);                        // (platinum full: the gold stays)
+    CHECK(up[4] == 0xFFFF && up[3] == 10);
+
+    // The script: 0x4C00 = the platinum, copper + 500, then EXIT
+    const profile::Profile* p = profile::find(games::Game::CurseOfTheAzureBonds, 57789, 62432);
+    if (!p || !p->ecl_ops) return;
+    CHECK(p->ecl_ops->five_coins);
+    Bytes c;
+    const uint16_t kBase = 0x8000;
+    for (int i = 0; i < 5; ++i) { c.push_back(0); op_addr(c, 0); }
+    const size_t first = c.size();
+    c.push_back(0x09); op_addr(c, 0x7CC3); op_addr(c, 0x4C00);
+    c.push_back(0x04); op_addr(c, 0x7CBB); c.push_back(2); c.push_back(500 & 0xFF); c.push_back(500 >> 8); op_addr(c, 0x7CBB);
+    c.push_back(0x09); op_addr(c, 0x7CBB); op_addr(c, 0x4C01);
+    c.push_back(0x00);
+    for (int i = 0; i < 5; ++i) {
+        c[1 + i * 4] = 1;
+        c[2 + i * 4] = static_cast<uint8_t>((kBase + first) & 0xFF);
+        c[3 + i * 4] = static_cast<uint8_t>((kBase + first) >> 8);
+    }
+    for (bool fix : {true, false}) {
+        rules::set_fixes(fix);
+        static ecl::GameState gs;
+        gs = ecl::GameState{};
+        TestHost host;
+        memcpy(gs.code, c.data(), c.size());
+        gs.code_len = static_cast<uint32_t>(c.size());
+        static party::Party pt;
+        pt.clear();
+        pt.count = 1;
+        pt.m[0] = party::Character{};
+        pt.m[0].rec[0x101] = 30;                // 30 gold, no platinum
+        ecl::Vm vm(gs, host, *p->ecl_ops);
+        vm.set_party(&pt);
+        CHECK(vm.init_script());
+        CHECK(vm.run(vm.entry(0)) == ecl::Stop::Stopped);
+        const party::Character& m = pt.m[0];
+        if (fix) {
+            // read as 6 platinum; the 500 copper (read back as written) made gold and electrum at the end
+            CHECK(vm.get(0x4C00) == 6 && vm.get(0x4C01) == 500);
+            CHECK(m.money(0) == 0 && m.money(1) == 0 && m.money(2) == 1 && m.money(3) == 2 && m.money(4) == 6);
+        } else {
+            CHECK(vm.get(0x4C00) == 0 && m.money(0) == 500 && m.money(3) == 30 && m.money(4) == 0);
+        }
+    }
+    rules::set_fixes(true);
+}
+
 static void test_ecl_vm()
 {
     {
@@ -8417,6 +8493,7 @@ int main()
     test_ecl();
     test_ecl_vm();
     test_vm_and();
+    test_coin_fixes();
     test_vm_darkness();
     test_vm_events_facts();
     test_ecl_party();

@@ -1319,6 +1319,7 @@ constexpr ecl::OpSet kCurseEcl = [] {
     s.on_goto = 0x25; s.on_gosub = 0x26; s.if_first = 0x16; s.if_last = 0x1B;
     s.load_files = 0x21; s.load_pieces = 0x37;
     s.duels = true;
+    s.five_coins = true;
     return s;
 }();
 
@@ -1501,6 +1502,7 @@ constexpr TitleStep kChampionsTitle[] = {
 
 constexpr ecl::OpSet kChampionsEcl = [] {
     ecl::OpSet s = kCurseEcl;
+    s.five_coins = false;           // (copper, bronze, steel, platinum: their worths not known)
     s.duels = false;
     s.sizes[0x3C] = 0;
     s.sizes[0x41] = 2;
@@ -1518,6 +1520,7 @@ constexpr ecl::OpSet kChampionsEcl = [] {
 // PIECES), 0x41 2 (EXPERIENCE): every one of its 56 blocks decodes
 constexpr ecl::OpSet kDarknessEcl = [] {
     ecl::OpSet s = kCurseEcl;
+    s.five_coins = false;           // (one coin: platinum / steel)
     s.duels = false;
     s.sizes[0x0C] = 4;
     s.sizes[0x1D] = 0;
@@ -4239,8 +4242,8 @@ bool has_item_fixes(games::Game g)
 {
     for (const Profile& p : kProfiles)
         if (p.game == g && (p.items.flame.type || p.variant.secret_files || p.variant.darkness_files ||
-                            p.fight.facts.gw.ways || p.clips.as_nine))
-            return true;                    // (Secret, Darkness, Gateway: rules::fixes)
+                            p.fight.facts.gw.ways || p.clips.as_nine || (p.ecl_ops && p.ecl_ops->five_coins)))
+            return true;                    // (Secret, Darkness, Gateway: rules::fixes; the five coins' money)
     return false;
 }
 

@@ -3887,6 +3887,38 @@ void pool_pay(int money[7], int cost)
     for (int m = 0; m < 5; ++m) money[m] = m == 4 ? left / 5 : m == 3 ? left % 5 : 0;
 }
 
+// Game Fixes' money (Tom, 2026-10-31; SPEC 12): in the games with AD&D's
+// five coins any coins worth a price pay it - the payer's, what they lack
+// from the counter's - with exact change (Pool's own drops what's under a
+// gold piece), and money is kept in the highest coins after each deal
+bool coin_fix() { return rules::fixes() && d->prof->ecl_ops && d->prof->ecl_ops->five_coins; }
+void coins_up(party::Character& ch)
+{
+    if (coin_fix()) rules::coins_up(ch);
+}
+
+// A shop's / temple's price (gold): the character's coins, else the
+// counter's (the originals: one or the other; Pool's coins set back as
+// platinum and odd gold). False: not enough money, nothing paid
+bool shop_pay(party::Character& ch, int cost)
+{
+    if (coin_fix()) {
+        if (!rules::pay_any(ch, ground->money, cost)) return false;
+        rules::coins_up(ground->money);
+        return true;
+    }
+    if (cost <= rules::gold_worth(ch)) {
+        if (pool_files()) pool_pay(ch, cost);
+        else rules::pay(ch, cost);
+    } else if (cost <= rules::gold_worth(ground->money)) {
+        if (pool_files()) pool_pay(ground->money, cost);
+        else rules::pay(ground->money, cost);
+    } else {
+        return false;
+    }
+    return true;
+}
+
 // The answers to Drop It? / Is It a Deal?
 bool items_yes_no(Ask what, char k, pic::Canvas& c)
 {
@@ -3973,6 +4005,7 @@ bool items_yes_no(Ask what, char k, pic::Canvas& c)
             add_coins(ch, 3, g);
             ground->money[4] += plat - p;
             ground->money[3] += gold % 5 - g;
+            coins_up(ch);
             rules::recalc(ch, *names, d->facts);
             back_to_items(c);
             note(c, over ? iw(profile::kOverloadPool) : iw(profile::kSold));
@@ -3987,20 +4020,14 @@ bool items_yes_no(Ask what, char k, pic::Canvas& c)
             rules::recalc(ch, *names, d->facts);
             over = true;
         }
+        coins_up(ch);
         back_to_items(c);
         note(c, over ? iw(profile::kOverloadPool) : iw(profile::kSold));
         return true;
     }
     // Id: 200 gold, from the character or the counter
-    if (pool_files() && (rules::gold_worth(ch) >= 200 || rules::gold_worth(ground->money) >= 200)) {
-        // (DOSBox: Brother Sean's 2000 gold -> platinum 321 gold 2 after two Ids and a sale)
-        if (rules::gold_worth(ch) >= 200) pool_pay(ch, 200);
-        else pool_pay(ground->money, 200);
-    } else if (rules::gold_worth(ch) >= 200) {
-        rules::pay(ch, 200);
-    } else if (rules::gold_worth(ground->money) >= 200) {
-        rules::pay(ground->money, 200);
-    } else {
+    // (DOSBox: Brother Sean's 2000 gold -> platinum 321 gold 2 after two Ids and a sale)
+    if (!shop_pay(ch, 200)) {
         back_to_items(c);
         note(c, iw(profile::kNoMoney));
         return true;
@@ -6708,8 +6735,9 @@ void buy(int i, pic::Canvas& c)
     }
     const uint8_t* it = goods(i);
     const int cost = rules::price(it, vm->get(0x7F6D) & 0xFF);
-    const bool own = cost <= rules::gold_worth(*ch);
-    if (!own && cost > rules::gold_worth(ground->money)) {
+    const long have = coin_fix() ? rules::copper_worth(*ch) + rules::copper_worth(ground->money) : 0;
+    if (coin_fix() ? have < cost * 200L
+                   : cost > rules::gold_worth(*ch) && cost > rules::gold_worth(ground->money)) {
         note(c, d->w_no_money);
         return;
     }
@@ -6718,11 +6746,7 @@ void buy(int i, pic::Canvas& c)
         return;
     }
     rules::add_item(*ch, it);
-    if (pool_files()) {
-        if (own) pool_pay(*ch, cost);
-        else pool_pay(ground->money, cost);
-    } else if (own) rules::pay(*ch, cost);
-    else rules::pay(ground->money, cost);
+    shop_pay(*ch, cost);
     rules::recalc(*ch, *names, d->facts);
     char nm[48];
     names->name(items::Item{it}, nm, sizeof nm);
@@ -7421,7 +7445,17 @@ void take_coins(int n, pic::Canvas& c)
     rules::recalc(ch, *names, d->facts);
     if (take_coin >= 0 && n > 0) {
         if (n > ground->money[take_coin]) n = ground->money[take_coin];     // (no more than lies there)
-        if (ch.encumbrance() + n > rules::max_load(ch)) {
+        int more = n;
+        if (coin_fix()) {
+            // (Game Fixes: the coins weigh what they will once made the highest)
+            int m[7];
+            for (int k = 0; k < 7; ++k) m[k] = ch.money(k);
+            const int before = m[0] + m[1] + m[2] + m[3] + m[4];
+            m[take_coin] += n;
+            rules::coins_up(m);
+            if (take_coin < 5) more = m[0] + m[1] + m[2] + m[3] + m[4] - before;
+        }
+        if (ch.encumbrance() + more > rules::max_load(ch)) {
             draw_take(c);
             note(c, d->w_over);
             return;
@@ -7429,6 +7463,7 @@ void take_coins(int n, pic::Canvas& c)
         if (n > ground->money[take_coin]) n = ground->money[take_coin];
         ground->money[take_coin] -= n;
         add_coins(ch, take_coin, n);
+        coins_up(ch);
         rules::recalc(ch, *names, d->facts);
     }
     list_coins();
@@ -7794,6 +7829,12 @@ void appraise_key(char k, pic::Canvas& c)
             } else {
                 add_coins(ch, 4, plat);
             }
+            if (coin_fix() && appraised % 5) {
+                // (Game Fixes: the odd gold too - the original drops it)
+                if (ch.encumbrance() + 1 <= rules::max_load(ch)) add_coins(ch, 3, appraised % 5);
+                else ground->money[3] += appraised % 5;
+                coins_up(ch);
+            }
         } else {
             return;
         }
@@ -7861,16 +7902,7 @@ bool shop_yes_no(Ask what, char k, pic::Canvas& c)
     }
     party::Character& ch = *pt->sel();
     const int cost = d->prof->cures.cost[cure_at];
-    bool paid = false;
-    if (cost <= rules::gold_worth(ch)) {
-        if (pool_files()) pool_pay(ch, cost);
-        else rules::pay(ch, cost);
-        paid = true;
-    } else if (cost <= rules::gold_worth(ground->money)) {
-        if (pool_files()) pool_pay(ground->money, cost);
-        else rules::pay(ground->money, cost);
-        paid = true;
-    }
+    const bool paid = shop_pay(ch, cost);
     draw_heal(c);
     if (!paid) {
         char t[24];
@@ -7977,7 +8009,9 @@ void shop_tap(int x, int y, pic::Canvas& c)
             }
             break;
         case 'S':                       // Share: the coins on the counter shared out
+            if (coin_fix()) rules::coins_up(ground->money);
             rules::share(*pt, ground->money);
+            for (int i = 0; coin_fix() && i < pt->count; ++i) rules::coins_up(pt->m[i]);
             shop_menu(c);
             break;
         case 'E':
@@ -10640,8 +10674,10 @@ bool train_yes_no(Ask what, char k, pic::Canvas& c)
     screen = Screen::PartyMenu;
     party::Character* ch = pt->sel();
     if (k == 'Y' && ch && trainer && train_mask) {
-        if (!game_won && d->prof->shop_words[profile::kTrainCost])
-            rules::pay(train_payer >= 0 && train_payer < pt->count ? pt->m[train_payer] : *ch, 1000);
+        if (!game_won && d->prof->shop_words[profile::kTrainCost]) {
+            party::Character& payer = train_payer >= 0 && train_payer < pt->count ? pt->m[train_payer] : *ch;
+            if (!coin_fix() || !rules::pay_any(payer, nullptr, 1000)) rules::pay(payer, 1000);
+        }
         train_payer = -1;
         const int mu = ch->level(classes::MagicUser), rg = ch->level(classes::Ranger);
         // (Pool's training leaves the carried weight and the movement as they

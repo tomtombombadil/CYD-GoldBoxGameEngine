@@ -53,6 +53,13 @@ the Project as claude/TODO.md.
 
 ## Claude
 
+- [ ] Money with Game Fixes (Tom, 2026-10-31; SPEC 12 "Money"): done for
+      Pool, Curse, Secret, Gateway. Open: (1) Champions' coin worths
+      (copper, bronze, steel, platinum - from its program) before its
+      money joins in; (2) Tom's rates were 2e's (1 pp = 50 sp); the engine
+      keeps the games' own (1e: 1 gp = 20 sp) - tell Tom; (3) the wagon
+      driver (Pool 2:9's whole-party payer) not run in the playsim yet.
+
 - [ ] Pool full play test, side by side with DOSBox (part 1, v0.160.3:
       Phlan's civilized area, 17 fixes; part 2, v0.160.4: lists, wall
       ahead, Locked menu keys, monsters' valueless items). Part 3
