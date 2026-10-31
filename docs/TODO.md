@@ -104,11 +104,24 @@ the Project as claude/TODO.md.
       magic-user in the party, a script DAMAGE's lines (white, from
       column 38, HP line by line, position line off) and its PRESS
       <ENTER>/<RETURN> wait. Undead fights' XP still differs by the
-      dice (rules now the same). Not reached: the Textile House,
-      Mendor's Library, Valjevo, the cemetery, the Kovel mansion, the
-      council's later commissions; Scribe (no scroll in the party); a
-      level-up with a new spell. Pool has no
-      Fix. Check in Curse's play test: Knock at a door's second locked
+      dice (rules now the same). Part 8: the Textile House (ECL4 block
+      2: the thieves' well and Restal, three hobgoblin fights, the man
+      in chains - Free / Parlay x5, Skullcrusher's ogre and the iron
+      box; placement identical, XP and coins equal) and Mendor's Library
+      (2:15: the kobolds' map - entry 10, the stacks' books - entry 7,
+      the spectre; teleported in past its locked doors) matched after
+      fixes: a PICTURE missing from the area's PIC file leaves the
+      sprite, Pool / Curse PARLAY's prompt " ", a LOAD CHARACTER past the
+      party forgotten at WHO / the script's end (all games), Pool's map
+      edge (past an edge = the far edge's first square; none in blocks
+      0 / 10). Open: Grishnak's temple (block 2, 3,11) - the original's
+      party (HP 250) lost twice from the same save, the engine won 6 of 6
+      seeds (Hold Person / "slays helpless" rules read the same; suspect
+      the Quick members' choices - bandaging, targets). Not reached:
+      Cadorna's reward (the box in hand: Phlan's watch takes it), Valjevo,
+      the cemetery, the Kovel mansion, the council's later commissions;
+      Scribe (no scroll); a cleric level-up with 2nd-level spells. Pool
+      has no Fix. Check in Curse's play test: PARLAY's prompt, Knock at a door's second locked
       kind, the DAMAGE lines' look, the Quick cleric's turning, the
       flee way, "is forced to flee", Curse's payments (Buy / Id / cures),
       the press words, word wrap,
