@@ -1833,7 +1833,15 @@ Stop Vm::step()
         // (Pool: after a fight the encounter's picture is no longer up - the
         // next SETUP MONSTER / APPROACH shows it again; DOSBox, Kuto's Well
         // 7,8: "A BAND OF KOBOLDS CLIMBS FROM THE WELL" over the picture)
-        if (set_.pool_map) reset_encounter();
+        if (set_.pool_map) {
+            reset_encounter();
+            // (Pool's COMBAT, ovr4 +0x17DB: the distance its scripts left in
+            // 0x7EC1 no further than the party sees from where it stands -
+            // DOSBox, Sokal Keep's frogs at 13,7 W: the script's table set 2,
+            // a wall ahead, the frogs placed next to the party)
+            const int s = sight();
+            if (s < get(0x7EC1)) set(0x7EC1, static_cast<uint16_t>(s));
+        }
         return wait_for(Wait::Combat);
     case 0x25:                                  // ON GOTO
     case 0x26: {                                // ON GOSUB
