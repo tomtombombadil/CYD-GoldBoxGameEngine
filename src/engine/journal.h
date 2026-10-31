@@ -14,7 +14,9 @@
 //                                   made from the Companion's map pictures
 //   char pdf_id[32]                 the PDF's /ID (which PDF it came from)
 //   u8 palette[256][3]              RGB
-//   entries x { u8 kind ('J' journal entry, 'T' tavern tale), u8 0,
+//   entries x { u8 kind ('J' journal entry, 'T' tavern tale, 'I' the
+//               introduction, 'P' Pool's proclamations by their numerals'
+//               values), u8 0,
 //               u16 number, u16 first piece, u16 pieces }
 //   pieces x  { u16 w, u16 h, u32 offset }  a rectangle of a page, at the
 //             scan's resolution, w x h bytes (palette indexes), top to bottom;
@@ -42,7 +44,7 @@ struct Piece {
 };
 
 struct EntryDef {
-    char     kind;                 // 'J' / 'T' / 'I' (the introduction, number 1)
+    char     kind;                 // 'J' / 'T' / 'I' (the introduction, number 1) / 'P' (a proclamation)
     uint8_t  number;
     uint16_t first;                // into the pieces
     uint8_t  count;
@@ -191,11 +193,27 @@ bool make_gbc(dax::ByteSource& dat, GbcPictures& pics, const char* id, Output& o
 
 // ---- the game's text ----------------------------------------------------------
 
-// Looks through printed game text for "JOURNAL ENTRY 31" (also "JOURNAL
-// AS ENTRY 59", "JOURNAL\nENTRY 44", "ENTRY #12") or "TAVERN TALE 12", or
-// "THE INTRODUCTION TO YOUR JOURNAL" (Gateway's and Treasures' starts: 'I' 1).
-// Returns the kind ('J' / 'T' / 'I') of the last complete mention and sets
-// *number, else 0.
+// Looks through printed game text for the journal's references, in order:
+//   'J' "JOURNAL ENTRY 31", "JOURNAL AS ENTRY 59", "JOURNAL\nENTRY 44",
+//       "ENTRY #12", JOURNAL a few words before ENTRY in the same sentence
+//       ("... INTO YOUR JOURNAL CALLING IT ENTRY 10"), "ENTRY 55 IN YOUR
+//       JOURNAL", a list ("UNDER ENTRIES 23 AND 14") and "(ENTRY 33)" (Pool:
+//       papers listed one a line after "... INTO YOUR JOURNAL:")
+//   'T' "TAVERN TALE 12" / "TAVERN TALE #12" / "TAVERN TALE NUMBER 12"
+//   'P' Pool's City Hall: "PROCLAMATION CXIV", "PROCLAMATIONS LXIV, CIX, AND
+//       LIX" - the Roman numerals' values (the journal's "Proclamation <N>")
+//   'I' "THE INTRODUCTION TO YOUR JOURNAL" (Gateway's and Treasures' starts: 1)
+// Up to max into out; returns how many.
+struct Mention {
+    char kind;
+    int  number;
+};
+int find_mentions(const char* text, Mention* out, int max);
+// The last complete mention's kind (else 0) and *number.
 char find_mention(const char* text, int* number);
+
+// A mention's name as the viewer says it: "Journal Entry 5", "Tavern Tale
+// 3", "Proclamation CXIV", "Introduction"
+void mention_name(char kind, int number, char* out, size_t cap);
 
 } // namespace journal

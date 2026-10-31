@@ -2046,6 +2046,15 @@ player's PDF, in scratch space); 58 entries and 23 tavern tales, each
 checked by eye (entry 37 is the atlas across a whole spread; the "legend
 for all maps" box belongs to none). Pool's scripts also say "TALK ENTRY 55
 IN YOUR JOURNAL" (the number first): the mention finder knows that too.
+2026-10-31 (Tom: references that don't say "journal entry"
+didn't open): the City Council's 18 **proclamations** (PDF pages 8-9,
+"Proclamation <Roman>" headings) are kind 'P' in the table, numbered by
+the numeral's value - the City Hall's "IN YOUR JOURNAL YOU NOTE
+PROCLAMATION(S) ..." opens them; Pool's other wordings now found too:
+JOURNAL a few words before ENTRY ("... JOURNAL CALLING IT ENTRY 10"), lists
+("UNDER ENTRIES 23 AND 14") and "(ENTRY 33)" lines. Several named at
+once are shown one after the other (Back shows the next). Champions'
+"TAVERN TALE NUMBER n" too. A Rescan remakes JOURNAL.DAT with them.
 2026-10-23 (branch journal-tables): **Secret** (72 entries), **Darkness**
 (99; the book has no entry 13) and **Gateway** (62) GOG journals -
 `make_table.py secret / darkness / gateway` (tesseract finds the
@@ -2106,7 +2115,8 @@ How it works (v0.12.0, Curse):
   scan keeps a file made from the same PDF. The scan log lists a PDF it
   doesn't know with its size and /ID, so a table can be added.
 - The engine watches the printed text for "JOURNAL ENTRY n" / "JOURNAL AS
-  ENTRY n" / "TAVERN TALE n" (numbers may come in the next PRINT) and, when
+  ENTRY n" / "TAVERN TALE n" (numbers may come in the next PRINT; every
+  wording: `journal::find_mentions`) and, when
   the game next waits for a key, the screen stays to be read (Tom,
   2026-10-10, v0.50.0: it used to jump straight to the entry); the player's
   next tap (or key) shows the entry instead of going on, and after Back to

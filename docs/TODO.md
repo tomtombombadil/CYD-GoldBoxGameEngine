@@ -7,6 +7,13 @@ the Project as claude/TODO.md.
 
 ## Tom
 
+- [ ] Pool's journal references (2026-10-31 fix): tap **Rescan** once
+      (JOURNAL.DAT gets the 18 City Hall proclamations), then try the
+      City Hall's postings, a tavern tale and the cabinet's "ENTRIES 23
+      AND 14" (Back shows the second). If tavern tales still show only
+      "Read Tavern Tale N ...": is the card's Pool the GOG or the Steam /
+      SNEG release? (SNEG's journal comes from the Gold Box Companion,
+      which has no tales or proclamations.)
 - [ ] The 5.0" boards (`TTB-CYD-GBGE_5.0in_Capacitive_ESP32-S3`, the
       FNK0115Q first; then the Hosyond - its back / box against the
       Freenove's): (1) the picture: 640x480 in the middle, black bars at

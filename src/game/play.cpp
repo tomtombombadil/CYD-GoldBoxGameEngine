@@ -600,8 +600,12 @@ uint32_t     cursor_at = 0;
 // Journal entries the text mentions ("record it in journal entry 31"):
 // shown once the game waits for a key
 char         jtext[200];            // the latest printed text
-char         journal_kind = 0;      // mentioned, not yet shown
-int          journal_num = 0;
+// Mentioned, not yet shown, in the order heard (a text may name several:
+// Pool's "UNDER ENTRIES 23 AND 14", its City Hall's four proclamations) -
+// the next tap shows the first, closing it shows the next
+constexpr int kMaxPending = 8;
+journal::Mention pending[kMaxPending];
+int          n_pending = 0;
 bool         journal_due = false;   // the game waits for the player: the next tap shows it
 // Every entry mentioned so far, in order (the Menu's Journal list); kept
 // for this session until saving games keeps it with the game
@@ -631,19 +635,26 @@ void heard(const char* t)
         n -= drop;
     }
     memcpy(jtext + n, t, add + 1);
-    int num = 0;
-    const char k = journal::find_mention(jtext, &num);
-    if (k) {
-        journal_kind = k;
-        journal_num = num;
-        jtext[0] = 0;
-        note_seen(k, num);
+    journal::Mention m[kMaxPending];
+    const int found = journal::find_mentions(jtext, m, kMaxPending);
+    if (found) jtext[0] = 0;
+    for (int i = 0; i < found; ++i) {
+        note_seen(m[i].kind, m[i].number);
+        bool have = false;
+        for (int k = 0; k < n_pending; ++k)
+            if (pending[k].kind == m[i].kind && pending[k].number == m[i].number) have = true;
+        if (have) continue;
+        if (n_pending == kMaxPending) {             // (the oldest makes room)
+            memmove(pending, pending + 1, sizeof pending[0] * (kMaxPending - 1));
+            --n_pending;
+        }
+        pending[n_pending++] = m[i];
     }
 }
 
 void journal_ready()
 {
-    if (journal_kind) journal_due = true;
+    if (n_pending) journal_due = true;
 }
 
 // Typing (INPUT NUMBER / STRING) on the menu line
@@ -15525,7 +15536,7 @@ const char* open(const char* data_dir, games::Game g, pic::Canvas& c, const char
     then = Then::Idle;
     anim_block = bigpic = last_pic = -1;
     jtext[0] = 0;
-    journal_kind = 0;
+    n_pending = 0;
     journal_due = false;
     n_seen = 0;
     cursor_on = false;
@@ -16966,23 +16977,26 @@ bool exit_requested()
     return e;
 }
 
-bool journal_waiting() { return d && journal_due && journal_kind; }
+bool journal_waiting() { return d && journal_due && n_pending; }
 
 bool journal_request(char* kind, int* number)
 {
-    if (!d || !journal_due) return false;
-    *kind = journal_kind;
-    *number = journal_num;
-    journal_due = false;
-    journal_kind = 0;
+    if (!d || !journal_due || !n_pending) return false;
+    *kind = pending[0].kind;
+    *number = pending[0].number;
+    memmove(pending, pending + 1, sizeof pending[0] * static_cast<size_t>(n_pending - 1));
+    --n_pending;
+    journal_due = n_pending > 0;        // (more named on the same screen: shown next)
     return true;
 }
 
 void journal_failed(char kind, int number, const char* why, pic::Canvas& c)
 {
     if (!d) return;
-    journal_kind = kind;
-    journal_num = number;
+    if (n_pending == kMaxPending) --n_pending;
+    memmove(pending + 1, pending, sizeof pending[0] * static_cast<size_t>(n_pending));
+    pending[0] = journal::Mention{kind, number};
+    ++n_pending;
     journal_due = true;
     cv = &c;
     error(c, why);

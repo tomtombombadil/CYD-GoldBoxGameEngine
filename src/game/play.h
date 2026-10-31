@@ -69,11 +69,14 @@ enum class Input : uint8_t { None, Number, Text };
 Input input();
 void input_key(char k, pic::Canvas& c);
 
-// The game mentioned a journal entry ('J') or tavern tale ('T') and now
-// waits for the player (Tom, 2026-10-10: the screen stays to be read; the
-// next tap - or key - shows the entry instead of going on, and the game
-// still waits after the viewer closes): journal_waiting() says one is due;
-// journal_request() takes it (true once, with what to show).
+// The game mentioned a journal entry ('J'), tavern tale ('T'), Pool's
+// proclamation ('P') or the introduction ('I') and now waits for the
+// player (Tom, 2026-10-10: the screen stays to be read; the next tap - or
+// key - shows the entry instead of going on, and the game still waits
+// after the viewer closes): journal_waiting() says one is due;
+// journal_request() takes it (true once each, with what to show). A text
+// that names several ("UNDER ENTRIES 23 AND 14") leaves the rest waiting:
+// the viewer shows them one after the other as each is closed.
 bool journal_waiting();
 bool journal_request(char* kind, int* number);
 // The viewer couldn't show it (memory): the request back, and an error on
@@ -138,7 +141,7 @@ bool icon_preview(bool action, uint8_t* out);
 // screen, so the 320x240 big preview (drawn over the canvas) stays off
 bool icon_gallery();
 
-// The journal entries ('J') and tavern tales ('T') the game has mentioned
+// The journal entries ('J'), tavern tales ('T') ... the game has mentioned
 // so far, in the order heard (the Menu's Journal list)
 int journal_seen_count();
 bool journal_seen(int i, char* kind, int* number);

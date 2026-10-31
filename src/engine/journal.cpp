@@ -1,5 +1,6 @@
 #include "journal.h"
 
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <new>
@@ -905,51 +906,206 @@ int piece_black(dax::ByteSource& src, const PieceInfo& p, uint8_t* row)
     return black_point(hist);
 }
 
-char find_mention(const char* text, int* number)
+namespace {
+
+bool is_letter(char c) { return (c | 0x20) >= 'a' && (c | 0x20) <= 'z'; }
+
+// The word `w` at s, a whole word (not inside a longer one)
+bool word_at(const char* text, const char* s, const char* w)
 {
-    char kind = 0;
+    if (!upper_eq(s, w) || (s > text && is_letter(s[-1]))) return false;
+    return !is_letter(s[strlen(w)]);
+}
+
+char upper(char c) { return c >= 'a' && c <= 'z' ? static_cast<char>(c - 32) : c; }
+bool is_roman(char c)
+{
+    c = upper(c);
+    return c == 'I' || c == 'V' || c == 'X' || c == 'L' || c == 'C' || c == 'D' || c == 'M';
+}
+
+// A Roman numeral of n letters at s (written the usual way: "CXIV", never
+// "CXIIII"), or -1
+int roman_value(const char* s, int n)
+{
+    static const struct { const char* r; int v; } kR[] = {
+        {"M", 1000}, {"CM", 900}, {"D", 500}, {"CD", 400}, {"C", 100}, {"XC", 90}, {"L", 50},
+        {"XL", 40},  {"X", 10},   {"IX", 9},  {"V", 5},    {"IV", 4},  {"I", 1}};
+    int v = 0, i = 0;
+    for (const auto& r : kR) {
+        // (M up to 3 times, the others as the usual spelling allows)
+        const int len = static_cast<int>(strlen(r.r));
+        const int most = (len == 1 && (r.v == 1000 || r.v == 100 || r.v == 10 || r.v == 1)) ? 3 : 1;
+        for (int k = 0; k < most && i + len <= n; ++k) {
+            bool same = true;
+            for (int j = 0; j < len; ++j)
+                if (upper(s[i + j]) != r.r[j]) same = false;
+            if (!same) break;
+            v += r.v;
+            i += len;
+        }
+    }
+    return i == n && v > 0 ? v : -1;
+}
+
+// One number of a list at p (spaces, '#' first): its value, and *end after
+// it; -1 if there's none. Roman: a numeral ending at a non-letter.
+int list_item(const char* p, bool roman, const char** end)
+{
+    while (is_space(*p) || (!roman && *p == '#')) ++p;
+    if (roman) {
+        int n = 0;
+        while (is_roman(p[n])) ++n;
+        if (n == 0 || is_letter(p[n])) return -1;
+        const int v = roman_value(p, n);
+        *end = p + n;
+        return v;
+    }
+    const int v = number_after(p);
+    if (v < 0) return -1;
+    while (*p >= '0' && *p <= '9') ++p;
+    *end = p;
+    return v;
+}
+
+// A list after a keyword: "23 AND 14", "#5", "LXIV, LXXVIII, CIX, AND LIX"
+// - the values into vals (up to max; the count returned), *end after the last
+int number_list(const char* p, bool roman, int* vals, int max, const char** end)
+{
+    int n = 0;
+    const char* e = nullptr;
+    int v = list_item(p, roman, &e);
+    while (v >= 0 && n < max) {
+        vals[n++] = v;
+        *end = e;
+        // ", " / " AND " / ", AND " / " & " - then the next one
+        const char* q = e;
+        bool sep = false;
+        if (*q == ',') {
+            ++q;
+            sep = true;
+        }
+        while (is_space(*q)) ++q;
+        if (upper_eq(q, "AND") && !is_letter(q[3])) {
+            q += 3;
+            sep = true;
+        } else if (*q == '&') {
+            ++q;
+            sep = true;
+        }
+        if (!sep) break;
+        v = list_item(q, roman, &e);
+    }
+    return n;
+}
+
+// "JOURNAL" in the same sentence a little before s (no '.', '!', '?' between)
+bool journal_before(const char* text, const char* s)
+{
+    for (int k = 0; k < 40 && s > text; ++k) {
+        --s;
+        if (*s == '.' || *s == '!' || *s == '?') return false;
+        if (upper_eq(s, "JOURNAL")) return true;
+    }
+    return false;
+}
+
+} // namespace
+
+int find_mentions(const char* text, Mention* out, int max)
+{
+    int got = 0;
+    auto add = [&](char k, int v) {
+        if (got < max) out[got++] = Mention{k, v};
+    };
+    int vals[8];
     for (const char* s = text; *s; ++s) {
-        if (upper_eq(s, "JOURNAL")) {
-            // "ENTRY" within a few words: "JOURNAL ENTRY", "JOURNAL AS ENTRY"
-            const char* t = s + 7;
-            for (int k = 0; k < 12 && *t; ++k, ++t) {
-                if (upper_eq(t, "ENTRY")) {
-                    const int n = number_after(t + 5);
-                    if (n >= 0) {
-                        kind = 'J';
-                        *number = n;
-                    }
-                    break;
-                }
-            }
-        } else if (upper_eq(s, "ENTRY") && (s == text || !((s[-1] | 0x20) >= 'a' && (s[-1] | 0x20) <= 'z'))) {
-            // Pool: "... TALK ENTRY 55 IN YOUR JOURNAL" - the number first
-            const int n = number_after(s + 5);
-            if (n < 0) continue;
-            const char* t = s + 5;
-            while (*t == ' ') ++t;
-            while (*t >= '0' && *t <= '9') ++t;
-            for (int k = 0; k < 24 && *t; ++k, ++t)
-                if (upper_eq(t, "JOURNAL")) {
-                    kind = 'J';
-                    *number = n;
-                    break;
-                }
+        const bool plural = word_at(text, s, "ENTRIES");
+        if (plural || word_at(text, s, "ENTRY")) {
+            // A journal entry's number (or a list): with JOURNAL a few words
+            // before in the sentence ("JOURNAL ENTRY 31", "JOURNAL AS ENTRY 59",
+            // Pool's "INTO YOUR JOURNAL CALLING IT ENTRY 10" / "UNDER ENTRIES 23
+            // AND 14"), JOURNAL soon after (Pool's "TALK ENTRY 55 IN YOUR
+            // JOURNAL"), or in brackets (Pool's papers listed after "... INTO
+            // YOUR JOURNAL:" one a line, each "(ENTRY 33)")
+            const char* end = s;
+            const int n = number_list(s + (plural ? 7 : 5), false, vals, 8, &end);
+            if (n == 0) continue;
+            bool ok = (s > text && s[-1] == '(') || journal_before(text, s);
+            for (int k = 0; !ok && k < 24 && end[k]; ++k)
+                if (upper_eq(end + k, "JOURNAL")) ok = true;
+            if (ok)
+                for (int i = 0; i < n; ++i) add('J', vals[i]);
+            s = end - 1;
         } else if (upper_eq(s, "INTRODUCTION TO YOUR JOURNAL")) {
             // Gateway's start: "... AS THE INTRODUCTION TO YOUR JOURNAL." (Treasures':
             // "YOU RECORD HIS WORDS AS THE INTRODUCTION ...") -
             // the journal's Introduction (kind 'I', number 1)
-            kind = 'I';
-            *number = 1;
-        } else if (upper_eq(s, "TAVERN TALE")) {
-            const int n = number_after(s + 11);
-            if (n >= 0) {
-                kind = 'T';
-                *number = n;
-            }
+            add('I', 1);
+        } else if (upper_eq(s, "TAVERN TALE") && (s == text || !is_letter(s[-1]))) {
+            // "TAVERN TALE 7", "#12", Champions' "TAVERN TALE NUMBER 3"
+            const char* p = s + 11;
+            if (upper(*p) == 'S') ++p;
+            while (is_space(*p)) ++p;
+            if (word_at(text, p, "NUMBER")) p += 6;
+            const char* end = p;
+            const int n = number_list(p, false, vals, 8, &end);
+            for (int i = 0; i < n; ++i) add('T', vals[i]);
+            if (n) s = end - 1;
+        } else if (upper_eq(s, "PROCLAMATION") && (s == text || !is_letter(s[-1]))) {
+            // Pool's City Hall: "... IN YOUR JOURNAL YOU NOTE PROCLAMATION CXIV."
+            // / "PROCLAMATIONS LXIV, LXXVIII, CIX, AND LIX." - the journal's
+            // proclamations by their numerals; the list ends the words (not
+            // "PROCLAMATION I HAVE ..."). (Its script prints the word and the
+            // numeral as two texts, the numeral without a space before it.)
+            const char* p = s + 12;
+            if (upper(*p) == 'S' && !is_letter(p[1])) ++p;
+            const char* end = p;
+            const int n = number_list(p, true, vals, 8, &end);
+            const char* q = end;
+            while (n && is_space(*q)) ++q;
+            if (n == 0 || is_letter(*q)) continue;
+            for (int i = 0; i < n; ++i) add('P', vals[i]);
+            s = end - 1;
         }
     }
-    return kind;
+    return got;
+}
+
+char find_mention(const char* text, int* number)
+{
+    Mention m[16];
+    const int n = find_mentions(text, m, 16);
+    if (n == 0) return 0;
+    *number = m[n - 1].number;
+    return m[n - 1].kind;
+}
+
+void mention_name(char kind, int number, char* out, size_t cap)
+{
+    if (cap == 0) return;
+    if (kind == 'I') {
+        snprintf(out, cap, "Introduction");
+        return;
+    }
+    if (kind == 'P') {
+        // the Roman numeral, as the journal's heading
+        static const struct { const char* r; int v; } kR[] = {
+            {"M", 1000}, {"CM", 900}, {"D", 500}, {"CD", 400}, {"C", 100}, {"XC", 90}, {"L", 50},
+            {"XL", 40},  {"X", 10},   {"IX", 9},  {"V", 5},    {"IV", 4},  {"I", 1}};
+        char r[24];
+        size_t o = 0;
+        int v = number > 0 && number < 4000 ? number : 0;
+        for (const auto& k : kR)
+            while (v >= k.v && o + strlen(k.r) < sizeof r) {
+                for (const char* c = k.r; *c; ++c) r[o++] = *c;
+                v -= k.v;
+            }
+        r[o] = 0;
+        snprintf(out, cap, "Proclamation %s", r);
+        return;
+    }
+    snprintf(out, cap, "%s %d", kind == 'T' ? "Tavern Tale" : "Journal Entry", number);
 }
 
 } // namespace journal

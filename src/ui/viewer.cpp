@@ -1144,8 +1144,8 @@ void prepare_journal_now(const library::GameDir& g)
         return;
     }
     delete doc;
-    int nj = 0, nt = 0;
-    for (int i = 0; i < t->n_entries; ++i) (t->entries[i].kind == 'T' ? nt : nj)++;
+    int nj = 0, nt = 0, np = 0;
+    for (int i = 0; i < t->n_entries; ++i) (t->entries[i].kind == 'T' ? nt : t->entries[i].kind == 'P' ? np : nj)++;
     // The Gold Box Companion copied to /GOLDBOX/GBC (as for its icons): its
     // pictures of the map entries when it has them (Tom, 2026-10-24: the
     // Treasures maps' scans are 72 dpi; the Steam / SNEG Companion's
@@ -1200,8 +1200,10 @@ void prepare_journal_now(const library::GameDir& g)
     f.close();
     scan_log_resume();
     if (ok) {
-        snprintf(line, sizeof line, "Prepared the %s journal: %d journal entries, %d tavern tales (%lu s)", title, nj, nt,
-                 static_cast<unsigned long>((millis() - t0) / 1000));
+        char procl[24] = "";
+        if (np) snprintf(procl, sizeof procl, ", %d proclamations", np);     // (Pool's City Hall)
+        snprintf(line, sizeof line, "Prepared the %s journal: %d journal entries, %d tavern tales%s (%lu s)", title, nj,
+                 nt, procl, static_cast<unsigned long>((millis() - t0) / 1000));
         if (maps) {
             scan_say(line, false, nullptr);
             snprintf(line, sizeof line, "  %d map%s from the Gold Box Companion's pictures", maps, maps == 1 ? "" : "s");
@@ -3246,8 +3248,7 @@ void draw_game_menu()
         int num;
         if (!play::journal_seen(k, &kind, &num)) break;
         char line[40];
-        if (kind == 'I') snprintf(line, sizeof line, "Introduction");      // (Gateway's start)
-        else snprintf(line, sizeof line, "%s %d", kind == 'T' ? "Tavern Tale" : "Journal Entry", num);
+        journal::mention_name(kind, num, line, sizeof line);     // ("Introduction": Gateway's start)
         const int y = a.y + i * rh;
         ui::text(x, y + ui::gap(), line, k == n - 1 ? style::kGold : style::kText);
         if (i + 1 < r) ui::gfx().drawFastHLine(x, y + rh - 1, wdt, style::kKeyEdge);
@@ -3588,12 +3589,11 @@ bool open_journal(char kind, int number)
     jv->pal_black = -1;
     const library::GameDir& g = game_dirs[game_sel];
     jv->has_pdf = g.journal[0] != 0;
-    const char* what = kind == 'T' ? "Tavern Tale" : "Journal Entry";
     // Without the pictures: as the original game, the printed journal - or
     // the PDF as a book
-    char named[24];
+    char named[40];
     if (kind == 'I') snprintf(named, sizeof named, "the Introduction");
-    else snprintf(named, sizeof named, "%s %d", what, number);
+    else journal::mention_name(kind, number, named, sizeof named);
     snprintf(jv->why, sizeof jv->why, "Read %s in your Adventurer's Journal.%s", named,
              !g.journal[0] ? ""
                            : " The journal PDF in this game's folder isn't prepared (an edition the engine doesn't know, "
@@ -3824,6 +3824,14 @@ void leave_journal()
     delete jv;
     jv = nullptr;
     close_book();
+    // The next one the same text named (Pool's "UNDER ENTRIES 23 AND 14",
+    // its City Hall's proclamations): shown at once, one after the other
+    char jk;
+    int jn;
+    if (!from_menu && play::journal_waiting() && play::journal_request(&jk, &jn)) {
+        if (open_journal(jk, jn)) return;
+        play::journal_failed(jk, jn, "Not enough memory to show the journal entry.", frame::canvas());
+    }
     // The Menu (when it opened the entry or the book), or the game screen
     // as it was
     go(from_menu ? Screen::GameMenu : Screen::Play);
@@ -4274,7 +4282,10 @@ bool play_journal()
     char jk;
     int jn;
     if (!play::journal_request(&jk, &jn)) return false;
-    if (!comfort_on(kCJournal)) return false;           // (switched off: as the original, the tap goes on)
+    if (!comfort_on(kCJournal)) {                        // (switched off: as the original, the tap goes on)
+        while (play::journal_request(&jk, &jn)) {}       // (any more named with it too)
+        return false;
+    }
     if (!open_journal(jk, jn)) {
         play::journal_failed(jk, jn, "Not enough memory to show the journal entry.", frame::canvas());
         present_play();

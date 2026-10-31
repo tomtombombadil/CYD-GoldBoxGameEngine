@@ -3837,7 +3837,7 @@ static void test_journal()
         CHECK(strlen(t.pdf_id) == 32 && t.n_entries > 0 && t.n_pieces >= t.n_entries);
         for (int e = 0; e < t.n_entries; ++e) {
             const journal::EntryDef& d = t.entries[e];
-            CHECK((d.kind == 'J' || d.kind == 'T' || d.kind == 'I') && d.number > 0 && d.count > 0 &&
+            CHECK((d.kind == 'J' || d.kind == 'T' || d.kind == 'I' || d.kind == 'P') && d.number > 0 && d.count > 0 &&
                   d.first + d.count <= t.n_pieces);
             for (int k = 0; k < e; ++k)
                 CHECK(!(t.entries[k].kind == d.kind && t.entries[k].number == d.number));
@@ -3925,6 +3925,65 @@ static void test_journal()
     CHECK(journal::find_mention("YOU HEAR TAVERN TALE 17", &n) == 'T' && n == 17);
     CHECK(journal::find_mention("RECORD IT AS JOURNAL ENTRY 29.", &n) == 'J' && n == 29);
     CHECK(journal::find_mention("AND YOU NOTE THIS AS JOURNAL ENTRY 42.", &n) == 'J' && n == 42);
+    // (Champions: "TAVERN TALE NUMBER " and the number)
+    CHECK(journal::find_mention("A STRANGER MUTTERS TAVERN TALE NUMBER 9", &n) == 'T' && n == 9);
+    // (Gateway: "# 40")
+    CHECK(journal::find_mention("YOU WRITE IT DOWN AS JOURNAL ENTRY # 40.", &n) == 'J' && n == 40);
+    // (Pool, Tom 2026-10-31: the references that didn't open their entries)
+    {
+        journal::Mention m[8];
+        // JOURNAL further before ENTRY in the same sentence
+        CHECK(journal::find_mention("THE GUIDES TALK; YOU DRAW A PLAN IN YOUR JOURNAL AND NAME IT ENTRY 12.", &n) == 'J' &&
+              n == 12);
+        // ... but not across a sentence's end
+        CHECK(journal::find_mention("YOU CLOSE YOUR JOURNAL. THE LEDGER'S ENTRY 7 IS BLANK.", &n) == 0);
+        // a list: two entries, in order
+        CHECK(journal::find_mentions("YOU PUSH THE NOTES INTO YOUR JOURNAL UNDER ENTRIES 23 AND 14.", m, 8) == 2 &&
+              m[0].kind == 'J' && m[0].number == 23 && m[1].kind == 'J' && m[1].number == 14);
+        CHECK(journal::find_mentions("FILED IN YOUR JOURNAL AS ENTRIES 3, 8, AND 41.", m, 8) == 3 && m[0].number == 3 &&
+              m[1].number == 8 && m[2].number == 41);
+        // a line of a list after "... INTO YOUR JOURNAL:" - the entry in brackets
+        CHECK(journal::find_mention("A BILL OF SALE FOR SIX GOATS. (ENTRY 33)", &n) == 'J' && n == 33);
+        CHECK(journal::find_mention("THE TOLL IS TWO COPPERS (ENTRY FEE 5)", &n) == 0);
+        // Pool's City Hall: the proclamations by their numerals ('P', the value)
+        CHECK(journal::find_mentions("NOTICES HANG HERE, IN YOUR JOURNAL YOU NOTE PROCLAMATIONS XLII, CXV, CCIX, AND LX.", m,
+                                     8) == 4 &&
+              m[0].kind == 'P' && m[0].number == 42 && m[1].number == 115 && m[2].number == 209 && m[3].number == 60);
+        // (the word and the numeral printed as two texts, joined as heard)
+        CHECK(journal::find_mention("IN YOUR JOURNAL YOU NOTE PROCLAMATIONCXIV.", &n) == 'P' && n == 114);
+        CHECK(journal::find_mentions("PROCLAMATIONCXXVI AND CX.", m, 8) == 2 && m[0].number == 126 && m[1].number == 110);
+        CHECK(journal::find_mention("PROCLAMATION LXXVIII", &n) == 'P' && n == 78);
+        // not a numeral: words after it, other words, a bad numeral
+        CHECK(journal::find_mention("THE HERALD'S PROCLAMATION I HAVE HEARD.", &n) == 0);
+        CHECK(journal::find_mention("PROCLAMATIONS ARE POSTED ON THE WALLS.", &n) == 0);
+        CHECK(journal::find_mention("A PROCLAMATION OF PURE EVIL.", &n) == 0);
+        CHECK(journal::find_mention("PROCLAMATION IIII.", &n) == 0);
+        CHECK(journal::find_mention("THE STEWARD READS A PROCLAMATION.", &n) == 0);
+        // the names the viewer shows
+        char nm[40];
+        journal::mention_name('P', 214, nm, sizeof nm);
+        CHECK(strcmp(nm, "Proclamation CCXIV") == 0);
+        journal::mention_name('P', 78, nm, sizeof nm);
+        CHECK(strcmp(nm, "Proclamation LXXVIII") == 0);
+        journal::mention_name('T', 3, nm, sizeof nm);
+        CHECK(strcmp(nm, "Tavern Tale 3") == 0);
+        journal::mention_name('J', 58, nm, sizeof nm);
+        CHECK(strcmp(nm, "Journal Entry 58") == 0);
+    }
+    // Pool's GOG journal (6,325,424 bytes): 58 entries, 23 tavern tales, the
+    // 18 proclamations (CCXIV the last)
+    {
+        const journal::Table* pt = journal::find_table(6325424u, "1d9365f3923839543e16fb839aa4631a");
+        CHECK(pt != nullptr);
+        int nj = 0, nt = 0, np = 0;
+        bool p214 = false;
+        for (int i = 0; pt && i < pt->n_entries; ++i) {
+            const char k = pt->entries[i].kind;
+            (k == 'T' ? nt : k == 'P' ? np : nj)++;
+            if (k == 'P' && pt->entries[i].number == 214) p214 = true;
+        }
+        CHECK(nj == 58 && nt == 23 && np == 18 && p214);
+    }
     // Champions' GOG journal (8,017,944 bytes): 88 entries and 57 tavern tales
     {
         const journal::Table* ck = journal::find_table(8017944u, "d589480a8abe1017dfb963d1fe03217a");

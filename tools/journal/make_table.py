@@ -87,17 +87,36 @@ def ocr_lines(path):
     return res
 
 
+def roman_value(r):
+    v = {'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100, 'D': 500, 'M': 1000}
+    return sum(-v[a] if v[a] < v[b] else v[a] for a, b in zip(r, r[1:])) + v[r[-1]]
+
+
 def pool_heads(files, L):
     """Pool's headings are italic text, not boxes: "Journal Entry N:" lines
     and, on the tavern page, "Tale N:" at a column's start (the number
-    token "N:" just right of "Tale", which OCR reads more surely)"""
+    token "N:" just right of "Tale", which OCR reads more surely); on the
+    City Council's pages "Proclamation <Roman>" (kind 'P', the numeral's
+    value - the game's City Hall names them by number)"""
     import re
     heads = []
     for fi, f in enumerate(files):
-        if fi not in L['pages']:
+        if fi not in L['pages'] and fi not in L.get('procl_pages', ()):
             continue
         for x, y, h, ws in ocr_lines(f):
             text = ' '.join(w[3] for w in ws)
+            if fi in L.get('procl_pages', ()):
+                m = re.match(r'\W*Proclamation\s+(\S+)$', text)
+                if m:
+                    # (OCR reads the italic I as l, 1, | or ]; CCI's last I as
+                    # L - checked by eye)
+                    r = re.sub(r'[l1|\]]', 'I', m.group(1))
+                    r = L.get('procl_ocr', {}).get(r, r)
+                    wx = ws[1][0] if ws[0][3] == '|' else x
+                    heads.append(('P', roman_value(r), fi, wx, y))
+                    continue
+            if fi not in L['pages']:
+                continue
             m = re.match(r'\s*J\w*rnal\s+Entry\s+(\d+)\s*:', text)
             if m:
                 heads.append(('J', int(m.group(1)), fi, x, y))
@@ -262,6 +281,9 @@ def pool_layout(t):
     t['J'][37] = [[14, 40, 15, 615, 935], [14, 690, 15, 620, 935]]
     # Tale 5 ends at its column's foot (the title above tale 6 is the intro's)
     t['T'][5] = t['T'][5][:1]
+    # Proclamation LXXVIII ends at its column's foot (the next column's top
+    # is the section's title and introduction, across the left book page)
+    t['P'][78] = t['P'][78][:1]
 
 
 def champions_layout(t):
@@ -401,8 +423,10 @@ LAYOUTS = {
         'top': 12, 'bottom': [952, 968, 968, 952],      # (page numbers at the outer columns' feet)
         'pages': range(8, 18),                           # the entries' and tales' spreads (0-based)
         'tale_page': 17,
+        'procl_pages': (7, 8),                           # the City Council's proclamations (0-based)
+        'procl_ocr': {'CCL': 'CCI'},
         'heads': pool_heads,
-        'stop': {'J': (16, 3), 'T': (17, 3)},
+        'stop': {'J': (16, 3), 'T': (17, 3), 'P': (8, 1)},
         'fix': pool_layout,
     },
     'curse': {
@@ -722,6 +746,9 @@ def main():
         for kind in 'JT':
             got = sorted(i[1] for i in items if i[0] == kind)
             print(kind, len(got), 'missing', sorted(set(range(1, max(got) + 1)) - set(got)) if got else '-')
+        got = sorted(i[1] for i in items if i[0] == 'P')    # (proclamations: numbers with gaps)
+        if got:
+            print('P', len(got), got)
     else:
         heads = []
         for fi, f in enumerate(files):
@@ -760,7 +787,7 @@ def main():
                 c, fi = 0, fi + 1
             y = top
 
-    t = {'J': {}, 'T': {}, 'I': {}}
+    t = {'J': {}, 'T': {}, 'I': {}, 'P': {}}
     for k, (kind, n, fi, c, y) in enumerate(items):
         nxt = items[k + 1][2:] if k + 1 < len(items) and items[k + 1][0] == kind else None
         t[kind][n] = pieces(fi, c, y - 14, nxt, L['stop'][kind])
@@ -790,7 +817,7 @@ def main():
         return pages[p]
 
     entries = []
-    for kind in 'JTI':
+    for kind in 'JTIP':
         for n in sorted(t[kind]):
             ps = []
             for p, x, y, w, h in t[kind][n]:
@@ -819,7 +846,7 @@ def main():
         json.dump(table, f, separators=(',', ':'))
     write_cpp(table, out_path)
     print(f"{name}: {sum(e['k'] == 'J' for e in entries)} journal entries, "
-          f"{sum(e['k'] == 'T' for e in entries)} tavern tales")
+          f"{sum(e['k'] == 'T' for e in entries)} tavern tales, {sum(e['k'] == 'P' for e in entries)} proclamations")
 
 
 def write_cpp(table, path):
