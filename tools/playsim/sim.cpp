@@ -1477,6 +1477,14 @@ int main(int argc, char** argv)
             }
         }
         { char t[16]; snprintf(t, sizeof t, "after_%c", *m); shot(t); }
+#ifdef CYD_TEST_HOOKS
+        // DIEDROP=1: dice told before a move and not rolled by it are dropped
+        // (a step that runs a square's own script rolls no wandering die)
+        if (getenv("DIEDROP") && !g_die_once.empty()) {
+            printf("  (%d told dice dropped)\n", (int)g_die_once.size());
+            g_die_once.clear();
+        }
+#endif
         char l1[48], l2[48]; play::describe(l1, l2, 48);
         printf("   now %d,%d %s | %s | %s\n", play::pos_x(), play::pos_y(), geo::dir_name(play::dir()), l1, l2);
         if (play::q_overland())      // (the Dark Queen's overland: its square, the whole map's, the picture)
