@@ -198,6 +198,7 @@ public:
     // An arena fight arranged (CALL 0x8000 / 0x8001) for the next COMBAT
     // (the original's flag, cleared after that fight or by a load)
     bool arena() const { return duel_; }
+    bool in_damage() const { return dmg_at_ >= 0; }   // (a DAMAGE's lines / key wait under way)
     void end_arena() { duel_ = false; }
 #ifdef CYD_TEST_HOOKS
     void test_set_monsters(bool v) { monsters_ = v; }     // (tests: a dumped state put back)

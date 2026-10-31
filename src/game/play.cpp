@@ -12632,6 +12632,14 @@ void begin_wait(pic::Canvas& c)
             show_menu_line(c);
             break;
         }
+        // (Pool: a DAMAGE's wait shows its own "PRESS <ENTER>/<RETURN> TO
+        // CONTINUE" in white - o8 +0x20A9, the press words' second;
+        // DOSBox, Stojanow Gate's bugbear punch)
+        if (pool_files() && vm->in_damage() && d->w_press[1][0]) {
+            clear_menu_line(c);
+            put(c, d->w_press[1], 0, text::kMenuRow, 15);
+            break;
+        }
         press_line(c, 15);
         break;
     case ecl::Wait::Shop:
