@@ -156,7 +156,27 @@ the Project as claude/TODO.md.
       box (both icons at once) - now on the ground, as the original's
       0x74572; "Surrenders" with the panel already saying unconscious -
       now shown while it stands (no turn box), then off the field (the
-      original's 0x644A7; coab read, not yet seen in DOSBox). Check in Curse's play test: PARLAY's prompt, Knock at a door's second locked
+      original's 0x644A7; both seen so in DOSBox, the slums' orcs). Then:
+      Grishnak's temple - the computer's multi-target spells took one
+      target (Hold Person's aim 6: the original picks (aim & 3) + 1 at
+      random; DOSBox holds two from one cast; the engine now loses 2 of
+      6 seeds there too); after the last enemy goes the round goes on
+      (the rest act, then Continue Battle) and a surrender's panel stays
+      (Tom's "unconscious" at Continue Battle); View works the character
+      out first (weight after training); Pool's View shows the portrait
+      where the state word 0x7F12 is 3 (Phlan, GAME.OVR 0x21537); View -
+      Spells without "Choose Spell:". Matched: Kuto's Well -> slums (a
+      wandering orc fight: XP 180 each both) -> Phlan, Cadorna's and
+      Norris's rewards at the clerk (208 + 833 XP, coins), the
+      commissions list, training Brother Sean to cleric 2 (HP, 3000 XP
+      cap). Open: (a) the hall's party menu - DOSBox shows the first
+      member lit on entry but moves from the old selection, and keeps it
+      after Begin (part 4 saw it reset after Darkstar's training - the
+      engine resets at Begin); (b) a computer's spell with no target:
+      the original loses it ("Spell Aborted"?), the engine tries the
+      next; (c) 2nd-level cleric spells need cleric 3 (Sean at the 3000
+      cap). Not reached: Valjevo, the cemetery, the Kovel mansion, the
+      later commissions, Sokal Keep's reward, Scribe. Check in Curse's play test: View - Spells' prompt, PARLAY's prompt, Knock at a door's second locked
       kind, the DAMAGE lines' look, the Quick cleric's turning, the
       flee way, "is forced to flee", Curse's payments (Buy / Id / cures),
       the press words, word wrap,
