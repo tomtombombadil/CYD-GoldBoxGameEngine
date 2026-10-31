@@ -626,6 +626,8 @@ int main(int argc, char** argv)
     if (e) { printf("open: %s\n", e); return 1; }
     // NOGALLERY=1: the icon editor opens as the original's (the gallery comfort off)
     if (getenv("NOGALLERY")) { play::Options o = play::opts; o.gallery = false; play::set_options(o); }
+    // (NOFIXES also as the game's own setting: Play's start sets the rules' switch from it)
+    if (getenv("NOFIXES")) { play::Options o = play::opts; o.item_fixes = false; play::set_options(o); }
     // SOUNDTEST=a-b: the game's own effects a to b, one after another, then out
     if (const char* st = getenv("SOUNDTEST")) {
         int a = 2, z = 14;
@@ -1353,6 +1355,12 @@ int main(int argc, char** argv)
             continue;
         }
         if (*m == '`') { g_quiet = !g_quiet; continue; }
+        if (*m == '?') {                // "?": the screen, the menu line, what the script waits for
+            printf("  ? screen %d menu [%s|%s] wait %d text [%s] selected %d\n", (int)play::screen, play::menu.prompt,
+                   play::menu.s, (int)play::vm->wait(), play::vm->wait() == ecl::Wait::Print ? play::vm->text() : "",
+                   play::pt ? play::pt->selected : -1);
+            continue;
+        }
 #ifdef CYD_TEST_HOOKS
         if (*m == '~') {                // "~n:v;": the next die of n faces rolls v
             int n = 0, v = 0;
@@ -1536,6 +1544,19 @@ int main(int argc, char** argv)
             }
         printf("  move mode %d menu [%s%s]\n", (int)play::moving, play::menu.prompt, play::menu.s);
         shot("moving");
+    }
+    if (getenv("COINLOG") && play::pt) {
+        // COINLOG=1: each member's coins (copper ... jewellery), the carried weight, the counter's
+        for (int i = 0; i < play::pt->count; ++i) {
+            const party::Character& ch = play::pt->m[i];
+            char nm[20];
+            ch.name(nm, sizeof nm);
+            printf("  coins %-16s %d %d %d %d %d gems %d jewels %d weight %d\n", nm, ch.money(0), ch.money(1),
+                   ch.money(2), ch.money(3), ch.money(4), ch.money(5), ch.money(6), ch.encumbrance());
+        }
+        if (play::ground)
+            printf("  counter %d %d %d %d %d\n", play::ground->money[0], play::ground->money[1], play::ground->money[2],
+                   play::ground->money[3], play::ground->money[4]);
     }
     if (getenv("SAVENOW")) {
         // SAVENOW=slot: saved as it stands, without the camp (a save for the original to load)

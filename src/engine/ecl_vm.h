@@ -310,6 +310,12 @@ private:
     uint8_t* sel_rec() const { return sel_mon_ >= 0 ? h_.monster_record(sel_mon_) : nullptr; }
     bool restore_ = false;
     mutable bool not_found_ = false;
+    // Game Fixes' coins (OpSet::five_coins): the members whose coins the
+    // running script has looked at or written (a bit each) - each made the
+    // highest coins at its first look, all of them again when it ends
+    mutable uint16_t coins_seen_ = 0;
+    void coins_touch(uint16_t a, bool write) const;
+    void coins_done();
     bool cleared_name_ = false, cleared_status_ = false;
     void restore_selected();
     void party_size();

@@ -600,6 +600,83 @@ void pay(party::Character& c, int gold)
     for (int i = 0; i < 7; ++i) put16(c.rec, 0xFB + i * 2, m[i] < 0 ? 0 : m[i]);
 }
 
+long copper_worth(const int money[7])
+{
+    long copper = 0;
+    for (int m = 0; m < 5; ++m) copper += static_cast<long>(money[m] > 0 ? money[m] : 0) * kPerCopper[m];
+    return copper;
+}
+
+long copper_worth(const party::Character& c)
+{
+    int m[7];
+    for (int i = 0; i < 7; ++i) m[i] = c.money(i);
+    return copper_worth(m);
+}
+
+void coins_of(long copper, int money[7])
+{
+    if (copper < 0) copper = 0;
+    for (int m = 4; m >= 0; --m) {
+        long n = copper / kPerCopper[m];
+        if (n > 0xFFFF) n = 0xFFFF;
+        money[m] = static_cast<int>(n);
+        copper -= n * kPerCopper[m];
+    }
+}
+
+namespace {
+int coin_count(const int money[7])
+{
+    int n = 0;
+    for (int m = 0; m < 5; ++m) n += money[m] > 0 ? money[m] : 0;
+    return n;
+}
+
+// The character's coins set to `money` (0-4), the carried weight following
+void set_coins(party::Character& c, const int money[7])
+{
+    int old[7];
+    for (int i = 0; i < 7; ++i) old[i] = c.money(i);
+    const int w = u16(c.rec, kWeight) - (coin_count(old) - coin_count(money));
+    for (int m = 0; m < 5; ++m) put16(c.rec, 0xFB + m * 2, money[m]);
+    put16(c.rec, kWeight, w < 0 ? 0 : w);
+}
+} // namespace
+
+void coins_up(int money[7])
+{
+    int up[7] = {0, 0, 0, 0, 0, money[5], money[6]};
+    coins_of(copper_worth(money), up);
+    if (coin_count(up) > coin_count(money)) return;         // (never heavier)
+    for (int m = 0; m < 5; ++m) money[m] = up[m];
+}
+
+void coins_up(party::Character& c)
+{
+    int m[7];
+    for (int i = 0; i < 7; ++i) m[i] = c.money(i);
+    coins_up(m);
+    set_coins(c, m);
+}
+
+bool pay_any(party::Character& c, int* other, int gold)
+{
+    const long cost = static_cast<long>(gold) * kPerCopper[3];
+    const long mine = copper_worth(c), theirs = other ? copper_worth(other) : 0;
+    if (mine + theirs < cost) return false;
+    int m[7];
+    for (int i = 0; i < 7; ++i) m[i] = c.money(i);
+    if (mine >= cost) {
+        coins_of(mine - cost, m);
+    } else {
+        coins_of(0, m);
+        coins_of(theirs - (cost - mine), other);
+    }
+    set_coins(c, m);
+    return true;
+}
+
 int max_load(const party::Character& c) { return 1500 + max_encumbrance(c); }
 
 namespace {

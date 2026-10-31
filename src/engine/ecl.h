@@ -165,6 +165,14 @@ struct OpSet {
     // Gateway: CALL 0x80F trades the selected member's coins up
     // (rules::trade_up - before its scripts take a price in platinum)
     uint16_t change_call = 0;
+    // The selected member's coins at 0x7CBB-0x7CC3 are AD&D's five (copper,
+    // silver, electrum, gold, platinum - Curse, Pool, Secret, Gateway). With
+    // rules::fixes() (Tom, 2026-10-31: any coins that together are worth a
+    // price pay it): a script's first look at a member's coins finds them
+    // in the highest coins (rules::coins_up - the inn's "1 platinum piece"
+    // paid from 30 gold), and the coins it touched are made the highest
+    // again when it ends. Off: the original's coins as they are.
+    bool five_coins = false;
 };
 
 // A script's memory address as the engine's machine (Curse's map) knows

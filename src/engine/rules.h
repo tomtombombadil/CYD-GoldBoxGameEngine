@@ -109,6 +109,26 @@ void pay(party::Character& c, int gold);
 // scripts then pay in platinum
 void trade_up(party::Character& c);
 
+// Game Fixes (Tom, 2026-10-31): every coin is worth its copper (AD&D: 1 pp
+// = 5 gp = 10 ep = 50 sp = 500 cp - the rates above), so a price is paid
+// from any coins that together are worth it, with exact change, and the
+// money is then held in the highest coins (fewer coins, less weight; gems
+// and jewellery as they are). For the games with the five coins (Pool,
+// Curse, Secret, Gateway) - the front end and the script machine decide
+// when (the originals pay from the coins as they are).
+long copper_worth(const int money[7]);
+long copper_worth(const party::Character& c);
+// The coins (0-4) worth `copper`, in the highest coins (each at most 65535)
+void coins_of(long copper, int money[7]);
+// The coins made the highest worth the same; never more coins than before.
+// The character's carried weight (0x187) goes down by the coins saved.
+void coins_up(int money[7]);
+void coins_up(party::Character& c);
+// `gold` paid: from the character's coins, what they can't cover from
+// `other`'s (the counter; nullptr: none); both left in the highest coins.
+// False (nothing paid) when the two together aren't worth it.
+bool pay_any(party::Character& c, int* other, int gold);
+
 // Coins: the party's player characters put all theirs in the pool; the
 // pool shared out (each coin kind from jewellery down: equal shares, one
 // more of the rest each while it lasts, then what's left to whoever can
