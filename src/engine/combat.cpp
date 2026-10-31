@@ -1013,7 +1013,30 @@ int g_kind = 0;                      // the damage's kind now (saving throws: re
 int g_actor = -1;                    // whose turn it is (saving throws: protection from evil / good)
 
 bool hasx(const Fighter& f, uint8_t type) { return type && f.has(type); }
+
+// The rolls shown (CYD_COMBAT_ROLLS): one written down when g_rolls is set
+int g_dmg_dice = -1;                 // the next harm's amount: its dice part (-1: all of it)
+void log_roll(int who, RollKind k, int blow, int nat, int mod, int need)
+{
+    if (!g_rolls || g_rolls->n >= kRollLog || who < 0) return;
+    g_rolls->taken &= ~(1u << g_rolls->n);
+    Roll& r = g_rolls->r[g_rolls->n++];
+    r.who = static_cast<uint8_t>(who);
+    r.kind = k;
+    r.blow = static_cast<uint8_t>(blow);
+    r.need = static_cast<int8_t>(need < -128 ? -128 : need > 127 ? 127 : need);
+    r.nat = static_cast<int16_t>(nat);
+    r.mod = static_cast<int16_t>(mod);
+}
+// A fighter's number in the fight (saving throws get the record); -1: not in it
+int fighter_no(const Fighter& f)
+{
+    if (!g_rolls || !g_b || !g_b->f || &f < g_b->f || &f >= g_b->f + g_b->n) return -1;
+    return static_cast<int>(&f - g_b->f);
+}
 } // namespace
+
+RollLog* g_rolls = nullptr;
 
 void set_actor(const Battle& b, int i)
 {
@@ -2405,6 +2428,8 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
             const int roll = d.roll(20, 1);
             const int extra = roll > 1 ? wbonus + (slayer ? 2 : 0) + (giant ? 1 : 0) : 0;
             bool hit = roll == 20 || (roll != 1 && roll + static_cast<int8_t>(at.rec[kHit]) + side + extra >= ac);
+            // (shown counted from THAC0 20: 60 - the to-hit value is the THAC0, 60 - the stored AC the AC)
+            log_roll(c, RollKind::Hit, out.n, roll, static_cast<int8_t>(at.rec[kHit]) - 40 + side + extra, ac - 40);
             // Blinking, once it has acted this round: not there to be hit
             // (Secret's 0x11C9D runs only at the blinker's own turn and for being
             // seen - never at the roll: AD&D's with rules::fixes())
@@ -2426,7 +2451,8 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
             const int n = slot ? at.rec[kDice + 1] : dice1;
             const int s = slot ? at.rec[kSides + 1] : sides1;
             const int bo = slot ? static_cast<int8_t>(at.rec[kBonus + 1]) : bonus1;
-            int dmg = (n && s ? d.roll(s, n) : 0) + bo;
+            int nat = n && s ? d.roll(s, n) : 0;   // (the dice as they came up: the rolls shown)
+            int dmg = nat + bo;
             if (b.fx && b.fx->dk.kalistes && hasx(at, b.fx->dk.kalistes)) {
                 dmg = kalistes_blow(at, d, dmg);
                 if (at.blows >= 1 && at.blows <= 6) h.weapon = at.blows;
@@ -2437,9 +2463,15 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
             dmg *= times;
             // The magic weapon's own damage (a dragon slayer's: 3 x d12 + 4 + Strength's)
             dmg += wbonus;
-            if (slayer) dmg = d.roll(12, 1) * 3 + 4 + rules::strength_damage(at.rec[0x125], at.rec[0x11], at.rec[0x1C]);
+            if (slayer) {
+                nat = d.roll(12, 1);
+                dmg = nat * 3 + 4 + rules::strength_damage(at.rec[0x125], at.rec[0x11], at.rec[0x1C]);
+            }
             // Secret's giant slaying: 6d6 + Strength's (GAME.OVR 0x13162)
-            if (giant) dmg = d.roll(6, 6) + rules::strength_damage(at.rec[0x125], at.rec[0x11], at.rec[0x1C]);
+            if (giant) {
+                nat = d.roll(6, 6);
+                dmg = nat + rules::strength_damage(at.rec[0x125], at.rec[0x11], at.rec[0x1C]);
+            }
             // A ranger against giants: their ranger level more
             // (Secret's only next to it: GAME.OVR 0x1427D, the distance at most 1)
             if (b.fx && hasx(at, b.fx->race.ranger_giant) && (tg.rec[0x14B] & 8) &&
@@ -2497,7 +2529,10 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
                 if (hasx(tg, m.need_magic) && (!item || plus == 0) && (at.rec[0x74] > 0 || at.rec[kHd] < 4)) dmg = 0;
                 // Gateway's undead (0x75, GAME.OVR 0x1459C): holy water 1d6 + 1
                 const bool holy = gw.holy_water && item && item[0x2E] == gw.holy_water;
-                if (hasx(tg, gw.holy) && holy) dmg = d.roll(6, 1) + 1;
+                if (hasx(tg, gw.holy) && holy) {
+                    nat = d.roll(6, 1);
+                    dmg = nat + 1;
+                }
                 // (Gateway's 0x3C, GAME.OVR 0x13127: holy water gets through)
                 if (hasx(tg, m.stop_normal) && !holy) {
                     if (!item || plus <= 0) dmg = 0;
@@ -2531,7 +2566,10 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
                 const bool silver = item && m.silver_word && item[0x31] == m.silver_word;
                 if (hasx(tg, m.silver_only) && !(item && (plus != 0 || silver))) dmg = 0;
                 if (hasx(tg, m.silver_half) && (!item || plus == 0)) dmg = silver ? dmg / 2 : 0;
-                if (hasx(tg, m.oil_bane) && item && m.oil_flask && item[0x2E] == m.oil_flask) dmg = d.roll(8, 3);
+                if (hasx(tg, m.oil_bane) && item && m.oil_flask && item[0x2E] == m.oil_flask) {
+                    dmg = d.roll(8, 3);
+                    nat = dmg;
+                }
                 // (its handler: fire / magic blows a point more a die - the Flame Tongue's)
                 else if (hasx(tg, m.oil_bane) && flame) dmg += n;
                 // A blessed quarrel slays it outright
@@ -2543,6 +2581,7 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
                     bolt_bane = true;
             }
             h.damage = dmg;
+            log_roll(c, RollKind::Damage, out.n, nat, dmg - nat, 0);
             out.any = true;
             if (slot == 0) ++hits1;
             // A flask of oil burns (Tom, 2026-10-12: "the flasks of oil should
@@ -2607,7 +2646,11 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
                 at.attacks[1] = 2;
                 at.rec[kDice + 1] = 2;
                 at.rec[kSides + 1] = 4;
+                const int logged = g_rolls ? g_rolls->n : 0;
                 const Attack more = attack(b, a, c, names, d, from_behind);
+                // (their rolls: numbered as their hits are below)
+                for (int k = logged; g_rolls && k < g_rolls->n; ++k)
+                    if (g_rolls->r[k].blow != 0xFF) g_rolls->r[k].blow = static_cast<uint8_t>(g_rolls->r[k].blow + out.n);
                 at.attacks[0] = keep[0];
                 at.attacks[1] = keep[1];
                 at.rec[kDice + 1] = keep_dice;
@@ -2885,6 +2928,12 @@ int harm(Battle& b, int c, int amount, const Harm& h, create::Dice& d, bool* dow
     g_dice = &d;
     g_kind = h.kind;
     int dmg = amount;
+    {
+        // (the rolls shown: the amount as rolled, before the target's defences and save)
+        const int nat = g_dmg_dice >= 0 ? g_dmg_dice : amount;
+        g_dmg_dice = -1;
+        log_roll(c, RollKind::Damage, 0xFF, nat, amount - nat, 0);
+    }
     b.lost_image = -1;
     b.risen = -1;
     if (b.fx && f.up() && dmg > 0) {
@@ -3478,12 +3527,16 @@ bool saving_throw(const Fighter& f, int type, int bonus, create::Dice& d)
 {
     if (type < 0 || type > 4) type = 4;
     const int r = d.roll(20, 1);
+    const int saver = fighter_no(f);    // (the rolls shown: -1 none written down)
+    if (r == 1 || r == 20) log_roll(saver, RollKind::Save, 0xFF, r, 0, f.rec[0xDF + type]);
     if (r == 1) return false;
     if (r == 20) return true;
     // Immune to poison, paralysis and death magic: every such save made
     // (the effect works on the roll after the natural 1 / 20: a 1 still fails)
-    if (g_fx && type == 0 && hasx(f, g_fx->mon.mind)) return true;
-    if (g_fx && type == 0 && hasx(f, g_fx->mon.no_poison)) return true;     // (Secret's dreadlord)
+    if (g_fx && type == 0 && (hasx(f, g_fx->mon.mind) || hasx(f, g_fx->mon.no_poison))) {     // (Secret's dreadlord)
+        log_roll(saver, RollKind::Save, 0xFF, r, 0, -1);
+        return true;
+    }
     // Champions' mages (GAME.OVR 0x3511B): their moon new -1, full +1
     if (f.robe >= 1 && f.robe <= 3) {
         const int ph = magic::moon(f.robe - 1);
@@ -3536,6 +3589,7 @@ bool saving_throw(const Fighter& f, int type, int bonus, create::Dice& d)
     }
     // (a byte, compared unsigned: a total below 0 wraps round to a save made -
     // the listing's do_saving_throw)
+    log_roll(saver, RollKind::Save, 0xFF, r, bonus + static_cast<int8_t>(f.rec[0x186]), f.rec[0xDF + type]);
     return ((r + bonus + static_cast<int8_t>(f.rec[0x186])) & 0xFF) >= f.rec[0xDF + type];
 }
 
@@ -3745,6 +3799,7 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
             // A touch (Bestow Curse): the blow has to land
             if (e.range == -1 && e.on_save == 1) {
                 const int roll = d.roll(20, 1);
+                log_roll(who[k], RollKind::Hit, 0xFF, roll, static_cast<int8_t>(me.rec[kHit]) - 40, f.rec[kAc] - 40);
                 if (roll == 1 || (roll != 20 && roll + static_cast<int8_t>(me.rec[kHit]) < f.rec[kAc])) {
                     say(who[k], Did::Unaffected, 0);
                     continue;
@@ -3891,7 +3946,8 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
             // one on the square aimed at and all on the path (an item's fixed
             // stroke: the path takes its plus alone); each saves for half
             const int count = fs.per == 3 ? pw : fs.n;
-            const int roll = ((count && fs.sides ? d.roll(fs.sides, count) : 0) + fs.plus) & 0xFF;
+            const int dice = count && fs.sides ? d.roll(fs.sides, count) : 0;
+            const int roll = (dice + fs.plus) & 0xFF;
             const int on_path = fs.per == 0 ? fs.plus : roll;
             Harm h = hs;
             h.dice = count;
@@ -3900,6 +3956,7 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
             auto hit = [&](int c, int amount) {
                 if (c < 0 || c >= b.n || !b.f[c].up()) return;
                 bool dn = false;
+                g_dmg_dice = amount == roll && amount == dice + fs.plus ? dice : -1;
                 const int done = harm(b, c, amount, h, d, &dn);
                 say(c, done > 0 ? Did::Damage : Did::Unaffected, done);
                 if (dn) say(c, Did::Down, 0);
@@ -3930,10 +3987,12 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
             }
             if (fs.per == 3) count = pw;
             if (fs.per == 5) count = d.roll(3, 1) * 2 + 1;
-            int dmg = (count && fs.sides ? d.roll(fs.sides, count) : 0) + plus;
+            const int dice = count && fs.sides ? d.roll(fs.sides, count) : 0;
+            int dmg = dice + plus;
             if (e.range == -1) {
                 // A touch: a blow that has to land
                 const int roll = d.roll(20, 1);
+                log_roll(who[k], RollKind::Hit, 0xFF, roll, static_cast<int8_t>(me.rec[kHit]) - 40, f.rec[kAc] - 40);
                 if (roll == 1 || (roll != 20 && roll + static_cast<int8_t>(me.rec[kHit]) < f.rec[kAc])) {
                     say(who[k], Did::Misses, 0);
                     continue;
@@ -3945,6 +4004,7 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
             h.save = e.on_save ? e.save : -1;
             h.on_save = e.on_save;
             bool dn = false;
+            g_dmg_dice = dice;
             const int done = harm(b, who[k], dmg, h, d, &dn);
             if (b.lost_image == who[k]) {
                 say(who[k], Did::LostImage, 0);
@@ -4579,6 +4639,7 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
         Fighter& f = b.f[who[0]];
         if (!f.up() || !b.fx) break;
         const int roll = d.roll(20, 1);
+        log_roll(who[0], RollKind::Hit, 0xFF, roll, static_cast<int8_t>(me.rec[kHit]) - 40, f.rec[kAc] - 40);
         if (roll == 1 || (roll != 20 && roll + static_cast<int8_t>(me.rec[kHit]) < f.rec[kAc])) {
             say(who[0], Did::Misses, 0);
             break;

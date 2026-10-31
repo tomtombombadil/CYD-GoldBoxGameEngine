@@ -138,6 +138,30 @@
 #define CYD_KEEP_MEMORIZING 1
 #endif
 
+// The rolls shown in fights (Tom, 2026-10-31: "In combat there is room
+// below the display of hits and misses to show the rolls and modifiers that
+// were just rolled ... It will also help in troubleshooting combat issues"):
+// under each message, at the foot of the fight's panel (its rows 19-21 -
+// fewer when the message's own lines reach down; never over them), in light
+// grey, the dice that message tells of as they came up, the modifiers'
+// total and the result: "To Hit: 17+2=19" and "Needed: 14" (a weapon's
+// blow: the modifiers counted from THAC0 20 - 20 - THAC0 plus the fight's
+// own, the total needed 20 - the target's AC as it stood), "Damage: 4+3=7"
+// when it hit (the dice, then all else to the points done); a miss shows
+// the last d20 missed; a spell: its target's save ("Save: 12+1=13",
+// "Needed: 14"; "immune") and its damage as rolled, before the target's
+// defences and save (the message says what was taken), a touch's d20.
+// Several blows in an attack: each hit's page its own. The engine writes
+// the rolls down (combat::g_rolls) only while a fight runs with the switch
+// on - nothing reads them back, so play is the same either way. On by
+// default (ours, for the small screens and testing). 0: as the originals.
+// Where: engine/combat.* (log_roll: attack, saving_throw, harm, cast's
+// touches), play_fight.inc (RollShow, take_roll, page_roll, show_rolls),
+// viewer.cpp (the Show Rolls key).
+#ifndef CYD_COMBAT_ROLLS
+#define CYD_COMBAT_ROLLS 1
+#endif
+
 // Each comfort compiled in can also be switched off by the player: the
 // game's Settings page (Tom, 2026-10-11, v0.72.0; one set for all games,
 // settings.h comforts_off), the one Settings screen (Home, a game's page, the

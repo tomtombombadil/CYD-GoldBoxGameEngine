@@ -3210,7 +3210,7 @@ void tap_sounds(const ui::Tap& t)
 // ---- The engine comforts' switches (Tom, 2026-10-11, v0.72.0) ----------------
 // One set for all games (settings.h comforts_off), on the one Settings
 // screen (below); a comfort compiled out (app/features.h) isn't listed.
-enum Comfort { kCFont, kCGallery, kCBigIcon, kCJournal, kCDemoTap, kCMoreGuys, kCPortrait, kCItemFixes, kComforts };
+enum Comfort { kCFont, kCGallery, kCBigIcon, kCJournal, kCDemoTap, kCMoreGuys, kCPortrait, kCItemFixes, kCRolls, kComforts };
 
 bool comfort_built(int c)
 {
@@ -3223,13 +3223,14 @@ bool comfort_built(int c)
     case kCMoreGuys: return CYD_MORE_CHARACTERS;
     case kCPortrait: return CYD_ICON_PORTRAIT;
     case kCItemFixes: return CYD_ITEM_FIXES;
+    case kCRolls: return CYD_COMBAT_ROLLS;
     default: return true;
     }
 }
 uint8_t comfort_bit(int c)
 {
     static const uint8_t kBits[kComforts] = {0, kOffGallery, kOffBigIcon, kOffJournal, kOffDemoTap, kOffMoreGuys,
-                                             kOffPortrait, kOffItemFixes};
+                                             kOffPortrait, kOffItemFixes, kOffRolls};
     return kBits[c];
 }
 bool comfort_on(int c)
@@ -3248,6 +3249,7 @@ void apply_options()
     o.more_guys = comfort_on(kCMoreGuys);
     o.portrait = comfort_on(kCPortrait);
     o.item_fixes = comfort_on(kCItemFixes);
+    o.rolls = comfort_on(kCRolls);
     o.font = comfort_on(kCFont) ? cfg->game_font : kFontGame;
     play::set_options(o);
 }
@@ -3278,7 +3280,8 @@ ui::Rect comfort_qmark(const ui::Rect& cell)
 }
 
 const char* const kComfortNames[kComforts] = {"Game Font",        "Icon Gallery",    "Large Icon",    "Journal Pop-Up",
-                                              "Tap to Stop Demo", "More Characters", "Icon Portrait", "Game Fixes"};
+                                              "Tap to Stop Demo", "More Characters", "Icon Portrait", "Game Fixes",
+                                              "Show Rolls"};
 
 // What each option does (sentence case; Tom, v0.84.0)
 const char* comfort_help_text(int c)
@@ -3349,6 +3352,13 @@ const char* comfort_help_text(int c)
                "and its blows are fire. Your files keep the original's item. Money: any coins worth a price pay "
                "it - the inn's 1 platinum from 5 gold - with exact change, and money is kept in the highest "
                "coins. Off: as the original.";
+               "and its blows are fire. Your files keep the original's item. Off: as the original.";
+    case kCRolls:
+        return "In a fight, under each message, the dice it tells of: the roll as it came up, the modifiers' "
+               "total and the result - \"To Hit: 17+2=19\" and \"Needed: 14\" (the modifiers counted from THAC0 "
+               "20, the total needed 20 less the target's AC), \"Damage: 4+3=7\" when it hits. A spell shows its "
+               "target's saving throw and its damage as rolled, before saves and resistances. Off: as the "
+               "original.";
     }
     return "";
 }
@@ -3487,7 +3497,9 @@ void toggle_original()
 {
     const bool on = all_comforts_off();
     cfg->comforts_off =
-        on ? 0 : (kOffGallery | kOffBigIcon | kOffDemoTap | kOffJournal | kOffMoreGuys | kOffPortrait | kOffItemFixes);
+        on ? 0
+           : (kOffGallery | kOffBigIcon | kOffDemoTap | kOffJournal | kOffMoreGuys | kOffPortrait | kOffItemFixes |
+              kOffRolls);
     if (!on) cfg->large_icons = 0;
     cfg->game_font = on ? kFontClear : kFontGame;
     settings_save(*cfg);

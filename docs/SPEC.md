@@ -2495,6 +2495,25 @@ a PC, PortMaster handhelds):
     icon or Edit drops the pick. Never shipped: the Companion is its
     author's work, read only from the card (Tom, `engine/gbc_icons.*`,
     host-tested with synthetic BMPs).
+  - `CYD_COMBAT_ROLLS` (Tom, 2026-10-31: "room below the display of hits
+    and misses to show the rolls ... It will also help in troubleshooting
+    combat issues"): every game's fight shows, under each message at the
+    panel's foot (rows 19-21, cols 23-38 - below the message's own lines,
+    never over them: with too few rows the Needed lines go first), the
+    rolls that message tells of - "To Hit: 17+2=19" and "Needed: 14" (the
+    d20, the modifiers counted from THAC0 20 - 20 - THAC0 plus the fight's
+    own: Bless, range, backstab, the weapon against that creature ... -
+    and 20 - the target's AC as it stood against the blow), "Damage:
+    4+3=7" when it hit (the dice, then everything else up to the points
+    done); a miss page the last d20 missed; each hit of several its own
+    page's. Spells, breath, monster touches: the target's save ("Save:
+    12+1=13", "Needed: 14", "immune") and the damage as rolled, before
+    the target's defences and save (the message says what was taken); a
+    touch spell's d20. Light grey (the Dark Queen: cyan - its words are
+    grey). The engine writes the rolls down only while a fight runs with
+    the switch on (`combat::g_rolls`; nothing reads them back - fights are
+    the same roll for roll either way; 656 bytes while a fight runs).
+    Settings key **Show Rolls** (on by default; As Original turns it off).
 
 ## 12. Where the engine differs from the original games (Tom, 2026-10-10: keep this list up to date)
 

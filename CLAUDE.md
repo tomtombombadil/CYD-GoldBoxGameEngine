@@ -432,6 +432,13 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   (Curse: the 3D view's frame tiles, cols 26-38 rows 1-13); where the game
   has a portrait (Pool) it comes first, a tap swaps; Pool's own portrait
   on View is the original's (from the party menu).
+- Show Rolls (Tom, 2026-10-31; `CYD_COMBAT_ROLLS`, on by default): fight
+  pages show their rolls at the panel's foot (rows 19-21, never over the
+  message) - "To Hit: d20+mods=total" / "Needed: N" (counted from THAC0
+  20), "Damage: dice+mods=done", spells' saves and damage as rolled. The
+  engine writes rolls down only via `combat::g_rolls` (log_roll in
+  attack / saving_throw / harm); new dice that a page tells of go
+  through log_roll, and play stays identical with the switch on or off.
 - Gold Box Companion files (Tom, 2026-10-11): its author's work - read
   from the player's copy on the card, NEVER shipped or copied into the
   repo (no license). Its combat icons: `/GOLDBOX/GBC/DAX-Icons-EGA`

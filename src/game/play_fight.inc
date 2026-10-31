@@ -680,6 +680,17 @@ struct Page {
     Fx      fx[2];                      // then these, one after the other; then the page's wait
 };
 
+// The rolls shown (CYD_COMBAT_ROLLS, Tom 2026-10-31): the engine's record
+// of the rolls just made, and each page's (at most 2: to hit / a save, then
+// damage) - a block of its own only while a fight runs with the switch on
+struct RollShow {
+    combat::RollLog log;
+    combat::Roll page[kPages][2];
+};
+// (light grey: apart from the game's own words - the Dark Queen's are light
+// grey, so cyan there)
+uint8_t roll_colour() { return hl() ? 3 : 7; }
+
 constexpr int kTileBytes = kSq * kSq / 2;
 constexpr int kTiles = 40;
 // A field picture's bytes (a VGA game in 256 colours: a byte a pixel)
@@ -714,6 +725,8 @@ struct Fight {
         fighters = nullptr;
         monster_items_off_arena();
         fight_arena_end();
+        combat::g_rolls = nullptr;
+        delete rolls;
     }
     Fight(const Fight&) = delete;
     Fight& operator=(const Fight&) = delete;
@@ -787,6 +800,7 @@ struct Fight {
     int      under_x = 0, under_y = 0;
     bool     has_under = false;
     int      aim_x = -1, aim_y = -1;    // where a spell was aimed (an area's centre)
+    RollShow* rolls = nullptr;          // the rolls shown (CYD_COMBAT_ROLLS; nullptr: switched off)
 };
 Fight* fg = nullptr;
 
@@ -797,6 +811,9 @@ Fight* make_fight()
     if (!b) return nullptr;
     Fight* f = new (std::nothrow) Fight(*b);
     if (!f) delete b;
+    // The rolls shown (no memory for them: the fight goes on without)
+    if (f && CYD_COMBAT_ROLLS && opts.rolls) f->rolls = new (std::nothrow) RollShow;
+    combat::g_rolls = f && f->rolls ? &f->rolls->log : nullptr;
     return f;
 }
 
@@ -1550,6 +1567,7 @@ void add_page(int who, const char* a, const char* b2 = nullptr, int whom = -1, c
     // (dropped when the pages or their text pool are full: 5 longest lines' room)
     fg->page_dropped = fg->pages >= kPages || fg->ptext_used > kPageText - 5 * 48;
     if (fg->page_dropped) return;
+    if (fg->rolls) fg->rolls->page[fg->pages][0].kind = fg->rolls->page[fg->pages][1].kind = combat::RollKind::None;
     Page& p = fg->page[fg->pages++];
     p.lines = 0;
     p.sound = 0;
@@ -1584,6 +1602,45 @@ const char* page_line(const Page& p, int k) { return fg->ptext + p.line_at[k]; }
 void page_sound(int id)
 {
     if (fg->pages > 0 && !fg->page_dropped) fg->page[fg->pages - 1].sound = static_cast<uint8_t>(id);
+}
+
+// ---- The rolls shown (CYD_COMBAT_ROLLS, Tom 2026-10-31): the engine writes
+// down each roll (combat::g_rolls); a page takes those it tells of
+// A new attack's / spell's rolls: the record starts again
+void rolls_clear()
+{
+    if (!fg || !fg->rolls) return;
+    fg->rolls->log.n = 0;
+    fg->rolls->log.taken = 0;
+}
+// The first roll of kind k against fighter `who` not on a page yet (blow: a
+// weapon attack's hit number, 0xFF the others', 0xFE any; last: the latest),
+// now on one; nullptr: none
+const combat::Roll* take_roll(combat::RollKind k, int who, int blow, bool last = false)
+{
+    if (!fg || !fg->rolls) return nullptr;
+    combat::RollLog& l = fg->rolls->log;
+    int got = -1;
+    for (int i = 0; i < l.n; ++i) {
+        const combat::Roll& r = l.r[i];
+        if ((l.taken >> i & 1) || r.kind != k || r.who != who || (blow != 0xFE && r.blow != blow)) continue;
+        got = i;
+        if (!last) break;
+    }
+    if (got < 0) return nullptr;
+    l.taken |= 1u << got;
+    return &l.r[got];
+}
+// The last page queued shows roll r too (2 at most)
+void page_roll(const combat::Roll* r)
+{
+    if (!r || !fg->rolls || !fg->pages || fg->page_dropped) return;
+    combat::Roll* p = fg->rolls->page[fg->pages - 1];
+    for (int k = 0; k < 2; ++k)
+        if (p[k].kind == combat::RollKind::None) {
+            p[k] = *r;
+            return;
+        }
 }
 
 // ---- The pages' pictures (facts: the Project's combat_setup_facts.md 6.5 /
@@ -1797,6 +1854,57 @@ void page_over(pic::Canvas& c)
 
 bool log_pages = false;                  // (the playsim's PAGELOG: each page's lines printed)
 
+// "To Hit: 17+2=19" (the short label when the long one makes it over the
+// panel's 16 columns)
+void roll_line(char* t, size_t cap, const char* label, const char* brief, const combat::Roll& r)
+{
+    const int m = r.mod < 0 ? -r.mod : r.mod;
+    snprintf(t, cap, "%s%d%c%d=%d", label, r.nat, r.mod < 0 ? '-' : '+', m, r.nat + r.mod);
+    if (strlen(t) > 16) snprintf(t, cap, "%s%d%c%d=%d", brief, r.nat, r.mod < 0 ? '-' : '+', m, r.nat + r.mod);
+}
+// A page's rolls at the panel's foot (its last rows, under the page's own
+// lines - never over them: with too few rows the "Needed" lines go first,
+// then the last lines): to hit / a save and the total needed, then damage
+void show_rolls(pic::Canvas& c, const combat::Roll* pr, int row)
+{
+    char line[4][24];
+    bool need[4] = {};
+    int n = 0;
+    static const combat::RollKind kOrder[3] = {combat::RollKind::Hit, combat::RollKind::Save, combat::RollKind::Damage};
+    for (combat::RollKind kind : kOrder)
+        for (int k = 0; k < 2 && n < 3; ++k) {
+            const combat::Roll& r = pr[k];
+            if (r.kind != kind) continue;
+            if (kind == combat::RollKind::Damage) {
+                roll_line(line[n++], sizeof line[0], "Damage: ", "Dmg: ", r);
+                continue;
+            }
+            if (kind == combat::RollKind::Save && r.need < 0) {
+                snprintf(line[n++], sizeof line[0], "Save: %d immune", r.nat);
+                continue;
+            }
+            roll_line(line[n++], sizeof line[0], kind == combat::RollKind::Hit ? "To Hit: " : "Save: ",
+                      kind == combat::RollKind::Hit ? "Hit: " : "Save:", r);
+            snprintf(line[n], sizeof line[0], "Needed: %d", r.need);
+            need[n++] = true;
+        }
+    // (rows row .. 21 are free)
+    const int free_rows = 22 - row;
+    for (int k = n - 1; k >= 0 && n > free_rows; --k)
+        if (need[k]) {
+            for (int j = k; j < n - 1; ++j) {
+                memcpy(line[j], line[j + 1], sizeof line[0]);
+                need[j] = need[j + 1];
+            }
+            --n;
+        }
+    if (n > free_rows) n = free_rows < 0 ? 0 : free_rows;
+    for (int k = 0; k < n; ++k) {
+        put(c, line[k], 23, 22 - n + k, roll_colour());
+        if (log_pages) plat::log("[rolls] %s\n", line[k]);
+    }
+}
+
 void show_page(pic::Canvas& c)
 {
     page_over(c);
@@ -1818,6 +1926,7 @@ void show_page(pic::Canvas& c)
     clear_panel(c, 10, 21);
     int row = 10;
     for (int k = 0; k < p.lines; ++k) row = panel_text(c, page_line(p, k), row, p.colour[k]);
+    if (fg->rolls && opts.rolls) show_rolls(c, fg->rolls->page[fg->at - 1], row);
     fg->fx_at = 0;
     page_fx(c);
 }
@@ -2074,6 +2183,7 @@ void special_cast(int i, int sp, int at)
     if (at >= 0 && at < b.n) {
         tg[nt++] = at;
         combat::SpellLine lines[24];
+        rolls_clear();
         const int n = combat::cast(b, mrules->tables, i, sp, *fs, tg, nt, rng, lines, 24, pw);
         spell_pages(i, lines, n, *fs, false);
         return;
@@ -2093,6 +2203,7 @@ void special_cast(int i, int sp, int at)
     e.sound = sound::kSpell;
     page_fx_set(0, e);
     combat::SpellLine lines[24];
+    rolls_clear();
     const int n = combat::cast(b, mrules->tables, i, sp, *fs, tg, nt, rng, lines, 24, pw);
     spell_pages(i, lines, n, *fs, false);
 }
@@ -2167,7 +2278,19 @@ __attribute__((noinline)) int dk_drain_hook(combat::Battle&, int who, int n)
 
 // What the engine says happened besides the plain blows (monster_fx_facts.md),
 // as pages: the special's words, its picture flying, the results
+void event_words(const combat::Event& e);
+// An event's page, with its rolls (CYD_COMBAT_ROLLS): the save of the one it
+// tells of, the damage as rolled
 void event_page(const combat::Event& e)
+{
+    const int before = fg->pages;
+    event_words(e);
+    if (!fg->rolls || fg->pages == before) return;
+    page_roll(take_roll(combat::RollKind::Save, e.who, 0xFE));
+    if (e.ev == combat::Ev::Damage || e.ev == combat::Ev::Unaffected)
+        page_roll(take_roll(combat::RollKind::Damage, e.who, 0xFF));
+}
+void event_words(const combat::Event& e)
 {
     char t[48];
     const int who = e.who;
@@ -2363,6 +2486,7 @@ int do_attack(pic::Canvas& c, int a, int t, bool behind, bool shot = false, int 
         fly = fly_fx(a, t, combat::shot_flight(b, f, ammo, combat::direction(f.x, f.y, b.f[t].x, b.f[t].y)));
         fly.sound = fly.fl.sound;
     }
+    rolls_clear();
     const combat::Attack at = combat::attack(b, a, t, names, rng, behind);
     attack_pages(a, t, at, behind, shot, fly);
     return at.shots;
@@ -2394,12 +2518,14 @@ void attack_pages(int a, int t, const combat::Attack& at, bool behind, bool shot
         if (at.image[k]) {
             // Secret: a mirror image took the blow - "lost an image"
             add_page(t, fw(profile::kLostImage));
+            page_roll(take_roll(combat::RollKind::Hit, t, k));
             first = false;
             continue;
         }
         if (at.avoided[k]) {
             // A missile dodged: "Avoids it"
             add_page(t, fw(profile::kAvoidsIt));
+            page_roll(take_roll(combat::RollKind::Hit, t, k));
             if (first && shot) page_fx_set(0, fly);
             first = false;
             continue;
@@ -2410,6 +2536,8 @@ void attack_pages(int a, int t, const combat::Attack& at, bool behind, bool shot
                  dmg == 1 ? fw(profile::kPointW) : fw(profile::kPointsW), fw(profile::kOfDamage));
         add_page(a, fw(at.backstab ? profile::kBackstabs : profile::kAttacksW), line, t);
         if (at.hits[k].weapon && !fg->page_dropped) fg->page[fg->pages - 1].weapon = at.hits[k].weapon;
+        page_roll(take_roll(combat::RollKind::Hit, t, k));
+        page_roll(take_roll(combat::RollKind::Damage, t, k));
         hit_page();
         // What the hit did besides (poison, paralysis, a touch's damage, engulfing ...)
         for (int j = 0; j < at.n_ev; ++j)
@@ -2417,6 +2545,7 @@ void attack_pages(int a, int t, const combat::Attack& at, bool behind, bool shot
     }
     if (first) {
         add_page(a, fw(at.backstab ? profile::kBackstabs : profile::kAttacksW), fw(profile::kMisses), t);
+        page_roll(take_roll(combat::RollKind::Hit, t, 0xFE, true));      // (the last miss)
         if (shot) page_fx_set(0, fly);
         else page_sound(sound::kMiss);
     }
@@ -2788,6 +2917,7 @@ void start_turn(pic::Canvas& c)
         combat::Event hev[4];
         int bite = -1;
         bool go_on = false;
+        rolls_clear();
         const int nh = combat::turn_holds(b, fg->cur, rng, hev, 4, &bite, &go_on);
         if (go_on) {
             // (Gateway's squid with the fixes: its squeeze, then its turn)
@@ -2800,6 +2930,7 @@ void start_turn(pic::Canvas& c)
             draw_fight(c);
             for (int k = 0; k < nh; ++k) event_page(hev[k]);
             if (bite >= 0) {
+                rolls_clear();
                 const combat::Attack at = combat::bite_attack(b, fg->cur, bite, names, rng);
                 attack_pages(fg->cur, bite, at, false, false, Fx{});
             }
@@ -2877,6 +3008,7 @@ void next_turn(pic::Canvas& c)
 void begin_round(pic::Canvas& c)
 {
     combat::Event ev[8];
+    rolls_clear();
     const int nev = combat::start_round(fg->b, rng, ev, 8);
     vm->set(0x7ECB, 0);                 // (the surprise word: cleared after the initiative, as the original)
     if (nev > 0) {
@@ -3748,6 +3880,7 @@ void ai_step(pic::Canvas& c)
         if (!f.fleeing) {
             combat::Event ev[24];
             bool ends = false;
+            rolls_clear();
             const int nev = combat::special(b, fg->t, i, rng, ev, 24, &ends);
             if (nev > 0) {
                 if (!on_screen(i)) focus(i, 3);    // the one doing it in view
@@ -5023,6 +5156,22 @@ void spell_pages(int caster, const combat::SpellLine* l, int n, const combat::Fi
             break;
         }
         }
+        // Its rolls (CYD_COMBAT_ROLLS): to hit (a touch), the save, the damage
+        // as rolled - two at most, the save and damage before a touch's roll
+        if (fg->rolls && fg->pages > before) {
+            const combat::Did dd = l[k].did;
+            if (dd == combat::Did::Damage || dd == combat::Did::Unaffected || dd == combat::Did::Word ||
+                dd == combat::Did::Word2 || dd == combat::Did::Word3 || dd == combat::Did::Word4 ||
+                dd == combat::Did::Misses || dd == combat::Did::LostImage) {
+                const combat::Roll* hit = take_roll(combat::RollKind::Hit, l[k].who, 0xFF);
+                const combat::Roll* sv = dd == combat::Did::Misses ? nullptr : take_roll(combat::RollKind::Save, l[k].who, 0xFE);
+                const combat::Roll* dm = dd == combat::Did::Misses ? nullptr : take_roll(combat::RollKind::Damage, l[k].who, 0xFE);
+                if (sv && dm) hit = nullptr;
+                page_roll(hit);
+                page_roll(sv);
+                page_roll(dm);
+            }
+        }
         // The spell flies on to the next one picked
         if (each && fg->pages > before && l[k].who != caster) {
             bool seen = false;
@@ -5222,6 +5371,7 @@ void blast_off(Fight::Blast& bl)
     combat::SpellLine lines[24];
     b.aim_x = bl.x;
     b.aim_y = bl.y;
+    rolls_clear();
     const int m = n ? combat::cast(b, mrules->tables, caster, 0x73, *fs, who, n, rng, lines, 24, bl.pw) : 0;
     b.aim_x = b.aim_y = -1;
     spell_pages(caster, lines, m, *fs, false);
@@ -5338,6 +5488,7 @@ void cast_now(pic::Canvas& c, bool forgotten)
     combat::SpellLine lines[24];
     b.aim_x = ax;
     b.aim_y = ay;
+    rolls_clear();
     const int n = combat::cast(b, mrules->tables, i, sp, *fs, fg->sp_t, fg->sp_n, rng, lines, 24, pw);
     b.aim_x = b.aim_y = -1;
     spell_pages(i, lines, n, *fs, each);
@@ -5353,6 +5504,7 @@ void cast_now(pic::Canvas& c, bool forgotten)
     if (fs->does == combat::SpellDoes::EnergyDrain && fg->sp_n > 0 && b.f[fg->sp_t[0]].up()) {
         combat::Event ev[8];
         int nev = 0;
+        rolls_clear();
         combat::drain(b, fg->sp_t[0], 1, ev, 8, &nev, -1);
         for (int k = 0; k < nev; ++k) event_page(ev[k]);
     }

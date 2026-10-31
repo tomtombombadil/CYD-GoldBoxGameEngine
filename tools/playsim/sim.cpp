@@ -628,6 +628,8 @@ int main(int argc, char** argv)
     if (getenv("NOGALLERY")) { play::Options o = play::opts; o.gallery = false; play::set_options(o); }
     // (NOFIXES also as the game's own setting: Play's start sets the rules' switch from it)
     if (getenv("NOFIXES")) { play::Options o = play::opts; o.item_fixes = false; play::set_options(o); }
+    // NOROLLS=1: fights without the rolls shown (the CYD_COMBAT_ROLLS comfort off)
+    if (getenv("NOROLLS")) { play::Options o = play::opts; o.rolls = false; play::set_options(o); }
     // SOUNDTEST=a-b: the game's own effects a to b, one after another, then out
     if (const char* st = getenv("SOUNDTEST")) {
         int a = 2, z = 14;
