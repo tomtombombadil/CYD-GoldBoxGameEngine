@@ -330,6 +330,7 @@ struct PickList {
 uint32_t note_until = 0;
 bool     note_held = false;      // an error: stays until a tap (Tom, 2026-10-09)
 bool     resume_after_note = false;  // the script goes on once that error is tapped away
+bool     items_after_note = false;   // Pool: the items screen again once the shop's word has had its time
 int last_pic_id = -1, last_pic_head = 0xFF;   // the script's picture (shops come back to it)
 bool camping = false;              // the camp is open (the position line says so)
 int  pm_item[Data::kItems];   // the menu item on each list line
@@ -3253,10 +3254,16 @@ bool pool_shop_blank();
 bool fight_moving();
 void fight_move_prompt(pic::Canvas& c);
 
+void back_to_items(pic::Canvas& c);
 void redraw_menu(pic::Canvas& c)
 {
     note_until = 0;
     note_held = false;
+    if (items_after_note) {
+        items_after_note = false;
+        back_to_items(c);
+        return;
+    }
     if (screen == Screen::PartyMenu && !pm_pick_for) pm_prompt(c);      // the party menu's own prompt
     else if (fight_moving()) fight_move_prompt(c);      // a fight's Move: its own prompt
     else show_menu_line(c);
@@ -3974,6 +3981,18 @@ bool items_yes_no(Ask what, char k, pic::Canvas& c)
         snprintf(t, sizeof t, "%s%s", iw(profile::kSortOf), nm);
     }
     rules::recalc(ch, *names, d->facts);
+    if (pool_files()) {
+        // (Pool: the word under the unlit list, Is It a Deal? still on the
+        // menu line, for the game's delay - then the items again: START
+        // ovr20 +0x20F8 -> 0x709:0xDBE; DOSBox, the shop at 9,11)
+        say_item(c, t);
+        int speed = vm->get(0x4BFC) & 0xFF;
+        if (speed == 0) speed = 4;
+        note_until = plat::now_ms() + static_cast<uint32_t>(speed) * 225;
+        if (!note_until) note_until = 1;
+        items_after_note = true;
+        return true;
+    }
     back_to_items(c);
     say_item(c, t);
     return true;
