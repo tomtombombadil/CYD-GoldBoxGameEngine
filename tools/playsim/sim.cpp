@@ -580,6 +580,7 @@ int main(int argc, char** argv)
     setvbuf(stdout, nullptr, _IOLBF, 0);       // (lines out at once: a hang or a crash keeps them)
     play::load_begins = getenv("LOADBEGINS") != nullptr;   // (Pool's load straight into the game: LOADBEGINS=1)
     if (getenv("NOFIXES")) rules::set_fixes(false);    // NOFIXES=1: Game Fixes off (the originals' ways)
+    if (getenv("PAGELOG")) play::log_pages = true;     // (every fight page's lines, any run)
 #ifdef CYD_TEST_HOOKS
     if (getenv("FIELDMAP")) combat::g_place_hook = place_told;     // (the squares as place() leaves them)
     if (getenv("DIEFIX")) for (const char* q = getenv("DIEFIX"); q && *q;) {
