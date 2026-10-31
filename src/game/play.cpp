@@ -12836,7 +12836,17 @@ void door_prompt(pic::Canvas& c)
         ow(dw.pick, w, sizeof w);
         strlcat(words, w, sizeof words);
     }
-    if (can_knock && dw.knock_spell && rules::knock_member(*pt, dw.knock_spell) >= 0) {
+    // (Pool: a door of the second locked kind (passage 3) offers Knock when
+    // a member has magic-user levels - the spell is looked for only when
+    // chosen; the first kind (2) when one has it memorized - o15 +0xF4C /
+    // +0xE0D, class test +0x236; DOSBox, Podol Plaza 2,13 W)
+    bool knock = dw.knock_spell && rules::knock_member(*pt, dw.knock_spell) >= 0;
+    if (pool_files() && geo::passage(d->map, d->gs.x, d->gs.y, step_dir) == 3) {
+        knock = false;
+        for (int i = 0; i < pt->count; ++i)
+            if (pt->m[i].rec[0x109 + 5] > 0) knock = true;
+    }
+    if (can_knock && knock) {
         ow(dw.knock, w, sizeof w);
         strlcat(words, w, sizeof words);
     }
