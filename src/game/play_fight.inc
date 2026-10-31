@@ -4315,6 +4315,16 @@ void end_fight(pic::Canvas& c)
     }
     fg->out = combat::finish(b, ml ? ml->m : nullptr);
     combat::Result r = fg->out.result;
+    // (Pool: a fight none of the enemies stayed in - every one ran off -
+    // ends "The party has found Treasure!": its won flag DS 0x443A is set
+    // only by a monster not running away - ovr6 +0x88 / +0x9D7; DOSBox,
+    // Sokal Keep's undead all turned)
+    bool none_beaten = false;
+    if (pool_files()) {
+        none_beaten = true;
+        for (int i = b.party_size; i < b.n; ++i)
+            if (b.f[i].team() && b.f[i].status() != party::Running) none_beaten = false;
+    }
     if (in_demo && r == combat::Lost)
         // The demo's party is all NPCs (who don't count as the party's
         // survivors in a real game): it wins while one of them stands
@@ -4488,7 +4498,7 @@ void end_fight(pic::Canvas& c)
         put(c, fw(profile::kPressAnyKey), 0, text::kMenuRow, 15);
         fg->st = FSt::Destroyed;
     } else {
-        put(c, fw(r == combat::Fled ? profile::kHasFled : profile::kHasWon), 1, 3, 10);
+        put(c, fw(r == combat::Fled ? profile::kHasFled : none_beaten ? profile::kFoundTreasure : profile::kHasWon), 1, 3, 10);
         char t[48];
         if (!no_exp_lines()) {
             snprintf(t, sizeof t, "%s%d", fw(profile::kEachReceives), fg->share);
