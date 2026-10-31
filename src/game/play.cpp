@@ -8640,12 +8640,9 @@ void sl_page(int dir)
     else sl.top = sl.top > rows ? sl.top - rows : 0;
     if (!pool_files()) return;
     if (sl.top > sl.n - rows) sl.top = sl.n > rows ? sl.n - rows : 0;
-    if (sl.sel >= old && sl.sel < old + rows) {
-        int s = sl.top + (sl.sel - old);
-        if (s >= sl.n) s = sl.n - 1;
-        while (s < sl.n - 1 && !sl.id[s]) ++s;     // (a level's heading: the spell under it)
-        sl.sel = s;
-    }
+    // (the original's highlight keeps its line of the page; the engine's
+    // rule: the turned page's first spell - Tom, 2026-10-31, SPEC 12)
+    if (sl.sel >= old && sl.sel < old + rows) dk_page_sel();
 }
 
 // "NAME can memorize:" and the counts a kind (cleric, druid, magic-user)
