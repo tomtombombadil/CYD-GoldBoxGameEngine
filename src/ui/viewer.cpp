@@ -3352,7 +3352,6 @@ const char* comfort_help_text(int c)
                "and its blows are fire. Your files keep the original's item. Money: any coins worth a price pay "
                "it - the inn's 1 platinum from 5 gold - with exact change, and money is kept in the highest "
                "coins. Off: as the original.";
-               "and its blows are fire. Your files keep the original's item. Off: as the original.";
     case kCRolls:
         return "In a fight, under each message, the dice it tells of: the roll as it came up, the modifiers' "
                "total and the result - \"To Hit: 17+2=19\" and \"Needed: 14\" (the modifiers counted from THAC0 "
