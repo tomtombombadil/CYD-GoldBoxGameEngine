@@ -3292,6 +3292,10 @@ void draw_character_gateway(pic::Canvas& c, const party::Character& ch)
 void view_character(pic::Canvas& c)
 {
     if (!pt->sel()) return;
+    // (the originals work the character out again as View shows them -
+    // coab playerDisplayFull's reclac_player_values; Pool after training:
+    // DOSBox's View shows the coins' weight the training left alone)
+    if (screen != Screen::Fight) rules::recalc(*pt->sel(), *names, d->facts);
     view_from = screen;
     screen = Screen::View;
     dk_own[kDkView] = 0;
