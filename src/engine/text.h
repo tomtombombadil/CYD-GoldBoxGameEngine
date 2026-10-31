@@ -162,6 +162,7 @@ struct Menu {
     int     count = 0;
     int8_t  start[kMaxItems] = {}; // first character of each choice (its key)
     int8_t  end[kMaxItems] = {};   // its last character
+    int8_t  koff[kMaxItems] = {};  // its key's place after its start (whole_words)
     int     selected = 0;
     bool    marked = false;        // (Gateway's '~' marks: only each choice's first letter lit)
     uint8_t prompt_fg = 0;         // the prompt's colour when not the usual (Gateway's questions: 14)
@@ -206,7 +207,11 @@ bool two_rows(const Menu& m);
 // Where choice k is drawn: its first cell's column and row (a two-row
 // menu's from the line's column - 0 but for the Dark Queen's buttons)
 void item_cell(const Menu& m, int k, int* col, int* row);
-// The key a choice stands for (its first character).
+// Each choice made its whole word (from the space before it), its key
+// the capital inside: Pool's "Rest daYs Hours ..." - the capitals mark
+// the keys, the words are the choices (Tom, 2026-10-31)
+void whole_words(Menu& m);
+// The key a choice stands for (its first character; whole_words: its capital).
 char key(const Menu& m, int item);
 
 } // namespace text

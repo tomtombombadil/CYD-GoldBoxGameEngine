@@ -2467,7 +2467,16 @@ the game's Settings (As Original: all of them).
   typed fields show a cursor (Pool's script questions, the coin
   questions show none); the highlight stays on a list while a question
   asks about its line (the originals - Pool, Gateway, Darkness's vault -
-  draw the list unlit then).
+  draw the list unlit then). Spell lists (Tom, 2026-10-31): a list opens
+  on its first spell with Memorize (not Exit) lit, a turned page's first
+  spell; the highlight stays on the spell picked after Memorize
+  (Darkness / Gateway / Pool start on the page's last spell, and Pool
+  goes back to the list's start after each pick); "Memorize these
+  spells?" starts on Yes (the originals: No, Gateway Yes). A menu left
+  by Exit starts on its first word when shown again (the shop's Buy, not
+  Exit). Pool's rest
+  menu "Rest daYs Hours ..." lights each whole word (the original: from
+  capital to capital).
 
 - **Secret of the Silver Blades** (v0.94.0): its party menu's Initialize
   Mouse/Joystick isn't shown (nothing to set up: taps are the mouse);

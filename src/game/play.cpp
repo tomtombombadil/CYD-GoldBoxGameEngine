@@ -1584,6 +1584,12 @@ int hl_sig()
     for (int k = 0; k < menu.count; ++k) v = v * 31u + static_cast<uint8_t>(text::key(menu, k));
     return static_cast<int>(v & 0x7FFFFFFF);
 }
+// Whether menu word k is Exit
+bool is_exit_word(int k)
+{
+    if (k < 0 || k >= menu.count) return false;
+    return menu.end[k] - menu.start[k] + 1 == 4 && strncasecmp(menu.s + menu.start[k], "exit", 4) == 0;
+}
 // A word picked on the menu line (a tap, or Select at the highlight)
 void hl_remember(int at)
 {
@@ -1597,8 +1603,10 @@ void hl_remember(int at)
         slot = hl_mem_next;
         hl_mem_next = (hl_mem_next + 1) % 16;
     }
+    // Exit leaves the menu: shown again it starts on its first word, never
+    // on Exit (Tom, 2026-10-31: the shop's Buy, Memorize's list)
     hl_mem[slot].sig = s;
-    hl_mem[slot].at = static_cast<int8_t>(at);
+    hl_mem[slot].at = static_cast<int8_t>(is_exit_word(at) ? 0 : at);
     hl_after_pick = true;
 #else
     (void)at;
@@ -1771,6 +1779,7 @@ void hl_own(DkMenu m)
 void hl_picked(int at)
 {
     if (!kept_hl() || at < 0) return;
+    if (CYD_MENU_HIGHLIGHT && is_exit_word(at)) at = 0;   // (Exit: back on the first word - Tom, 2026-10-31)
     dk_place = at;
     if (dk_slot >= 0 && dk_slot_sig == menu_sig()) dk_own[dk_slot] = at;
 }
@@ -4978,6 +4987,8 @@ void ask_yes_no(pic::Canvas& c, Ask what, const char* prompt)
     dk_slot = -1;
     // (Darkness's camp "Lose it?" lights Yes - GAME.OVR 0x2AFCB: 0x108:0x43 with 'Y')
     if (what == Ask::LoseIt && kept_hl()) menu.selected = 0;
+    // (the camp's "Memorize these spells?" on Yes, every game - Tom, 2026-10-31; set below too)
+    const bool yes_first = what == Ask::MemorizeThese;
     // (Gateway's questions start on Yes - its question routine, seg 0x116
     // entry 0x39, GAME.OVR 0x46203; DOSBox)
     if (gateway()) menu.selected = 0;
@@ -4999,6 +5010,7 @@ void ask_yes_no(pic::Canvas& c, Ask what, const char* prompt)
         default: break;
         }
     }
+    if (yes_first) menu.selected = 0;
     hl_fresh();
     show_menu_line(c);
 }
@@ -8463,6 +8475,7 @@ magic::Scrolls scroll_facts()
 
 int list_rows();
 void dk_page_sel();
+bool sl_fresh_menu = false;         // a list just opened: its menu on its first word (Memorize, not Exit - Tom, 2026-10-31)
 
 void build_lines(const uint8_t* ids, int n)
 {
@@ -8496,25 +8509,24 @@ void build_lines(const uint8_t* ids, int n)
     sl.top = 0;
     sl.sel = -1;
     sl.reading = -1;
+    sl_fresh_menu = true;
     for (int i = 0; i < sl.n; ++i)
         if (sl.id[i]) {
             sl.sel = i;
             break;
         }
-    dk_page_sel();
 }
 
-// Darkness's lists start on the page's LAST spell, and a turned page's
-// last spell is chosen (DOSBox: Memorize, Cast, the next page); Gateway's
-// too (DOSBox: Memorize); Pool's open so (its spell lists, ovr23 +0x148,
-// start the list routine on line 0, the level's heading, whose highlight
-// moves up past it - ovr26 +0xB03 - round to the page's last line; DOSBox:
-// training's choice, Memorize)
+// A spell list starts on its FIRST spell and a turned page on the page's
+// first spell, every game (Tom, 2026-10-31: the menu highlight rule).
+// The originals differ: Darkness / Gateway / Pool start on the page's
+// LAST spell (DOSBox: Memorize, Cast, training's choice; Pool's list
+// routine starts on the level's heading and its highlight wraps up to the
+// last line - ovr23 +0x148, ovr26 +0xB03) - not followed, SPEC 12.
 void dk_page_sel()
 {
-    if (!darkness_files() && !gateway() && !pool_files()) return;
     const int rows = list_rows();
-    for (int i = sl.top + rows - 1; i >= sl.top; --i)
+    for (int i = sl.top; i < sl.top + rows; ++i)
         if (i < sl.n && sl.id[i]) {
             sl.sel = i;
             return;
@@ -8665,6 +8677,10 @@ void draw_spells(pic::Canvas& c)
         text::build(menu, prompt, keys);
         menu.selected = 0;
         hl_first();                     // (Darkness: GAME.OVR 0x29E86 sets the first)
+        if (sl_fresh_menu) {
+            sl_fresh_menu = false;
+            hl_fresh();
+        }
         show_menu_line(c);
     }
     dirty(0, pic::kScreenH);
@@ -8987,12 +9003,9 @@ void spells_tap(int x, int y, pic::Canvas& c)
     }
     if (k == 'M' && sl.sel >= 0) {
         magic::add(*pt->sel(), mrules->tables, sl.id[sl.sel]);
-        if (pool_files()) {
-            // (Pool: the list from its start again after each pick - its
-            // index back to -1, ovr16 +0x521 - so on the first page's last line)
-            sl.top = 0;
-            dk_page_sel();
-        }
+        // The highlight stays on the spell picked (Tom, 2026-10-31; Pool's
+        // own goes back to the list's start after each pick - ovr16 +0x521 -
+        // not followed, SPEC 12)
         draw_counts(c);
         draw_spells(c);
     } else if (k == 'N' && sl.top + list_rows() < sl.n) {
@@ -9046,6 +9059,7 @@ void rest_menu(pic::Canvas& c)
     char words[48];
     mw(profile::kRestMenu, words, sizeof words);
     text::build(menu, "", words);
+    text::whole_words(menu);            // (Pool's "Rest daYs ...": a word a choice - Tom, 2026-10-31)
     menu.selected = 0;
     hl_first();                         // (Darkness: GAME.OVR 0x27DFE sets the first)
     show_menu_line(c);

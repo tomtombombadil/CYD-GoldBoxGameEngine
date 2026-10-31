@@ -494,7 +494,24 @@ int hit(const Menu& m, int col)
 
 char key(const Menu& m, int item)
 {
-    return item >= 0 && item < m.count ? m.s[m.start[item]] : 0;
+    return item >= 0 && item < m.count ? m.s[m.start[item] + m.koff[item]] : 0;
+}
+
+void whole_words(Menu& m)
+{
+    if (m.marked) return;
+    for (int k = 0; k < m.count; ++k) {
+        int b = m.start[k];
+        while (b > 0 && m.s[b - 1] != ' ' && m.s[b - 1] != kRowBreak) --b;
+        if (b == m.start[k]) continue;
+        m.koff[k] = static_cast<int8_t>(m.start[k] - b);
+        m.start[k] = static_cast<int8_t>(b);
+        if (k > 0) {
+            int e = b - 1;
+            while (e > m.start[k - 1] && (m.s[e] == ' ' || m.s[e] == kRowBreak)) --e;
+            m.end[k - 1] = static_cast<int8_t>(e);
+        }
+    }
 }
 
 } // namespace text
