@@ -9005,6 +9005,18 @@ void memorize(pic::Canvas& c)
         say_status(c, t);
         return;
     }
+    // (Pool: a cleric's / magic-user's spell levels worked out again from
+    // the level's totals and Wisdom as Memorize opens, from 2nd level on -
+    // DOSBox, Brother Sean's record poked: at level 2 / 3 the counts follow
+    // the level and Wisdom whatever the record held (0xB2), at level 1 the
+    // record's own count stays (made at creation))
+    if (pool_files() && (ch.level(0) > 1 || ch.level(5) > 1)) {
+        uint8_t keep[15];
+        memcpy(keep, ch.rec + 0x12D, sizeof keep);      // (the record's counts: cleric, druid, magic-user x 5)
+        classes::spell_slots(ch, mrules->tables);
+        if (ch.level(0) <= 1) memcpy(ch.rec + 0x12D, keep, 5);
+        if (ch.level(5) <= 1) memcpy(ch.rec + 0x12D + 10, keep + 10, 5);
+    }
     if (magic::memorizing(ch)) {
         confirm_memorize(c, profile::kMemorizeThese);
         return;
