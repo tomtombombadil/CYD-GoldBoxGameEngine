@@ -3479,7 +3479,10 @@ void draw_list(pic::Canvas& c, const char* prompt, const char* what)
         }
     }
     char keys[60];
-    snprintf(keys, sizeof keys, "%s%s%s%s", what, l.top + l.rows() < l.n ? d->w_next : "", l.top > 0 ? d->w_prev : "",
+    // (Pool: no Prev while the whole list fits the page, though the shared
+    // top line hides its first line - DOSBox, creation's lists from top 1)
+    const bool prev = l.top > 0 && !(pool_files() && l.n <= l.rows());
+    snprintf(keys, sizeof keys, "%s%s%s%s", what, l.top + l.rows() < l.n ? d->w_next : "", prev ? d->w_prev : "",
              d->w_exit[0] == ' ' ? d->w_exit : " Exit");
     text::build(menu, prompt, keys);
     menu.selected = 0;
@@ -6053,7 +6056,9 @@ void draw_pick(pic::Canvas& c)
     plist.col0 = 1;
     plist.n = mk->n_opt + 1;                // the heading, then the choices
     if (plist.index < 1) plist.index = 1;
-    draw_list(c, "", mk->stage == 4 ? mk->change[2] : mk->words[4]);
+    // (Pool's pick lists have no Select word - "Exit" alone; Return or a
+    // tap takes the line: the creation code's list call, words "")
+    draw_list(c, "", mk->stage == 4 ? mk->change[2] : pool_files() ? "" : mk->words[4]);
 }
 
 // ---- Human Change (the party menu, where training is offered): a human
@@ -6138,6 +6143,11 @@ void pick_stage(int stage, pic::Canvas& c)
     screen = Screen::CreatePick;
     plist = PickList{};
     plist.index = stage == 1 ? 1 : 1;
+    // (Pool: the heading is the list's line 0 and the list routine keeps the
+    // shared top line (DS 0x6B29, 1 from the program's start) - so the
+    // original shows the choices from row 2 without "Pick Race" unless a
+    // list before left the top at 0; ovr creation 0x19FC4 / ovr26 +0xD9A)
+    if (pool_files()) plist.top = pool_list_top > 1 ? 1 : pool_list_top;
     draw_pick(c);
 }
 
@@ -8170,6 +8180,10 @@ void list_tap(int x, int y, pic::Canvas& c)
             if (screen == Screen::CreatePick) {
                 if (i >= 1) {
                     l.index = i;
+                    if (pool_files() && mk && mk->stage != 4) {
+                        picked(i, c);       // (Pool: no Select - a tap takes the line)
+                        return;
+                    }
                     draw_pick(c);
                 }
                 return;
@@ -16260,8 +16274,9 @@ bool nav_point(int* x, int* y)
         *y = (pm_row0() + pm_sel) * 8 + 2;
         return true;
     }
-    if (screen == Screen::Take && pool_files() && input_mode == Input::None && plist.n) {
-        // (Pool's coin lists: Select = Return, the line lit)
+    if ((screen == Screen::Take || (screen == Screen::CreatePick && mk && mk->stage != 4)) && pool_files() &&
+        input_mode == Input::None && plist.n) {
+        // (Pool's coin lists and creation's pick lists: Select = Return, the line lit)
         *x = (plist.col0 + 1) * 8 + 2;
         *y = (plist.row0 + plist.index - plist.top) * 8 + 2;
         return true;
