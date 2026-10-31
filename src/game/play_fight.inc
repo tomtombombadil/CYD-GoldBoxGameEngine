@@ -1392,6 +1392,12 @@ void fighter_name(const combat::Fighter& f, char* out, size_t cap)
     snprintf(out, cap, "%.*s", len, nm);
 }
 
+void draw_square(pic::Canvas& c, int x, int y);
+
+// A fighter's icon. The attack pose goes on the field's ground: the
+// fighter's squares drawn again first (the original's 0x74572 before its
+// attack icon - the ready pose and the turn's box under it go; Tom's board:
+// both poses at once)
 void draw_icon(pic::Canvas& c, int i, bool attack = false)
 {
     const combat::Fighter& f = fg->b.f[i];
@@ -1399,6 +1405,14 @@ void draw_icon(pic::Canvas& c, int i, bool attack = false)
     const Pic4& ic = fg->icon[f.icon];
     const uint8_t* p = ic.px[attack && ic.px[1] ? 1 : 0];
     if (!p) return;
+    if (attack) {
+        int sx[4], sy[4];
+        const int n = combat::squares(f.size, sx, sy);
+        for (int k = 0; k < n; ++k) {
+            const int gx = f.x + sx[k], gy = f.y + sy[k];
+            if (gx >= fg->b.vx && gx < fg->b.vx + 7 && gy >= fg->b.vy && gy < fg->b.vy + 7) draw_square(c, gx, gy);
+        }
+    }
     const int x = kViewX + (f.x - fg->b.vx) * kSq, y = kViewY + (f.y - fg->b.vy) * kSq;
     blit4(c, p, ic.w, ic.h, x, y, f.facing >= 4, true, kViewX, kViewY, kViewX + 7 * kSq, kViewY + 7 * kSq);
 }
