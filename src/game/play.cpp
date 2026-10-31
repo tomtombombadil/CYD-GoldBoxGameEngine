@@ -12416,7 +12416,12 @@ void draw_input(pic::Canvas& c)
     // (Gateway's too, the name white, its cursor the font's glyph 0 - an
     // underline - in white: DOSBox)
     const bool name_after = engine_ask == EngineAsk::Name && screen == Screen::CreateName && (darkness_files() || gateway());
-    const int x = input_engine ? static_cast<int>(strlen(input_prompt)) + (name_after ? 1 : 0) : 0;
+    // (Pool's scripts' INPUT STRING / NUMBER - START 0x709:0x9E3 / 0xB66:
+    // the (empty) prompt at column 0, each letter typed a column further -
+    // the first in column 1 - in white, no cursor: DOSBox, Sokal Keep's
+    // "WHAT DO YOU SAY?")
+    const bool pool_in = pool_files() && !input_engine;
+    const int x = (input_engine ? static_cast<int>(strlen(input_prompt)) + (name_after ? 1 : 0) : 0) + (pool_in ? 1 : 0);
     // (Darkness's coin questions: the prompt green, the number white - DOSBox)
     // (Gateway's View's coin question: the prompt green too - DOSBox)
     // (Pool's coin questions: the prompt green - DOSBox)
@@ -12424,8 +12429,8 @@ void draw_input(pic::Canvas& c)
     if (input_engine) put(c, input_prompt, 0, text::kMenuRow, dk ? 10 : 13);
     // (Darkness's typed name is white - DOSBox)
     put(c, input_buf, x, text::kMenuRow,
-        dk ? 15 : input_engine ? (name_after ? 15 : 13) : 10);
-    if (x + input_len < 40) {
+        dk || pool_in ? 15 : input_engine ? (name_after ? 15 : 13) : 10);
+    if (x + input_len < 40 && !pool_in) {
         if (gateway()) font::draw_glyph(c, d->font, 0, (x + input_len) * 8, text::kMenuRow * 8, 15, 0);
         else c.fill((x + input_len) * 8, text::kMenuRow * 8, 8, 8, 15);     // the cursor
     }
