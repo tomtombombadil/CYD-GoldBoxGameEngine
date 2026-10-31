@@ -13393,11 +13393,15 @@ void rec_name(const uint8_t* rec, char* out)
 // tiles; where a portrait exists it comes first, a tap swaps the two.
 
 // Pool's portrait for this character can be shown (the original: from the
-// party menu only; with the comfort, wherever View is)
+// party menu and where the state word is 3; with the comfort, wherever View is)
 bool view_has_portrait()
 {
     if (!d->prof->create.head_blocks || !d->prof->create.body_blocks || !portraits_on()) return false;
-    return (CYD_ICON_PORTRAIT && opts.portrait) || view_from == Screen::PartyMenu;
+    // (the original's View: its portrait when the game's state word - the
+    // script's 0x6E12, the engine's 0x7F12 - is 3, as in Phlan's streets
+    // and buildings; the party menu sets 3 too. GAME.OVR 0x21537; DOSBox:
+    // the clerk's treasure View shows it, the slums' camp / treasure don't)
+    return (CYD_ICON_PORTRAIT && opts.portrait) || view_from == Screen::PartyMenu || (vm && vm->get(0x7F12) == 3);
 }
 
 // The box's place: Pool's (its box shares the screen's border), else
