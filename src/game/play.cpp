@@ -9486,8 +9486,8 @@ void draw_whom(pic::Canvas& c)
         cr.on_camp = true;
         draw_frame(c);
         draw_view(c);
-        // (Darkness, the Dark Queen: the camp's picture in the view again - DOSBox)
-        if (camping && (darkness_files() || hl()) && d->prof->variant.camp_pic) draw_own_pic(camp_pic());
+        // (Darkness, the Dark Queen, Pool: the camp's picture in the view again - DOSBox)
+        if (camping && (darkness_files() || hl() || pool_files()) && d->prof->variant.camp_pic) draw_own_pic(camp_pic());
         draw_panel(c);
         text::clear(c, text::kTextArea);
         dirty_rows(17, 22);
