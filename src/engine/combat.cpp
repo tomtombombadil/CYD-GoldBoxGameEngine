@@ -4928,6 +4928,7 @@ int bolt_path(const Battle& b, const Tables& t, int caster, int tx, int ty, int 
     int last = who(tx, ty);
     bool wall = false, near = near_rule;
     int budget = (length * 2) & 0xFF;
+    int idle = 0;                                   // segments in a row that used no steps
     while (budget > 0) {
         Stepper p(Tx, Ty, Tx + (Tx - cx) * sign * budget, Ty + (Ty - cy) * sign * budget);
         int px = Tx, py = Ty;                       // where the segment's picture starts
@@ -4969,6 +4970,14 @@ int bolt_path(const Battle& b, const Tables& t, int caster, int tx, int ty, int 
             const int used = (p.steps - prev) & 0xFF;
             budget = used < budget ? budget - used : 0;
             prev = p.steps;
+            // (the original's count of half steps carries over from one
+            // segment to the next - coab's sub_5FA44 var_3D - so a bolt
+            // bouncing between two walls with a segment as long as the last
+            // uses nothing and bounces for ever: the fight fuzzer's Darkness
+            // lightning bolt, seed 5 fight 444. The same state again and
+            // again - stopped, whatever the switches: nothing else changes)
+            if (used) idle = 0;
+            else if (++idle > 3) budget = 0;
             if (wall || budget == 0) break;
         }
     }
