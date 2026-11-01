@@ -134,6 +134,7 @@ struct Data {
     // Pool's view modes: the wilderness screen drawn by the menu / the view
     // mode before the last new block (DS 0x49F9 > 1), the block's own (0x49FA > 1)
     bool           ov_up = false, ov_cur = false;
+    int            ov_area_seen = -1;       // the ECL file of the last new block (a new one: the area's start)
 
     // The wilderness map's places (from the program)
     uint8_t        city_x[32] = {}, city_y[32] = {};
@@ -1842,6 +1843,7 @@ void ow(uint32_t at, char* out, size_t cap);
 void idle_menu(pic::Canvas& c)
 {
     if (!pool_overland()) d->ov_up = false;
+    if (d->prof->game == games::Game::PoolOfRadiance) d->ov_cur = pool_overland();     // (DS 0x49FA: the mode at the menu)
     if (marker_overland()) {
         // Darkness's / Champions' overland: Move and Encamp (DOSBox; Champions'
         // GAME.OVR 0x19CA5); Champions' marker shows meanwhile
@@ -13196,7 +13198,16 @@ void handle(ecl::Stop r)
             // of the screen stays, also when no menu came between; DOSBox)
             d->ov_up = d->ov_cur;
             d->ov_cur = pool_overland();
-            if (d->ov_up && !d->ov_cur) {
+            const bool new_area = d->gs.game_area != d->ov_area_seen;
+            d->ov_area_seen = d->gs.game_area;
+            if (new_area && !d->ov_cur) {
+                // (a new ECL file: the area's start, ovr4 +0x3308 - after the
+                // first run the whole screen redrawn by its state, here the
+                // 3D one: main_frame(1), the knot at 16,16 back; DOSBox, the
+                // graveyard from the wilderness)
+                draw_frame(c);
+                draw_panel(c);
+            } else if (d->ov_up && !d->ov_cur) {
                 layout::box(c, d->tables, d->frame_tiles, 2, 2, 14, 14);
                 dirty_rows(2, 14);
             }
