@@ -3428,14 +3428,32 @@ void try_step(pic::Canvas& c, int dir)
         say(c, FSt::Turn);
         return;
     }
+    // A free attack that left it held (paralysed, asleep) or stunned: the
+    // original still takes the step (coab's move_step_away_attack, then the
+    // step - only one out of the fight stops), AD&D's with the Game Fixes:
+    // no step, the turn over (SPEC 12)
+    if (rules::fixes() && (combat::helpless(b, f) || combat::stunned(b, f))) {
+        draw_fight(c);
+        say(c, FSt::Next);
+        return;
+    }
+    // Held fast by a free attack (a hug, engulfed - its moves 0): no step
+    // (the original steps only with moves left, and a step costing more
+    // than is left leaves 0 - coab's move handler / sub_3E748)
+    if (f.moves <= 0) {
+        draw_fight(c);
+        if (fg->pages) say(c, FSt::Move);
+        else end_move(c);
+        return;
+    }
     combat::step(b, i, dir);
     sfx(sound::kStep);
-    f.moves -= cost;
+    f.moves = static_cast<int16_t>(f.moves > cost ? f.moves - cost : 0);
     guard_attacks(c, i);
     cloud_step(i);
     if (fg->pages) {
         draw_fight(c);
-        say(c, !f.up() ? FSt::Turn : combat::helpless(b, f) ? FSt::Next : FSt::Move);
+        say(c, !f.up() ? FSt::Turn : (combat::helpless(b, f) || combat::stunned(b, f)) ? FSt::Next : FSt::Move);
         return;
     }
     if (!on_screen(i) || f.x - b.vx < 1 || f.x - b.vx > 5 || f.y - b.vy < 1 || f.y - b.vy > 5) focus(i, 2);
@@ -4007,17 +4025,19 @@ void ai_step(pic::Canvas& c)
     case combat::Act::Step: {
         const int cost = combat::step_cost(b, fg->t, i, p.dir, nullptr, nullptr);
         free_attacks(c, i, p.dir);
-        if (f.up()) {
+        // (held / stunned by a free attack: no step with the Game Fixes; held
+        // fast - moves 0 - none at all: see try_step)
+        if (f.up() && f.moves > 0 && !(rules::fixes() && (combat::helpless(b, f) || combat::stunned(b, f)))) {
             combat::step(b, i, p.dir);
             sfx(sound::kStep);
-            f.moves -= cost;
+            f.moves = static_cast<int16_t>(f.moves > cost ? f.moves - cost : 0);
             guard_attacks(c, i);
             cloud_step(i);
         }
         if (on_screen(i) && !f.team()) focus(i, 2);
         draw_fight(c);
         if (fg->pages) {
-            say(c, !f.up() ? FSt::Turn : combat::helpless(b, f) ? FSt::Next : FSt::Ai);
+            say(c, !f.up() ? FSt::Turn : (combat::helpless(b, f) || combat::stunned(b, f)) ? FSt::Next : FSt::Ai);
             return;
         }
         if (!f.up()) {

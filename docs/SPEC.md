@@ -2647,6 +2647,11 @@ the game's Settings (As Original: all of them).
   healer takes a body lying beside it (a party member down) whatever its
   side - a monster cleric heals a fallen hero. With Game Fixes on only
   its own side's (`combat::heal_target`).
+- **Held by a free attack mid-step** (Game Fixes, every game; the fight
+  fuzzer, 2026-11-01): a fighter paralysed, put to sleep or stunned by the
+  free attack of one it steps away from still takes that step in the
+  original (coab's move_step_away_attack: only one out of the fight
+  stops); with Game Fixes on it stays where it is and its turn is over.
 - **Money** (Game Fixes, `rules::fixes()`; Tom, 2026-10-31: "All money is
   convertible ... the innkeeper should accept any combination of coins";
   Pool, Curse, Secret, Gateway - the games with AD&D's five coins at the
