@@ -213,6 +213,8 @@ static void run_ops(const char* q)
         else if (*q == '-') { ++q; play::pt->m[*q - '0'].rec[0x1A4] = 1; }
         else if (*q == '!') { for (int i = 0; i < play::pt->count; ++i) { const party::Character& ch = play::pt->m[i]; char nm[20]; ch.name(nm, 20); printf("  %s HP %d/%d st %d fx:", nm, ch.hp(), ch.hp_max(), ch.health()); for (int k = 0; k < ch.n_affects; ++k) printf(" %02X/%d/%d", ch.affects[k][0], ch.affects[k][1] | ch.affects[k][2] << 8, ch.affects[k][3]); printf("\n"); } }
         else if (*q == '~') { for (int k = 0; k < 600; ++k) { g_now += 100; play::tick(g_now, C); } }
+        else if (*q == '"' && q[1]) { ++q; const bool ok = play::cheat_open(*q - '0', C); printf("  cheat %c: %s, screen %d, %d goods\n", *q, ok ? "open" : "not ready", (int)play::screen, play::ground ? play::goods_count() : -1); }     // ("n: the Cheats tab's 0 Healer, 1 Merchant, 2 Sanctuary)
+        else if (*q == '$') printf("  clock %d %d %d %d %d (screen %d)\n", play::vm->get(0x4BC6), play::vm->get(0x4BC7), play::vm->get(0x4BC8), play::vm->get(0x4BC9), play::vm->get(0x4BCA), (int)play::screen);
         else if (*q == 'v' || *q == '^') {      // the cursor keys Down / Up (a list's highlight)
             play::nav(*q == 'v' ? play::Nav::Down : play::Nav::Up, C);
             printf("  %c: spell list sel %d top %d of %d\n", *q, play::sl.sel, play::sl.top, play::sl.n);
@@ -652,6 +654,7 @@ int main(int argc, char** argv)
                         getenv("SOUNDRECGAME") ? (games::Game)atoi(getenv("SOUNDRECGAME")) : games::Game::Unknown);
     const char* e = play::open(dir, game, C, getenv("CACHE"));
     if (e) { printf("open: %s\n", e); return 1; }
+    if (getenv("CAMPWORDS")) { char cw[48]; play::camp_words(cw, sizeof cw); printf("  camp words [%s] -> [%s]\n", play::d->w_camp_menu, cw); return 0; }    // CAMPWORDS=1: the camp menu's words, read from the program
     // VMSEED=n: the scripts' random numbers from seed n (the board seeds them at every Play)
     if (getenv("VMSEED") && play::vm) play::vm->seed(static_cast<uint32_t>(strtoul(getenv("VMSEED"), nullptr, 10)));
     // NOGALLERY=1: the icon editor opens as the original's (the gallery comfort off)
@@ -1165,6 +1168,22 @@ int main(int argc, char** argv)
     if (getenv("DISASM") && getenv("AREA")) disasm();
     if (getenv("CHOICES")) for (const char* q = getenv("CHOICES"); *q; ++q) if (*q >= '0' && *q <= '9') choices.push_back(*q - '0');
     settle(0, getenv("MS") ? atoi(getenv("MS")) : 60000);
+    if (getenv("CHEATHURT"))        // CHEATHURT=1: everyone at 1 hit point first (the Healer's / Sanctuary's checks)
+        for (int i = 0; i < play::pt->count; ++i) play::pt->m[i].rec[0x1A4] = 1;
+    if (getenv("CHEAT")) {          // CHEAT=n: the Cheats tab's 0 Healer, 1 Merchant, 2 Sanctuary (then CAMPRUN's ops)
+        const bool ok = play::cheat_open(atoi(getenv("CHEAT")), C);
+        settle(0, 3000);
+        printf("  cheat %s: %s, screen %d menu [%s%s], %d goods\n", getenv("CHEAT"), ok ? "open" : "not ready",
+               (int)play::screen, play::menu.prompt, play::menu.s, play::ground ? play::goods_count() : -1);
+        for (int i = 0; getenv("GOODSLOG") && play::ground && i < play::goods_count(); ++i) {     // GOODSLOG=1: each good, its price
+            const uint8_t* it = play::goods(i);
+            char nm[48];
+            play::names->name(items::Item{it}, nm, sizeof nm);
+            printf("  good %2d: %-30s type %3d plus %d value %d price %d\n", i, nm, it[0x2E], (int8_t)it[0x35],
+                   items::Item{it}.value(), rules::price(it, play::vm->get(0x7F6D) & 0xFF));
+        }
+        shot("cheat");
+    }
     if (getenv("CAMPRUN")) run_ops(getenv("CAMPRUN"));
     shot("start");
     if (getenv("PICTURE")) {            // PICTURE=id: the event picture shown, each of its animation's frames a snapshot
@@ -1387,6 +1406,16 @@ int main(int argc, char** argv)
             continue;
         }
         if (*m == '`') { g_quiet = !g_quiet; continue; }
+        if (*m == '"' && m[1]) {        // "\"n": the Cheats tab's 0 Healer, 1 Merchant, 2 Sanctuary; then CAMPRUN2's ops
+            ++m;
+            const bool ok = play::cheat_open(*m - '0', C);
+            settle(0, 3000);
+            printf("  cheat %c: %s, screen %d menu [%s%s], %d goods\n", *m, ok ? "open" : "not ready", (int)play::screen,
+                   play::menu.prompt, play::menu.s, play::ground ? play::goods_count() : -1);
+            shot("cheat");
+            if (getenv("CAMPRUN2")) run_ops(getenv("CAMPRUN2"));
+            continue;
+        }
         if (*m == '?') {                // "?": the screen, the menu line, what the script waits for
             printf("  ? screen %d menu [%s|%s] wait %d text [%s] selected %d\n", (int)play::screen, play::menu.prompt,
                    play::menu.s, (int)play::vm->wait(), play::vm->wait() == ecl::Wait::Print ? play::vm->text() : "",

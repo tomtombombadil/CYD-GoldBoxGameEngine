@@ -100,6 +100,13 @@ bool walking();
 // between its waits, an empty PRINTCLEAR being shown): the map over the
 // game screen can stay up while ticks finish it
 bool walk_pending();
+// The Cheats tab (Tom, 2026-11-01; features.h CYD_CHEATS, Options::cheats):
+// ready only while the party stands at the exploring menu; cheat_open opens
+// 0 Healer (the game's temple, free), 1 Merchant (its shops' goods
+// together, the best price), 2 Sanctuary (its camp, rests never
+// interrupted) on the game screen - false when not ready
+bool cheats_ready();
+bool cheat_open(int which, pic::Canvas& c);
 // A fight wants the direction keys (Tom, 2026-10-10: a fight's own keys -
 // the 8 ways and Select): a fighter moving or aiming by hand
 bool fight_pad();
@@ -124,6 +131,8 @@ struct Options {
     bool portrait = true;         // View Character: the icon portrait (CYD_ICON_PORTRAIT)
     bool item_fixes = true;       // the originals' item mistakes fixed - Pool's Flame Tongue (CYD_ITEM_FIXES)
     bool rolls = true;            // fights show the rolls just made under the messages (CYD_COMBAT_ROLLS)
+    bool camp_fix = true;         // Pool's camp has Fix as the later games' (CYD_CAMP_FIX)
+    bool cheats = true;           // the Game menu's Cheats tab (CYD_CHEATS)
     uint8_t font = 0;             // the game's text (CYD_CLEAR_FONT): 0 its own (the default), 1 the engine's
                                   // Clear font, 2 the player's Pools of Darkness font (set_darkness_dir),
                                   // 3 Clear Caps (the Clear capitals only)

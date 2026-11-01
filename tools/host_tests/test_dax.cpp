@@ -2213,6 +2213,23 @@ static void test_ecl()
     const ecl::MapLoad none = ecl::find_map_load(quiet_only.data(), static_cast<uint32_t>(quiet_only.size()), set);
     CHECK(!none.has_geo() && !none.has_walls());
 
+    // The Cheats tab's Merchant (ecl::find_shops): a shop's TREASURE with the
+    // shop word set before its COMBAT (either order), its price factor; a
+    // treasure after a fight isn't a shop's
+    {
+        Bytes s = {0x12, 0x34};
+        for (int i = 0; i < 5; ++i) { s.push_back(0); op_addr(s, kBase + 20); }
+        auto treasure = [&](int b) { s.push_back(0x27); for (int k = 0; k < 7; ++k) op_imm(s, 0); op_imm(s, b); };
+        auto save = [&](int v, uint16_t a) { s.push_back(0x09); op_imm(s, v); op_addr(s, a); };
+        treasure(12); save(1, 0x7F6C); save(8, 0x7F6D); s.push_back(0x24);     // a shop: goods first
+        save(1, 0x7F6C); save(32, 0x7F6D); treasure(14); s.push_back(0x24);    // a shop: the word first
+        treasure(13); s.push_back(0x24);                                       // a fight's treasure
+        s.push_back(0x00);
+        ecl::ShopFinds sf;
+        ecl::find_shops(s.data(), static_cast<uint32_t>(s.size()), set, sf);
+        CHECK(sf.n_blocks == 2 && sf.blocks[0] == 12 && sf.blocks[1] == 14 && sf.factor_lo == 8);
+    }
+
     // Pool of Radiance: the same script loaded at 0x9900, its words at Pool's
     // addresses - decoded into Curse's map
     const profile::Profile* pp = profile::find(games::Game::PoolOfRadiance, 65231, 68592);

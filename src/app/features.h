@@ -162,6 +162,38 @@
 #define CYD_COMBAT_ROLLS 1
 #endif
 
+// The camp's Fix in every game (Tom, 2026-11-01: "add the Fix menu option
+// to the PoolRad encamp menu (and any other game that lacks it)"): Curse
+// added Fix to the camp - the healers rest, memorize their cure spells
+// again and heal the party, as long as it takes (spells::fix_plan) - and
+// every later game kept it; Pool of Radiance's camp has none ("Save View
+// Magic Rest Alter Exit"). With this on, Pool's camp is "Save View Magic
+// Rest Alter Fix Exit" and its Fix is Curse's with Pool's own cure spells,
+// rest and memorizing (an encounter breaks it off as it does a Rest).
+// Every other game's own camp already has Fix. A game "enhancement" -
+// whether these get a list of their own beside Game Fixes is Tom's to
+// decide (docs/TODO.md); it sits with the comforts meanwhile. 0: as the
+// original. Where: play.cpp (camp_words, fix_party), viewer.cpp (the Camp
+// Fix key).
+#ifndef CYD_CAMP_FIX
+#define CYD_CAMP_FIX 1
+#endif
+
+// The Cheats tab (Tom, 2026-11-01): the in-game Game menu's Cheats tab -
+// Healer (the game's own temple, every cure free), Merchant (the game's
+// own shop with the goods of all its shops together, Buy / Sell / Id /
+// Appraise as its shops have them, at the best price any of its shops
+// asks) and Sanctuary (the game's own camp - Rest, Magic, Fix, View, Alter,
+// Save - where nothing interrupts a rest: no wandering monsters, no city
+// watch, no camp scripts). Only while the party stands at the exploring
+// menu; leaving one goes back there as it was. Hidden with the Settings
+// key Cheats Tab off. 0: no Cheats tab. Where: play.cpp (cheat_*),
+// engine/ecl.* (find_shops: the goods the game's scripts sell),
+// viewer.cpp (the tab, the key).
+#ifndef CYD_CHEATS
+#define CYD_CHEATS 1
+#endif
+
 // Each comfort compiled in can also be switched off by the player: the
 // game's Settings page (Tom, 2026-10-11, v0.72.0; one set for all games,
 // settings.h comforts_off), the one Settings screen (Home, a game's page, the

@@ -3042,7 +3042,10 @@ bool tap_keyboard(const ui::Tap& t)
 // Journal PDF (the book). More tabs as the engine grows. Back to Game at
 // the bottom.
 
-enum MenuTab { kTabJournal, kTabPdf, kTabSounds, kTabSettings, kTabLogs, kTabs };
+enum MenuTab { kTabJournal, kTabPdf, kTabSounds, kTabSettings, kTabLogs, kTabCheats, kTabs };
+// (the Cheats tab - last - only with Settings' Cheats Tab on: features.h CYD_CHEATS)
+bool cheats_tab_on();
+int n_tabs() { return cheats_tab_on() ? kTabs : kTabs - 1; }
 int  menu_tab = kTabJournal;
 int  menu_page = 0;
 bool from_menu = false;       // the journal / PDF screens go back to the Menu
@@ -3059,8 +3062,8 @@ ui::Rect menu_esc_rect()
 // (five tabs and Exit Game, in the small text - 320x240's book tab is
 // "PDF"; Logs since v0.86.0, Tom: to look at the logs in the game;
 // Settings since v0.91.0, the one Settings screen - was Options)
-const char* const kTabNames[kTabs] = {"Journal", "Journal PDF", "Sounds", "Settings", "Logs"};
-const char* const kTabShort[kTabs] = {"Journal", "PDF", "Sounds", "Settings", "Logs"};
+const char* const kTabNames[kTabs] = {"Journal", "Journal PDF", "Sounds", "Settings", "Logs", "Cheats"};
+const char* const kTabShort[kTabs] = {"Journal", "PDF", "Sounds", "Settings", "Logs", "Cheats"};
 const char* tab_label(int i) { return ui::large() ? kTabNames[i] : kTabShort[i]; }
 
 // Each tab as wide as its word plus an equal share of the rest
@@ -3069,8 +3072,9 @@ ui::Rect tab_rect(int i)
     const int gp = ui::gap();
     const int right = menu_esc_rect().x;
     int words = 0, x = gp;
-    for (int k = 0; k < kTabs; ++k) words += ui::text_width(tab_label(k), ui::Font::Small);
-    const int extra = (right - gp * (kTabs + 1) - words) / kTabs;
+    const int nt = n_tabs();
+    for (int k = 0; k < nt; ++k) words += ui::text_width(tab_label(k), ui::Font::Small);
+    const int extra = (right - gp * (nt + 1) - words) / nt;
     for (int k = 0; k < i; ++k) x += ui::text_width(tab_label(k), ui::Font::Small) + extra + gp;
     return {x, 2, ui::text_width(tab_label(i), ui::Font::Small) + extra, ui::header_h() - 4};
 }
@@ -3078,7 +3082,7 @@ ui::Rect tab_rect(int i)
 void draw_tabs(int active)
 {
     ui::gfx().fillRect(0, 0, ui::width(), ui::header_h(), style::kHeader);
-    for (int i = 0; i < kTabs; ++i)
+    for (int i = 0; i < n_tabs(); ++i)
         ui::key_small(tab_rect(i), tab_label(i), i == active ? ui::KeyStyle::Lit : ui::KeyStyle::Normal);
     if (ui::large()) ui::key(menu_esc_rect(), "Exit Game");
     else ui::key_small(menu_esc_rect(), "Exit Game");
@@ -3092,7 +3096,7 @@ bool menu_esc_hit(const ui::Tap& t)
 
 int tab_hit(const ui::Tap& t)
 {
-    for (int i = 0; i < kTabs; ++i)
+    for (int i = 0; i < n_tabs(); ++i)
         if (tab_rect(i).contains(t.x, t.y)) return i;
     return -1;
 }
@@ -3210,7 +3214,8 @@ void tap_sounds(const ui::Tap& t)
 // ---- The engine comforts' switches (Tom, 2026-10-11, v0.72.0) ----------------
 // One set for all games (settings.h comforts_off), on the one Settings
 // screen (below); a comfort compiled out (app/features.h) isn't listed.
-enum Comfort { kCFont, kCGallery, kCBigIcon, kCJournal, kCDemoTap, kCMoreGuys, kCPortrait, kCItemFixes, kCRolls, kComforts };
+enum Comfort { kCFont, kCGallery, kCBigIcon, kCJournal, kCDemoTap, kCMoreGuys, kCPortrait, kCItemFixes, kCRolls,
+               kCCampFix, kCCheats, kComforts };
 
 bool comfort_built(int c)
 {
@@ -3224,22 +3229,34 @@ bool comfort_built(int c)
     case kCPortrait: return CYD_ICON_PORTRAIT;
     case kCItemFixes: return CYD_ITEM_FIXES;
     case kCRolls: return CYD_COMBAT_ROLLS;
+    case kCCampFix: return CYD_CAMP_FIX;
+    case kCCheats: return CYD_CHEATS;
     default: return true;
     }
 }
-uint8_t comfort_bit(int c)
+// (bits 8 on: comforts_off2's)
+uint16_t comfort_bit(int c)
 {
-    static const uint8_t kBits[kComforts] = {0, kOffGallery, kOffBigIcon, kOffJournal, kOffDemoTap, kOffMoreGuys,
-                                             kOffPortrait, kOffItemFixes, kOffRolls};
+    static const uint16_t kBits[kComforts] = {0, kOffGallery, kOffBigIcon, kOffJournal, kOffDemoTap, kOffMoreGuys,
+                                              kOffPortrait, kOffItemFixes, kOffRolls, kOff2CampFix << 8,
+                                              kOff2Cheats << 8};
     return kBits[c];
+}
+uint16_t comforts_off() { return static_cast<uint16_t>(cfg->comforts_off | cfg->comforts_off2 << 8); }
+void set_comforts_off(uint16_t v)
+{
+    cfg->comforts_off = static_cast<uint8_t>(v);
+    cfg->comforts_off2 = static_cast<uint8_t>(v >> 8);
 }
 bool comfort_on(int c)
 {
     if (!comfort_built(c)) return false;
     if (c == kCBigIcon && !ui::large()) return cfg->large_icons != 0;      // (320x240: off unless chosen - it covers the editor)
     if (c == kCFont) return cfg->game_font != kFontGame;                   // (the game's own unless chosen - Tom)
-    return !(cfg->comforts_off & comfort_bit(c));
+    return !(comforts_off() & comfort_bit(c));
 }
+
+bool cheats_tab_on() { return comfort_on(kCCheats); }
 
 void apply_options()
 {
@@ -3250,6 +3267,8 @@ void apply_options()
     o.portrait = comfort_on(kCPortrait);
     o.item_fixes = comfort_on(kCItemFixes);
     o.rolls = comfort_on(kCRolls);
+    o.camp_fix = comfort_on(kCCampFix);
+    o.cheats = comfort_on(kCCheats);
     o.font = comfort_on(kCFont) ? cfg->game_font : kFontGame;
     play::set_options(o);
 }
@@ -3281,7 +3300,7 @@ ui::Rect comfort_qmark(const ui::Rect& cell)
 
 const char* const kComfortNames[kComforts] = {"Game Font",        "Icon Gallery",    "Large Icon",    "Journal Pop-Up",
                                               "Tap to Stop Demo", "More Characters", "Icon Portrait", "Game Fixes",
-                                              "Show Rolls"};
+                                              "Show Rolls",       "Camp Fix",        "Cheats Tab"};
 
 // What each option does (sentence case; Tom, v0.84.0)
 const char* comfort_help_text(int c)
@@ -3358,6 +3377,17 @@ const char* comfort_help_text(int c)
                "20, the total needed 20 less the target's AC), \"Damage: 4+3=7\" when it hits. A spell shows its "
                "target's saving throw and its damage as rolled, before saves and resistances. Off: as the "
                "original.";
+    case kCCampFix:
+        return "Pool of Radiance's camp gets Fix, as every later game has it: the party's clerics cast their "
+               "healing spells, rest and memorize them again until everyone is healed (or their spells run "
+               "out), the time passing as it does - a wandering monster can break the rest off. The other "
+               "games' camps have Fix already. Off: Pool's camp as the original.";
+    case kCCheats:
+        return "A Cheats tab in the Game menu, while the party stands at the exploring menu: Healer - the "
+               "game's own temple, every cure free; Merchant - the game's own shop selling the goods of all "
+               "its shops, at the best price any of them asks, and buying from you as its shops do; "
+               "Sanctuary - the game's own camp, where nothing interrupts a rest (no wandering monsters, no "
+               "city watch). Off: no Cheats tab.";
     }
     return "";
 }
@@ -3477,7 +3507,7 @@ void toggle_comfort(int c)
                                                               : kFontGame;
         cfg->game_font = next == kFontDarkness && !darkness_dir(dd, sizeof dd) ? kFontGame : next;
     } else {
-        cfg->comforts_off ^= comfort_bit(c);
+        set_comforts_off(comforts_off() ^ comfort_bit(c));
     }
     settings_save(*cfg);
     apply_options();
@@ -3495,10 +3525,9 @@ bool all_comforts_off()
 void toggle_original()
 {
     const bool on = all_comforts_off();
-    cfg->comforts_off =
-        on ? 0
-           : (kOffGallery | kOffBigIcon | kOffDemoTap | kOffJournal | kOffMoreGuys | kOffPortrait | kOffItemFixes |
-              kOffRolls);
+    uint16_t all = 0;
+    for (int c = 0; c < kComforts; ++c) all = static_cast<uint16_t>(all | comfort_bit(c));
+    set_comforts_off(on ? 0 : all);
     if (!on) cfg->large_icons = 0;
     cfg->game_font = on ? kFontClear : kFontGame;
     settings_save(*cfg);
@@ -3512,6 +3541,55 @@ ui::Rect game_settings_area()
     return {0, top, ui::width(), ui::height() - top - ui::key_h() - ui::gap() * 2};
 }
 
+
+// ---- The Cheats tab (Tom, 2026-11-01; features.h CYD_CHEATS) ----------------
+// Healer, Merchant, Sanctuary - each the game's own screen (play::cheat_open),
+// only while the party stands at the exploring menu; Back to Game
+struct CheatKey {
+    const char* name;
+    const char* sub;
+};
+constexpr CheatKey kCheatKeys[3] = {
+    {"Healer", "The temple's cures, all free"},
+    {"Merchant", "Every shop's goods, the best prices"},
+    {"Sanctuary", "Camp and rest, never interrupted"},
+};
+ui::Rect cheat_key(int i)
+{
+    const ui::Rect a = journal_area();
+    const int gp = ui::gap(), top = a.y + ui::line_h(ui::Font::Small) * 2 + gp * 3;
+    int h = (a.y + a.h - top - gp * 3) / 3;
+    if (h > ui::key_h() * 2) h = ui::key_h() * 2;
+    const int w = ui::large() ? ui::width() * 2 / 3 : ui::width() - gp * 6;
+    return {(ui::width() - w) / 2, top + i * (h + gp), w, h};
+}
+void draw_cheats()
+{
+    ui::key(ui::bottom_key(0, 1), "Back to Game");
+    const ui::Rect a = journal_area();
+    const bool ready = play::cheats_ready();
+    const int x = ui::gap() * 3, w = ui::width() - ui::gap() * 6;
+    wrap_text(x, a.y + ui::gap(), w,
+              ready ? "The game's own screens, without their costs or dangers."
+                    : "Only at the exploring menu - not in a fight, camp, shop or question.",
+              ui::Font::Small, ready ? style::kText : style::kTextMuted, true);
+    for (int i = 0; i < 3; ++i)
+        ui::key2(cheat_key(i), kCheatKeys[i].name, kCheatKeys[i].sub, ready ? ui::KeyStyle::Normal : ui::KeyStyle::Dim);
+}
+void tap_cheats(const ui::Tap& t)
+{
+    if (bottom_hit(t, 1) == 0) {
+        leave_menu();
+        return;
+    }
+    for (int i = 0; i < 3; ++i) {
+        if (!cheat_key(i).contains(t.x, t.y)) continue;
+        if (!play::cheats_ready()) return;          // (dimmed: the note says why)
+        leave_menu();
+        if (screen == Screen::Play) play::cheat_open(i, frame::canvas());
+        return;
+    }
+}
 
 void draw_game_menu()
 {
@@ -3529,6 +3607,10 @@ void draw_game_menu()
             return;
         }
         draw_settings_body();
+        return;
+    }
+    if (menu_tab == kTabCheats) {
+        draw_cheats();
         return;
     }
     const int pages = menu_tab == kTabPdf || menu_note[0] ? 1 : menu_pages();   // (a note: no list pages)
@@ -3600,10 +3682,14 @@ void tap_game_menu(const ui::Tap& t)
         open_game_logs();
         return;
     }
-    if (tab == kTabJournal || tab == kTabSounds || tab == kTabSettings) {
+    if (tab == kTabJournal || tab == kTabSounds || tab == kTabSettings || tab == kTabCheats) {
         menu_tab = tab;
         menu_note[0] = 0;
         dirty = true;
+        return;
+    }
+    if (menu_tab == kTabCheats) {
+        tap_cheats(t);
         return;
     }
     if (menu_tab == kTabSounds) {
