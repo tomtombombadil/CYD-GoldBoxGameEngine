@@ -13202,10 +13202,13 @@ void handle(ecl::Stop r)
             d->ov_area_seen = d->gs.game_area;
             if (new_area && !d->ov_cur) {
                 // (a new ECL file: the area's start, ovr4 +0x3308 - after the
-                // first run the whole screen redrawn by its state, here the
-                // 3D one: main_frame(1), the knot at 16,16 back; DOSBox, the
-                // graveyard from the wilderness)
-                draw_frame(c);
+                // first run the frame drawn by its state, here the 3D one's
+                // boxes: the knot at 16,16 and the 3D view's frame back; the
+                // text window keeps its words - DOSBox, the graveyard and the
+                // northern gates from the wilderness)
+                layout::box(c, d->tables, d->frame_tiles, 0, 0, 16, 16);
+                layout::box(c, d->tables, d->frame_tiles, 2, 2, 14, 14);
+                dirty_rows(0, 16);
                 draw_panel(c);
             } else if (d->ov_up && !d->ov_cur) {
                 layout::box(c, d->tables, d->frame_tiles, 2, 2, 14, 14);
