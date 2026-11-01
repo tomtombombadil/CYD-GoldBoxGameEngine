@@ -17264,6 +17264,47 @@ void take_dirty(int& y0, int& y1)
     dirty0 = dirty1 = 0;
 }
 
+// The journal's text screens (play.h): the party menu's frame (the Dark
+// Queen's marble with the version screen's tall box), the inside black -
+// the canvas's paper kept as it was (the game screen comes back from the
+// card afterwards; nothing of the game's own state changes)
+bool text_screen(pic::Canvas& c)
+{
+    if (!d || !d->font.loaded) return false;
+    const int16_t paper = c.paper;
+    if (hl()) {
+        c.paper = -1;
+        c.clear(0);
+        plat::File fa, fb;
+        const bool a = open_hl("FRAME.TLB", fa), b = open_hl("GEN.TLB", fb);
+        {
+            plat::FileSource sa(fa), sb(fb);
+            qview::draw_frame(c, a ? &sa : nullptr, b ? &sb : nullptr, -1, nullptr, q_col(), q_pal());
+            q_take();
+        }
+        if (a) fa.close();
+        if (b) fb.close();
+        q_pm_box(c, 183);
+    } else {
+        c.clear(0);
+        krynn_moons();
+        layout::outer(c, d->tables, d->frame_tiles);
+    }
+    c.fill_black(8, 8, pic::kScreenW - 16, 22 * 8);
+    c.fill_black(0, 24 * 8, pic::kScreenW, 8);
+    c.paper = paper;
+    return true;
+}
+
+void text_line(pic::Canvas& c, const char* s, int n, int x, int y, int scale)
+{
+    if (!d) return;
+    for (int i = 0; i < n; ++i) {
+        const char ch = s[i] >= ' ' && s[i] <= '~' ? s[i] : ' ';     // (a tab or a stray byte: a space)
+        font::draw_glyph_scaled(c, d->font, font::glyph_of(d->font, ch), x + i * 8 * scale, y, 15, scale);
+    }
+}
+
 // (none on the Dark Queen's overland: its GEO map 2 is a 10 x 10 stand-in)
 const geo::Map* map() { return d && d->map.loaded && !q_overland() ? &d->map : nullptr; }
 int pos_x() { return d ? d->gs.x : 0; }

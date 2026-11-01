@@ -130,6 +130,25 @@ bool unpark(const char* path)
 
 bool parked() { return is_parked; }
 
+bool save(const char* path)
+{
+    if (!pixels || is_parked || !sd_begin()) return false;
+    fs::File f = sd_fs().open(path, "w");
+    if (!f) return false;
+    const bool ok = card_write(f, pixels, cv.bytes());
+    f.close();
+    return ok;
+}
+
+bool restore(const char* path)
+{
+    if (!pixels || is_parked || !sd_begin()) return false;
+    fs::File f = sd_fs().open(path, "r");
+    const bool ok = f && card_read(f, pixels, cv.bytes());
+    if (f) f.close();
+    return ok;
+}
+
 void set_palette(int index, const pic::Rgb& c)
 {
     // Index 16 is the EGA pictures' "transparent"; a 256-colour palette

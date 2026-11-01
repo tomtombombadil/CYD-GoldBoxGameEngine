@@ -54,6 +54,11 @@ void present_rows(int y0, int y1);
 bool park(const char* path);
 bool unpark(const char* path);
 bool parked();
+// The journal's text screens borrow the canvas (Tom, 2026-10-31): save()
+// writes the game screen to path and keeps the canvas (no memory taken);
+// restore() reads it back into it. False: not written / not read.
+bool save(const char* path);
+bool restore(const char* path);
 
 // A palette entry as the panel shows it (RGB565, the usual byte order)
 uint16_t colour(int index);

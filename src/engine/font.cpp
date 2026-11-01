@@ -172,6 +172,31 @@ void draw_glyph(pic::Canvas& c, const Font& f, int g, int x, int y, uint8_t fg, 
     }
 }
 
+void draw_glyph_scaled(pic::Canvas& c, const Font& f, int g, int x, int y, uint8_t fg, int scale)
+{
+    if (scale <= 1) {
+        draw_glyph(c, f, g, x, y, fg, -1);
+        return;
+    }
+    if (g_ink_from >= 0 && fg == g_ink_from) fg = static_cast<uint8_t>(g_ink_to);
+    const bool lower = f.clear && g >= kGlyphs && g < kGlyphs + 26;
+    if (g < 0 || (g >= kGlyphs && !lower)) return;
+    for (int row = 0; row < 8; ++row) {
+        const uint8_t bits = lower ? kClearLower[g - kGlyphs][row] : f.glyph[g][row];
+        for (int col = 0; col < 8; ++col) {
+            if (!(bits & (0x80 >> col))) continue;
+            for (int j = 0; j < scale; ++j) {
+                const int py = y + row * scale + j;
+                if (py < 0 || py >= c.h) continue;
+                for (int i = 0; i < scale; ++i) {
+                    const int px = x + col * scale + i;
+                    if (px >= 0 && px < c.w) c.set(px, py, fg);
+                }
+            }
+        }
+    }
+}
+
 void set_ink_remap(int from, int to)
 {
     g_ink_from = from;

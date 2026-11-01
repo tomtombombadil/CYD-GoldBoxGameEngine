@@ -722,6 +722,16 @@ static void test_font()
             for (int x = 0; x < 8; ++x)
                 same &= (gp[r * pic::kScreenW + x] == 15) == ((font::kClearLower[1][r] & (0x80 >> x)) != 0);
         CHECK(same);
+        // Twice the size (the journal's Large text): each ink pixel a 2 x 2
+        // square, the paper left as it was
+        gc.clear(3);
+        font::draw_glyph_scaled(gc, g, font::glyph_of(g, 'b'), 16, 8, 15, 2);
+        same = true;
+        for (int r = 0; r < 16; ++r)
+            for (int x = 0; x < 16; ++x)
+                same &= gp[(8 + r) * pic::kScreenW + 16 + x] ==
+                        ((font::kClearLower[1][r / 2] & (0x80 >> (x / 2))) ? 15 : 3);
+        CHECK(same && gp[8 * pic::kScreenW + 15] == 3 && gp[24 * pic::kScreenW + 16] == 3);
         font::set_clear(g, false);
         CHECK(!g.clear && memcmp(g.glyph, f.glyph, sizeof g.glyph) == 0 && font::glyph_of(g, 'a') == 1);
         // Mid-game: text already on the screen changes font with it (a menu

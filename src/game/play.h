@@ -147,6 +147,18 @@ bool icon_gallery();
 int journal_seen_count();
 bool journal_seen(int i, char* kind, int* number);
 
+// The journal's text screens (Tom, 2026-10-31: a typeset journal's text
+// entries and book pages on black in the game font chosen in Settings,
+// inside the game's own border): text_screen draws the frame the game puts
+// round a full-screen text (its party menu's - each game's own tiles, bars
+// or marble), the inside (cells 1-38 x 1-22) and row 24 black; false when
+// no game is open (the font and frame aren't loaded). text_line prints n
+// characters of s from pixel (x, y) in the game's text colour, each glyph
+// scale x its size (1 or 2), ink only. The front end keeps the game screen
+// on the card meanwhile and puts it back (the canvas is borrowed).
+bool text_screen(pic::Canvas& c);
+void text_line(pic::Canvas& c, const char* s, int n, int x, int y, int scale);
+
 // Canvas rows changed since the last call (y1 == 0: none).
 void take_dirty(int& y0, int& y1);
 // The viewer's "show the changed rows now" (for a message before slow work

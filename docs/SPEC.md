@@ -2270,6 +2270,32 @@ How it works (v0.12.0, Curse):
   known one): a reference the prepared journal lacks says "Tavern Tale
   9 isn't in this edition's journal (...)"; no JOURNAL.DAT says the scan
   hasn't prepared it (tap Rescan; its log says why).
+  **The game's look for text** (Tom, 2026-10-31: "display the text on a
+  black background using the game font (the same one chosen in the
+  settings) ... the screen included the game border"): an entry that is
+  all text (journal entries, tavern tales, proclamations, the
+  Introduction) and the book's text pages are drawn in the game's own
+  text screen - the frame the game puts round a full-screen text (its
+  party menu's: Curse's / Gateway's tables, Pool's boxes, Secret's bars,
+  Darkness's BORDERS pieces, Treasures' BORD pieces, the Krynn frames,
+  the Dark Queen's marble with the version screen's tall box), black
+  inside, the text white in the Game Font chosen in Settings (Original:
+  the game's capitals; Clear with lower case; Clear Caps; Darkness's) in
+  8 x 8 cells from cell (1, 1), wrapped at spaces (a word longer than a
+  line is cut), a blank line between paragraphs. Zoom = **Normal** (38 x
+  22 characters) / **Large** (each glyph 2x: 19 x 11), kept for the
+  session; Prev / Next a page of lines ("2 of 3"; the last page may end
+  early), then the book's page before / after; a drag moves by lines.
+  It is drawn INTO the game canvas: `frame::save` writes the game screen
+  to `_CYD/SCREEN.TMP` (the canvas stays allocated), `play::text_screen`
+  / `text_line` draw, `frame::restore` reads the screen back when the
+  viewer closes - no memory beyond the viewer's own (its line table:
+  1,000 lines). Shown 1:1 on 320x240 and 1.5x on 480x320 (canvas rows
+  0-191 = 288 panel rows; the slim key row 28 px there). Picture entries
+  and mixed text / picture entries keep the paper look; the engine's old
+  text look is only the fallback (no game open, the canvas parked, the
+  card won't take SCREEN.TMP). No Settings switch: it is the look Tom
+  asked for, nothing of the original games is changed by it.
 
 ## 8. Copy protection (Tom, 2026-10-06)
 
