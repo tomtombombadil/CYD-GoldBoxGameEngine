@@ -233,7 +233,29 @@ the Project as claude/TODO.md.
       ADD NPC's side byte and View's Trade for NPCs. Not reached: the
       Kovel mansion inside, Valjevo, Scribe (no scroll yet), later
       commissions. The Add list's order (DOSBox: the newest .CHA first) not
-      checked further. Check in Curse's play test: spell-list paging,
+      checked further.
+      Part 14: the Kovel mansion - the wealthy block's guard rooms
+      (eight orcs, the hay beds' orcs: 21 / 18 XP both), the patrol's
+      Advance / Parlay (Nice: they wander off), the mansion (ECL3 14,
+      north edge of block 24): locked doors (Pick per member, a failed
+      Pick -> "Bash Exit", Bash), the thieves (let go / attack), the
+      weapon pile's gas ambush (524 XP), the chase (225 x7 / 263 x6:
+      Dirten dead in DOS - by the rule), the files (journal 38, 51),
+      the scythes / needle / gas (find traps d100, Avoid / Disarm,
+      who disarms), the scroll cabinet, the jail (journal 48), the
+      loot room, the three cabinets (journal 23, 14; Pick / Break),
+      the rugs - matched. Fixed: a377139 DAMAGE lines past the text
+      window wait (white press words) and clear; adb5b86 SPELL (0x3B)
+      always "first member, place 1" as the original's uninitialised
+      byte (Cast Knock opens), the real search with Game Fixes
+      (SPEC 12); b584fd5 "has no copyable scrolls" timed and cleared.
+      Scribe: Darkstar (level 1, untrained) has 2 MU scrolls - "no
+      copyable scrolls" in both; a real scribe needs a trained magic-
+      user. Not reached: the caskets (6,7), the map (4,5), back to the
+      clerk / the bishop, the graveyard's inside, Zhentil Keep,
+      Valjevo. Curse: check its SPELL op (the engine reads rec 0x1F +
+      k, the list is at 0x1E) and its DAMAGE page break.
+      Check in Curse's play test: spell-list paging,
       the camp text after View / Magic, Create's lists (Curse has the
       same list routine?), Begin's selection, View - Spells' prompt, PARLAY's prompt, Knock at a door's second locked
       kind, the DAMAGE lines' look, the Quick cleric's turning, the
