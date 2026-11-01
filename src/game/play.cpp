@@ -9915,7 +9915,9 @@ void flame_ask(pic::Canvas& c, bool abort)
 // After "casts": who it's for
 void cast_onwards(pic::Canvas& c)
 {
-    if (cr.cs && cr.cs->does == spells::Does::FireShield && !cr.flame) {
+    // (a game without the question's words - Champions': not asked, as in fights)
+    if (cr.cs && cr.cs->does == spells::Does::FireShield && !cr.flame && d->prof->fight.words[profile::kFlameType] &&
+        d->prof->fight.words[profile::kHotCold]) {
         flame_ask(c, false);
         return;
     }

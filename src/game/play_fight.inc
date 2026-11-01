@@ -5075,7 +5075,11 @@ void begin_targeting(pic::Canvas& c, int sp)
     fg->aim_x = fg->aim_y = -1;
     const int aim = e.aim & 0x0F;
     const combat::FightSpell* bfs = fight_spell(sp);
-    if (bfs && bfs->does == combat::SpellDoes::FireShield && !fg->b.f[fg->cur].quick && !fg->b.f[fg->cur].team()) {
+    // ("flame type: Hot Cold" - only in a game whose program has the question:
+    // Champions' has neither words, and the empty menu waited for ever - the
+    // fight fuzzer, 2026-11-01; there the spell goes as the computer's)
+    if (bfs && bfs->does == combat::SpellDoes::FireShield && !fg->b.f[fg->cur].quick && !fg->b.f[fg->cur].team() &&
+        d->prof->fight.words[profile::kFlameType] && d->prof->fight.words[profile::kHotCold]) {
         // "flame type: Hot Cold"
         fg->sp_t[fg->sp_n++] = fg->cur;
         flame_menu(c);
