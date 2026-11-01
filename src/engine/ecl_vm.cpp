@@ -2182,6 +2182,10 @@ Stop Vm::step()
         const int id = value(o[0]) & 0xFF, morale = value(o[1]) & 0xFF;
         if (party_ && party_->count < party::kMaxParty && h_.add_npc(id) && party_->sel()) {
             party_->sel()->rec[0xF7] = static_cast<uint8_t>(0x80 | (morale >> 1));
+            // (Pool, ovr4 +0x2B7E: the record's side byte 0x10E - here 0x197 -
+            // is 0, the party's, but 1 for MON block 0x18; the monster file's
+            // own 1 made Dirten an enemy - a yellow name, DOSBox cyan)
+            if (set_.pool_map) party_->sel()->rec[0x197] = id == 0x18 ? 1 : 0;
             party_size();
             h_.party_changed();
         }
