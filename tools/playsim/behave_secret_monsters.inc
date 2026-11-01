@@ -767,8 +767,10 @@ void effects()
         const struct { int d20, hit, pe; bool hits; const char* what; } th[] = {
             {4, 45, 0, false, "4 + 45 against AC 50 misses"}, {5, 45, 0, true, "5 + 45 against AC 50 hits"},
             {1, 70, 0, false, "a natural 1 misses (to-hit 70)"}, {20, 10, 0, true, "a natural 20 hits (to-hit 10)"},
-            {5, 45, 1, true, "5 + 45 hits one with Protection from Evil (an evil monster)"}};
+            {5, 45, 1, true, "5 + 45 hits one with Protection from Evil (an evil monster)"},
+            {5, 45, 2, false, "Game Fixes: 5 + 45 misses one with Protection from Evil (AD&D's -2)"}};
         for (const auto& c : th) {
+            rules::set_fixes(c.pe == 2);
             only({m, p});
             put(m, 1, 11, 10, 60, 5);
             F(m).rec[0x11B] = 8;                         // (chaotic evil)
@@ -791,6 +793,7 @@ void effects()
             snprintf(w, sizeof w, "a monster's blow: %s", c.what);
             expect(Q, w, hits(r) == c.hits && (!c.hits || F(p).hp() == 60 - (4 + 5 + 3)), "hit %d, HP %d", hits(r), F(p).hp());
         }
+        rules::set_fixes(true);
     }
     // Morale (GAME.OVR 0xE22F, Curse's): control & 0x7F x 2 (0x80: 0) - under
     // the share of its hit points lost, or 0: its side's health against 100

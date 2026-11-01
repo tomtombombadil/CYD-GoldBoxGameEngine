@@ -50,7 +50,22 @@ int othac0(int k, int lv)
     const auto* r = b_row("thac0", k);
     return r && lv >= 0 && lv + 1 < static_cast<int>(r->size()) ? (*r)[1 + lv] : -1;
 }
-const std::vector<int>* osave(int k, int lv) { return b_row("save", k, lv); }
+// The original's saves at a level - with the Game Fixes each the best of
+// the levels up to it (the original's paladin row 8: poison 9 after 8 -
+// SPEC 12); a ring of four, two are used at once
+const std::vector<int>* osave(int k, int lv)
+{
+    const std::vector<int>* r = b_row("save", k, lv);
+    if (!r || !rules::fixes()) return r;
+    static std::vector<int> ring[4];
+    static int at = 0;
+    std::vector<int>& best = ring[at++ & 3];
+    best = *r;
+    for (int l = 1; l < lv; ++l)
+        if (const std::vector<int>* e = b_row("save", k, l))
+            for (size_t i = 2; i < best.size() && i < e->size(); ++i) best[i] = std::min(best[i], (*e)[i]);
+    return &best;
+}
 // The original's THAC0 (GAME.OVR 0x3C1B1): 0, then the most of every
 // class's row at that class's level - the classes not held at level 0
 int othac0_all(const int lv[8])
