@@ -16,7 +16,7 @@ Play SSI's Gold Box games on an ESP32 "Cheap Yellow Display". Your own legitimat
 Unlimited Adventures is not on the menu because of the very tight memory constraints of the original ESP32 (most base CYD models). The ESP32-S3 and ESP32-C5 models might be able to support it. As it is: VGA modes are not supported on the base ESP32 CYD models. The original ESP32 just doesn't have enough available SRAM for the game and VGA. Frankly it's a miracle we have these games working with only about 320KB of sram available.
 
 ## A Stylus Is Recommended For The Best Game Play Experience!
-The screens on these CYD's are small. Fingertips are not. So we recommend the use of a stylus when playing these games. The game engine allows you to tap on the menu items to select them, as if they were on-screen buttons (which is pretty cool!) or you can use the navigation buttons at the bottom of the screen to move the highlight around and then tap the Select button. Fortunately, most CYD's come with a stylus. You can use any pointed plastic item, such as a pen (with the metal tip retracted) or even a stylus from another system. Nintendo DS styluses work quite well.
+The screens on these CYD's are small. Fingertips are not. So we recommend the use of a stylus when playing these games. The game engine allows you to tap on the menu items to select them, as if they were on-screen buttons (which is pretty cool!) or you can use the navigation buttons at the bottom of the screen to move the highlight around and then tap the Select button. Fortunately, most CYD's come with a stylus. You can use any pointed plastic item, such as a pen (with the metal tip retracted) or even a stylus from another system. Nintendo DS styluses work quite well. (Capacitive screens need a different kind of stylus than resistive screens!)
 
 ## Install
 
@@ -30,9 +30,9 @@ Easiest method: Use the web flasher!
 | 3.2" ESP32-32E, 240x320 | `TTB-CYD-GBGE_3.2in_ST7789_Resistive` | purchased from same Amazon seller as others, but no longer available |
 | 3.5" ESP32-32E, 320x480 | `TTB-CYD-GBGE_3.5in_ST7796_Resistive` | https://www.amazon.com/dp/B0FFYWJ8BZ |
 | 4.0" ESP32-32E, 320x480 | `TTB-CYD-GBGE_4.0in_ST7796_Resistive` | https://www.amazon.com/dp/B0FFZ599FJ |
-| 4.0" ESP32-S3, 480x320 capacitive touch (FNK0104, ST7796 model) | `TTB-CYD-GBGE_4.0in_ST7796_Capacitive_ESP32-S3` | https://www.amazon.com/dp/B0H6W1HJSG |
-| 5.0" ESP32-S3, 800x480 capacitive touch (FNK0115Q) | `TTB-CYD-GBGE_5.0in_Capacitive_ESP32-S3` | https://www.amazon.com/dp/B0H93PLQVX |
-| 2.8" ESP32-C5, two USB-C (NM-CYD-C5) | `TTB-CYD-GBGE_2.8in_ST7789_Resistive_ESP32-C5` | https://www.amazon.com/dp/B0H1QCHMW6 |
+| 4.0" ESP32-**S3**, 480x320 capacitive touch (FNK0104, ST7796 model) | `TTB-CYD-GBGE_4.0in_ST7796_Capacitive_ESP32-S3` | https://www.amazon.com/dp/B0H6W1HJSG |
+| 5.0" ESP32-**S3**, 800x480 capacitive touch (FNK0115Q) | `TTB-CYD-GBGE_5.0in_Capacitive_ESP32-S3` | https://www.amazon.com/dp/B0H93PLQVX |
+| 2.8" ESP32-**C5**, two USB-C (NM-CYD-C5) | `TTB-CYD-GBGE_2.8in_ST7789_Resistive_ESP32-C5` | https://www.amazon.com/dp/B0H1QCHMW6 |
 
 These five ESP32 boards, the ESP32-C5 board and the ESP32-S3 board are tested with this firmware. The base ESP32 CYD boards I tested with were all purchased through Amazon and are 'Freenove' brand. Links below.
 
