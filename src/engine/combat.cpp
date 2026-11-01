@@ -1244,11 +1244,14 @@ void end_effect(Battle& b, Fighter& f, int k)
         }
         if (fx.fear && type == fx.fear) {
             f.fleeing = false;                  // the fear is over
-            if (data & 1) f.quick = false;
+            // (Quick kept while the other effect that made it Quick lasts - a
+            // berserk turn; the fight fuzzer: a feared one, Quick by its
+            // berserk, was left fleeing on the player's menu when that ended)
+            if ((data & 1) && !hasx(f, fx.sp.berserk)) f.quick = false;
         }
         if (fx.sp.berserk && type == fx.sp.berserk) {
             f.rec[0x197] = static_cast<uint8_t>(data & 1);     // its own side again
-            if (data & 0x10) f.quick = false;
+            if ((data & 0x10) && !hasx(f, fx.fear)) f.quick = false;     // (still feared: Quick stays)
             f.target = -1;
         }
         // A hold taken away (dispelled): its victim (the data) goes free
