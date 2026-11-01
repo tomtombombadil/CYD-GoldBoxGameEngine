@@ -209,11 +209,16 @@ the Project as claude/TODO.md.
       Play) - seeded since 8e6bbf6 (Curse and the rest share it).
       (d) settled: the slums' kobolds load to the cap (63) in both,
       the original leaves 4 out at placement, as the engine (fighter
-      table identical). Open: (c) entering the city hall the original
-      selects the last member, (e) a leader's loot order; a brawl
-      entered facing east (the engine leaves 27 out) not compared. Not reached: Podol's auction (the
-      council's commission), the graveyard, the Kovel mansion,
-      Valjevo, Scribe (no scroll in DOS). The Add list's order (DOSBox: the newest .CHA first) not
+      table identical). A brawl entered facing east: 17 against 18
+      in both (same squares). (c) settled: the city hall's last
+      member is block 0's "MAD MAN" roll (RANDOM 19) - a NEWECL keeps
+      the selection its loop left, as the engine. The slums' locked
+      doors (Pick / Bash), Kuto's Well crossed, Podol's auction
+      (Disguise, comments, a bid, the disguise blown, cancelled)
+      matched; 77119bf a PICTURE counts as the encounter's picture
+      shown (Curse: check). Open: (e) a leader's loot order. Not
+      reached: the council's reward for the auction, the graveyard,
+      the Kovel mansion, Valjevo, Scribe (no scroll in DOS). The Add list's order (DOSBox: the newest .CHA first) not
       checked further. Check in Curse's play test: spell-list paging,
       the camp text after View / Magic, Create's lists (Curse has the
       same list routine?), Begin's selection, View - Spells' prompt, PARLAY's prompt, Knock at a door's second locked

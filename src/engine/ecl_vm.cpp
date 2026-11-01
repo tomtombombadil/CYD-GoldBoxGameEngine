@@ -1644,6 +1644,11 @@ Stop Vm::step()
         // flee." then the goblins' sprite gone)
         const bool sprite = id == 0xFF && set_.pool_map && enc_.sprite_on && !enc_.pic_on;
         if (id == 0xFF) reset_encounter();
+        // (Pool: a picture counts as the encounter's picture shown - START
+        // ovr4 +0x8AD sets [0x84C9], so a following ENCOUNTER MENU leaves it
+        // up while the head (0x7EE1) is the one last drawn; DOSBox, Podol's
+        // auction: "THE MONSTERS STAND READY" over the auctioneer)
+        else if (set_.pool_map) enc_.pic_on = true;
         h_.picture(id, get(0x7EE1) & 0xFF);
         if (sprite) h_.redraw();
         return Stop::Running;
