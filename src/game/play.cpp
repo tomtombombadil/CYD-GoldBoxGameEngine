@@ -12766,12 +12766,28 @@ void begin_wait(pic::Canvas& c)
         // in colour 15 and redraws the party list (0xBA:0x767) without it;
         // DOSBox, Stojanow Gate's volley of rocks)
         const bool pool_dmg = pool_files() && vm->in_damage();
+        // (Pool: a DAMAGE line that would start below the text window waits
+        // first - "PRESS <ENTER>/<RETURN> TO CONTINUE" in white - then the
+        // window is cleared and the line printed from its top left; START
+        // ovr8 +0x218E: row > 22 -> row 17, the wait 0x709:0xBF5, the print
+        // with its clear flag; DOSBox, the Kovel mansion's gas cabinet: three
+        // hit lines)
+        const bool dmg_break = pool_dmg && strcmp(vm->text(), "\n") != 0 && !vm->clear() &&
+                               w.row > script_area().last_row();
         if (pool_dmg) {
             c.fill(17 * 8, 15 * 8, 22 * 8, 8, 0);
             dirty_rows(15, 15);
-            w.col = script_area().x1;
+            if (!dmg_break) w.col = script_area().x1;
         }
         text::begin(w, c, vm->text(), script_area(), pool_dmg ? 15 : script_text_colour(), vm->clear());
+        if (dmg_break && d->w_press[1][0]) {
+            w.state = text::State::PageFull;
+            clear_menu_line(c);
+            put(c, d->w_press[1], 0, text::kMenuRow, 15);
+            t_started = false;
+            page_prompt = true;
+            break;
+        }
         if (d->prof->variant.tr) {
             // Treasures: its colour codes ("%" + a hex digit); the last one
             // stays the scripts' colour (game byte 0x38 - img 0x6765)
