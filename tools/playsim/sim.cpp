@@ -1431,6 +1431,8 @@ int main(int argc, char** argv)
         case 'B': a = play::Act::TurnAround; break;
         case 'A': a = play::Act::Area; break;
         case 'K': a = play::Act::Look; break;
+        case '<': a = play::Act::StepLeft; break;        // (side-steps; Pool's wilderness: west / east)
+        case '>': a = play::Act::StepRight; break;
         }
         printf("   open N%d E%d S%d W%d\n", geo::passage(play::d->map, play::pos_x(), play::pos_y(), 0), geo::passage(play::d->map, play::pos_x(), play::pos_y(), 2), geo::passage(play::d->map, play::pos_x(), play::pos_y(), 4), geo::passage(play::d->map, play::pos_x(), play::pos_y(), 6));
         const bool ok = play::act(a, C);

@@ -131,6 +131,7 @@ struct Data {
     // Pool's wilderness map (read from the program when first shown), the rider's gallop
     overland::Data* ov = nullptr;
     uint8_t        gallop = 0;
+    bool           ov_up = false;           // the wilderness screen drawn by the menu (DS 0x49F9 > 1)
 
     // The wilderness map's places (from the program)
     uint8_t        city_x[32] = {}, city_y[32] = {};
@@ -1090,6 +1091,38 @@ void ov_square(int* col, int* row)
     *row = vm->get(0x4BC4) & 0xFF;
 }
 
+// The rider (ICON.DAX 0, 128, 1, 129, 2, 130 in turn - the next picture
+// each time; black see-through; facing south or west mirrored) drawn
+// over what is there at window square (px0, py0)
+void ov_rider(pic::Canvas& c, int px0, int py0)
+{
+    plat::File f;
+    uint8_t px[24 * 12];
+    static const uint8_t kRider[6] = {0, 128, 1, 129, 2, 130};
+    if (open_dax("ICON.DAX", f)) {
+        plat::FileSource src(f);
+        const dax::Entry* e = d->idx.find(kRider[d->gallop % 6]);
+        uint8_t hdr[pic::kHeaderSize];
+        pic::Header h;
+        if (e) {
+            dax::RleReader r(src, d->idx, *e);
+            if (r.read(hdr, sizeof hdr) == sizeof hdr && pic::parse_header(hdr, e->raw_size, h) &&
+                h.frame_bytes() == sizeof px && r.read(px, sizeof px) == sizeof px) {
+                const int pxl = 8 + 24 * px0, pyl = 8 + 24 * py0;
+                const bool mirror = d->gs.dir > 3;
+                for (int r2 = 0; r2 < 24; ++r2)
+                    for (int k = 0; k < 24; ++k) {
+                        const int sk = mirror ? 23 - k : k;
+                        const uint8_t v = static_cast<uint8_t>(sk & 1 ? px[r2 * 12 + sk / 2] & 15 : px[r2 * 12 + sk / 2] >> 4);
+                        if (v) c.set(pxl + k, pyl + r2, v);
+                    }
+            }
+        }
+        f.close();
+    }
+    d->gallop = static_cast<uint8_t>((d->gallop + 1) % 6);
+}
+
 // The left box: 5 x 5 icons (SQRPACI.DAX blocks 1 and 2, 128 frames each,
 // opaque; the healed land recoloured), the rider (ICON.DAX 0, 128, 1, 129,
 // 2, 130 in turn - a picture each redraw; black see-through; facing south
@@ -1145,31 +1178,32 @@ void draw_overland(pic::Canvas& c)
         }
         f.close();
     }
-    // The rider
-    static const uint8_t kRider[6] = {0, 128, 1, 129, 2, 130};
-    if (open_dax("ICON.DAX", f)) {
-        plat::FileSource src(f);
-        const dax::Entry* e = d->idx.find(kRider[d->gallop % 6]);
-        uint8_t hdr[pic::kHeaderSize];
-        pic::Header h;
-        if (e) {
-            dax::RleReader r(src, d->idx, *e);
-            if (r.read(hdr, sizeof hdr) == sizeof hdr && pic::parse_header(hdr, e->raw_size, h) &&
-                h.frame_bytes() == sizeof px && r.read(px, sizeof px) == sizeof px) {
-                const int pxl = 8 + 24 * (col - x0), pyl = 8 + 24 * (row - y0);
-                const bool mirror = d->gs.dir > 3;
-                for (int r2 = 0; r2 < 24; ++r2)
-                    for (int k = 0; k < 24; ++k) {
-                        const int sk = mirror ? 23 - k : k;
-                        const uint8_t v = static_cast<uint8_t>(sk & 1 ? px[r2 * 12 + sk / 2] & 15 : px[r2 * 12 + sk / 2] >> 4);
-                        if (v) c.set(pxl + k, pyl + r2, v);
-                    }
-            }
-        }
-        f.close();
-    }
-    d->gallop = static_cast<uint8_t>((d->gallop + 1) % 6);
+    ov_rider(c, col - x0, row - y0);
     dirty_rows(1, 15);
+}
+
+// The wilderness screen first drawn by the menu after a 3D view (its
+// ovr15 +0xC0F -> 00BA:2B5E, DS 0x49F9 < 2; overland_facts 1.6): the
+// boxes cleared and framed, the map with the rider, the rider again (the
+// next picture over the first), the panel. Until then nothing draws the
+// map - the arrival's pictures go on the 3D screen as it was (DOSBox)
+void ov_enter(pic::Canvas& c)
+{
+    d->ov_up = true;
+    draw_frame(c);
+    // (its framebox(1,1,15,15), (17,1,38,15), (1,17,38,22) in that order:
+    // the last one's top crosses cell 16,16 with the rope - no corner there)
+    layout::box(c, d->tables, d->frame_tiles, 0, 0, 16, 16);
+    layout::box(c, d->tables, d->frame_tiles, 16, 0, 39, 16);
+    layout::box(c, d->tables, d->frame_tiles, 0, 16, 39, 23);
+    draw_overland(c);
+    if (ov_load()) {
+        int col, row, x0, y0;
+        ov_square(&col, &row);
+        overland::window(col, row, &x0, &y0);
+        ov_rider(c, col - x0, row - y0);
+    }
+    draw_panel(c);
 }
 
 // Treasures' overland (its o144+0x8C2; the demo's): 11 x 11 squares of
@@ -1340,7 +1374,7 @@ void draw_view(pic::Canvas& c)
     if (pic_shown) return;
     tr_position = true;
     if (pool_overland()) {
-        draw_overland(c);
+        if (d->ov_up) draw_overland(c);     // (before the menu has drawn it: nothing - ov_enter)
         return;
     }
     if (gw_wild()) {
@@ -1465,8 +1499,7 @@ void draw_party(pic::Canvas& c, int col, bool mark_sel = true, bool box = false)
         const bool sel = i == pt->selected && mark_sel;
         const uint8_t fg = q && sel ? 11 : sel ? 15 : !ch.in_combat() ? 12 : ch.enemy() ? 14 : q ? 7 : gw_trainable(ch) ? 13 : 11;
         if (sel && box) hl_text(c, t, col, row);
-        else put(c, t, col, row, fg);
-        const int ac = ch.ac_raw();
+        else put(c, t, col, row, fg);        const int ac = ch.ac_raw();
         const int aw = ac <= 0x32 ? 1 : ac <= 0x3C ? 2 : ac <= 0x45 ? 1 : 0;
         snprintf(t, sizeof t, "%s%d", ac > 60 ? "-" : "", ac > 60 ? ac - 60 : 60 - ac);
         put(c, t, 0x20 + aw, row, q ? 7 : 10);
@@ -1800,6 +1833,7 @@ bool move_menu() { return secret_files() || darkness_files() || gateway() || kry
 void ow(uint32_t at, char* out, size_t cap);
 void idle_menu(pic::Canvas& c)
 {
+    if (!pool_overland()) d->ov_up = false;
     if (marker_overland()) {
         // Darkness's / Champions' overland: Move and Encamp (DOSBox; Champions'
         // GAME.OVR 0x19CA5); Champions' marker shows meanwhile
@@ -1825,6 +1859,7 @@ void idle_menu(pic::Canvas& c)
         show_menu_line(c);
     } else if (pool_overland()) {
         // Pool's wilderness: no Area (its program's words)
+        if (!d->ov_up && !pic_shown && bigpic < 0) ov_enter(c);
         text::build(menu, "", "Cast View Encamp Search Look");
         menu.selected = 0;
         show_menu_line(c);
@@ -12465,6 +12500,15 @@ struct Host : ecl::Host {
         // window cleared; an event picture stays
         pic::Canvas& c = *cv;
         cursor_hide();
+        if (pool_overland() && bigpic < 0 && anim_block < 0 && !(pic_shown && head_shown >= 0)) {
+            // (Pool's CLEARBOX, ovr4 +0x2B14: cells 1-15 of the left box
+            // cleared, nothing redrawn - in the wilderness the map stays
+            // away and the frame as it is; DOSBox)
+            pic_shown = false;
+            c.fill(8, 8, 120, 120, 0);
+            dirty_rows(1, 15);
+            return;
+        }
         bigpic = -1;
         draw_frame(c);
         draw_panel(c);
@@ -13129,6 +13173,14 @@ void handle(ecl::Stop r)
         break;
     case Then::NewFirst:
         vm->set(0x4BF2, d->gs.script);
+        if (d->ov_up && !pool_overland()) {
+            // (Pool, the wilderness left for a 3D area - its new-block
+            // handler ovr4 +0x31B4: framebox(3,3,13,13), the 3D view's own
+            // frame; the rest of the screen stays; DOSBox)
+            d->ov_up = false;
+            layout::box(c, d->tables, d->frame_tiles, 2, 2, 14, 14);
+            dirty_rows(2, 14);
+        }
         pool_map_edge();
         after_move_redraw();
         run_entry(0, Then::NewStep);
