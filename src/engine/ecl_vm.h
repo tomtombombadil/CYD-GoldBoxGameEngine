@@ -328,6 +328,9 @@ private:
     // Pool's [0x4431]: LOAD FILES / LOAD PIECES ran since the block began
     // (a NEWECL or a load clears it) - its CALL 0x2C90 redraws only then
     bool view_set_ = false;
+    // Pool's [0x84E3]: a monster's sprite is on the view (until the view is
+    // drawn again) - its SPRITE OFF redraws the view only then
+    bool sprite_up_ = false;
     mutable bool not_found_ = false;
     // Game Fixes' coins (OpSet::five_coins): the members whose coins the
     // running script has looked at or written (a bit each) - each made the

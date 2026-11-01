@@ -70,13 +70,13 @@ bool Vm::show_encounter()
     bool drew_sprite = false;
     if (!enc_.pic_on && dungeon) {
         h_.sprite(enc_.sprite, enc_.distance);
-        enc_.sprite_on = drew_sprite = true;
+        enc_.sprite_on = drew_sprite = sprite_up_ = true;
     } else if (!enc_.pic_on && set_.pool_map) {
         // Pool's wilderness (ovr8 +0x54E, view mode > 1): the sprite's
         // middle frame over the map as it is - the first time; again, the
         // view (map and rider) redrawn first (DOSBox: the merchants)
         h_.sprite(enc_.sprite, enc_.sprite_on ? 1 : 1 | kSpriteOver);
-        enc_.sprite_on = drew_sprite = true;
+        enc_.sprite_on = drew_sprite = sprite_up_ = true;
     }
     const uint8_t head = static_cast<uint8_t>(get(0x7EE1) & 0xFF);
     // Pool: the ENCOUNTER MENU itself shows the picture next to the party
@@ -902,6 +902,7 @@ Stop Vm::run(uint16_t address)
     if (address < kBase) return Stop::Stopped;
     pc_ = address - kBase;
     stop_ = new_script_ = false;
+    if (address == entry_[1]) sprite_up_ = false;     // (after a step the view is drawn anew)
     if (wait_ == Wait::Combat) {
         // A fight never resumed (lost - the party menu after it, a load or a
         // new game next): its monsters are gone as after any fight, or the
@@ -1651,7 +1652,10 @@ Stop Vm::step()
         // CMD_Picture, spriteChanged; DOSBox, Pool's slums: "The monsters
         // flee." then the goblins' sprite gone)
         const bool sprite = id == 0xFF && set_.pool_map && enc_.sprite_on && !enc_.pic_on;
-        if (id == 0xFF) reset_encounter();
+        if (id == 0xFF) {
+            reset_encounter();
+            sprite_up_ = false;
+        }
         // (Pool: a picture counts as the encounter's picture shown - START
         // ovr4 +0x8AD sets [0x84C9], so a following ENCOUNTER MENU leaves it
         // up while the head (0x7EE1) is the one last drawn; DOSBox, Podol's
@@ -1982,7 +1986,10 @@ Stop Vm::step()
             // (Pool, START ovr4 +0x2CFE: only after the block's LOAD FILES /
             // LOAD PIECES - [0x4431]; a save loaded in the nomads' camp,
             // whose first run skips them, walks to the hut unseen - DOSBox)
-            if (!set_.pool_map || view_set_) h_.redraw();
+            if (!set_.pool_map || view_set_) {
+                h_.redraw();
+                sprite_up_ = false;
+            }
         } else if (w == 0x6803) {
             // The event picture's next frame, then the game's delay
             h_.anim_step();
@@ -2152,6 +2159,11 @@ Stop Vm::step()
     }
     case 0x31:                                  // SPRITE OFF
         ++pc_;
+        // (Pool, START ovr4 +0x2AA9: the view redrawn only while a sprite
+        // is up - [0x84E3]; a picture alone stays. DOSBox, the nomads' camp:
+        // the headman's picture over "HERE YOU MAY REST" the second night)
+        if (set_.pool_map && !sprite_up_) return Stop::Running;
+        sprite_up_ = false;
         h_.picture(0xFF, 0xFF);
         return Stop::Running;
     case 0x32:                                  // FIND ITEM: anyone carries one of that type
