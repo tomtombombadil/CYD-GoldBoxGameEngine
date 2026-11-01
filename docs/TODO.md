@@ -202,10 +202,16 @@ the Project as claude/TODO.md.
       PICTURE 0xFF takes a sprite away. Matched: Sokal Keep finished
       (Ferran, the stands, the boat back), its reward at the clerk
       (1308 XP), the inn's rest, the city hall locked after 14:00.
-      Open (LOG part 11): (c) entering the city hall the original
-      selects the last member, (d) the slums' kobold wander loads 60
-      monsters in DOS, 63 in the engine (placement differs after it),
-      (e) a leader's loot order. Not reached: Podol's auction (the
+      Part 12: Tom's tavern brawls - the rule (a tale, then RANDOM 3
+      = 1: one in four; Grab at the pickpocket) and the fighters
+      (11 + 11 + 11 + 13, all placed facing south) match DOSBox; the
+      dice were unseeded (the same tales / brawls / rolls at every
+      Play) - seeded since 8e6bbf6 (Curse and the rest share it).
+      (d) settled: the slums' kobolds load to the cap (63) in both,
+      the original leaves 4 out at placement, as the engine (fighter
+      table identical). Open: (c) entering the city hall the original
+      selects the last member, (e) a leader's loot order; a brawl
+      entered facing east (the engine leaves 27 out) not compared. Not reached: Podol's auction (the
       council's commission), the graveyard, the Kovel mansion,
       Valjevo, Scribe (no scroll in DOS). The Add list's order (DOSBox: the newest .CHA first) not
       checked further. Check in Curse's play test: spell-list paging,
