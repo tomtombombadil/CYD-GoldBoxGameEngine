@@ -90,7 +90,13 @@ the Project as claude/TODO.md.
       protection from evil's -2 to be hit is lost in the original (only
       the saves) - a Game Fixes candidate; (5) not checked yet: weapon
       immunities beyond bare hands, XP from a whole fight's end, Mirror
-      Image / Displacement against blows.
+      Image / Displacement against blows; (6) the Dark Queen's lich
+      (MONCHA.GLB #31) loads with 104 hit points over its maximum 81 -
+      check q_load_monster's fields against DQK; (7) R10 still flags
+      all-Quick stalemates the rules allow (a shooter that can't hurt an
+      unarmoured caster guarding out of reach - Queen's enchanted aurak;
+      a forced-fleeing golem nothing hurts) - not bugs, the player would
+      act.
 
 - [ ] Money with Game Fixes (Tom, 2026-10-31; SPEC 12 "Money"): done for
       Pool, Curse, Secret, Gateway. Open: (1) Champions' coin worths
