@@ -80,23 +80,31 @@ the Project as claude/TODO.md.
       before a flight, the free attack's hold, moves below 0, Champions'
       Fire Shield question, casts not putting off the no-attack end,
       Quick under fear + berserk; Game Fixes: saves below 0, a step
-      taken held. Open: (1) checked against coab (Curse) and Pool's
-      ovr10 order only - confirm the fleeing turn (cornered blows,
-      items / spells first) and "only attacks reset the 15 rounds" in
-      Pool's / Secret's / Darkness's code or DOSBox; (2) panic: the
-      original's morale failure lasts a turn (re-tested each turn,
-      coab's moral_failure), the engine's for the fight; (3) Krynn's
-      profiles give effect 0x06 to both entangle and stun; (4)
-      protection from evil's -2 to be hit is lost in the original (only
-      the saves) - a Game Fixes candidate; (5) not checked yet: weapon
-      immunities beyond bare hands, XP from a whole fight's end, Mirror
-      Image / Displacement against blows; (6) the Dark Queen's lich
-      (MONCHA.GLB #31) loads with 104 hit points over its maximum 81 -
-      check q_load_monster's fields against DQK; (7) R10 still flags
-      all-Quick stalemates the rules allow (a shooter that can't hurt an
-      unarmoured caster guarding out of reach - Queen's enchanted aurak;
-      a forced-fleeing golem nothing hurts) - not bugs, the player would
-      act.
+      taken held. Round 2 (2026-11-01): confirmed in every game's program
+      (Secret, Darkness, Champions, Gateway, Treasures, Death Knights,
+      Dark Queen): only an attack resets the 15 rounds (the one writer
+      of the limit past the fight's start), the fleeing turn's shape
+      (moralFailureEscape's third back-step). Fixed: panic for a turn
+      only (each game's FleeCheck clears it first) and "is forced to
+      flee" in every game; the morale test's moves with haste / slow and
+      Curse never below 0; a lightning bolt bouncing between two walls
+      for ever (the fight hung - Darkness, all games); Dark Queen's
+      Entangle 0x1B / Power Word Stun
+      0x6A (Death Knights' 0x06 for both is its program's - effect 6 is
+      held there); Game Fixes: Protection from Evil's -2 to hit, a save
+      never worse a level up (paladin 8th, Darkness's / Treasures' thief
+      19th). The lich's 104 / 81: its MONCHA record as stored, DQK's
+      LOAD MONSTER copies it (R6 lets it stay). Added: the matrix's
+      weapon immunities, images / displacement, morale, spells on every
+      status; `behave levels` (classes to their last level, Wisdom
+      bonus, money sums, camp cures) and the monkey's party checker - all
+      clean on the nine games. Open: (1) R10 still flags all-Quick
+      stalemates the rules allow (Queen's chromatic dragons nothing in
+      the party can hurt) - not bugs, the player would act; (2) not done
+      yet: shops' buy / sell / Id prices against the originals, treasure
+      sharing by the rules, encumbrance and movement, wands / scrolls /
+      potions' use outside fights, poison / disease clocks over a rest,
+      level drain and Restoration in the later games.
 
 - [ ] Money with Game Fixes (Tom, 2026-10-31; SPEC 12 "Money"): done for
       Pool, Curse, Secret, Gateway. Open: (1) Champions' coin worths
