@@ -780,6 +780,20 @@ void place(Battle& b, const Tables& t, int facing, int distance, SolidSide solid
 void place_pool(Battle& b, const Tables& t, int facing, int distance, const geo::Map* m, int px, int py);
 #ifdef CYD_TEST_HOOKS
 extern void (*g_place_hook)(const Battle& b);   // (tests: told the squares when place() is done)
+// (tests: every fighter action told to the fight checker - the sweep's
+// invariants, tools/playsim/fight_check.inc; `extra`: the attacks left, a
+// spell, the hit points before ...). Board builds have none of it.
+enum class TestAct : uint8_t { Attack, FreeAttack, AttackEnd, Bite, Cast, Step, Bandage, TurnUndead, Special, Taunt,
+                               Flee, TurnStart, Harm, HarmEnd, Guard, UseItem };
+extern void (*g_act_hook)(const Battle& b, int who, TestAct act, int target, int extra);
+#define CYD_TEST_ACT(b, who, act, target, extra)                                                                     \
+    do {                                                                                                         \
+        if (::combat::g_act_hook) ::combat::g_act_hook(b, who, ::combat::TestAct::act, target, extra);           \
+    } while (0)
+#else
+#define CYD_TEST_ACT(b, who, act, target, extra) \
+    do {                                         \
+    } while (0)
 #endif
 void occupancy(Battle& b);
 

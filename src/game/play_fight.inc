@@ -2865,6 +2865,7 @@ void spend_item(int i, int sp)
 void announce_item(pic::Canvas& c, int i, int k)
 {
     const combat::Fighter& f = fg->b.f[i];
+    CYD_TEST_ACT(fg->b, i, UseItem, -1, k);
     char w1[16], nm[40], t[48];
     cw(profile::kUsesItem, w1, sizeof w1);
     add_page(i, w1);
@@ -2923,6 +2924,7 @@ void start_turn(pic::Canvas& c)
 {
     combat::Battle& b = fg->b;
     combat::Fighter& f = b.f[fg->cur];
+    CYD_TEST_ACT(b, fg->cur, TurnStart, -1, f.delay);
     f.received = f.turns = 0;
     f.guarding = false;
     fg->ai_checked = false;
@@ -4007,6 +4009,7 @@ void ai_step(pic::Canvas& c)
         return;
     }
     case combat::Act::Guard:
+        CYD_TEST_ACT(b, i, Guard, -1, 0);
         f.guarding = true;
         end_turn(c);
         return;
@@ -5703,6 +5706,7 @@ void done_key(pic::Canvas& c, char key)
     combat::Fighter& f = fg->b.f[fg->cur];
     switch (key) {
     case 'G':
+        CYD_TEST_ACT(fg->b, fg->cur, Guard, -1, 0);
         f.guarding = true;
         add_page(fg->cur, fw(profile::kGuarding));
         f.delay = 0;
@@ -5715,6 +5719,7 @@ void done_key(pic::Canvas& c, char key)
         break;
     case 'Q': end_turn(c); break;
     case 'B': {
+        CYD_TEST_ACT(fg->b, fg->cur, Bandage, -1, 0);
         const int k = combat::bandage(fg->b);
         if (k >= 0) {
             add_page(k, fw(profile::kBandaged));

@@ -622,6 +622,7 @@ bool fits(const Battle& b, const Tables& t, int i, int size, int x, int y)
 
 #ifdef CYD_TEST_HOOKS
 void (*g_place_hook)(const Battle& b) = nullptr;
+void (*g_act_hook)(const Battle& b, int who, TestAct act, int target, int extra) = nullptr;
 #endif
 
 void place(Battle& b, const Tables& t, int facing, int distance, SolidSide solid, void* ctx, int sides)
@@ -997,6 +998,7 @@ int step_cost(const Battle& b, const Tables& t, int i, int dir, bool* edge, int*
 
 void step(Battle& b, int i, int dir)
 {
+    CYD_TEST_ACT(b, i, Step, dir, 0);
     Fighter& f = b.f[i];
     f.x += kDx[dir];
     f.y += kDy[dir];
@@ -2221,6 +2223,16 @@ int kalistes_blow(const Fighter& at, create::Dice& d, int dmg)
 
 Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& d, bool from_behind)
 {
+#ifdef CYD_TEST_HOOKS
+    if (g_act_hook) {
+        g_act_hook(b, a, from_behind ? TestAct::FreeAttack : TestAct::Attack, c, b.f[a].attacks[0] + b.f[a].attacks[1]);
+    }
+    struct Told {
+        const Battle& b;
+        int a, c, hp;
+        ~Told() { CYD_TEST_ACT(b, a, AttackEnd, c, hp); }
+    } told{b, a, c, b.f[c].hp()};
+#endif
     Attack out;
     Fighter& at = b.f[a];
     Fighter& tg = b.f[c];
@@ -2848,6 +2860,7 @@ int turn_holds(Battle& b, int i, create::Dice& d, Event* out, int cap, int* bite
 
 Attack bite_attack(Battle& b, int a, int c, const items::Names* names, create::Dice& d)
 {
+    CYD_TEST_ACT(b, a, Bite, c, 0);
     Fighter& at = b.f[a];
     const int keep[2] = {at.attacks[0], at.attacks[1]};
     const uint8_t keep_dice = at.rec[kDice], keep_sides = at.rec[kSides];
@@ -2925,6 +2938,14 @@ int harm(Battle& b, int c, int amount, const Harm& h, create::Dice& d, bool* dow
     if (down) *down = false;
     if (resisted) *resisted = false;
     if (c < 0 || c >= b.n) return 0;
+#ifdef CYD_TEST_HOOKS
+    CYD_TEST_ACT(b, c, Harm, h.kind, amount);
+    struct Told {
+        const Battle& b;
+        int c, kind, hp;
+        ~Told() { if (g_act_hook) g_act_hook(b, c, TestAct::HarmEnd, kind, hp); }
+    } told{b, c, h.kind, b.f[c].hp()};
+#endif
     Fighter& f = b.f[c];
     g_b = &b;
     g_fx = b.fx;
@@ -3274,6 +3295,7 @@ int pick_target(Battle& b, const Tables& t, int i, create::Dice& d)
 
 int taunt(Battle& b, int kender, create::Dice& d, int* out, int cap)
 {
+    if (kender >= 0 && kender < b.n) CYD_TEST_ACT(b, kender, Taunt, -1, 0);
     int n = 0;
     if (!b.fx || !b.fx->taunted || kender < 0 || kender >= b.n) return 0;
     b.taunter = kender;
@@ -3435,6 +3457,7 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
 
 bool flee(Battle& b, const Tables& t, int i, create::Dice& d)
 {
+    CYD_TEST_ACT(b, i, Flee, -1, 0);
     Fighter& f = b.f[i];
     const int my = f.team() ? 1 : 0;
     // No enemy that can reach it: away; else its movement against the
@@ -3711,6 +3734,7 @@ static int meteors(Battle& b, int caster, const FightSpell& fs, const Harm& hs, 
 int cast(Battle& b, const classes::Tables& st, int caster, int spell, const FightSpell& fs, const int* targets,
          int n, create::Dice& d, SpellLine* out, int cap, int pw)
 {
+    CYD_TEST_ACT(b, caster, Cast, n > 0 && targets ? targets[0] : -1, spell);
     int lines = 0;
     b.n_bolt = 0;
     auto say = [&](int who, Did did, int amount) {
@@ -5193,6 +5217,7 @@ static int turn_undead_dk(Battle& b, const Tables& t, int cleric, create::Dice& 
 
 int turn_undead(Battle& b, const Tables& t, int cleric, create::Dice& d, int* out, int cap)
 {
+    CYD_TEST_ACT(b, cleric, TurnUndead, -1, 0);
     Fighter& me = b.f[cleric];
     me.turned_undead = true;
     if (!t.turn_known) return 0;
@@ -5870,6 +5895,7 @@ int special(Battle& b, const Tables& t, int i, create::Dice& d, Event* out, int 
 {
     *ends_turn = false;
     if (!b.fx || i < 0 || i >= b.n) return 0;
+    CYD_TEST_ACT(b, i, Special, -1, 0);
     Fighter& f = b.f[i];
     if (!f.up() || !f.size) return 0;
     const MonFx& m = b.fx->mon;
