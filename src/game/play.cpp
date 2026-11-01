@@ -4468,7 +4468,10 @@ void draw_camp_screen(pic::Canvas& c)
     camping = true;
     if (bigpic < 0) {
         draw_frame(c);
-        draw_view(c);
+        // (Pool's camp in the wilderness: the left box cleared round the
+        // camp's picture, no map - DOSBox)
+        if (pool_overland() && d->prof->variant.camp_pic) c.fill(8, 8, 120, 120, 0);
+        else draw_view(c);
         if (d->prof->variant.camp_pic) draw_own_pic(camp_pic());
         draw_panel(c);
     }
