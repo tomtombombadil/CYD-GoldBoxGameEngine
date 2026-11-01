@@ -2746,6 +2746,13 @@ the game's Settings (As Original: all of them).
   the level to 21st, but its table's rows for 19th-21st are empty - 0,
   so from 19th level every save is made. With Game Fixes on those levels
   keep the 18th's row (`classes::saving_throws`).
+- **The Krynn games' paladins' hit points** (Game Fixes; the level value
+  tests, 2026-11-01): Champions' and Death Knights' training (GAME.OVR
+  0x24D43) gives the fighters' Constitution bonus and the fixed gain past
+  the hit dice to fighters, rangers and knights - the knight in Curse's
+  paladin's place - so a paladin gets neither (past 9th level 1 a level,
+  the least). With Game Fixes on a paladin is a fighter for both, as
+  AD&D's (`create::secret_hp`); the Dark Queen's own already does.
 - **Thief skills below 0** (Game Fixes, every game; the level value
   tests, 2026-11-01): the originals add the Dexterity's minus to the
   level's base in a byte, so a skill the minus takes past 0 wraps round

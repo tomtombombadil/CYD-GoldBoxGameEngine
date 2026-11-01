@@ -221,6 +221,10 @@ void secret_hp(party::Character& c, const classes::Tables& t, const Facts& f, Di
     // Constitution and figure past the hit dice, not paladins' -, and a
     // neutral god's cleric one die at level 1)
     const bool kr = t.lay.krynn;
+    // (the Krynn games' paladins take neither - the knight took Curse's
+    // paladin's place in the test; Game Fixes: AD&D's, a fighter's
+    // Constitution and 3 a level past the hit dice - SPEC 12)
+    const bool kpal = kr && rules::fixes();
     for (int k = 0; k < (kr ? 8 : 7); ++k) {
         const int lv = c.level(k);
         if (lv <= 0 || !(t.u8(static_cast<uint16_t>(t.lay.class_masks + k)) & mask)) continue;
@@ -229,10 +233,10 @@ void secret_hp(party::Character& c, const classes::Tables& t, const Facts& f, Di
             const int a = d.roll(f.hp_dice[k], n), b = d.roll(f.hp_dice[k], n);
             rolled += a > b ? a : b;
             int cb = cv >= 0 && cv < 26 ? kConHp[cv] : 0;
-            if (k == 2 || k == 4 || (kr ? k == 7 : k == 3))
+            if (k == 2 || k == 4 || (kr ? k == 7 || (kpal && k == 3) : k == 3))
                 cb += cv == 17 ? 1 : cv == 18 ? 2 : cv == 19 || cv == 20 ? 3 : cv >= 21 && cv <= 23 ? 4 : cv >= 24 && cv <= 25 ? 5 : 0;
             con += cb * n;
-        } else if (k == 2 || (kr ? k == 7 : k == 3)) {
+        } else if (k == 2 || (kr ? k == 7 || (kpal && k == 3) : k == 3)) {
             rolled = 3;
         } else if (k == 4 || k == 0 || k == 6) {
             rolled = 2;
