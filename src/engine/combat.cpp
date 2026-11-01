@@ -3830,7 +3830,9 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
         b.aim_x >= 0)
         m = in_area(b, *b.tables, b.aim_x, b.aim_y, 2, who, kMaxFighters);
     if (m == 0) return 0;
-    b.no_action = b.round + 15;
+    // (no reset of the 15 rounds without an attack: only an attack moves it -
+    // coab's AttackTarget, sub_3F9DB, is its only writer in a fight; a caster
+    // putting up spells for ever kept a fight going - the fight fuzzer)
     set_actor(b, caster);
     g_dice = &d;
     g_kind = 0;
