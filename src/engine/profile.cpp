@@ -2027,7 +2027,7 @@ constexpr combat::Facts kQueenFightFacts = {.held = {0x33, 0x34, 0x35, 0x1F}, .b
                 .backstab_weapons = {0x07, 0x08, 0x23, 0x24, 0x25, 0x61}, .charm = 0x0B, .fear = 0x6F, .cough = 0x1E,
                 .shot_pointed = {9, 21, 100, 28, 31, 73}, .shot_spinning = {2, 7, 20}, .shot_flask = {85, 86},
                 .shot_sling = {47, 98, 101},
-                .bestow = 0x24, .blink = 0x25, .fumbling = 0x1B, .silence = 0x15, .entangle = 0x06, .sticks = 0x03,
+                .bestow = 0x24, .blink = 0x25, .fumbling = 0x1B, .silence = 0x15, .entangle = 0x1B, .sticks = 0x03,
                 .faerie = 0, .blinded = 0x21, .animals_blind = 0, .feeble = 0,
                 .mon = {.poison = 0x40, .poison_m2 = 0x56, .kreen_bite = 0x45, .need_magic = 0x67, .no_cold = 0x62,
                         .no_elec = 0, .globe = 0x3F, .elf_sleep = 0x5F, .detect = 0x18, .prot_evil_near = 0x2D,
@@ -2037,7 +2037,7 @@ constexpr combat::Facts kQueenFightFacts = {.held = {0x33, 0x34, 0x35, 0x1F}, .b
                 .sp = {.enlarge = 0x0C, .confuse = 0x23, .berserk = 0x4D, .evil_ward = 0x04, .hot = 0x32,
                        .cold = 0x36, .zap = 0x70, .slow_poison = 0x16, .poison_damage = 0x0F, .hammer = 0x17,
                        .con_regen = 0x3E, .shield = 0x11, .enfeeble = 0x1D, .ill = 0x22, .weak = 0x2B, .sick = 0x2C,
-                       .stun = 0x06},
+                       .stun = 0x6A},
                 .race = {0x5E, 0x12, 0x1A, 0x07, 0x2F, 0x30, 0x69, true},
                 .items = {.displace = 0x59, .ring_invisible = 0x38, .fire_ring = 0x3D},
                 .berserk = 0x6B, .taunted = 0x5B};

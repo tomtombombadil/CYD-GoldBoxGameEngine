@@ -1412,6 +1412,7 @@ TurnFx turn_effects(Battle& b, int i)
             drop_aff(f, cf);
             if (fx.fear) give_aff(f, fx.fear, 10, made_quick ? 1 : 0, true);
             f.fleeing = true;
+            f.panic = false;
             f.quick = true;
             f.target = -1;
             return TurnFx::RunsAway;
@@ -2397,7 +2398,24 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
             else ac = ac < 58 ? ac + 2 : 60;
         }
         // (protection from evil / good: the original's -2 to hit comes before
-        // the roll and is lost; only the saves count)
+        // the roll and is lost; only the saves count. With the Game Fixes
+        // the AD&D spell: an evil / good attacker -2 to hit one warded -
+        // SPEC 12)
+        if (rules::fixes()) {
+            const int al = at.rec[0x11B];
+            bool warded = false;
+            if ((al == 0 || al == 3 || al == 6) && hasx(tg, fx.prot_good)) warded = true;
+            if (!warded && (al == 2 || al == 5 || al == 8)) {
+                warded = hasx(tg, fx.prot_evil) || hasx(tg, fx.mon.prot_evil_near);
+                for (int k = 0; !warded && fx.mon.prot_evil_near && k < b.n; ++k) {
+                    const Fighter& o = b.f[k];
+                    if (&o == &tg || !o.size || !tg.size || !o.has(fx.mon.prot_evil_near)) continue;
+                    const int ddx = o.x - tg.x, ddy = o.y - tg.y;
+                    warded = ddx >= -1 && ddx <= 1 && ddy >= -1 && ddy <= 1;
+                }
+            }
+            if (warded) side -= 2;
+        }
         // Attacking makes them seen
         const int inv = find_aff(at, fx.invisible);
         if (inv >= 0) drop_aff(at, inv);
@@ -4023,6 +4041,7 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
                 (f.member >= 0 && f.rec[0xF7] < 0x80 && !f.quick) || (was >= 0 && (f.aff[was][3] & 1));
             if (b.fx && b.fx->fear) give_aff(f, b.fx->fear, minutes, made_quick ? 1 : 0, false);
             f.fleeing = true;
+            f.panic = false;
             if (made_quick) f.quick = true;
             f.target = -1;
             say(who[k], Did::Word, 0);
@@ -4909,6 +4928,7 @@ int bolt_path(const Battle& b, const Tables& t, int caster, int tx, int ty, int 
     int last = who(tx, ty);
     bool wall = false, near = near_rule;
     int budget = (length * 2) & 0xFF;
+    int idle = 0;                                   // segments in a row that used no steps
     while (budget > 0) {
         Stepper p(Tx, Ty, Tx + (Tx - cx) * sign * budget, Ty + (Ty - cy) * sign * budget);
         int px = Tx, py = Ty;                       // where the segment's picture starts
@@ -4950,6 +4970,14 @@ int bolt_path(const Battle& b, const Tables& t, int caster, int tx, int ty, int 
             const int used = (p.steps - prev) & 0xFF;
             budget = used < budget ? budget - used : 0;
             prev = p.steps;
+            // (the original's count of half steps carries over from one
+            // segment to the next - coab's sub_5FA44 var_3D - so a bolt
+            // bouncing between two walls with a segment as long as the last
+            // uses nothing and bounces for ever: the fight fuzzer's Darkness
+            // lightning bolt, seed 5 fight 444. The same state again and
+            // again - stopped, whatever the switches: nothing else changes)
+            if (used) idle = 0;
+            else if (++idle > 3) budget = 0;
             if (wall || budget == 0) break;
         }
     }
@@ -5203,23 +5231,41 @@ Morale morale(Battle& b, const Tables& t, int i)
             return Morale::Surrender;
         }
     }
+    // Its effects on the morale figure, in the order it has them (the
+    // originals' CheckAffectsEffect: Bless +5, Curse -5 but never below 0 -
+    // coab's Curse handler; a figure brought to 0 is a failed test)
+    auto effects = [&](int m) {
+        for (int k = 0; b.fx && f.n_aff && k < *f.n_aff; ++k) {
+            if (b.fx->bless && f.aff[k][0] == b.fx->bless) m += 5;
+            else if (b.fx->curse && f.aff[k][0] == b.fx->curse) m = m < 5 ? 0 : m - 5;
+        }
+        return m;
+    };
     int m = (f.rec[kControl] & 0x7F) * 2;
     if (m > 102) m = 0;
-    int adj = 0;
-    if (b.fx && f.has(b.fx->bless)) adj += 5;
-    if (b.fx && f.has(b.fx->curse)) adj -= 5;
-    m += adj;
+    m = effects(m);
     const int lost = f.hp_max() ? 100 - f.hp() * 100 / f.hp_max() : 0;
     if (!(m < lost || m == 0)) return Morale::Fight;
-    const int m2 = b.enemy_health + adj;
+    const int m2 = effects(b.enemy_health);
     if (!(m2 < 100 - b.morale_base || m2 == 0 || !f.team())) return Morale::Fight;
+    // Its moves against the fastest enemy's, each as the round gives them
+    // (coab's CalcMoves / MaxOppositionMoves: movement 1-96, else 1, x 2,
+    // haste x 2, slow / 2 - then halved): it flees when none is faster
+    auto moves = [&](const Fighter& o) {
+        int mv = o.rec[kMove];
+        if (mv < 1 || mv > 96) mv = 1;
+        mv *= 2;
+        if (b.fx && hasx(o, b.fx->haste)) mv *= 2;
+        if (b.fx && hasx(o, b.fx->slow)) mv /= 2;
+        return mv / 2;
+    };
     int fastest = 0;
     for (int c = 0; c < b.n; ++c) {
         const Fighter& o = b.f[c];
-        if (o.up() && o.size && o.team() != f.team() && o.rec[kMove] > fastest) fastest = o.rec[kMove];
+        if (o.up() && o.size && o.team() != f.team() && moves(o) > fastest) fastest = moves(o);
     }
     (void)t;
-    if (fastest <= f.rec[kMove]) return Morale::Flee;
+    if (fastest <= moves(f)) return Morale::Flee;
     if (f.rec[0x13] > 5) return Morale::Surrender;
     return Morale::Fight;
 }
@@ -5247,7 +5293,7 @@ static int turn_undead_dk(Battle& b, const Tables& t, int cleric, create::Dice& 
         for (int i = 0; i < b.n; ++i) {
             const Fighter& f = b.f[i];
             const int ut = f.rec[0xE9];
-            if (!f.up() || !f.size || f.fleeing || (f.team() ? 1 : 0) == my || ut <= type || ut > limit) continue;
+            if (!f.up() || !f.size || (f.fleeing && !f.panic) || (f.team() ? 1 : 0) == my || ut <= type || ut > limit) continue;
             if (!range(b, t, cleric, i, false, nullptr)) continue;
             best = i;
             type = ut;
@@ -5262,6 +5308,7 @@ static int turn_undead_dk(Battle& b, const Tables& t, int cleric, create::Dice& 
         Fighter& f = b.f[best];
         if (v > 0) {
             f.fleeing = true;
+            f.panic = false;
             out[n++] = best;
         } else {
             f.rec[kHealth] = party::Gone;
@@ -5295,7 +5342,7 @@ int turn_undead(Battle& b, const Tables& t, int cleric, create::Dice& d, int* ou
         for (int i = 0; i < b.n; ++i) {
             const Fighter& f = b.f[i];
             const int ut = f.rec[0xE9];
-            if (!f.up() || !f.size || f.fleeing || (f.team() ? 1 : 0) == my || ut == 0 || ut >= type) continue;
+            if (!f.up() || !f.size || (f.fleeing && !f.panic) || (f.team() ? 1 : 0) == my || ut == 0 || ut >= type) continue;
             if (!range(b, t, cleric, i, false, nullptr)) continue;
             best = i;
             type = ut;
@@ -5306,6 +5353,7 @@ int turn_undead(Battle& b, const Tables& t, int cleric, create::Dice& d, int* ou
         Fighter& f = b.f[best];
         if (v > 0) {
             f.fleeing = true;
+            f.panic = false;
             out[n++] = best;
         } else {
             f.rec[kHealth] = party::Gone;

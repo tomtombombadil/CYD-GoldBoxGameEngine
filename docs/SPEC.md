@@ -2727,6 +2727,20 @@ the game's Settings (As Original: all of them).
   byte compared unsigned, so a total below 0 wraps round to a save made -
   a 2 rolled with -4 (blinded, a bestowed curse) saves. With Game Fixes
   on a total below 0 is a save failed (`combat::saving_throw`).
+- **Protection from Evil / Good against blows** (Game Fixes, every game;
+  the rule tests, 2026-11-01): the originals work the spell's -2 to hit
+  out before the attack roll and then drop it - only its +2 to the saves
+  counts. With Game Fixes on an evil (good) attacker is -2 to hit one
+  warded (the spell, or next to a 10' radius one), as AD&D's spell says
+  (`combat::attack`).
+- **Saving throws worse at a higher level** (Game Fixes; the level rule
+  tests, 2026-11-01): the originals' save tables have rows worse than the
+  level before - the paladin's 8th level poison 9 after 8 at 7th (Curse,
+  Secret, Champions, Darkness, Treasures, Gateway), Darkness's and
+  Treasures' thief at 19th the 13th-16th row again (10 9 8 13 9 after
+  9 8 6 12 7). With Game Fixes on each save is the best of the class's
+  rows up to its level (AD&D: none worse for a level gained;
+  `classes::class_bonuses`).
 - **Held by a free attack mid-step** (Game Fixes, every game; the fight
   fuzzer, 2026-11-01): a fighter paralysed, put to sleep or stunned by the
   free attack of one it steps away from still takes that step in the

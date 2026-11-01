@@ -576,7 +576,15 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   cleared field (own turn, guard, free attack, attacked, attacking, saves,
   moves, fleeing, experience, charm). Per-game env as the behave runs
   (GAME, BOOTSLOT, MAREA / MBLOCK, FIGHTAT, CACHE). Expected values from
-  the rules / coab / the originals' code, never the engine's.
+  the rules / coab / the originals' code, never the engine's. Round 2:
+  the matrix adds weapon immunities (+0-+3), Mirror Image / Displacement
+  against blows and morale; `behave levels` (-DBEHAVE_LEVELS, any game:
+  ONLY= classes, wisdom, money) trains every class to its last level (L1-L5:
+  one level, to-hit, saves, hit points, slots never worse), the cleric's
+  Wisdom bonus and the coin exchange's sums; `tools/playsim/party_check.inc`
+  (P1-P7: hit points, coins / charges wrapping, memorized past the slots,
+  abilities, levels) runs on every monkey action - MCAMP=n biases the
+  monkey to the camp's screens.
 - **DOSBox here** (2026-10-12): the ORIGINAL games run on Claude's side -
   `apt-get install dosbox xdotool x11-apps imagemagick`, a virtual display
   (`Xvfb :5`), `DISPLAY=:5 SDL_AUDIODRIVER=dummy dosbox -conf <conf>`

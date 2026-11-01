@@ -64,9 +64,9 @@ static void problem(const char* what)
     printf("!! PROBLEM: %s\n", what);
 }
 
-#ifdef CYD_TEST_HOOKS
 #include <map>
 #include <set>
+#ifdef CYD_TEST_HOOKS
 #include "fight_check.inc"
 #endif
 
@@ -90,6 +90,8 @@ static void tap_item(int i)
     if (play::menu.count) text::item_cell(play::menu, i, &col, &row);
     play::tap(col * 8 + 2, row * 8 + 2, C);
 }
+
+#include "party_check.inc"
 
 static int pm_line(char k)
 {
@@ -1352,6 +1354,17 @@ static void sweep_monkey(int rounds)
             play::back(C);
             continue;
         }
+        // MCAMP=n: n in 100 of the exploring turns open the camp (its spells,
+        // rest, items, training's screens get the actions)
+        if (play::walking() && getenv("MCAMP") && pick(100) < atoi(getenv("MCAMP"))) {
+            if (!tap_word('E') && !tap_word('C')) tap_item(pick(menu.count));
+            for (int k = 0; k < 5; ++k) {
+                g_now += 20;
+                play::tick(g_now, C);
+            }
+            pcheck::check();
+            continue;
+        }
         if (play::walking() && pick(100) < 60) {
             static const play::Act acts[] = {play::Act::Forward, play::Act::Forward, play::Act::Forward, play::Act::TurnLeft,
                                              play::Act::TurnRight, play::Act::TurnAround, play::Act::StepLeft, play::Act::StepRight};
@@ -1495,6 +1508,7 @@ static void sweep_monkey(int rounds)
                 }
             }
         }
+        pcheck::check();
         if (pt->count < 0 || pt->count > party::kMaxParty) problem("party size out of range");
         if (pt->count && (pt->selected < 0 || pt->selected >= pt->count)) {
             char t[64];
@@ -1532,6 +1546,7 @@ static void sweep_monkey(int rounds)
         if (getenv("HEAPLOG") && play::walking() && r % 200 == 0) printf("  heap %d: %zu in use (boot %d)\n", r, mallinfo2().uordblks, boots);
     }
     printf("  %d boots, %d fights\n", boots, fights_seen);
+    pcheck::report();
 }
 
 // ---- memloop (v0.85.5, Tom's 3.2": after a long session the fight's pictures
@@ -1663,6 +1678,9 @@ static void dice_faces(std::initializer_list<int> f) { dice_usual(); b_faces.ass
 #ifdef BEHAVE_MATRIX
 #include "behave_matrix.inc"
 #endif
+#ifdef BEHAVE_LEVELS
+#include "behave_levels.inc"
+#endif
 
 #ifdef CYD_TEST_HOOKS
 #include "fight_fuzz.inc"
@@ -1743,6 +1761,9 @@ int main(int argc, char** argv)
 #endif
 #ifdef BEHAVE_MATRIX
         if (want("matrix")) behave_matrix();
+#endif
+#ifdef BEHAVE_LEVELS
+        if (want("levels")) behave_levels();
 #endif
 #ifdef BEHAVE_TREASURES
         if (want("treasures")) behave_darkness();       // (Darkness's checks, Treasures' oracles)

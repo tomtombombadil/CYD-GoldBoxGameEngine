@@ -3884,11 +3884,18 @@ void ai_step(pic::Canvas& c)
     if (!fg->ai_checked && !fg->flee_told) {
         // The holds it had (engulfing, hugging) let go, as the original does
         combat::release_holds(b, i);
-        // (Pool: one already fleeing - turned undead, panic - says so at
-        // each of its turns, then runs: "is forced to flee" - ovr10
-        // +0x10D7; DOSBox, Sokal Keep's undead. Its turn's checks go on
-        // after the page: the items, a spell, Turn Undead - ovr10 +0xC8 on)
-        if (pool_files() && f.fleeing) {
+        // Last turn's panic is over: the morale test is taken again (every
+        // game's FleeCheck clears it first - coab's sub_3637F; Darkness ovr
+        // 0xACBE, Secret 0xE240, Champions 0xD84F, Dark Queen 0x2EF38)
+        if (f.panic) {
+            f.panic = false;
+            f.fleeing = false;
+        }
+        // One forced to flee - turned undead, fear - says so at each of its
+        // turns, then runs: "is forced to flee" (every game's FleeCheck; Pool
+        // ovr10 +0x10D7, DOSBox, Sokal Keep's undead). Its turn's checks go
+        // on after the page: the items, a spell, Turn Undead - ovr10 +0xC8 on
+        if (f.fleeing) {
             fg->flee_told = true;
             add_page(i, fw(profile::kForcedFlee));
             say(c, FSt::Ai);
@@ -3921,6 +3928,7 @@ void ai_step(pic::Canvas& c)
         }
         if (mo == combat::Morale::Flee && !f.fleeing) {
             f.fleeing = true;
+            f.panic = true;                 // (this turn only)
             fg->ai_checked = false;         // (its items and spells next - the original's order)
             fg->flee_told = true;
             add_page(i, fw(profile::kFleesPanic));
@@ -3982,7 +3990,7 @@ void ai_step(pic::Canvas& c)
             bool undead = false;
             for (int e = 0; e < b.n && !undead; ++e) {
                 const combat::Fighter& o = b.f[e];
-                undead = o.up() && o.size && !o.fleeing && (o.team() ? 1 : 0) != (f.team() ? 1 : 0) && o.rec[0xE9] &&
+                undead = o.up() && o.size && !(o.fleeing && !o.panic) && (o.team() ? 1 : 0) != (f.team() ? 1 : 0) && o.rec[0xE9] &&
                          combat::range(b, fg->t, i, e, false, nullptr);
             }
             if (undead) {

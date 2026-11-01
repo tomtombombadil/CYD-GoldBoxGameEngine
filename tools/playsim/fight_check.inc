@@ -103,6 +103,11 @@ bool stands(const combat::Fighter& f) { return f.status() == party::Okay || f.st
 
 // The round each fighter last started a turn in (R7); the spell it had begun then (R5)
 std::vector<int> turn_round, pending;
+// Each fighter's hit points when the checker first saw it: a record stored
+// over its maximum (the Dark Queen's lich, MONCHA.GLB #31: 104 of 81 - the
+// original's LOAD MONSTER copies the record as it is, DQK 0x356DC) may stay
+// up to there; R6 flags only a rise past both
+std::vector<int> start_hp;
 // Held at the blow's start (R3), standing (R11)
 bool blow_held = false;
 bool in_bite = false;               // (a hold's bite: Bite, then its Attack)
@@ -223,6 +228,7 @@ void tick()
         endless_told = false;
         turn_round.assign(b.n, -1);
         pending.assign(b.n, 0);
+        start_hp.assign(combat::kMaxFighters, -1);
         told.clear();
         ally_attacked = false;
     }
@@ -232,7 +238,9 @@ void tick()
         const combat::Fighter& f = b.f[i];
         if (f.gone) continue;
         // (but the electricity eaters: +8 a bolt, no limit - the original's handler, coab ovr013)
-        if (f.hp() > f.hp_max() && f.hp_max() > 0 && !(b.fx && b.fx->mon.absorb_elec && f.has(b.fx->mon.absorb_elec)))
+        if (i < (int)start_hp.size() && start_hp[i] < 0) start_hp[i] = f.hp();
+        const int cap = i < (int)start_hp.size() && start_hp[i] > f.hp_max() ? start_hp[i] : f.hp_max();
+        if (f.hp() > cap && f.hp_max() > 0 && !(b.fx && b.fx->mon.absorb_elec && f.has(b.fx->mon.absorb_elec)))
             bad_once("R6", i, "hit points over the maximum: " + who(b, i));
         if (f.up() && !stands(f)) bad_once("R6", i, "standing with status " + std::to_string(f.status()) + ": " + who(b, i));
         if (f.up() && f.size && f.hp() <= 0 && f.status() != party::Animated) bad_once("R6", i, "standing at 0 hit points: " + who(b, i));

@@ -134,7 +134,9 @@ std::vector<Status> statuses()
     one("protected from evil", ProtEvil, fx.prot_evil);
     one("faerie fire", Faerie, fx.faerie);
     one("mirror images", Mirror, fx.mirror);
-    // (Krynn's profiles give 0x06 to both entangle and stun - open: taken as the stun there)
+    // (Death Knights gives 0x06 to both entangle and Power Word Stun - its
+    // spell row; effect 6's handler is the held ones' there, GAME.OVR
+    // 0x1BCA9: taken as the stun)
     if (fx.entangle != fx.sp.stun) one("entangled", Entangle, fx.entangle);
     one("enlarged", Enlarge, fx.sp.enlarge);
     v.push_back({"fleeing", Fleeing, 0});
@@ -253,6 +255,226 @@ int moves_at_start(const Status& s)
     combat::start_round(play::fg->b, play::rng);
     dice_off();
     return F(B).moves;
+}
+
+// ---- Dice at their highest (the d20 20): damage that halves to something
+int m_die_max(int n) { return n - 1; }
+
+// A's weapon for a blow (a melee weapon type of the game's), its plus
+uint8_t wpn[1][items::kRecordSize];
+int melee_type()
+{
+    for (int t = 1; play::names && t < items::kTypes; ++t) {
+        const items::TypeInfo& ti = play::names->type(t);
+        if (ti.slot == items::kSlotWeapon && ti.range <= 1 && !(ti.flags & 0x81) && ti.sides > 0) return t;
+    }
+    return -1;
+}
+// B's hit points lost to one blow of A's (+plus weapon; -1 bare hands),
+// B with the effect `type` (0 none), every die at its highest
+int blow_loss(int type, int plus)
+{
+    put(A, 0, 10, 10);
+    put(B, 1, 11, 10);
+    F(A).rec[0x74] = 1;                 // (a human: AD&D's need-magic rule takes the race)
+    auto* keep = F(A).items;
+    const int keep_n = F(A).n_items;
+    const int t = melee_type();
+    if (plus >= 0 && t > 0) {
+        memset(wpn, 0, sizeof wpn);
+        wpn[0][0x2E] = static_cast<uint8_t>(t);
+        wpn[0][0x32] = static_cast<uint8_t>(plus);
+        wpn[0][0x34] = 1;
+        F(A).items = wpn;
+        F(A).n_items = 1;
+    }
+    if (type) add_aff(B, type, 0);
+    create::g_die_hook = m_die_max;
+    play::fg->cur = A;
+    const int before = F(B).hp();
+    combat::attack(play::fg->b, A, B, play::names, play::rng);
+    dice_off();
+    F(A).items = keep;
+    F(A).n_items = keep_n;
+    return before - F(B).hp();
+}
+
+// ---- T10 weapon immunities: what a +0 ... +3 weapon's blow does to one
+// with each immunity the game has (coab's handlers: AffectResistWeapons -
+// +0 nothing, +1 / +2 half, +3 all; AffectProtNonMagicWeapons - +0 nothing
+// from a human; Pool's wight - magic or silver; Darkness's +1 / +2 / +3
+// needed; the halvers below +3 / +4)
+void weapons()
+{
+    if (melee_type() < 0 || !play::names) {
+        printf("  (matrix: no melee weapon type)\n");
+        return;
+    }
+    const combat::MonFx& m = play::fg->b.fx->mon;
+    struct Imm {
+        const char* name;
+        uint8_t type;
+        int what[4];        // per plus 0-3: 0 nothing, 1 half, 2 all
+    } list[] = {
+        {"resist weapons (stop normal)", m.stop_normal, {0, 1, 1, 2}},
+        {"non-magic weapons no use (need magic)", m.need_magic, {0, 2, 2, 2}},
+        {"silver or magic only", m.silver_only, {0, 2, 2, 2}},
+        {"+1 needed", m.need_plus1, {0, 2, 2, 2}},
+        {"+2 needed", m.need_plus2, {0, 0, 2, 2}},
+        {"+3 needed", m.need_plus3, {0, 0, 0, 2}},
+        {"half below +3", m.half_under3, {1, 1, 1, 2}},
+        {"half below +4", m.half_under4, {1, 1, 1, 1}},
+    };
+    for (const Imm& im : list) {
+        if (!im.type) continue;
+        for (int plus = 0; plus <= 3; ++plus) {
+            const int full = blow_loss(0, plus), got = blow_loss(im.type, plus);
+            const int want = im.what[plus] == 0 ? 0 : im.what[plus] == 1 ? full / 2 : full;
+            snprintf(w, sizeof w, "%s (%02X) x a +%d weapon's blow: %s", im.name, im.type, plus,
+                     im.what[plus] == 0 ? "nothing" : im.what[plus] == 1 ? "half" : "all");
+            expect(P, w, got == want && full > 0, "lost %d of %d", got, full);
+        }
+    }
+}
+
+// ---- T11 Mirror Image and Displacement against blows (dice highest: the
+// image die takes it when the game's images take blows). Mirror: Curse's /
+// Pool's images only take spells (coab's MirrorImage: spell_id > 0); Secret's
+// and Gateway's take blows too (their handlers in the blow's damage phase).
+// Displacement (coab's AffectDisplace): the first attack on it misses
+void images()
+{
+    combat::Battle& b = play::fg->b;
+    const combat::Facts& fx = *b.fx;
+    if (fx.mirror) {
+        put(A, 0, 10, 10);
+        put(B, 1, 11, 10);
+        add_aff(B, fx.mirror, fx.mirror_plain ? 3 : 0x30);
+        create::g_die_hook = m_die_max;
+        play::fg->cur = A;
+        const int before = F(B).hp();
+        combat::attack(b, A, B, play::names, play::rng);
+        dice_off();
+        const bool blows = fx.secret || fx.gw.mirror;
+        int k = -1;
+        for (int j = 0; F(B).n_aff && j < *F(B).n_aff && k < 0; ++j)
+            if (F(B).aff[j][0] == fx.mirror) k = j;
+        const int left = k < 0 ? 0 : fx.mirror_plain ? F(B).aff[k][3] : F(B).aff[k][3] >> 4;
+        snprintf(w, sizeof w, "mirror images x a blow: %s", blows ? "an image lost, no harm" : "it lands, the images kept");
+        expect(P, w, blows ? (F(B).hp() == before && left == 2) : (F(B).hp() < before && left == 3), "hp %d of %d, images %d",
+               F(B).hp(), before, left);
+    }
+    if (fx.items.displace) {
+        const bool works = !fx.items.displace_unused || rules::fixes();
+        put(A, 0, 10, 10);
+        put(B, 1, 11, 10);
+        add_aff(B, fx.items.displace, 0);
+        bool hit1 = false, hit2 = false;
+        for (int k = 0; k < 2; ++k) {
+            F(A).attacks[0] = 1;
+            F(A).attacks[1] = 0;
+            dice(20);
+            play::fg->cur = A;
+            const combat::Attack at = combat::attack(b, A, B, play::names, play::rng);
+            dice_off();
+            bool h = false;
+            for (int j = 0; j < at.n; ++j) h |= at.hits[j].hit;
+            (k ? hit2 : hit1) = h;
+        }
+        snprintf(w, sizeof w, "displacement x two blows (d20 20): %s", works ? "the first misses, the second hits" : "both hit");
+        expect(P, w, works ? (!hit1 && hit2) : (hit1 && hit2), "first %d second %d", (int)hit1, (int)hit2);
+    }
+}
+
+// ---- T13 Protection from Evil against an evil attacker's blow: the
+// original's -2 to hit is lost (only the saves count); AD&D's with the
+// Game Fixes (SPEC 12)
+void prot_evil()
+{
+    const combat::Facts& fx = *play::fg->b.fx;
+    if (!fx.prot_evil) return;
+    for (int fix = 0; fix < 2; ++fix) {
+        rules::set_fixes(fix == 1);
+        int lowest = 21;
+        for (int d20 = 1; d20 <= 20 && lowest == 21; ++d20) {
+            put(A, 0, 10, 10);
+            put(B, 1, 11, 10);
+            F(A).rec[0x11B] = 2;        // (the attacker lawful evil)
+            add_aff(B, fx.prot_evil, 0);
+            dice(d20);
+            play::fg->cur = A;
+            const combat::Attack at = combat::attack(play::fg->b, A, B, play::names, play::rng);
+            dice_off();
+            for (int k = 0; k < at.n; ++k)
+                if (at.hits[k].hit) lowest = d20;
+        }
+        snprintf(w, sizeof w, "protected from evil x an evil attacker's blow, Game Fixes %s: hit from a d20 of %d", fix ? "on" : "off",
+                 fix ? 12 : 10);
+        expect(P, w, lowest == (fix ? 12 : 10), "lowest hit %d", lowest);
+    }
+    rules::set_fixes(true);
+}
+
+// ---- T12 morale (coab's FleeCheck sub_3637F; Darkness ovr 0xACAC, Secret
+// 0xE22E, Dark Queen 0x2EF27 the same): its morale (control & 0x7F) x 2
+// (over 102: 0), Bless +5 / Curse -5 (not below 0), against the hit points
+// it has lost (%); then the enemy side's health against the script's base
+// (0 or our side: on); then it flees when no enemy moves faster (moves:
+// movement x 2, haste x 2, slow / 2, halved), else surrenders with
+// Intelligence over 5
+void morale_tests()
+{
+    combat::Battle& b = play::fg->b;
+    const combat::Facts& fx = *b.fx;
+    auto setup = [&](int ctl, int hp, int mv_b, int intel) {
+        put(A, 0, 10, 10);
+        put(B, 1, 14, 10, 60);
+        F(B).rec[0xF7] = static_cast<uint8_t>(0x80 | ctl);
+        F(B).rec[0x1A4] = static_cast<uint8_t>(hp);
+        F(B).rec[0x1A5] = static_cast<uint8_t>(mv_b);
+        F(B).rec[0x13] = static_cast<uint8_t>(intel);
+        b.enemy_health = 10;
+        b.morale_base = 0;
+    };
+    auto test = [&](const char* name, combat::Morale want) {
+        const combat::Morale got = combat::morale(b, play::fg->t, B);
+        expect(P, name, got == want, "morale %d", (int)got);
+    };
+    setup(25, 50, 12, 10);
+    test("morale x hurt a little (17% lost, morale 50): it fights", combat::Morale::Fight);
+    setup(25, 10, 12, 10);
+    test("morale x badly hurt, as fast as its enemies: it flees", combat::Morale::Flee);
+    setup(25, 10, 6, 10);
+    test("morale x badly hurt, enemies faster, Intelligence 10: it surrenders", combat::Morale::Surrender);
+    setup(25, 10, 6, 3);
+    test("morale x badly hurt, enemies faster, Intelligence 3: it fights", combat::Morale::Fight);
+    if (fx.haste) {
+        setup(25, 10, 12, 10);
+        add_aff(A, fx.haste, 0);
+        test("morale x badly hurt, a hasted enemy (twice its moves): it surrenders", combat::Morale::Surrender);
+    }
+    if (fx.slow) {
+        setup(25, 10, 12, 10);
+        add_aff(B, fx.slow, 0);
+        test("morale x badly hurt and slowed: it surrenders", combat::Morale::Surrender);
+    }
+    if (fx.curse) {
+        setup(2, 60, 12, 10);           // (morale 4, unhurt: Curse brings it to 0 - a failed test)
+        add_aff(B, fx.curse, 0);
+        test("morale x 4 and cursed (0), unhurt: it flees", combat::Morale::Flee);
+    }
+    if (fx.bless) {
+        setup(25, 30, 12, 10);          // (50% lost; morale 50 + 5)
+        add_aff(B, fx.bless, 0);
+        test("morale x 50% lost, blessed (55): it fights", combat::Morale::Fight);
+    }
+    setup(25, 10, 12, 10);
+    b.enemy_health = 100;
+    b.morale_base = 0;
+    test("morale x badly hurt, its side unhurt (100 of 100): it fights", combat::Morale::Fight);
+    put(B, 0, 14, 10);
+    F(B).rec[0x1A4] = 5;
+    test("morale x a party member: no test", combat::Morale::Fight);
 }
 
 void run()
@@ -432,6 +654,41 @@ void run()
             expect(P, "charmed x the caster's side", F(B).team() == F(A).team(), "team %d", F(B).team());
         }
     }
+    // T14 targeted by a damage spell (its save failed - a d20 of 1 - its
+    // dice highest): every status standing takes the damage (AD&D: none
+    // of them wards off a spell's harm; mirror images apart - they take
+    // single-target spells, T11's)
+    if (play::load_magic()) {
+        // (one that harms a plain target so: not a touch spell - those roll to hit)
+        auto harm = [&](const combat::FightSpell* fs, const Status& s) {
+            put(A, 0, 10, 10);
+            put(B, 1, 12, 10);
+            give(B, s);
+            create::g_die_hook = [](int n) { return n == 20 ? 0 : n - 1; };
+            combat::SpellLine lines[8];
+            const int tg[1] = {B};
+            const int before = F(B).hp();
+            combat::cast(play::fg->b, play::mrules->tables, A, fs->spell, *fs, tg, 1, play::rng, lines, 8, 9);
+            dice_off();
+            return before - F(B).hp();
+        };
+        const Status plain{"none", Plain, 0};
+        const combat::FightSpell* fs = nullptr;
+        for (int i = 0; i < play::d->prof->fight.n_spells && !fs; ++i) {
+            const combat::FightSpell& c = play::d->prof->fight.spells[i];
+            if (c.does == combat::SpellDoes::Damage && c.sides && harm(&c, plain) > 0) fs = &c;
+        }
+        for (const Status& s : list) {
+            if (!fs || down(s) || s.kind == Mirror) continue;
+            const int lost = harm(fs, s);
+            snprintf(w, sizeof w, "%s x a damage spell (%02X, its save failed): harmed", s.name.c_str(), fs->spell);
+            expect(P, w, lost > 0, "lost %d", lost);
+        }
+    }
+    weapons();
+    images();
+    morale_tests();
+    prot_evil();
     combat::g_act_hook = fc::on ? fc::on_act : nullptr;
 }
 
