@@ -1,5 +1,4 @@
 # Gold Box Game Engine for Cheap Yellow Displays
-**I really need to change the name of this repo to "CYD-GoldBoxGameEngine"**
 
 Play SSI's Gold Box games on an ESP32 "Cheap Yellow Display". Your own legitimate copy of each game is required!
 - **Pool of Radiance**
