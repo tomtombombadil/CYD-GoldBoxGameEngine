@@ -97,10 +97,17 @@ void check()
                 if (kind < 0 || kind > 2 || lvl < 1 || lvl > 9) continue;
                 ++mem[kind][lvl - 1];
             }
+            // (Krynn: a mage's moon gives up to 2 more among levels 1-5 -
+            // one phase from full 1, full 2; Champions' GAME.OVR 0x1B31A)
+            int moon_left = t.lay.krynn ? 2 : 0;
             for (int kind = 0; kind < 3; ++kind)
                 for (int l = 0; l < 9; ++l) {
                     if (!mem[kind][l]) continue;
                     const int slots = l < 5 ? c.rec[0x12D + kind * 5 + l] : 0;
+                    if (kind == 2 && l < 5 && slots > 0 && mem[kind][l] > slots && mem[kind][l] - slots <= moon_left) {
+                        moon_left -= mem[kind][l] - slots;
+                        continue;
+                    }
                     if (l < 5 && mem[kind][l] > slots) {
                         char t2[96];
                         snprintf(t2, sizeof t2, "%d memorized of kind %d level %d, %d slots: ", mem[kind][l], kind, l + 1, slots);
