@@ -713,6 +713,7 @@ bool Vm::init_script(bool reload)
     if (!entries(code_of(s_), s_.code_len, set_, e)) return false;
     for (int i = 0; i < 5; ++i) entry_[i] = static_cast<uint16_t>(e[i] == 0xFFFFFFFFu ? 0 : kBase + e[i]);
     sp_ = 0;
+    view_set_ = false;
     for (bool& f : flags_) f = false;
     cleared_name_ = cleared_status_ = false;
     sel_mon_ = -1;
@@ -1780,6 +1781,7 @@ Stop Vm::step()
     case 0x21:                                  // LOAD FILES
     case 0x37: {                                // LOAD PIECES
         if (!need(3)) return Stop::Error;
+        view_set_ = true;
         const int a = value(o[0]) & 0xFF, b = value(o[1]) & 0xFF, c = value(o[2]) & 0xFF;
         const bool dungeon = get(0x4BE6) != 0;
         if (op_ == 0x21) {
@@ -1977,7 +1979,10 @@ Stop Vm::step()
         if (!need(1)) return Stop::Error;
         const uint16_t w = o[0].word();
         if (w == set_.redraw_call) {
-            h_.redraw();
+            // (Pool, START ovr4 +0x2CFE: only after the block's LOAD FILES /
+            // LOAD PIECES - [0x4431]; a save loaded in the nomads' camp,
+            // whose first run skips them, walks to the hut unseen - DOSBox)
+            if (!set_.pool_map || view_set_) h_.redraw();
         } else if (w == 0x6803) {
             // The event picture's next frame, then the game's delay
             h_.anim_step();
