@@ -570,6 +570,10 @@ void thief_skills(party::Character& c, const Tables& t)
         } else {
             v = bonus + base + race_adj;
             if (skill < 6) v += t.s8(static_cast<uint16_t>(t.lay.thief_dex + dex * 5 + skill));
+            // (the originals keep a byte: a low Dexterity's minus past the
+            // base wraps round - Dexterity 9 at 1st level, move silently
+            // -5 = 251%, never failing. Game Fixes: 0 - SPEC 12)
+            if (v < 0 && rules::fixes()) v = 0;
         }
         if (plus10) v += 10;
         c.rec[kThief + skill - 1] = static_cast<uint8_t>(v);
