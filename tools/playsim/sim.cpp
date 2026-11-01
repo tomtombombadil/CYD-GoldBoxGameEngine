@@ -19,6 +19,7 @@
 #include "engine/rules.h"
 #include <vector>
 #include <string>
+#include <execinfo.h>   // (DIEBT: backtrace)
 
 // HEAPPROF=1 with tools/playsim/heapprof.cpp linked in: the heap by call site
 void heapprof_mark(const char*) __attribute__((weak));
@@ -73,6 +74,14 @@ static int die_fix(int n)
 {
     static const bool dlog = getenv("DICELOG") != nullptr;     // DICELOG=1: every die's faces
     if (dlog) printf("  (die %d)\n", n);
+    static const int bt_faces = getenv("DIEBT") ? atoi(getenv("DIEBT")) : -1;  // DIEBT=n: who rolls the dice of n faces
+    if (n == bt_faces || bt_faces == 0) {
+        void* st[8];
+        const int k = backtrace(st, 8);
+        printf("  (die %d from", n);
+        for (int i = 1; i < k; ++i) printf(" %p", st[i]);
+        printf(")\n");
+    }
     for (size_t i = 0; i < g_die_once.size(); ++i)
         if (g_die_once[i].first == n) {
             const int v = g_die_once[i].second;
@@ -81,6 +90,8 @@ static int die_fix(int n)
             return v;
         }
     for (auto& f : g_die_always) if (f.first == n) return f.second;
+    static const bool trace = getenv("DIETRACE") != nullptr;   // DIETRACE=1: dice nobody told (the auto differ)
+    if (trace) printf("  (die %d: untold)\n", n);
     return -1;
 }
 #endif
@@ -100,11 +111,27 @@ static void place_told(const combat::Battle& b)
 }
 #endif
 static bool g_quiet = false;         // (moves between two '`': no snapshots)
+// STATELOG=1 (the auto differ): with every snapshot the party's place and
+// each member's record in Pool's / the game's own layout (hex)
+static void state_log(const char* name)
+{
+    if (!getenv("STATELOG") || !play::pt || !play::d) return;
+    printf("  STATE %s pos %d %d %d sel %d n %d screen %d anim %d\n", name, play::pos_x(), play::pos_y(), play::dir(),
+           play::pt->selected, play::pt->count, (int)play::screen, play::anim_block);
+    for (int i = 0; i < play::pt->count; ++i) {
+        uint8_t r[party::kPoolRecordSize];
+        party::to_pool(play::pt->m[i], r);
+        printf("  REC %d ", i);
+        for (size_t k = 0; k < sizeof r; ++k) printf("%02X", r[k]);
+        printf("\n");
+    }
+}
 static void shot(const char* tag)
 {
     if (g_quiet) return;
     char name[64];
     snprintf(name, sizeof name, "out/%02d_%s.ppm", shot_n++, tag);
+    state_log(name);
     FILE* f = fopen(name, "wb");
     if (!f) return;                     // no out/ folder: no snapshots
     fprintf(f, "P6 320 200 255\n");
@@ -1367,6 +1394,15 @@ int main(int argc, char** argv)
             continue;
         }
 #ifdef CYD_TEST_HOOKS
+        if (*m == '$') {                // "$": the told dice not rolled yet dropped (the auto differ: a step's end)
+            if (!g_die_once.empty()) {
+                printf("  DICE LEFT");
+                for (auto& d : g_die_once) printf(" %d:%d", d.first, d.second);
+                printf("\n");
+            }
+            g_die_once.clear();
+            continue;
+        }
         if (*m == '~') {                // "~n:v;": the next die of n faces rolls v
             int n = 0, v = 0;
             if (sscanf(m + 1, "%d:%d", &n, &v) == 2) g_die_once.push_back({n, v});
