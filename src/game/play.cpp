@@ -1189,9 +1189,14 @@ void draw_overland(pic::Canvas& c)
 // boxes cleared and framed, the map with the rider, the rider again (the
 // next picture over the first), the panel. Until then nothing draws the
 // map - the arrival's pictures go on the 3D screen as it was (DOSBox)
+void anim_stop();
 void ov_enter(pic::Canvas& c)
 {
     d->ov_up = true;
+    anim_stop();
+    bigpic = -1;
+    pic_shown = false;
+    head_shown = body_shown = -1;
     draw_frame(c);
     // (its framebox(1,1,15,15), (17,1,38,15), (1,17,38,22) in that order:
     // the last one's top crosses cell 16,16 with the rope - no corner there)
@@ -1862,7 +1867,7 @@ void idle_menu(pic::Canvas& c)
         show_menu_line(c);
     } else if (pool_overland()) {
         // Pool's wilderness: no Area (its program's words)
-        if (!d->ov_up && !pic_shown && bigpic < 0) ov_enter(c);
+        if (!d->ov_up) ov_enter(c);
         text::build(menu, "", "Cast View Encamp Search Look");
         menu.selected = 0;
         show_menu_line(c);
