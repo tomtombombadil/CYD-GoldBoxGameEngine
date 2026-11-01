@@ -2634,6 +2634,12 @@ void guard_attacks(pic::Canvas& c, int i)
     for (int e = 0; e < b.n && b.f[i].up(); ++e) {
         combat::Fighter& en = b.f[e];
         if (!en.guarding || !en.up() || (en.team() ? 1 : 0) == my || !combat::adjacent(b, i, e)) continue;
+        // (asleep, held, paralysed or stunned since it chose to guard: no
+        // blow - Tom, 2026-11-01; the guard is lost with it)
+        if (combat::helpless(b, en) || combat::stunned(b, en)) {
+            en.guarding = false;
+            continue;
+        }
         en.guarding = false;
         // (with the attacks it has left: none, no blow - the original's)
         if (en.attacks[0] <= 0 && en.attacks[1] <= 0) continue;

@@ -1765,7 +1765,10 @@ int start_round(Battle& b, create::Dice& d, Event* out, int cap)
         if (b.surprise & (f.team() + 1)) delay -= 6;       // (the word: 1 our side, 2 the enemies - the listing's sub_3E000)
         if (delay < 0 || delay > 20) delay = 0;
         f.delay = delay;
-        if (helpless(b, f) || stunned(b, f)) f.delay = 0;
+        if (helpless(b, f) || stunned(b, f)) {
+            f.delay = 0;
+            f.guarding = false;     // (a sleeper's guard is over - Tom, 2026-11-01)
+        }
         int mv = f.rec[kMove];
         if (mv < 1 || mv > 96) mv = 1;
         f.moves = mv * 2;
@@ -3062,7 +3065,7 @@ bool free_attack_ok(const Battle& b, const Tables& t, int e, int mover)
 {
     const Fighter& en = b.f[e];
     const Fighter& m = b.f[mover];
-    if (helpless(b, en) || !range(b, t, e, mover, false, nullptr)) return false;
+    if (helpless(b, en) || stunned(b, en) || !range(b, t, e, mover, false, nullptr)) return false;
     // (one with the Dragon Slayer's or the Robe of Vermin's effect never - the
     // original's; Pool's code asks the same of its stirge drinking and its
     // mantis holding on: those never)

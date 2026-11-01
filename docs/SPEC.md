@@ -2569,7 +2569,10 @@ the game's Settings (As Original: all of them).
   capital to capital). Spells chosen to memorize stay chosen when the
   camp breaks before they are learnt - an interrupted rest - and the next
   camp's Memorize asks "Memorize these spells?" with them (the originals
-  forget them; features.h `CYD_KEEP_MEMORIZING`, Tom 2026-10-31).
+  forget them; features.h `CYD_KEEP_MEMORIZING`, Tom 2026-10-31). A
+  guard asleep, held, paralysed or stunned strikes no one stepping next to
+  it, nor does a stunned fighter get a free attack on one leaving its side
+  (Tom, 2026-11-01).
 
 - **Secret of the Silver Blades** (v0.94.0): its party menu's Initialize
   Mouse/Joystick isn't shown (nothing to set up: taps are the mouse);
