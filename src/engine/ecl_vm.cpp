@@ -1753,6 +1753,11 @@ Stop Vm::step()
         }
         stop_ = true;
         new_script_ = true;
+        // (the new block starts with the selection as it is: the one to put
+        // back at an EXIT forgotten - Pool's area start, ovr4 +0x3308 clears
+        // [0x4430]; coab's sub_29758 clears restore_player_ptr)
+        restore_ = false;
+        if (party_) start_sel_ = party_->selected;
         return Stop::Running;
     }
     case 0x21:                                  // LOAD FILES
