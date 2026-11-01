@@ -566,6 +566,11 @@ struct Fighter {
     bool    swept = false;              // swept this round
     bool    gone = false;               // a monster there was no room for: not in the fight at all
     bool    fleeing = false;            // turned undead, panic: runs for the field's edge
+    // Panic (a morale failure) lasts its turn only: the next turn's morale
+    // test is taken again (the originals' FleeCheck clears it first - coab's
+    // sub_3637F, Darkness ovr 0xACB6, Secret 0xE240, Dark Queen 0x2EF38);
+    // turned undead and fear keep `fleeing` without it
+    bool    panic = false;
     bool    escaped = false;            // turned gaseous and escaped (Pool's vampire): away, not down
     uint8_t was_control = 0;            // its control byte before Animate Dead (back after the fight)
     uint8_t undead_turns = 0;           // Darkness: its Turn Undeads this fight (R13)

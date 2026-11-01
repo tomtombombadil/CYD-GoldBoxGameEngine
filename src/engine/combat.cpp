@@ -1412,6 +1412,7 @@ TurnFx turn_effects(Battle& b, int i)
             drop_aff(f, cf);
             if (fx.fear) give_aff(f, fx.fear, 10, made_quick ? 1 : 0, true);
             f.fleeing = true;
+            f.panic = false;
             f.quick = true;
             f.target = -1;
             return TurnFx::RunsAway;
@@ -4023,6 +4024,7 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
                 (f.member >= 0 && f.rec[0xF7] < 0x80 && !f.quick) || (was >= 0 && (f.aff[was][3] & 1));
             if (b.fx && b.fx->fear) give_aff(f, b.fx->fear, minutes, made_quick ? 1 : 0, false);
             f.fleeing = true;
+            f.panic = false;
             if (made_quick) f.quick = true;
             f.target = -1;
             say(who[k], Did::Word, 0);
@@ -5247,7 +5249,7 @@ static int turn_undead_dk(Battle& b, const Tables& t, int cleric, create::Dice& 
         for (int i = 0; i < b.n; ++i) {
             const Fighter& f = b.f[i];
             const int ut = f.rec[0xE9];
-            if (!f.up() || !f.size || f.fleeing || (f.team() ? 1 : 0) == my || ut <= type || ut > limit) continue;
+            if (!f.up() || !f.size || (f.fleeing && !f.panic) || (f.team() ? 1 : 0) == my || ut <= type || ut > limit) continue;
             if (!range(b, t, cleric, i, false, nullptr)) continue;
             best = i;
             type = ut;
@@ -5262,6 +5264,7 @@ static int turn_undead_dk(Battle& b, const Tables& t, int cleric, create::Dice& 
         Fighter& f = b.f[best];
         if (v > 0) {
             f.fleeing = true;
+            f.panic = false;
             out[n++] = best;
         } else {
             f.rec[kHealth] = party::Gone;
@@ -5295,7 +5298,7 @@ int turn_undead(Battle& b, const Tables& t, int cleric, create::Dice& d, int* ou
         for (int i = 0; i < b.n; ++i) {
             const Fighter& f = b.f[i];
             const int ut = f.rec[0xE9];
-            if (!f.up() || !f.size || f.fleeing || (f.team() ? 1 : 0) == my || ut == 0 || ut >= type) continue;
+            if (!f.up() || !f.size || (f.fleeing && !f.panic) || (f.team() ? 1 : 0) == my || ut == 0 || ut >= type) continue;
             if (!range(b, t, cleric, i, false, nullptr)) continue;
             best = i;
             type = ut;
@@ -5306,6 +5309,7 @@ int turn_undead(Battle& b, const Tables& t, int cleric, create::Dice& d, int* ou
         Fighter& f = b.f[best];
         if (v > 0) {
             f.fleeing = true;
+            f.panic = false;
             out[n++] = best;
         } else {
             f.rec[kHealth] = party::Gone;
