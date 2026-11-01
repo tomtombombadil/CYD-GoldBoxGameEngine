@@ -2630,7 +2630,8 @@ const Profile kProfiles[] = {
                  .press_words = {0x1DCB, 0x1DF0}, .view_prompt = 0x21AC7,
                  .shop_heading = 0x6CF3,
                  .loot_heading = 0x6080,
-                 .the_end = 0x6A4C},
+                 .the_end = 0x6A4C,
+                 .npc_look = 0x8C7},           // (the NPCs' portraits: ovr18 +0x1262)
      .overland = &kPoolOverland},
     // Secret of the Silver Blades (being built: the screens and the maps so
     // far; zero = not known yet)
