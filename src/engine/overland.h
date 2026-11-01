@@ -21,7 +21,7 @@ constexpr int kView = 5;                 // the squares shown each way
 constexpr int kSpecials = 9;
 
 // A test of an area word (the engine's script memory) for a special square
-enum class Op : uint8_t { Never, Always, Ne, Bit, NoBit, Above };
+enum class Op : uint8_t { Never, Always, Ne, Bit, NoBit, Above, Eq };
 struct Test {
     uint16_t word;
     Op       op;

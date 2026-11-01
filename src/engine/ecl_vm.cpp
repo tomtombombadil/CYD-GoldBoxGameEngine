@@ -70,13 +70,13 @@ bool Vm::show_encounter()
     bool drew_sprite = false;
     if (!enc_.pic_on && dungeon) {
         h_.sprite(enc_.sprite, enc_.distance);
-        enc_.sprite_on = drew_sprite = true;
+        enc_.sprite_on = drew_sprite = sprite_up_ = true;
     } else if (!enc_.pic_on && set_.pool_map) {
         // Pool's wilderness (ovr8 +0x54E, view mode > 1): the sprite's
         // middle frame over the map as it is - the first time; again, the
         // view (map and rider) redrawn first (DOSBox: the merchants)
         h_.sprite(enc_.sprite, enc_.sprite_on ? 1 : 1 | kSpriteOver);
-        enc_.sprite_on = drew_sprite = true;
+        enc_.sprite_on = drew_sprite = sprite_up_ = true;
     }
     const uint8_t head = static_cast<uint8_t>(get(0x7EE1) & 0xFF);
     // Pool: the ENCOUNTER MENU itself shows the picture next to the party
@@ -713,6 +713,7 @@ bool Vm::init_script(bool reload)
     if (!entries(code_of(s_), s_.code_len, set_, e)) return false;
     for (int i = 0; i < 5; ++i) entry_[i] = static_cast<uint16_t>(e[i] == 0xFFFFFFFFu ? 0 : kBase + e[i]);
     sp_ = 0;
+    view_set_ = false;
     for (bool& f : flags_) f = false;
     cleared_name_ = cleared_status_ = false;
     sel_mon_ = -1;
@@ -901,6 +902,7 @@ Stop Vm::run(uint16_t address)
     if (address < kBase) return Stop::Stopped;
     pc_ = address - kBase;
     stop_ = new_script_ = false;
+    if (address == entry_[1]) sprite_up_ = false;     // (after a step the view is drawn anew)
     if (wait_ == Wait::Combat) {
         // A fight never resumed (lost - the party menu after it, a load or a
         // new game next): its monsters are gone as after any fight, or the
@@ -1650,7 +1652,10 @@ Stop Vm::step()
         // CMD_Picture, spriteChanged; DOSBox, Pool's slums: "The monsters
         // flee." then the goblins' sprite gone)
         const bool sprite = id == 0xFF && set_.pool_map && enc_.sprite_on && !enc_.pic_on;
-        if (id == 0xFF) reset_encounter();
+        if (id == 0xFF) {
+            reset_encounter();
+            sprite_up_ = false;
+        }
         // (Pool: a picture counts as the encounter's picture shown - START
         // ovr4 +0x8AD sets [0x84C9], so a following ENCOUNTER MENU leaves it
         // up while the head (0x7EE1) is the one last drawn; DOSBox, Podol's
@@ -1780,6 +1785,7 @@ Stop Vm::step()
     case 0x21:                                  // LOAD FILES
     case 0x37: {                                // LOAD PIECES
         if (!need(3)) return Stop::Error;
+        view_set_ = true;
         const int a = value(o[0]) & 0xFF, b = value(o[1]) & 0xFF, c = value(o[2]) & 0xFF;
         const bool dungeon = get(0x4BE6) != 0;
         if (op_ == 0x21) {
@@ -1977,7 +1983,13 @@ Stop Vm::step()
         if (!need(1)) return Stop::Error;
         const uint16_t w = o[0].word();
         if (w == set_.redraw_call) {
-            h_.redraw();
+            // (Pool, START ovr4 +0x2CFE: only after the block's LOAD FILES /
+            // LOAD PIECES - [0x4431]; a save loaded in the nomads' camp,
+            // whose first run skips them, walks to the hut unseen - DOSBox)
+            if (!set_.pool_map || view_set_) {
+                h_.redraw();
+                sprite_up_ = false;
+            }
         } else if (w == 0x6803) {
             // The event picture's next frame, then the game's delay
             h_.anim_step();
@@ -2147,6 +2159,11 @@ Stop Vm::step()
     }
     case 0x31:                                  // SPRITE OFF
         ++pc_;
+        // (Pool, START ovr4 +0x2AA9: the view redrawn only while a sprite
+        // is up - [0x84E3]; a picture alone stays. DOSBox, the nomads' camp:
+        // the headman's picture over "HERE YOU MAY REST" the second night)
+        if (set_.pool_map && !sprite_up_) return Stop::Running;
+        sprite_up_ = false;
         h_.picture(0xFF, 0xFF);
         return Stop::Running;
     case 0x32:                                  // FIND ITEM: anyone carries one of that type
@@ -2183,6 +2200,12 @@ Stop Vm::step()
         if (set_.sizes[0x34] == 1) {
             // Pool's: one operand, the clock's slot 1 (its program's handler)
             if (!need(1)) return Stop::Error;
+            // (Pool's handler, START ovr4 +0x2AC1, fetches the operand by an
+            // index it never sets - [bp-1], left by the GOSUB before it - and
+            // the clock doesn't move: DOSBox, the nomads' escort to the hut
+            // (ECL7 block 17, its only use) leaves it at 22:48. Game Fixes:
+            // the minutes the script asks for)
+            if (set_.pool_map && !rules::fixes()) return Stop::Running;
             advance_clock(1, value(o[0]) & 0xFF);
             return Stop::Running;
         }

@@ -243,7 +243,7 @@ int scroll_spells(party::Character& c, const classes::Tables& t, const Scrolls& 
             if (scribing ? v > 0x80 : v > 0) ids[n++] = v & 0x7F;
         }
     }
-    sort_by_level(t, ids, n);
+    if (!sc.unsorted) sort_by_level(t, ids, n);
     return n;
 }
 

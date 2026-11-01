@@ -73,6 +73,10 @@ struct Scrolls {
     uint8_t types[2] = {};
     uint8_t count_at = 0x30;
     bool    readers = false;
+    // Pool (START ovr16's Scribe list): the scrolls' spells in the items'
+    // order, each scroll's in its own - not sorted by level (a level's
+    // heading again wherever the level changes; DOSBox)
+    bool    unsorted = false;
 };
 // Secret's test for a spell on a scroll (GAME.OVR 0x2C64B with its scroll
 // flag): clerics' spells Wisdom 9+ and a cleric or a paladin past 8th level;

@@ -1280,7 +1280,7 @@ constexpr overland::Facts kPoolOverland = {
     {{{{0, OvOp::Never, 0}}},
      {{{0, OvOp::Never, 0}}},
      {{{0x4C8C, OvOp::Ne, 0xFF}}},
-     {{{0x4CD2, OvOp::Ne, 0}, {0x4C7C, OvOp::Bit, 8}, {0x4C9F, OvOp::Ne, 0}}},
+     {{{0x4CD2, OvOp::Ne, 0}, {0x4C7C, OvOp::Bit, 8}, {0x4C9F, OvOp::Eq, 0}}},   // (ovr28 +0x103: tents only while 0x4C9F != 0)
      {{{0x4CA0, OvOp::NoBit, 2}}},
      {{{0, OvOp::Always, 0}}},
      {{{0x4CA0, OvOp::NoBit, 1}}},
@@ -2630,7 +2630,8 @@ const Profile kProfiles[] = {
                  .press_words = {0x1DCB, 0x1DF0}, .view_prompt = 0x21AC7,
                  .shop_heading = 0x6CF3,
                  .loot_heading = 0x6080,
-                 .the_end = 0x6A4C},
+                 .the_end = 0x6A4C,
+                 .npc_look = 0x8C7},           // (the NPCs' portraits: ovr18 +0x1262)
      .overland = &kPoolOverland},
     // Secret of the Silver Blades (being built: the screens and the maps so
     // far; zero = not known yet)

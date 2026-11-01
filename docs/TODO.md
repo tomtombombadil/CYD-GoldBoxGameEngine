@@ -281,6 +281,37 @@ the Project as claude/TODO.md.
       graveyard's scripted squares (voice's gifts 8,2, crypt 12,4,
       tower 15,6, the paladin's wraith 15,8, the vampire 14,0, mummies
       9,11), Zhentil Keep, the pyramid, Mendor's library, Valjevo.
+      Part 16: the graveyard - skeletons / zombies (surprise both ways,
+      Flee, Advance -> Parlay), 1600 XP zombies, then wights (DOS
+      destroys the level 1-2 party by drain, the engine too: THE END)
+      and the mummies at 9,11 (party destroyed in DOS; the engine's
+      turned mummies, immune to plain weapons, flee forever - open,
+      see below). The graveyard's north (voice 8,2, crypt 12,4, tower,
+      wraith, vampire) is behind the tower's wights at 9,5 - out of
+      reach for this party. Matched: training (cleric / MU / fighter /
+      thief halls: one level a visit, XP capped below the next, 1000
+      gold, HP dice told), the spell to learn, the arena's partner
+      (RANDOM 250 picks the NPC), Id at the shop (200 gold), Scribe's
+      "can not scribe" (timed), the clerk's commissions, the harbour's
+      BAY boat, wilderness kobold surprises (Flee), the nomads' camp
+      (wire / crowd, parlay, feast, journal 55, two nights, "stay and
+      fight"). Fixed: 3dd05d1 an NPC joins as Pool's load makes it
+      (icon size / d6 colours, Random(256), portrait by class die,
+      class values - THAC0 19); 175bcce Scribe's list in the items'
+      order; 6962fd0 the nomads' tents' test (0x4C9F == 0 -> grass);
+      ea4ebd6 ECL CLOCK (0x34) doesn't move the clock (Game Fixes:
+      it does; SPEC 12); 6e120dd CAMPING with the view blocked;
+      d56bcf6 CALL 0x2C90 redraws only after the block's LOAD FILES /
+      PIECES; 26f3284 SPRITE OFF only while a sprite is up. Open:
+      (c) a fight whose turned undead can't be hurt and can't get
+      away never ends in the engine (their 0-damage blows reset the
+      15-round rule) - DOS not seen (its cleric didn't turn them);
+      (d) with 8 members DOS's party-menu redraw after End / Home
+      blanks "CREATE NEW CHARACTER" (cosmetic, not copied). Resume:
+      the nomads' kobold war (save G, ECL7 17, after "stay and
+      fight"), then Zhentil Keep, the pyramid, Mendor, Valjevo. Curse:
+      check ADD NPC's icon / portrait / class values, Scribe's order,
+      CALL 2E10 / SPRITE OFF conditions.
       Check in Curse's play test: spell-list paging,
       the camp text after View / Magic, Create's lists (Curse has the
       same list routine?), Begin's selection, View - Spells' prompt, PARLAY's prompt, Knock at a door's second locked

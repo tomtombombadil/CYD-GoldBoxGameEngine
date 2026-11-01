@@ -814,6 +814,10 @@ struct Profile {
         // rejoicing from row 5, column 2 (wrapped before column 38), "Press
         // any key to continue" in magenta; 0: Curse's (the text at row 3)
         uint32_t the_end = 0;
+        // Pool: an NPC's View portrait tables (DS; heads [sex * 8 + d8] 16
+        // bytes, then bodies [sex * 5 + d5] 10 each: cleric, fighter,
+        // magic-user, thief - its ovr18 +0x1262); 0: none
+        uint16_t npc_look = 0;
     } variant;
     // Pool's wilderness map (overland.h; null: none)
     const overland::Facts* overland;

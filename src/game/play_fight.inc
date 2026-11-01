@@ -221,8 +221,52 @@ int read_monster_items(const char* file, int block, uint8_t* out, int cap)
     return k;
 }
 
+// Pool's NPC as its load makes it (START ovr18 +0xEC4 / +0x1262, ovr24 +0):
+// a character's fight icon - size 1 for dwarves, gnomes and halflings, 2
+// for elves, half-elves, half-orcs and humans; body, arm and leg colours
+// and shield, weapon a d6 each as (d + 8) x 16 + d, the hair 0xC4 - a
+// random number (0xAB; Random(256)), the View portrait: a body by one of
+// its classes picked by a die (cleric / magic-user / thief / else the
+// fighter's row, a d5) and a head (a d8) from the program's tables
+// (variant.npc_look: heads 16 bytes, then bodies 10 each - cleric,
+// fighter, magic-user, thief; [sex * n + die]), then its class values
+// worked out (THAC0, saves, slots - the file's are its own)
+__attribute__((noinline)) void pool_npc_look(party::Character& ch)
+{
+    uint8_t* r = ch.rec;
+    const int race = r[0x74];
+    if (race == 1 || race == 3 || race == 5) r[0x144] = 1;
+    else if (race == 2 || race == 4 || race == 6 || race == 7) r[0x144] = 2;
+    for (int k = 1; k <= 6; ++k) {
+        if (k == 4) {
+            r[0x144 + k] = 0xC4;
+            continue;
+        }
+        const int dd = rng.roll(6, 1);
+        r[0x144 + k] = static_cast<uint8_t>((dd + 8) * 16 + dd);
+    }
+    r[0x126] = static_cast<uint8_t>(rng.roll(256, 1) - 1);
+    const uint16_t look = d->prof->variant.npc_look;
+    int cls[8], n = 0;
+    for (int i = 0; i <= 6; ++i)
+        if (static_cast<int8_t>(r[0x109 + i]) > 0) cls[++n] = i;
+    if (n == 0) cls[n = 1] = 2;
+    const int pick = cls[rng.roll(n, 1)];
+    const int sex = r[0x119];
+    const int body_row = pick == 0 ? 16 : pick == 5 ? 36 : pick == 6 ? 46 : 26;
+    const int b = rng.roll(5, 1), h = rng.roll(8, 1);
+    uint8_t t;
+    if (look && program_ds(static_cast<uint16_t>(look + body_row + sex * 5 + b), &t, 1)) r[0x140] = t;
+    if (look && program_ds(static_cast<uint16_t>(look + sex * 8 + h), &t, 1)) r[0x13F] = t;
+    MagicRules* m = nullptr;
+    if (load_rules(m)) classes::class_bonuses(ch, m->tables);
+    delete m;
+    if (names) rules::recalc(ch, *names, d->facts);
+}
+
 // ADD NPC: MON<area> block `id` (its record, effects, items) joins the party
-// at its end and is selected; its fight icon is CPIC<area> block `id`
+// at its end and is selected; its fight icon is CPIC<area> block `id` (Pool:
+// its own character icon - pool_npc_look)
 bool npc_join(int id)
 {
     if (pt->count >= party::kMaxParty) return false;
@@ -240,6 +284,7 @@ bool npc_join(int id)
     const int na = read_block(file, id, &ch.affects[0][0], sizeof ch.affects);
     ch.n_affects = na > 0 ? na / static_cast<int>(party::kAffectSize) : 0;
     ch.rec[0x126] = static_cast<uint8_t>(id);
+    if (pool_files()) pool_npc_look(ch);
     // The lowest icon slot no one else has
     for (int slot = 0; slot < 8; ++slot) {
         bool used = false;
@@ -1306,7 +1351,9 @@ void compose_icon(int slot, const party::Character& ch)
     // at 0x126): its own picture. (A player character's 0x126 is a random
     // number and head / body 0 are ordinary choices - v0.40.3: the GOG
     // sample party fought without icons.)
-    if (ch.rec[0xF7] >= 0x80 && ch.rec[0x126] && !ch.rec[0x141] && !ch.rec[0x142]) {
+    // (Pool: an NPC is drawn as a character - its CHEAD / CBODY icon, ovr18
+    // +0x482; 0x126 is a random number there)
+    if (!pool_files() && ch.rec[0xF7] >= 0x80 && ch.rec[0x126] && !ch.rec[0x141] && !ch.rec[0x142]) {
         load_monster_icon(slot, ch.rec[0x126]);
         if (fg->icon[slot].px[0]) return;
     }

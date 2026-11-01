@@ -48,6 +48,7 @@ bool holds(const Test& t, GetWord get, void* ctx)
     case Op::Bit: return (v & t.value) != 0;
     case Op::NoBit: return (v & t.value) == 0;
     case Op::Above: return v > t.value;
+    case Op::Eq: return v == t.value;
     default: return false;
     }
 }
