@@ -107,8 +107,13 @@ HAL, CI, flasher and UI rules come from there; copy from it freely.
   SNEG (Tom, 2026-10-10, v0.70.0): its PDFs are typeset text, so the
   journal entries come from the Gold Box Companion's
   `GBC/Games/<nn. Game>/Game.dat` (`<journal N>` text) + `JE_NNN.jpg`
-  (`journal::make_gbc`); text entries are laid out by the viewer (Zoom =
-  Small / Medium / Large text). Since 2026-10-31 (Tom: tavern tales said
+  (`journal::make_gbc`). Text entries and the book's text pages (Tom,
+  2026-10-31) are drawn in the game's look: its own text-screen border,
+  black inside, the Settings' Game Font, 8 x 8 cells (Zoom = Normal /
+  Large 2x) - INTO the game canvas, the game screen saved to
+  `_CYD/SCREEN.TMP` meanwhile (`frame::save` / `restore`,
+  `play::text_screen` / `text_line`, viewer.cpp `jg_*`; no switch; the
+  old Small / Medium / Large look only as the fallback; SPEC 7). Since 2026-10-31 (Tom: tavern tales said
   "unknown edition"; he wants the book) the scan also reads the PDF's
   own text on the board (`engine/pdf_text.*`, `journal::make_book`):
   BOOK.TXT (the book view shows it as text, a PDF page at a time) and

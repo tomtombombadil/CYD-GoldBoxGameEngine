@@ -95,6 +95,10 @@ void draw_glyph(pic::Canvas& c, const Font& f, int g, int x, int y, uint8_t fg, 
 // light grey - DOSBox); from -1: none
 void set_ink_remap(int from, int to);
 
+// Glyph g's ink only, each pixel a scale x scale square, top-left at pixel
+// (x, y) (the journal's text screens - Large text: 2). The paper is left.
+void draw_glyph_scaled(pic::Canvas& c, const Font& f, int g, int x, int y, uint8_t fg, int scale);
+
 // Prints text from cell (col, row) rightwards; stops at the right edge.
 // Returns the column after the last character.
 int draw_text(pic::Canvas& c, const Font& f, const char* s, int col, int row, uint8_t fg, int bg);

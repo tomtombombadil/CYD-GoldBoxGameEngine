@@ -3654,6 +3654,7 @@ constexpr int kPieceGap = 6;              // white between an entry's pieces
 enum { kZoomColumn = 0, kZoomWhole = 1 };
 const char* const kZoomSlim[2] = {"Column", "Whole"};
 const char* const kTextSlim[3] = {"Small", "Medium", "Large"};
+const char* const kGameSlim[2] = {"Normal", "Large"};      // (the game's look: 8 x 8 text, or twice that)
 
 // A piece's rows from JOURNAL.DAT
 struct JournalRows : resample::RowSource {
@@ -3701,12 +3702,16 @@ struct JournalView {
     int      text_at[kMaxJournalPieces] = {};   // piece i's text in it (-1: a picture)
     int      l0[kMaxJournalPieces] = {}, ln[kMaxJournalPieces] = {};   // piece i's lines
     int      n_lines = 0;
-    uint16_t line_at[700], line_len[700];  // line_len 0: a paragraph's gap
+    uint16_t line_at[1000], line_len[1000];  // line_len 0: a paragraph's gap
     int      line_px = 16;
     // The book as text (a typeset journal PDF - the Steam / SNEG releases):
     // BOOK.TXT's page book_page of book_pages, one text piece
     bool     book = false;
     int      book_page = 0, book_pages = 0;
+    // The game's look (Tom, 2026-10-31): text drawn on the game's own text
+    // screen - its border, black inside, the game font chosen in Settings -
+    // in the borrowed game canvas (jg_begin); top is then a line number
+    bool     game = false;
     ~JournalView()
     {
         free(text);
@@ -3714,6 +3719,146 @@ struct JournalView {
     }
 };
 JournalView* jv = nullptr;
+constexpr int kMaxLines = 999;            // (line_at's size - 1)
+
+// ---- The journal's text in the game's look -------------------------------
+// Tom, 2026-10-31: "display the text on a black background using the game
+// font (the same one chosen in the settings) ... the screen included the
+// game border". Text entries (journal entries, tavern tales,
+// proclamations) and the typeset book's text pages are drawn into the game
+// canvas itself - the frame the game puts round a full-screen text, the
+// text in 8 x 8 cells (Zoom: Normal 38 x 22, Large 2x: 19 x 11), wrapped
+// at words - shown 1:1 on 320x240 and 1.5x on 480x320 (as the Resource
+// Test's 1.5x), its top 24 rows (row 24, the menu line, isn't needed). The
+// game screen waits on the card meanwhile (SCREEN.TMP: written once, read
+// back into the same memory when the viewer closes) - no memory beyond
+// what the viewer had. Picture entries (the scanned GOG journals) keep the
+// paper look; the old text look is the fallback when the canvas can't be
+// borrowed (no game open, the canvas parked, the card won't take it).
+bool jg_saved = false;                    // the game screen is on the card; the canvas is the viewer's
+int  jg_zoom = 0;                         // 0 Normal, 1 Large (kept while the board runs)
+constexpr int kJgRows = 24;               // canvas cell rows shown (the border's 0-23)
+int jg_scale() { return jg_zoom + 1; }
+int jg_cols() { return 38 / jg_scale(); }
+int jg_lines() { return 22 / jg_scale(); }
+bool game_look() { return screen == Screen::Journal && jv && jv->have && jv->game; }
+void jg_path(char* out, size_t cap) { library::cache_path("SCREEN.TMP", out, cap); }
+
+// The canvas borrowed (the game screen to the card) and the text screen's
+// frame drawn in it; false: the old look (nothing changed)
+bool jg_begin()
+{
+    if (jg_saved) return true;
+    if (play_error || frame::parked()) return false;
+    char path[96];
+    jg_path(path, sizeof path);
+    if (!frame::save(path)) {
+        memlog::note("journal: game screen not saved - text in the engine's look");
+        return false;
+    }
+    if (!play::text_screen(frame::canvas())) return false;      // (no game: the canvas untouched)
+    jg_saved = true;
+    return true;
+}
+
+// The game screen back (the canvas as it was) and the game's 1:1 layout
+void jg_end()
+{
+    if (!jg_saved) return;
+    jg_saved = false;
+    char path[96];
+    jg_path(path, sizeof path);
+    if (!frame::parked() && !frame::restore(path)) {
+        // (the game's next screen draws over it; the text that waited is lost)
+        memlog::note("journal: game screen not read back from the card - blank until the game draws");
+        frame::canvas().fill_black(0, 0, pic::kScreenW, pic::kScreenH);
+    }
+    frame::set_scale(frame::Scale::One);
+    frame::set_left(true);
+}
+
+// top kept in range: at most the last page's start (pages of jg_lines()
+// lines, as a book's - the last one may end early)
+void jg_clamp()
+{
+    const int rows = jg_lines();
+    const int max_top = jv->n_lines > 0 ? (jv->n_lines - 1) / rows * rows : 0;
+    if (jv->top > max_top) jv->top = max_top;
+    if (jv->top < 0) jv->top = 0;
+}
+
+// The text pieces in lines of jg_cols() characters, broken at spaces; a
+// paragraph's end (and a piece's) a blank line, never two in a row or one
+// at the top
+void jg_layout()
+{
+    JournalView& v = *jv;
+    const int cols = jg_cols();
+    v.n_lines = 0;
+    auto gap = [&](int at) {
+        if (v.n_lines == 0 || v.line_len[v.n_lines - 1] == 0 || v.n_lines >= kMaxLines) return;
+        v.line_at[v.n_lines] = static_cast<uint16_t>(at);
+        v.line_len[v.n_lines++] = 0;
+    };
+    for (int i = 0; i < v.count; ++i) {
+        if (v.text_at[i] < 0) continue;
+        const char* t = v.text;
+        const int start = v.text_at[i];
+        const int n = start + static_cast<int>(strlen(t + start));
+        int p0 = start;
+        while (p0 < n && v.n_lines < kMaxLines) {
+            int end = p0;                              // this paragraph: [p0, end)
+            while (end < n && t[end] != '\n') ++end;
+            int p = p0;
+            while (p < end && t[p] == ' ') ++p;
+            while (p < end && v.n_lines < kMaxLines) {
+                int fit = end - p <= cols ? end : p + cols;
+                if (fit < end) {
+                    int k = fit;                       // the last space that ends a line here
+                    while (k > p && t[k] != ' ') --k;
+                    if (k > p) fit = k;                // (else a word longer than a line: cut)
+                }
+                int len = fit - p;
+                while (len > 0 && t[p + len - 1] == ' ') --len;
+                if (len > 0) {
+                    v.line_at[v.n_lines] = static_cast<uint16_t>(p);
+                    v.line_len[v.n_lines++] = static_cast<uint16_t>(len);
+                }
+                p = fit;
+                while (p < end && t[p] == ' ') ++p;
+            }
+            gap(end);
+            p0 = end + 1;
+        }
+        gap(n);
+    }
+    while (v.n_lines > 0 && v.line_len[v.n_lines - 1] == 0) --v.n_lines;
+    jg_clamp();
+}
+
+// The page shown: the lines from top in the canvas, its rows to the panel
+void jg_draw()
+{
+    JournalView& v = *jv;
+    pic::Canvas& c = frame::canvas();
+    const int sc = jg_scale();
+    c.fill_black(8, 8, pic::kScreenW - 16, 22 * 8);
+    for (int r = 0; r < jg_lines() && v.top + r < v.n_lines; ++r) {
+        const int k = v.top + r;
+        if (v.line_len[k]) play::text_line(c, v.text + v.line_at[k], v.line_len[k], 8, 8 + r * 8 * sc, sc);
+    }
+    frame::set_left(false);
+    frame::set_scale(ui::large() ? frame::Scale::OneAndHalf : frame::Scale::One);
+    frame::present_rows(0, kJgRows * 8);
+}
+
+// Pages: "2 of 3" from the line on top
+void jg_pages(int* at, int* pages)
+{
+    const int rows = jg_lines();
+    *pages = jv->n_lines > 0 ? (jv->n_lines - 1) / rows + 1 : 1;
+    *at = jv->top + rows >= jv->n_lines ? *pages : jv->top / rows + 1;
+}
 
 constexpr int kTextPad = 8;               // a text entry's margins
 ui::Font journal_text_font()
@@ -3758,8 +3903,8 @@ ui::Rect journal_area()
 // The viewers - a journal entry, the book (Tom, 2026-10-10): no title bar
 // (Back is in the bottom row) and a slim row of keys about 57% of the usual
 // height; the page numbers sit in the row between Prev and Next
-int slim_h() { return ui::large() ? 32 : 22; }
-int slim_gap() { return ui::large() ? 4 : 3; }
+int slim_h() { return ui::large() ? (game_look() ? 28 : 32) : 22; }   // (480x320: under the 1.5x text screen's 288 rows)
+int slim_gap() { return ui::large() ? (game_look() ? 2 : 4) : 3; }
 ui::Rect slim_key(int i, int n)
 {
     const int gp = slim_gap();
@@ -3806,11 +3951,11 @@ int journal_text_piece(int i)
     const int n = start + static_cast<int>(strlen(t + start));
     char buf[256];
     int p0 = start;
-    while (p0 < n && v.n_lines < 699) {
+    while (p0 < n && v.n_lines < kMaxLines) {
         int end = p0;                                  // this paragraph: [p0, end)
         while (end < n && t[end] != '\n') ++end;
         int p = p0;
-        while (p < end && v.n_lines < 699) {
+        while (p < end && v.n_lines < kMaxLines) {
             // The most words from p that fit
             int fit_end = p, k = p;
             while (k < end) {
@@ -3832,7 +3977,7 @@ int journal_text_piece(int i)
             p = fit_end;
             while (p < end && t[p] == ' ') ++p;
         }
-        if (end < n && v.n_lines < 699) {
+        if (end < n && v.n_lines < kMaxLines) {
             v.line_at[v.n_lines] = static_cast<uint16_t>(end);
             v.line_len[v.n_lines] = 0;                 // the gap
             ++v.n_lines;
@@ -3894,6 +4039,7 @@ bool open_journal(char kind, int number)
     jv->have = false;
     jv->sc_piece = -1;
     jv->pal_black = -1;
+    jv->game = false;
     const library::GameDir& g = game_dirs[game_sel];
     jv->has_pdf = g.journal[0] != 0;
     // Without the pictures: as the original game, the printed journal - or
@@ -3977,7 +4123,10 @@ bool open_journal(char kind, int number)
             }
             if (ok && (jv->maxw > 0 || n_text)) {
                 jv->have = true;
-                journal_layout();
+                // Text only: in the game's look when the canvas can be borrowed
+                jv->game = jv->text_mode && jg_begin();
+                if (jv->game) jg_layout();
+                else journal_layout();
             }
             if (!ok) {
                 memlog::note("journal entry: not enough memory");
@@ -4042,6 +4191,16 @@ bool open_text_book(int p, bool at_end)
     jv->sc_piece = -1;
     if (!was_book) jv->zoom = 1;                // (Medium; kept from page to page)
     jv->top = 0;
+    jv->game = jg_begin();
+    if (jv->game) {
+        jg_layout();
+        if (at_end) {
+            jv->top = jv->n_lines;             // (the page's last screenful)
+            jg_clamp();
+        }
+        go(Screen::Journal);
+        return true;
+    }
     journal_layout();
     if (at_end) {
         jv->top = jv->total_h;
@@ -4111,7 +4270,10 @@ void draw_journal()
     // Just "2 of 3" (Tom, v0.66.1): the entry's number is in its picture
     char page[32];
     int pages = 1, at = 1;
-    if (jv && jv->have && jv->total_h > a.h) {
+    const bool gl = game_look();
+    if (gl) {
+        jg_pages(&at, &pages);
+    } else if (jv && jv->have && jv->total_h > a.h) {
         pages = (jv->total_h - a.h + journal_step() - 1) / journal_step() + 1;
         at = jv->top + a.h >= jv->total_h ? pages : jv->top / journal_step() + 1;
     }
@@ -4119,13 +4281,18 @@ void draw_journal()
     if (jv && jv->book) snprintf(page, sizeof page, "%d of %d", jv->book_page, jv->book_pages);   // (the PDF's pages)
     const int nk = journal_keys();
     if (nk >= 5) {
-        const bool more = jv->top + a.h < jv->total_h || (jv->book && jv->book_page < jv->book_pages);
+        const bool more = (gl ? jv->top + jg_lines() < jv->n_lines : jv->top + a.h < jv->total_h) ||
+                          (jv->book && jv->book_page < jv->book_pages);
         const bool less = jv->top > 0 || (jv->book && jv->book_page > 1);
         for (int c = 0; c < nk; ++c) {
             const ui::Rect r = slim_key(c, nk);
             switch (journal_key_at(c)) {
             case kJBack: ui::key(r, "Back"); break;
             case kJZoom:
+                if (gl) {
+                    ui::key(r, kGameSlim[jg_zoom], jg_zoom ? ui::KeyStyle::Lit : ui::KeyStyle::Normal);
+                    break;
+                }
                 ui::key(r, jv->text_mode ? kTextSlim[jv->zoom] : kZoomSlim[jv->zoom],
                         jv->zoom != (jv->text_mode ? 1 : kZoomColumn) ? ui::KeyStyle::Lit : ui::KeyStyle::Normal);
                 break;
@@ -4143,6 +4310,13 @@ void draw_journal()
     if (!jv || !jv->have) {
         wrap_text(ui::gap() * 3, a.y + ui::gap() * 2, ui::width() - ui::gap() * 6, jv ? jv->why : "",
                   ui::Font::Normal, style::kText, true);
+        return;
+    }
+    if (gl) {
+        jg_draw();                          // (the game's text screen)
+#if defined(CYD_QEMU)
+        qemu::mem_now("journal entry drawn (game look)");
+#endif
         return;
     }
     // On white, like the journal's paper
@@ -4211,6 +4385,7 @@ void leave_journal()
     delete jv;
     jv = nullptr;
     close_book();
+    jg_end();                               // (the game screen back from the card)
     // The next one the same text named (Pool's "UNDER ENTRIES 23 AND 14",
     // its City Hall's proclamations): shown at once, one after the other
     char jk;
@@ -4298,6 +4473,33 @@ void tap_journal(const ui::Tap& t)
         return;
     }
     if (!jv || !jv->have || k == kJLabel) return;
+    if (game_look()) {
+        // A page of lines at a time; past the ends, the book's page before /
+        // after; Zoom keeps the line on top in view (its page)
+        const int rows = jg_lines();
+        if (k == kJPrev) {
+            if (jv->top > 0) jv->top = jv->top > rows ? (jv->top - 1) / rows * rows : 0;
+            else if (jv->book && jv->book_page > 1 && !open_text_book(jv->book_page - 1, true))
+                memlog::note("journal book (text): page not shown");
+        } else if (k == kJNext) {
+            if (jv->top + rows < jv->n_lines) {
+                jv->top = jv->top / rows * rows + rows;
+                jg_clamp();
+            } else if (jv->book && jv->book_page < jv->book_pages && !open_text_book(jv->book_page + 1, false)) {
+                memlog::note("journal book (text): page not shown");
+            }
+        } else if (k == kJZoom) {
+            const int off = jv->top < jv->n_lines ? jv->line_at[jv->top] : 0;
+            jg_zoom = 1 - jg_zoom;
+            jg_layout();
+            int line = 0;
+            while (line + 1 < jv->n_lines && jv->line_at[line + 1] <= off) ++line;
+            jv->top = line / jg_lines() * jg_lines();
+            jg_clamp();
+        }
+        dirty = true;
+        return;
+    }
     const ui::Rect a = view_area();
     if (k == kJPrev && jv->top == 0 && jv->book && jv->book_page > 1) {
         if (!open_text_book(jv->book_page - 1, true)) memlog::note("journal book (text): page not shown");
@@ -4329,6 +4531,14 @@ void tick_journal()
 {
     int dx, dy;
     if (!pan_done(&dx, &dy) || !jv || !jv->have) return;
+    if (game_look()) {
+        // (lines of 8 x scale canvas rows; 1.5x on 480x320)
+        const int line_px = 8 * jg_scale() * (ui::large() ? 3 : 2) / 2;
+        jv->top -= (dy + (dy < 0 ? -line_px / 2 : line_px / 2)) / line_px;
+        jg_clamp();
+        dirty = true;
+        return;
+    }
     jv->top -= dy;
     journal_layout();
     dirty = true;
