@@ -2578,6 +2578,41 @@ a PC, PortMaster handhelds):
     tap; the fight's own key row (manual Move / Aim) gets a Map key before
     Game for it (its arrows 2 px narrower). Settings key **Companion
     Views** (on by default; As Original turns it off: the map alone).
+  - `CYD_CAMP_FIX` (Tom, 2026-11-01: "add the Fix menu option to the
+    PoolRad encamp menu (and any other game that lacks it)"): of the nine
+    games only Pool of Radiance's camp lacks Fix (checked: the camp words
+    each program holds). With the switch Pool's camp is "Save View Magic
+    Rest Alter Fix Exit" and its Fix is Curse's code (`fix_party`,
+    `spells::fix_plan`) with Pool's own cure spells (kPoolCamp), rest,
+    memorizing and wandering monsters (an encounter breaks it off as a
+    Rest's). Settings key **Camp Fix** (on by default). Whether such
+    additions get their own "Game Enhancements" list beside Game Fixes is
+    Tom's open question (docs/TODO.md).
+  - `CYD_CHEATS` (Tom, 2026-11-01): the in-game Game menu's **Cheats** tab
+    (last), keys **Healer**, **Merchant**, **Sanctuary** - usable only
+    while the party stands at the exploring menu (3D, wilderness or an
+    overland map; dimmed with a note otherwise: not in a fight, a camp, a
+    shop or while the game asks). Each opens the game's own screen with
+    the exploring screen waiting on the card (`_CYD/CHEAT.TMP`); leaving
+    it puts that screen back and the exploring menu, no script involved.
+    Healer: the game's temple (its own list and words; Darkness's Repair
+    too), every cure free - no price asked, nothing paid. Merchant: the
+    game's shop with the goods of all its shops (Curse-style games: the
+    ITEM blocks every script's shop sets out - `ecl::find_shops`, SAVE 1
+    into the shop word with a TREASURE before the COMBAT; Darkness,
+    Treasures, Death Knights, Dark Queen: every SHOP n list of the
+    program), each kind once, on the heap while open (Curse 72, Pool 88,
+    Darkness 144, Treasures 167 goods); Buy / View (Sell, Id) / Appraise
+    as the game's shops; the price factor the lowest any of its shops
+    sets (Curse 8 = half; most 16 = the goods' value; the Dark Queen's
+    scripts aren't read: 16, or less if the word asks less); selling is
+    the games' one rule (half value); the coin exchange Game Fix as in any
+    shop. Sanctuary: the game's camp opened without the area's
+    before-camp script, its rests (and Fix) never interrupted - no
+    wandering monsters, no city watch, no camp-interrupted script -
+    Darkness's towns allow Rest and Fix there. Settings key **Cheats Tab**
+    (on by default; off hides the tab). Where: play.cpp (cheat_*),
+    viewer.cpp (the tab), engine/ecl.* (find_shops).
 
 ## 12. Where the engine differs from the original games (Tom, 2026-10-10: keep this list up to date)
 
@@ -2586,6 +2621,8 @@ the originals is a bug. Engine comforts with a `features.h` switch are
 marked (switch); since v0.72.0 the player can also turn each one off in
 the game's Settings (As Original: all of them).
 
+- **Pool's camp has Fix** and **every game has the Cheats tab** (Tom,
+  2026-11-01; switches `CYD_CAMP_FIX`, `CYD_CHEATS` - section 11).
 - **Every game** (Tom, 2026-10-31): a one-choice "PRESS ENTER TO
   CONTINUE" menu goes on with any key or a tap, movement keys included
   (the originals wait for Return); after a script moves the party, the

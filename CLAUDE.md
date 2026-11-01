@@ -454,6 +454,15 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   engine writes rolls down only via `combat::g_rolls` (log_roll in
   attack / saving_throw / harm); new dice that a page tells of go
   through log_roll, and play stays identical with the switch on or off.
+- Camp Fix and Cheats (Tom, 2026-11-01; SPEC 11): `CYD_CAMP_FIX` -
+  Pool's camp gets Curse's Fix (the only game lacking it); `CYD_CHEATS` -
+  the Game menu's Cheats tab: Healer (the game's temple, free), Merchant
+  (all its shops' goods - `ecl::find_shops` / the SHOP n lists - at the
+  lowest price factor its shops set), Sanctuary (its camp, rests never
+  interrupted); only at the exploring menu (`play::cheats_ready`), the
+  screen parked in `_CYD/CHEAT.TMP`. Settings keys Camp Fix / Cheats Tab
+  (`comforts_off2`). A "Game Enhancements" list: Tom's open question
+  (TODO).
 - Gold Box Companion files (Tom, 2026-10-11): its author's work - read
   from the player's copy on the card, NEVER shipped or copied into the
   repo (no license). Its combat icons: `/GOLDBOX/GBC/DAX-Icons-EGA`

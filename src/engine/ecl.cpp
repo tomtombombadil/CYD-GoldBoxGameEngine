@@ -177,4 +177,75 @@ MapLoad find_map_load(const uint8_t* block, uint32_t len, const OpSet& set)
     return m;
 }
 
+void find_shops(const uint8_t* block, uint32_t len, const OpSet& set, ShopFinds& out)
+{
+    constexpr uint8_t kSave = 0x09, kTreasure = 0x27, kCombat = 0x24;
+    constexpr uint16_t kShopWord = 0x7F6C, kPriceWord = 0x7F6D;
+    const uint32_t pre = set.no_prefix ? 0 : 2;
+    if (len < pre + 1) return;
+    const uint8_t* c = block + pre;
+    const uint32_t n = len - pre;
+    auto plain = [](const Operand& o, int* v) {
+        if (o.code == 0 || o.code == 2) {
+            *v = o.code == 0 ? o.low : o.word();
+            return true;
+        }
+        return false;
+    };
+    auto address = [](const Operand& o) { return o.code == 1 || o.code == 3; };
+    // One instruction of a stretch of code: the shop word set and the last
+    // TREASURE's block (0xFFFF: none) since the last COMBAT - both before
+    // it, in either order, are a shop's goods (taken at once: the COMBAT
+    // may be code shared by several shops)
+    bool shop = false;
+    uint16_t items = 0xFFFF;
+    auto look = [&](const Insn& in) {
+        int v = 0;
+        if (in.op == kSave && in.count >= 2 && address(in.ops[1]) && plain(in.ops[0], &v)) {
+            const uint16_t a = in.ops[1].word();
+            if (a == kShopWord && v == 1) shop = true;
+            if (a == kPriceWord || (set.byte_map && a == 0x28)) {      // (Darkness / Treasures: its byte 0x28)
+                const int f = v == 0 ? 0x10 : v;
+                if ((f & (f - 1)) == 0 && f <= 0x80 && (!out.factor_lo || f < out.factor_lo))
+                    out.factor_lo = static_cast<uint8_t>(f);
+            }
+        } else if (in.op == kTreasure && in.count >= 8 && plain(in.ops[7], &v) && (v & 0xFF) < 0x80) {
+            items = static_cast<uint16_t>(v & 0xFF);
+        } else if (in.op == kCombat) {
+            shop = false;
+            items = 0xFFFF;
+        }
+        if (shop && items != 0xFFFF) {
+            bool have = false;
+            for (int k = 0; k < out.n_blocks; ++k) have = have || out.blocks[k] == items;
+            if (!have && out.n_blocks < ShopFinds::kMax) out.blocks[out.n_blocks++] = static_cast<uint8_t>(items);
+        }
+    };
+    // The code in order, start to end (a shop's code is plain: a TREASURE,
+    // the words, the COMBAT - jumps and shared code don't hide it then);
+    // what isn't an instruction, and every jump away, ends a stretch. The
+    // 5 entry points first (a filler byte and an operand each) aren't code
+    uint32_t p = 0;
+    for (int k = 0; k < 5 && p + 2 < n; ++k) {
+        const uint8_t code = c[p + 1];
+        p += 1 + (code == 1 || code == 2 || code == 3 || code == 0x81 ? 3 : code == 0x80 ? 2u + c[p + 2] : 2);
+    }
+    while (p < n) {
+        Insn in;
+        if (!decode(c, n, p, set, in) || in.next <= p) {
+            ++p;
+            shop = false;
+            items = 0xFFFF;
+            continue;
+        }
+        look(in);
+        if (in.op == set.exit || in.op == set.go_to || in.op == set.ret || in.op == set.new_ecl ||
+            (set.end_op && in.op == set.end_op)) {
+            shop = false;
+            items = 0xFFFF;
+        }
+        p = in.next;
+    }
+}
+
 } // namespace ecl

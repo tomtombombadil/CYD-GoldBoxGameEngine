@@ -220,4 +220,21 @@ struct MapLoad {
 // OpSet::no_prefix).
 MapLoad find_map_load(const uint8_t* block, uint32_t len, const OpSet& set);
 
+// What an area script's shops sell (the Cheats tab's Merchant - Tom,
+// 2026-11-01): the ITEM<area> blocks a shop sets out - a TREASURE with a
+// plain block number after which (or before which) the script sets the
+// shop word (SAVE 1 into 0x7F6C) and starts the "fight" that opens it
+// (COMBAT) - and the price factors its shops set (SAVE into 0x7F6D, in
+// 16ths: 0x10 the goods' own value, 0x08 half, 0x20 double ...). Curse's
+// opcodes (SAVE 0x09, TREASURE 0x27, COMBAT 0x24 - Pool, Secret,
+// Champions and Gateway keep them); SHOP n's games list their shops in
+// the program instead. The block's code read in order, start to end.
+struct ShopFinds {
+    static constexpr int kMax = 48;
+    uint8_t blocks[kMax] = {};
+    int     n_blocks = 0;
+    uint8_t factor_lo = 0;          // the lowest price factor set (0: none seen)
+};
+void find_shops(const uint8_t* block, uint32_t len, const OpSet& set, ShopFinds& out);
+
 } // namespace ecl

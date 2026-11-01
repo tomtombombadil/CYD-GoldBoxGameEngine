@@ -7,6 +7,19 @@ the Project as claude/TODO.md.
 
 ## Tom
 
+- [ ] "Game Enhancements" (Tom, 2026-11-01: "We may need to have another
+      toggle/list in addition to Game Fixes ... I'll think about that"):
+      should additions like Pool's camp Fix get a list of their own
+      beside Game Fixes? Meanwhile Camp Fix sits with the comforts
+      (Settings key Camp Fix, features.h CYD_CAMP_FIX). Don't ask again -
+      Tom's to decide.
+- [ ] Try (2026-11-01, not pushed yet): Pool's camp Fix (a hurt party,
+      a cleric with Cure Light Wounds); the Game menu's Cheats tab -
+      Healer (the temple's cures free), Merchant (every shop's goods,
+      Next / Prev through them; Curse's half price), Sanctuary (a rest in
+      Phlan's slums the watch can't break). Cheats work at the exploring
+      menu only; Settings - Cheats Tab Off hides the tab.
+
 - [x] Spell lists open on the first spell with Memorize lit, the highlight stays after Memorize, "Memorize these spells?" on Yes, Pool's rest menu lit by whole words, a menu left by Exit starts on its first word (the shop's Buy) - Tom, 2026-10-31 (v0.161.2)
 - [ ] Companion Views (2026-11-01, Settings, on by default): 480x320 -
       tap the map beside the game: Party (icons, HP bars, effects), then
@@ -79,6 +92,14 @@ the Project as claude/TODO.md.
       the new square at once (the original shows the old one). SPEC 12.
 
 ## Claude
+
+- [ ] Cheats tab (2026-11-01): checked in the playsim for Pool, Curse,
+      Secret, Darkness, Treasures, Gateway, Death Knights (Healer /
+      Merchant / Sanctuary) - not yet for Champions (its save A loops in
+      the Solace camp / city menu) and the Dark Queen (its save starts in
+      Palanthas's city menu; its Merchant reads the SHOP lists but not
+      the scripts' price words - 16 assumed). The 320x240 / 480x320 tab
+      and keys only built, not seen on a board (QEMU has no screen).
 
 - [ ] Rule tests (2026-11-01; CLAUDE.md "Rule tests"): the fight checker
       (R1-R12), `fightfuzz` and `behave matrix` run clean on all nine

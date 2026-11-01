@@ -217,6 +217,19 @@ Data* d = nullptr;
 party::Party* pt = nullptr;
 items::Names* names = nullptr;     // item name words and types
 items::Ground* ground = nullptr;   // treasure / a shop's goods (own block: RAM is tight)
+// The Cheats tab's screen on now (Tom, 2026-11-01; features.h CYD_CHEATS):
+// the temple / shop / camp opened by the Game menu, not by a script
+enum class Cheat : uint8_t { None, Healer, Merchant, Sanctuary };
+Cheat cheat = Cheat::None;
+// The Merchant's goods (every shop's - more than a counter holds: Pools of
+// Darkness's shops have ~150 kinds): on the heap while it's open
+constexpr int kCheatGoods = 255;
+uint8_t (*cheat_goods)[items::kRecordSize] = nullptr;
+int cheat_n = 0, cheat_cap = 0;
+bool merchant_goods() { return cheat == Cheat::Merchant && cheat_goods; }
+void cheat_free_goods();
+void cheat_end(pic::Canvas& c);
+bool cheat_draw_shop(pic::Canvas& c);
 const char* rw(int i) { return d->roster[i]; }
 ecl::Vm* vm = nullptr;
 Host* host = nullptr;
@@ -3444,7 +3457,8 @@ void pick_line(int i, char* out, size_t cap);     // Create New Character's list
 void draw_input(pic::Canvas& c);
 
 // The shop's goods are listed last first (as the games list them)
-const uint8_t* goods(int i) { return ground->item[ground->n - 1 - i]; }
+const uint8_t* goods(int i) { return merchant_goods() ? cheat_goods[cheat_n - 1 - i] : ground->item[ground->n - 1 - i]; }
+int goods_count() { return merchant_goods() ? cheat_n : ground->n; }
 int shop_price(const uint8_t* it);
 
 // Combat and the treasure after it (play_fight.inc)
@@ -4454,10 +4468,21 @@ bool tr_crown()
     // (its camp, ovl 0x74 +0x2EDE: game byte 0x3E set and 0x25B not 2)
     return d->prof->variant.tr && d->w_crown_menu[0] && d->gs.area1[0x3E] && d->gs.area1[0x25B] != 2;
 }
+bool camp_fix_on();
 void camp_words(char* out, size_t cap)
 {
     snprintf(out, cap, "%s", tr_crown() ? d->w_crown_menu : d->w_camp_menu);
-    if (!no_rest_here()) return;
+    if (camp_fix_on() && !tr_crown() && !strstr(out, "Fix")) {
+        // Camp Fix (Tom, 2026-11-01; features.h CYD_CAMP_FIX): Pool's camp
+        // gets Curse's Fix, before its last word (Exit) as Curse has it
+        const char* last = strrchr(out, ' ');
+        if (last && strlen(out) + 5 < cap) {
+            char tail[16];
+            snprintf(tail, sizeof tail, "%s", last + 1);
+            snprintf(out + (last - out), cap - static_cast<size_t>(last - out), " Fix %s", tail);
+        }
+    }
+    if (!no_rest_here() || cheat == Cheat::Sanctuary) return;     // (Sanctuary: rest anywhere)
     // word 3 (Rest) and 5 (Fix) of "Save View Magic Rest Alter Fix Exit"
     char tmp[sizeof d->w_camp_menu];
     size_t n = 0;
@@ -4584,6 +4609,11 @@ void leave_camp(pic::Canvas& c)
     end_magic();
     screen = Screen::Game;
     camping = false;
+    if (cheat == Cheat::Sanctuary) {
+        pic_shown = false;
+        cheat_end(c);                   // (the Cheats tab's Sanctuary: back where the party was)
+        return;
+    }
     if (d->prof->variant.camp_pic && pic_shown) {
         anim_stop();
         pic_shown = false;
@@ -5279,6 +5309,7 @@ void yes_no_key(char k, pic::Canvas& c)
 char import_dir[128] = {};
 char darkness_dir[128] = {};    // the player's Pools of Darkness folder ("" if none): its font
 Options opts;                   // the engine comforts switched on (Settings)
+bool camp_fix_on() { return CYD_CAMP_FIX && opts.camp_fix; }
 
 bool in_party(const char* name)
 {
@@ -6673,6 +6704,7 @@ void draw_treasure_pic() { draw_own_pic(d->prof->variant.treasure_pic); }
 
 void draw_shop(pic::Canvas& c)
 {
+    if (cheat_draw_shop(c)) return;     // (the Cheats tab's: the exploring screen as it was)
     // The exploring screen with the shop's picture, as the script left it
     anim_stop();
     bigpic = -1;
@@ -6771,6 +6803,10 @@ void leave_shop(pic::Canvas& c, bool asked)
             else host_picture(0xFF, 0);
         }
     }
+    if (cheat == Cheat::Healer || cheat == Cheat::Merchant) {
+        cheat_end(c);                   // (the Cheats tab's: back to the exploring menu, no script to go on)
+        return;
+    }
     const bool place = pool_shop_blank();
     screen = Screen::Game;
     if (place) draw_position(c);        // (Pool: the place line back - DOSBox)
@@ -6796,7 +6832,7 @@ void draw_buy(pic::Canvas& c)
     plist.row0 = 1;
     plist.row1 = 22;
     plist.col0 = 1;
-    plist.n = ground->n;
+    plist.n = goods_count();
     if (d->prof->variant.shop_heading) {
         // (Pool: "Shop" over the list at column 17, the goods from row 4 - DOSBox)
         char w[8];
@@ -6856,7 +6892,7 @@ void buy_dk(int i, pic::Canvas& c)
 void buy(int i, pic::Canvas& c)
 {
     party::Character* ch = pt->sel();
-    if (!ch || i < 0 || i >= ground->n) return;
+    if (!ch || i < 0 || i >= goods_count()) return;
     if (dk_ui()) {
         buy_dk(i, c);
         return;
@@ -7017,8 +7053,14 @@ void leave_heal(pic::Canvas& c)
 }
 
 // The price, then "pay for cure"
+bool shop_yes_no(Ask what, char k, pic::Canvas& c);
 void offer_cure(pic::Canvas& c)
 {
+    if (cheat == Cheat::Healer) {
+        // (the Cheats tab's Healer: no price, no question - the cure done)
+        shop_yes_no(Ask::PayCure, 'Y', c);
+        return;
+    }
     char t[96], a[24], b[24];
     sw(profile::kOnlyCost, a, sizeof a);
     sw(profile::kGoldPieces, b, sizeof b);
@@ -8030,7 +8072,7 @@ bool shop_yes_no(Ask what, char k, pic::Canvas& c)
     }
     party::Character& ch = *pt->sel();
     const int cost = d->prof->cures.cost[cure_at];
-    const bool paid = shop_pay(ch, cost);
+    const bool paid = cheat == Cheat::Healer || shop_pay(ch, cost);      // (the Cheats tab's Healer: free)
     draw_heal(c);
     if (!paid) {
         char t[24];
@@ -8071,7 +8113,7 @@ void shop_tap(int x, int y, pic::Canvas& c)
                 // (the second line highlighted, the top kept from the last list - DOSBox)
                 plist.index = 1;
                 plist.top = pool_list_top > 1 ? 1 : pool_list_top;
-                if (plist.top > ground->n) plist.top = 0;
+                if (plist.top > goods_count()) plist.top = 0;
             }
             draw_buy(c);
             break;
@@ -9412,7 +9454,8 @@ void rest_tick(uint32_t now, pic::Canvas& c)
             }
         // An encounter can break in
         const int period = vm->get(d->prof->magic.rest_period), chance = vm->get(d->prof->magic.rest_chance);
-        if (period > 0 && ++rest_encounter_steps >= period) {
+        // (the Cheats tab's Sanctuary: nothing breaks in)
+        if (period > 0 && cheat != Cheat::Sanctuary && ++rest_encounter_steps >= period) {
             rest_encounter_steps = 0;
             if (rng.roll(100, 1) <= chance) {
                 if (pool_files()) {
@@ -9464,6 +9507,7 @@ void fix_party(pic::Canvas& c)
     }
     const auto& m = d->prof->magic;
     const spells::FixPlan f = spells::fix_plan(*pt, mrules->tables, m.camp, m.n_camp, rng);
+    plat::log("[play] Fix: %d minutes, %d hit points to share (%d lost)\n", f.minutes, f.heal, spells::hp_lost(*pt));
     if (f.minutes <= 0) return;
     rest = RestRun{};
     rest.left = f.minutes;
@@ -15258,7 +15302,315 @@ bool start_title(pic::Canvas& c, uint32_t timeout_ms)
 
 #include "play_queen_late.inc"
 
+// ---- Cheats (the Game menu's Cheats tab - Tom, 2026-11-01; features.h CYD_CHEATS) ----
+// Healer: the game's own temple, its cures free. Merchant: the game's own
+// shop with every shop's goods together (the scripts' shop TREASUREs -
+// ecl::find_shops - or the program's SHOP n lists), at the lowest price
+// factor any of its shops sets. Sanctuary: the game's own camp, its rests
+// never interrupted. Opened only at the exploring menu (cheats_ready); the
+// exploring screen waits on the card (_CYD/CHEAT.TMP) and comes back as it
+// was when the cheat's screen is left.
+uint16_t cheat_factor_was = 0;
+bool cheat_screen_saved = false;
+
+void cheat_park_path(char* out, size_t cap) { snprintf(out, cap, "%s/_CYD/CHEAT.TMP", games::kRootDir); }
+
+void cheat_save_screen(pic::Canvas& c)
+{
+    char path[96];
+    cheat_park_path(path, sizeof path);
+    cheat_screen_saved = false;
+    plat::File f = plat::open(path, "w");
+    if (!f) {
+        char dir[64];
+        snprintf(dir, sizeof dir, "%s/_CYD", games::kRootDir);
+        if (!plat::exists(dir)) plat::mkdir(dir);
+        f = plat::open(path, "w");
+    }
+    if (!f) {
+        plat::log("[play] cheat: the screen couldn't wait on the card\n");
+        return;
+    }
+    uint8_t row[pic::kScreenW];
+    bool ok = c.w <= pic::kScreenW;
+    for (int y = 0; ok && y < c.h; ++y) {
+        c.get_row(0, y, c.w, row);
+        ok = f.write(row, static_cast<size_t>(c.w)) == static_cast<size_t>(c.w);
+    }
+    f.close();
+    cheat_screen_saved = ok;
+}
+
+bool cheat_restore_screen(pic::Canvas& c)
+{
+    if (!cheat_screen_saved) return false;
+    char path[96];
+    cheat_park_path(path, sizeof path);
+    plat::File f = plat::open(path, "r");
+    if (!f) {
+        plat::log("[play] cheat: the screen didn't come back from the card\n");
+        return false;
+    }
+    uint8_t row[pic::kScreenW];
+    bool ok = c.w <= pic::kScreenW;
+    for (int y = 0; ok && y < c.h; ++y) {
+        ok = f.read(row, static_cast<size_t>(c.w)) == c.w;
+        if (ok) c.put_row(0, y, c.w, row);
+    }
+    f.close();
+    dirty(0, pic::kScreenH);
+    return ok;
+}
+
+// The way back to the exploring menu, the screen as it was
+void cheat_end(pic::Canvas& c)
+{
+    const Cheat was = cheat;
+    cheat = Cheat::None;
+    anim_stop();
+    if (was == Cheat::Merchant) vm->set(0x7F6D, cheat_factor_was);
+    cheat_free_goods();
+    if (ground) ground->clear();
+    temple = false;
+    screen = Screen::Game;
+    waiting = false;
+    then = Then::Idle;
+    if (!cheat_restore_screen(c)) {
+        after_move_redraw();
+        text::clear(c, text::kTextArea);
+        dirty_rows(17, 22);
+    }
+    {
+        char path[96];
+        cheat_park_path(path, sizeof path);
+        if (cheat_screen_saved) plat::remove(path);
+        cheat_screen_saved = false;
+    }
+    // (the party's hit points as they are now)
+    if (pt->count && bigpic < 0 && (vm->get(0x4BE6) || pool_overland())) draw_party(c, 17);
+    plat::log("[play] cheat %d over\n", static_cast<int>(was));
+    idle_menu(c);
+}
+
+// The shop's / temple's screen again (from Buy, Heal, View): the exploring
+// screen as it was, the party and the menu
+bool cheat_draw_shop(pic::Canvas& c)
+{
+    if (cheat == Cheat::None) return false;
+    anim_stop();                        // (no event picture comes back over it)
+    if (!cheat_restore_screen(c)) return false;
+    text::clear(c, text::kTextArea);
+    dirty_rows(17, 22);
+    if (pt->count) draw_party(c, 17);
+    shop_menu(c);
+    return true;
+}
+
+// A good laid out once: the same item from two shops is one line
+bool cheat_add_good(const uint8_t* it)
+{
+    for (int i = 0; i < cheat_n; ++i) {
+        const uint8_t* g = cheat_goods[i];
+        if (!memcmp(g + 0x2E, it + 0x2E, 0x34 - 0x2E) && !memcmp(g + 0x35, it + 0x35, items::kRecordSize - 0x35))
+            return true;
+    }
+    if (cheat_n >= cheat_cap) {
+        // (room for more: 32 at a time, to kCheatGoods)
+        const int cap = cheat_cap + 32;
+        if (cap > kCheatGoods) return false;
+        void* p = realloc(cheat_goods, static_cast<size_t>(cap) * items::kRecordSize);
+        if (!p) return false;
+        cheat_goods = static_cast<uint8_t(*)[items::kRecordSize]>(p);
+        cheat_cap = cap;
+    }
+    memcpy(cheat_goods[cheat_n++], it, items::kRecordSize);
+    return true;
+}
+void cheat_free_goods()
+{
+    free(cheat_goods);
+    cheat_goods = nullptr;
+    cheat_n = cheat_cap = 0;
+}
+
+// ITEM<k> block `block` (k < 0: ITEM.DAX) added to the goods; Secret's
+// blocks are numbered across the family: another ITEM file's when k's
+// hasn't it
+__attribute__((noinline)) int cheat_item_block(int k, int block)
+{
+    char name[16];
+    int dropped = 0;
+    for (int pass = 0; pass < 12; ++pass) {
+        const int fk = pass == 0 ? k : pass - 2;            // (the script's file's, then ITEM.DAX, ITEM0 ... ITEM9)
+        if (pass && fk == k) continue;
+        if (fk < 0) snprintf(name, sizeof name, "ITEM.DAX");
+        else snprintf(name, sizeof name, "ITEM%d.DAX", fk);
+        plat::File f;
+        if (!open_dax(name, f)) continue;
+        const dax::Entry* e = d->idx.find(static_cast<uint8_t>(block));
+        if (!e) {
+            f.close();
+            continue;
+        }
+        plat::FileSource src(f);
+        dax::RleReader r(src, d->idx, *e);
+        uint8_t it[items::kRecordSize];
+        while (r.read(it, items::kRecordSize) == items::kRecordSize)
+            if (!cheat_add_good(it)) ++dropped;
+        f.close();
+        return dropped;
+    }
+    return dropped;
+}
+
+// The game's scripts read for their shops (the goods' ITEM blocks, the
+// prices); factor: the lowest price factor any of them sets (0: none)
+__attribute__((noinline)) int cheat_scan_scripts(bool goods, int* factor)
+{
+    int dropped = 0;
+    *factor = 0;
+    const ecl::OpSet* set = d->prof->ecl_ops;
+    if (!set || hl()) return 0;                 // (the Dark Queen's scripts are in ECL.GLB: its SHOP lists alone)
+    for (int k = -1; k <= 9; ++k) {
+        char name[16];
+        if (k < 0) snprintf(name, sizeof name, "ECL.DAX");
+        else snprintf(name, sizeof name, "ECL%d.DAX", k);
+        plat::File f;
+        if (!open_dax(name, f)) continue;
+        uint8_t found[ecl::ShopFinds::kMax];
+        int n_found = 0;
+        {
+            plat::FileSource src(f);
+            for (int e = 0; e < d->idx.count; ++e) {
+                const dax::Entry& en = d->idx.entries[e];
+                if (!en.raw_size) continue;
+                uint8_t* buf = static_cast<uint8_t*>(malloc(en.raw_size));
+                if (!buf) continue;
+                dax::RleReader r(src, d->idx, en);
+                const size_t got = r.read(buf, en.raw_size);
+                ecl::ShopFinds sf;
+                if (got == en.raw_size) ecl::find_shops(buf, en.raw_size, *set, sf);
+                free(buf);
+                if (sf.factor_lo && (!*factor || sf.factor_lo < *factor)) *factor = sf.factor_lo;
+                for (int b = 0; b < sf.n_blocks; ++b) {
+                    bool have = false;
+                    for (int q = 0; q < n_found; ++q) have = have || found[q] == sf.blocks[b];
+                    if (!have && n_found < ecl::ShopFinds::kMax) found[n_found++] = sf.blocks[b];
+                }
+            }
+        }
+        f.close();
+        if (goods)
+            for (int q = 0; q < n_found; ++q) {
+                plat::log("[play] Merchant: %s's shop goods, ITEM block %d\n", name, found[q]);
+                dropped += cheat_item_block(k, found[q]);
+            }
+    }
+    return dropped;
+}
+
+// (at the exploring menu: walking, or an overland's marker map - Darkness's,
+// the Krynn games')
+bool cheats_ready_in()
+{
+    const bool at_menu = walking() || (screen == Screen::Game && !waiting && then == Then::Idle &&
+                                       input_mode == Input::None && marker_overland());
+    return at_menu && pt && pt->count > 0 && !camping && !fg;
+}
+
+void cheat_healer(pic::Canvas& c)
+{
+    cheat_save_screen(c);
+    cheat = Cheat::Healer;
+    ground->clear();
+    temple = true;
+    plat::log("[play] cheat: Healer\n");
+    text::clear(c, text::kTextArea);
+    dirty_rows(17, 22);
+    open_shop(c);
+}
+
+void cheat_merchant(pic::Canvas& c)
+{
+    cheat_save_screen(c);
+    // (its message up before the card is read - the scripts, the goods)
+    text::clear(c, text::kTextArea);
+    clear_menu_line(c);
+    put(c, "The merchant lays out the goods...", 1, 18, 10);
+    dirty_rows(17, 24);
+    present_now();
+    ground->clear();
+    cheat_free_goods();
+    int dropped = 0, factor = 0;
+    const auto& pi = d->prof->items;
+    const bool lists = hl() || pi.goods_rows || pi.goods_runs;
+    dropped += cheat_scan_scripts(!lists, &factor);
+    if (lists && d->prof->ecl_ops) {
+        // SHOP n's games: every list of the program's (each shop's goods)
+        items::Ground* g = new (std::nothrow) items::Ground;
+        if (g) {
+            const int last = hl() ? 9 : pi.goods_count ? 8 : d->prof->ecl_ops->shops;
+            for (int n = 1; n <= last; ++n) {
+                g->clear();
+                static_cast<ecl::Host*>(host)->shop_items(n, *g);
+                for (int i = 0; i < g->n; ++i)
+                    if (!cheat_add_good(g->item[i])) ++dropped;
+            }
+            delete g;
+        }
+    }
+    if (dropped) plat::log("[play] Merchant: %d goods left out (no room)\n", dropped);
+    plat::log("[play] Merchant: %d goods, price factor %d\n", cheat_n, factor);
+    {
+        char m[40];
+        snprintf(m, sizeof m, "Merchant: %d goods", cheat_n);
+        memlog::note(m);
+    }
+    cheat = Cheat::Merchant;
+    cheat_factor_was = vm->get(0x7F6D);
+    if (!cheat_n) {
+        cheat_end(c);
+        error(c, "No shop's goods were found in this game's files.");
+        return;
+    }
+    // (the best price: the lowest factor its shops set; none found - the
+    // goods' own value unless the word asks less already)
+    const int now = cheat_factor_was & 0xFF;
+    const int best = factor ? factor : 0x10;
+    const bool now_ok = now && (now & (now - 1)) == 0 && now <= 0x80;
+    vm->set(0x7F6D, static_cast<uint16_t>(now_ok && now < best ? now : best));
+    temple = false;
+    text::clear(c, text::kTextArea);
+    dirty_rows(17, 22);
+    open_shop(c);
+}
+
+void cheat_sanctuary(pic::Canvas& c)
+{
+    cheat_save_screen(c);
+    cheat = Cheat::Sanctuary;
+    plat::log("[play] cheat: Sanctuary\n");
+    camp_from_script = false;
+    open_camp(c);               // (no before-camp script: entry 2 isn't run)
+}
+
 } // namespace
+
+bool cheats_ready() { return CYD_CHEATS && opts.cheats && d && cheats_ready_in(); }
+
+bool cheat_open(int which, pic::Canvas& c)
+{
+    if (!cheats_ready()) return false;
+    cursor_hide();
+    anim_stop();
+    switch (which) {
+    case 0: cheat_healer(c); break;
+    case 1: cheat_merchant(c); break;
+    case 2: cheat_sanctuary(c); break;
+    default: return false;
+    }
+    return true;
+}
 
 bool available(games::Game g) { return profile::program_name(g) != nullptr; }
 
