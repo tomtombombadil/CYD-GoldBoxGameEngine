@@ -6257,10 +6257,10 @@ void open_treasure(pic::Canvas& c)
     text::clear(c, text::kTextArea);
     dirty_rows(17, 22);
     if (pool_files() && !vault) {
-        // (Pool's treasure screen, state 6: main_frame(1) - the left box
-        // cleared round the chest, the wilderness map too; DOSBox)
-        c.fill(8, 8, 120, 120, 0);
-        dirty_rows(1, 15);
+        // (Pool's treasure screen, state 6: main_frame(1) - the frame with
+        // the 3D view's, the left box cleared round the chest, the
+        // wilderness map too; DOSBox)
+        draw_frame(c);
     }
     if (d->prof->variant.treasure_pic && !vault) draw_treasure_pic();
     if (pt->count) draw_party(c, 17);
