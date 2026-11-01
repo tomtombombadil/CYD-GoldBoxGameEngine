@@ -131,7 +131,9 @@ struct Data {
     // Pool's wilderness map (read from the program when first shown), the rider's gallop
     overland::Data* ov = nullptr;
     uint8_t        gallop = 0;
-    bool           ov_up = false;           // the wilderness screen drawn by the menu (DS 0x49F9 > 1)
+    // Pool's view modes: the wilderness screen drawn by the menu / the view
+    // mode before the last new block (DS 0x49F9 > 1), the block's own (0x49FA > 1)
+    bool           ov_up = false, ov_cur = false;
 
     // The wilderness map's places (from the program)
     uint8_t        city_x[32] = {}, city_y[32] = {};
@@ -13173,13 +13175,17 @@ void handle(ecl::Stop r)
         break;
     case Then::NewFirst:
         vm->set(0x4BF2, d->gs.script);
-        if (d->ov_up && !pool_overland()) {
-            // (Pool, the wilderness left for a 3D area - its new-block
-            // handler ovr4 +0x31B4: framebox(3,3,13,13), the 3D view's own
-            // frame; the rest of the screen stays; DOSBox)
-            d->ov_up = false;
-            layout::box(c, d->tables, d->frame_tiles, 2, 2, 14, 14);
-            dirty_rows(2, 14);
+        if (pool_files()) {
+            // (Pool's new-block handler ovr4 +0x31B4: the old view mode kept
+            // (DS 0x49F9), the block's own; the wilderness left for a 3D
+            // area: framebox(3,3,13,13), the 3D view's own frame - the rest
+            // of the screen stays, also when no menu came between; DOSBox)
+            d->ov_up = d->ov_cur;
+            d->ov_cur = pool_overland();
+            if (d->ov_up && !d->ov_cur) {
+                layout::box(c, d->tables, d->frame_tiles, 2, 2, 14, 14);
+                dirty_rows(2, 14);
+            }
         }
         pool_map_edge();
         after_move_redraw();
