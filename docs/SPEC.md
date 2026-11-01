@@ -2641,7 +2641,10 @@ the game's Settings (As Original: all of them).
   by Exit starts on its first word when shown again (the shop's Buy, not
   Exit). Pool's rest
   menu "Rest daYs Hours ..." lights each whole word (the original: from
-  capital to capital). Spells chosen to memorize stay chosen when the
+  capital to capital). The party menu shows its highlight from the start
+  in every game (the originals light none until a key; Tom, 2026-11-01);
+  a camp line too long for 40 columns (Pool's "Camp: " with Camp Fix)
+  drops the prompt's trailing space. Spells chosen to memorize stay chosen when the
   camp breaks before they are learnt - an interrupted rest - and the next
   camp's Memorize asks "Memorize these spells?" with them (the originals
   forget them; features.h `CYD_KEEP_MEMORIZING`, Tom 2026-10-31). A

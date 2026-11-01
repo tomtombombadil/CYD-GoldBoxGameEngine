@@ -359,6 +359,10 @@ int  train_payer = -1, train_who = -1;      // Gateway: who pays for the trainin
 bool pm_picked = false;             // ... picked: the function goes on
 int  pm_sel = 0;              // the party menu line the cursor keys highlight
 bool keys_used = false;       // a cursor key was used: highlights where the games had none (the party menu)
+// The party menu's (and the Dark Queen's pickers') highlight: from the start
+// in every game (Tom, 2026-11-01: the menu highlight rule, CYD_MENU_HIGHLIGHT),
+// else only once a cursor key was used
+bool pm_lit() { return keys_used || CYD_MENU_HIGHLIGHT; }
 char pm_saves[12];            // save slots found ("AB")
 bool load_where = false;      // Darkness: Load's "Load from where?" asked, a slot next
 bool load_secret = false;     // Darkness: Load from Secret's saved games (its folder on the card)
@@ -2257,7 +2261,7 @@ void draw_party_menu(pic::Canvas& c)
         q_pm_buttons(c, on);
         return;
     }
-    if ((keys_used || (tr && CYD_MENU_HIGHLIGHT)) && pm_lines) {
+    if (pm_lit() && pm_lines) {
         // the cursor keys' line, highlighted as the games' lists are
         // (Treasures shows its line from the start - DOSBox - in the
         // engine's white box, CYD_MENU_HIGHLIGHT)
@@ -4544,7 +4548,12 @@ void draw_camp(pic::Canvas& c)
     // (its camp at ovr 0x104F1: byte 0x2B = 1 and 0x2C >= 100 - the town's)
     char words[sizeof d->w_camp_menu];
     camp_words(words, sizeof words);
-    text::build(menu, d->w_camp, words);
+    // (the line too long for its 40 columns - Pool's "Camp: " with Camp
+    // Fix's word: the prompt's trailing space goes - Tom, 2026-11-01)
+    char prompt[sizeof d->w_camp];
+    snprintf(prompt, sizeof prompt, "%s", d->w_camp);
+    for (size_t n = strlen(prompt); n && prompt[n - 1] == ' ' && n + strlen(words) > 40; --n) prompt[n - 1] = 0;
+    text::build(menu, prompt, words);
     menu.selected = 0;
     hl_own(kDkCamp);                    // (Darkness: GAME.OVR 0x104F1's own place, from Save)
     show_menu_line(c);
@@ -16839,7 +16848,7 @@ bool nav(Nav n, pic::Canvas& c)
     if (!d || input_mode != Input::None) return false;
     cv = &c;
     if (demo_input(c)) return true;
-    const bool first = !keys_used;
+    const bool first = !pm_lit();
     if (screen == Screen::Won) {
         won_key(c);
         return true;
