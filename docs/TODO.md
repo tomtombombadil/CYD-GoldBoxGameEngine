@@ -72,6 +72,26 @@ the Project as claude/TODO.md.
 
 ## Claude
 
+- [ ] Rule tests (2026-11-01; CLAUDE.md "Rule tests"): the fight checker
+      (R1-R12), `fightfuzz` and `behave matrix` run clean on all nine
+      games. Fixed from them: cornered fleeing fights where it stands
+      (Pool part 16's open (c), the endless mummies), the to-and-fro
+      flight, no morale test while fleeing, items / spells / Turn Undead
+      before a flight, the free attack's hold, moves below 0, Champions'
+      Fire Shield question, casts not putting off the no-attack end,
+      Quick under fear + berserk; Game Fixes: saves below 0, a step
+      taken held. Open: (1) checked against coab (Curse) and Pool's
+      ovr10 order only - confirm the fleeing turn (cornered blows,
+      items / spells first) and "only attacks reset the 15 rounds" in
+      Pool's / Secret's / Darkness's code or DOSBox; (2) panic: the
+      original's morale failure lasts a turn (re-tested each turn,
+      coab's moral_failure), the engine's for the fight; (3) Krynn's
+      profiles give effect 0x06 to both entangle and stun; (4)
+      protection from evil's -2 to be hit is lost in the original (only
+      the saves) - a Game Fixes candidate; (5) not checked yet: weapon
+      immunities beyond bare hands, XP from a whole fight's end, Mirror
+      Image / Displacement against blows.
+
 - [ ] Money with Game Fixes (Tom, 2026-10-31; SPEC 12 "Money"): done for
       Pool, Curse, Secret, Gateway. Open: (1) Champions' coin worths
       (copper, bronze, steel, platinum - from its program) before its
@@ -305,7 +325,9 @@ the Project as claude/TODO.md.
       PIECES; 26f3284 SPRITE OFF only while a sprite is up. Open:
       (c) a fight whose turned undead can't be hurt and can't get
       away never ends in the engine (their 0-damage blows reset the
-      15-round rule) - DOS not seen (its cleric didn't turn them);
+      15-round rule) - DOS not seen (its cleric didn't turn them) -
+      fixed by the rule tests: a cornered one fights where it stands
+      (coab's moralFailureEscape);
       (d) with 8 members DOS's party-menu redraw after End / Home
       blanks "CREATE NEW CHARACTER" (cosmetic, not copied). Resume:
       the nomads' kobold war (save G, ECL7 17, after "stay and

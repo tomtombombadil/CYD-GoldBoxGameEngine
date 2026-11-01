@@ -936,7 +936,9 @@ static void sp_fight_targets()
     sp_put(sp_c, 0, 10, 12);
     sp_put(sp_t[0], 1, 11, 12);
     sp_dice(1, 2, 100);
+    rules::set_fixes(false);            // (the original's; with the Game Fixes a save failed - SPEC 12)
     sp_cast(sp_c, 0x31, {sp_t[0]});
+    rules::set_fixes(true);
     expect(SP, "Hold Person (MU) on one, d20 2 at -3: the byte wraps - saved", sp_aff(sp_t[0], 0x34) < 0);
     struct HoldBonus {
         int spell, n, bonus;

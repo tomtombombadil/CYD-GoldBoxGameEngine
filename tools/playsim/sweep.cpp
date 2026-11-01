@@ -64,6 +64,12 @@ static void problem(const char* what)
     printf("!! PROBLEM: %s\n", what);
 }
 
+#ifdef CYD_TEST_HOOKS
+#include <map>
+#include <set>
+#include "fight_check.inc"
+#endif
+
 // (a menu on two rows - Darkness's, Gateway's fights - the word's own row: text::item_cell)
 static bool tap_word(char k)
 {
@@ -121,6 +127,9 @@ static bool pump(int max_iter = 400000)
             }
         }
         if (!d) return false;
+#ifdef CYD_TEST_HOOKS
+        fc::tick();
+#endif
         if (getenv("FIGHTLOG") && fg && it % 10000 == 0) {
             const combat::Fighter& cf = fg->b.f[fg->cur < 0 ? 0 : fg->cur];
             printf("  [it %d round %d cur %d (%s team %d hp %d at %d,%d) st %d n %d]\n", it, fg->b.round, fg->cur,
@@ -366,7 +375,7 @@ static bool start_fight(int area = 0, int mon = 0, int copies = 0)
                        : game == 9      ? 0x9C1D          // (Treasures: save A's 11-monster fight)
                                          : 0x8AC2;
     if (mon) {
-        play::d->gs.game_area = static_cast<uint8_t>(area);
+        if (area >= 0) play::d->gs.game_area = static_cast<uint8_t>(area);      // (-1: the area's own - the Dark Queen's one file)
         play::vm->set(a + 2, static_cast<uint16_t>(mon));
         if (copies) play::vm->set(a + 4, static_cast<uint16_t>(copies));
         play::vm->set(a + 6, static_cast<uint16_t>(mon));
@@ -1651,6 +1660,13 @@ static void dice_faces(std::initializer_list<int> f) { dice_usual(); b_faces.ass
 #ifdef BEHAVE_QUEEN
 #include "behave_queen.inc"
 #endif
+#ifdef BEHAVE_MATRIX
+#include "behave_matrix.inc"
+#endif
+
+#ifdef CYD_TEST_HOOKS
+#include "fight_fuzz.inc"
+#endif
 
 int main(int argc, char** argv)
 {
@@ -1679,6 +1695,7 @@ int main(int argc, char** argv)
         sweep_monkey(argc > 4 ? atoi(argv[4]) : 20000);
     }
 #ifdef CYD_TEST_HOOKS
+    else if (mode == "fightfuzz") sweep_fightfuzz(static_cast<unsigned>(arg ? arg : 1), argc > 4 ? atoi(argv[4]) : 1000);
     else if (mode == "behave") {
         // (each part: a function of its own .inc; argv[3] = one part's name, or all)
         const std::string only = argc > 3 ? argv[3] : "";
@@ -1723,6 +1740,9 @@ int main(int argc, char** argv)
 #endif
 #ifdef BEHAVE_QUEEN
         if (want("queen")) behave_queen();
+#endif
+#ifdef BEHAVE_MATRIX
+        if (want("matrix")) behave_matrix();
 #endif
 #ifdef BEHAVE_TREASURES
         if (want("treasures")) behave_darkness();       // (Darkness's checks, Treasures' oracles)

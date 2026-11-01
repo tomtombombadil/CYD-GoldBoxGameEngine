@@ -616,7 +616,11 @@ void rules_checks()
         expect(kPart, "saves: a natural 20 saves (needs 40)", combat::saving_throw(f, 0, 0, rng));
         f.rec[0xDF] = 15;
         dice_faces({2});
+        rules::set_fixes(false);        // (the original's; the Game Fixes: a save failed - SPEC 12)
         expect(kPart, "saves: a total below 0 wraps round to a save (byte sum: 2 - 4)", combat::saving_throw(f, 0, -4, rng));
+        rules::set_fixes(true);
+        dice_faces({2});
+        expect(kPart, "saves, Game Fixes: a total below 0 fails", !combat::saving_throw(f, 0, -4, rng));
         dice_usual();
     }
     // -- Backstab (coab CanBackStabTarget): a thief straight behind a man-sized

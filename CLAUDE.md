@@ -544,6 +544,20 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   ITEMTST<n>) with every magic item of the game, each with a class that
   may use it; Pool's save-only items come from a scratch file (EXTRA=),
   never from the repo; the characters go to Tom as a zip, never committed.
+  **Rule tests** (2026-11-01, Tom: find rule bugs systematically, every
+  game): with -DCYD_TEST_HOOKS the engine tells every fighter action to
+  `combat::g_act_hook` (`CYD_TEST_ACT`; board builds have none) and
+  `tools/playsim/fight_check.inc` checks the fight's rules R1-R12 on each
+  action and tick (pump and the fuzzer; a break prints "!! RULE Rn" with
+  the fuzz seed). `sweep <folder> fightfuzz <seed> <fights>` plays random
+  fights (random monster from the game's MON*CHA / MONCHA.GLB, copies,
+  party turns, statuses put on as turns begin, guards, the turned, the
+  fallen); FUZZONE=k replays fight k alone, FCWATCH=i / FCACTLOG=n trace.
+  `behave matrix` (-DBEHAVE_MATRIX) is the status x trigger matrix on a
+  cleared field (own turn, guard, free attack, attacked, attacking, saves,
+  moves, fleeing, experience, charm). Per-game env as the behave runs
+  (GAME, BOOTSLOT, MAREA / MBLOCK, FIGHTAT, CACHE). Expected values from
+  the rules / coab / the originals' code, never the engine's.
 - **DOSBox here** (2026-10-12): the ORIGINAL games run on Claude's side -
   `apt-get install dosbox xdotool x11-apps imagemagick`, a virtual display
   (`Xvfb :5`), `DISPLAY=:5 SDL_AUDIODRIVER=dummy dosbox -conf <conf>`
