@@ -531,14 +531,19 @@ void queen_hp(party::Character& c, const classes::Tables& t, Dice& d, int mask, 
             rolled = row >= 0 && row < 11 ? kPast[row] : 1;
         }
     }
+    int cp = con;
     if (held > 0) {
         rolled /= held;
         if (rolled < 1) rolled = 1;
-        con = static_cast<uint8_t>(con / held);
+        // (the byte divided unsigned: a multi-class's penalty a large gain;
+        // Game Fixes signed, and at least 1 a level - Secret's / Krynn's the
+        // same, secret_hp; SPEC 12)
+        cp = rules::fixes() ? static_cast<int8_t>(con) / held : con / held;
     }
+    if (rules::fixes() && rolled + cp < 1) cp = 1 - rolled;
     const uint8_t lost = static_cast<uint8_t>(r[kHpMax] - r[kHp]);
     r[kHpRolled] = static_cast<uint8_t>(r[kHpRolled] + rolled);
-    r[kHpMax] = static_cast<uint8_t>(r[kHpMax] + rolled + con);
+    r[kHpMax] = static_cast<uint8_t>(r[kHpMax] + rolled + cp);
     r[kHp] = r[kHpMax] < lost ? 0 : static_cast<uint8_t>(r[kHpMax] - lost);
 }
 

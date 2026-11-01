@@ -2904,7 +2904,9 @@ the game's Settings (As Original: all of them).
   a dwarf's or gnome's -4 when giants attack counts (Secret's is set
   before the roll, which overwrites it); Constitution's hit points are
   signed (Secret's unsigned division turns a multi-class's penalty into
-  a large gain) and a level gives at least 1; Sell's overload test
+  a large gain) and a level gives at least 1 (the Dark Queen's training,
+  ovl 0xB +0x380E, has the same two - the same fix since 2026-11-01,
+  `create::queen_hp`); Sell's overload test
   weighs the coins it pays (Secret's weighs the price in gold); a pile
   with no count joins nothing (Secret's swallows it). Not in the engine
   yet: Secret's scroll bundles (Join on scrolls, up to 10).
