@@ -335,6 +335,7 @@ uint32_t note_until = 0;
 bool     note_held = false;      // an error: stays until a tap (Tom, 2026-10-09)
 bool     resume_after_note = false;  // the script goes on once that error is tapped away
 bool     items_after_note = false;   // Pool: the items screen again once the shop's word has had its time
+bool     status_after_note = false;  // Pool: a character's timed words cleared once they have had their time
 int last_pic_id = -1, last_pic_head = 0xFF;   // the script's picture (shops come back to it)
 bool camping = false;              // the camp is open (the position line says so)
 int  pm_item[Data::kItems];   // the menu item on each list line
@@ -3376,6 +3377,12 @@ void redraw_menu(pic::Canvas& c)
         items_after_note = false;
         back_to_items(c);
         return;
+    }
+    if (status_after_note) {
+        // (Pool: 0xBA:0x2383 - the text rows 18-22 cleared after the delay)
+        status_after_note = false;
+        c.fill(8, 18 * 8, 38 * 8, 5 * 8, 0);
+        dirty_rows(18, 22);
     }
     if (screen == Screen::PartyMenu && !pm_pick_for) pm_prompt(c);      // the party menu's own prompt
     else if (fight_moving()) fight_move_prompt(c);      // a fight's Move: its own prompt
@@ -8947,6 +8954,16 @@ void show_scrolls(pic::Canvas& c)
         char t[32];
         cw(profile::kNoCopyable, t, sizeof t);
         say_status(c, t);
+        if (pool_files()) {
+            // (Pool: its words wait the game's delay and go - START ovr16
+            // +0xC26 -> 0xBA:0x16EC with its "timed" flag: 0x709:0xDBE, then
+            // the rows cleared; DOSBox, Scribe with no scroll: gone at once)
+            int speed = vm->get(0x4BFC) & 0xFF;
+            if (speed == 0) speed = 4;
+            note_until = plat::now_ms() + static_cast<uint32_t>(speed) * 225;
+            if (!note_until) note_until = 1;
+            status_after_note = true;
+        }
         return;
     }
     const int keep = sl.scrolls && !sl.learning && sl.sel >= 0 ? sl.id[sl.sel] : 0;
@@ -15802,6 +15819,7 @@ const char* open(const char* data_dir, games::Game g, pic::Canvas& c, const char
     load_sound();
     if (sound_on()) audio_prepare();    // (the S3's codec and amplifier awake before the first sound)
     note_until = 0;
+    status_after_note = false;
     last_pic_id = -1;
     ecl::GameState& gs = d->gs;
     gs.game_area = d->prof->start_area;
@@ -15936,6 +15954,7 @@ void close()
     in_game_menu = camp_from_script = game_won = items_direct = false;
     waiting = resume_after_note = note_held = false;
     note_until = 0;
+    status_after_note = false;
     then = Then::Idle;
     new_base[0] = 0;
     if (d) {
@@ -16671,6 +16690,9 @@ void tap(int x, int y, pic::Canvas& c)
 {
     if (!d) return;
     cv = &c;
+    // (Pool: a key during a character's timed words waits for them and then
+    // acts - the delay doesn't eat it)
+    if (note_until && status_after_note) redraw_menu(c);
     if (demo_input(c)) return;
     if (lk.on) {
         if (rom.asking) {
