@@ -12538,7 +12538,9 @@ struct Host : ecl::Host {
         pic_shown = false;
         head_shown = body_shown = -1;
         area_view = false;
-        draw_view(c);
+        const bool over = (distance & ecl::kSpriteOver) != 0;
+        distance &= ~ecl::kSpriteOver;
+        if (!over) draw_view(c);
         char name[24];
         plat::File f;
         if (!open_area_dax("SPRIT", id, f, name, sizeof name)) return;

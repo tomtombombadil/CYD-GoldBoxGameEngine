@@ -101,6 +101,7 @@ enum class Wait : uint8_t {
 enum class Stop : uint8_t { Running, Waiting, Stopped, NewScript, Error };
 
 constexpr int kMaxDamageLines = 16;  // DAMAGE: lines at most
+constexpr int kSpriteOver = 0x100;   // Host::sprite: over the screen as it is (no view redrawn)
 
 class Host {
 public:
@@ -119,6 +120,8 @@ public:
     // to see how far the party can see; and a monster's sprite (SPRITn
     // block `id`) drawn in a freshly drawn 3D view, `distance` 0-2 away
     virtual int wall_type(int x, int y, int dir) { (void)x; (void)y; (void)dir; return 1; }
+    // (distance | kSpriteOver: drawn over the screen as it is - Pool's
+    // wilderness, the first time)
     virtual void sprite(int id, int distance) { (void)id; (void)distance; }
     // TREASURE: the items of ITEM<area> block `block` (shop goods, a
     // treasure) added to g

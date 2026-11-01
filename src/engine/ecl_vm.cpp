@@ -70,6 +70,12 @@ bool Vm::show_encounter()
     if (!enc_.pic_on && dungeon) {
         h_.sprite(enc_.sprite, enc_.distance);
         enc_.sprite_on = drew_sprite = true;
+    } else if (!enc_.pic_on && set_.pool_map) {
+        // Pool's wilderness (ovr8 +0x54E, view mode > 1): the sprite's
+        // middle frame over the map as it is - the first time; again, the
+        // view (map and rider) redrawn first (DOSBox: the merchants)
+        h_.sprite(enc_.sprite, enc_.sprite_on ? 1 : 1 | kSpriteOver);
+        enc_.sprite_on = drew_sprite = true;
     }
     const uint8_t head = static_cast<uint8_t>(get(0x7EE1) & 0xFF);
     // Pool: the ENCOUNTER MENU itself shows the picture next to the party
