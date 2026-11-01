@@ -1639,8 +1639,13 @@ Stop Vm::step()
     case 0x0E: {                                // PICTURE
         if (!need(1)) return Stop::Error;
         const int id = value(o[0]) & 0xFF;
+        // (PICTURE 0xFF takes a sprite away too - the view redrawn: coab's
+        // CMD_Picture, spriteChanged; DOSBox, Pool's slums: "The monsters
+        // flee." then the goblins' sprite gone)
+        const bool sprite = id == 0xFF && set_.pool_map && enc_.sprite_on && !enc_.pic_on;
         if (id == 0xFF) reset_encounter();
         h_.picture(id, get(0x7EE1) & 0xFF);
+        if (sprite) h_.redraw();
         return Stop::Running;
     }
     case 0x0F:                                  // INPUT NUMBER
