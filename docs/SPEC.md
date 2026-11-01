@@ -2647,6 +2647,11 @@ the game's Settings (As Original: all of them).
   healer takes a body lying beside it (a party member down) whatever its
   side - a monster cleric heals a fallen hero. With Game Fixes on only
   its own side's (`combat::heal_target`).
+- **Saving throws below 0** (Game Fixes, every game; found by the status
+  matrix, 2026-11-01): the original adds the d20 and the bonuses in a
+  byte compared unsigned, so a total below 0 wraps round to a save made -
+  a 2 rolled with -4 (blinded, a bestowed curse) saves. With Game Fixes
+  on a total below 0 is a save failed (`combat::saving_throw`).
 - **Held by a free attack mid-step** (Game Fixes, every game; the fight
   fuzzer, 2026-11-01): a fighter paralysed, put to sleep or stunned by the
   free attack of one it steps away from still takes that step in the

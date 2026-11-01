@@ -3667,7 +3667,12 @@ bool saving_throw(const Fighter& f, int type, int bonus, create::Dice& d)
     // (a byte, compared unsigned: a total below 0 wraps round to a save made -
     // the listing's do_saving_throw)
     log_roll(saver, RollKind::Save, 0xFF, r, bonus + static_cast<int8_t>(f.rec[0x186]), f.rec[0xDF + type]);
-    return ((r + bonus + static_cast<int8_t>(f.rec[0x186])) & 0xFF) >= f.rec[0xDF + type];
+    const int total = r + bonus + static_cast<int8_t>(f.rec[0x186]);
+    // (with the Game Fixes a total below 0 is no save - AD&D's; the
+    // original's wrap made a 2 with -4 - blinded, a bestowed curse - a save
+    // made: the status matrix, 2026-11-01; SPEC 12)
+    if (total < 0 && rules::fixes()) return false;
+    return (total & 0xFF) >= f.rec[0xDF + type];
 }
 
 // The caster's level for the spell's kind (as spells::power, from the record)
