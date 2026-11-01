@@ -654,6 +654,37 @@ void run()
             expect(P, "charmed x the caster's side", F(B).team() == F(A).team(), "team %d", F(B).team());
         }
     }
+    // T14 targeted by a damage spell (its save failed - a d20 of 1 - its
+    // dice highest): every status standing takes the damage (AD&D: none
+    // of them wards off a spell's harm; mirror images apart - they take
+    // single-target spells, T11's)
+    if (play::load_magic()) {
+        // (one that harms a plain target so: not a touch spell - those roll to hit)
+        auto harm = [&](const combat::FightSpell* fs, const Status& s) {
+            put(A, 0, 10, 10);
+            put(B, 1, 12, 10);
+            give(B, s);
+            create::g_die_hook = [](int n) { return n == 20 ? 0 : n - 1; };
+            combat::SpellLine lines[8];
+            const int tg[1] = {B};
+            const int before = F(B).hp();
+            combat::cast(play::fg->b, play::mrules->tables, A, fs->spell, *fs, tg, 1, play::rng, lines, 8, 9);
+            dice_off();
+            return before - F(B).hp();
+        };
+        const Status plain{"none", Plain, 0};
+        const combat::FightSpell* fs = nullptr;
+        for (int i = 0; i < play::d->prof->fight.n_spells && !fs; ++i) {
+            const combat::FightSpell& c = play::d->prof->fight.spells[i];
+            if (c.does == combat::SpellDoes::Damage && c.sides && harm(&c, plain) > 0) fs = &c;
+        }
+        for (const Status& s : list) {
+            if (!fs || down(s) || s.kind == Mirror) continue;
+            const int lost = harm(fs, s);
+            snprintf(w, sizeof w, "%s x a damage spell (%02X, its save failed): harmed", s.name.c_str(), fs->spell);
+            expect(P, w, lost > 0, "lost %d", lost);
+        }
+    }
     weapons();
     images();
     morale_tests();
