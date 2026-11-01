@@ -1501,7 +1501,8 @@ void draw_party(pic::Canvas& c, int col, bool mark_sel = true, bool box = false)
         const bool sel = i == pt->selected && mark_sel;
         const uint8_t fg = q && sel ? 11 : sel ? 15 : !ch.in_combat() ? 12 : ch.enemy() ? 14 : q ? 7 : gw_trainable(ch) ? 13 : 11;
         if (sel && box) hl_text(c, t, col, row);
-        else put(c, t, col, row, fg);        const int ac = ch.ac_raw();
+        else put(c, t, col, row, fg);
+        const int ac = ch.ac_raw();
         const int aw = ac <= 0x32 ? 1 : ac <= 0x3C ? 2 : ac <= 0x45 ? 1 : 0;
         snprintf(t, sizeof t, "%s%d", ac > 60 ? "-" : "", ac > 60 ? ac - 60 : 60 - ac);
         put(c, t, 0x20 + aw, row, q ? 7 : 10);
