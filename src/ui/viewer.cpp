@@ -3407,7 +3407,8 @@ const char* comfort_help_text(int c)
     case kCCheats:
         return "A Cheats tab in the Game menu, while the party stands at the exploring menu: Healer - the "
                "game's own temple, every cure free; Merchant - the game's own shop selling the goods of all "
-               "its shops, at the best price any of them asks, and buying from you as its shops do; "
+               "its shops at their normal prices, identifying for free, and buying from you as its shops do "
+               "(both with the picture the game's own temples and shops show); "
                "Sanctuary - the game's own camp, where nothing interrupts a rest (no wandering monsters, no "
                "city watch). Off: no Cheats tab.";
     case kCCompanion:
@@ -3582,7 +3583,7 @@ struct CheatKey {
 };
 constexpr CheatKey kCheatKeys[3] = {
     {"Healer", "The temple's cures, all free"},
-    {"Merchant", "Every shop's goods, the best prices"},
+    {"Merchant", "Every shop's goods, Id free"},
     {"Sanctuary", "Camp and rest, never interrupted"},
 };
 ui::Rect cheat_key(int i)

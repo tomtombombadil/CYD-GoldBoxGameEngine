@@ -2596,18 +2596,30 @@ a PC, PortMaster handhelds):
     the exploring screen waiting on the card (`_CYD/CHEAT.TMP`); leaving
     it puts that screen back and the exploring menu, no script involved.
     Healer: the game's temple (its own list and words; Darkness's Repair
-    too), every cure free - no price asked, nothing paid. Merchant: the
+    too), every cure free - no price asked, nothing paid. Healer and
+    Merchant (Tom, 2026-11-01: "so the user knows they're in a store")
+    show the picture the game's own temples / shops show in place of the
+    3D view - the last PICTURE (and the head word with it: Pool's / Curse's
+    shopkeepers are a head and a body) before a script's temple / shop
+    opens (`ecl::ShopFinds` shop_pic / temple_pic; SHOP n in the list
+    games), a person or event picture before a big one, a shop at the
+    goods' own prices first, never the game's camp / treasure picture;
+    drawn from its script's file (`pic_file_override`), read once a game;
+    the exploring screen, its picture state and VGA colours come back on
+    leaving. Checked in the playsim: Pool, Curse, Secret, Darkness,
+    Gateway, Treasures, Champions, Death Knights, Dark Queen. Merchant: the
     game's shop with the goods of all its shops (Curse-style games: the
     ITEM blocks every script's shop sets out - `ecl::find_shops`, SAVE 1
     into the shop word with a TREASURE before the COMBAT; Darkness,
     Treasures, Death Knights, Dark Queen: every SHOP n list of the
     program), each kind once, on the heap while open (Curse 72, Pool 88,
     Darkness 144, Treasures 167 goods); Buy / View (Sell, Id) / Appraise
-    as the game's shops; the price factor the lowest any of its shops
-    sets (Curse 8 = half; most 16 = the goods' value; the Dark Queen's
-    scripts aren't read: 16, or less if the word asks less); selling is
-    the games' one rule (half value); the coin exchange Game Fix as in any
-    shop. Sanctuary: the game's camp opened without the area's
+    as the game's shops; the goods' own prices - factor 16, the games'
+    ordinary shops' (Tom, 2026-11-01: not Curse's / Death Knights'
+    half-price merchant's); Id free (no price taken; the game's question
+    from its "I'll identify your ..." without the price before it);
+    selling is the games' one rule (half value); the coin exchange Game
+    Fix as in any shop. Sanctuary: the game's camp opened without the area's
     before-camp script, its rests (and Fix) never interrupted - no
     wandering monsters, no city watch, no camp-interrupted script -
     Darkness's towns allow Rest and Fix there. Settings key **Cheats Tab**

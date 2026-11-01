@@ -234,7 +234,15 @@ struct ShopFinds {
     uint8_t blocks[kMax] = {};
     int     n_blocks = 0;
     uint8_t factor_lo = 0;          // the lowest price factor set (0: none seen)
+    // The picture a shop / temple shows (the block's last PICTURE before it
+    // opens - at its COMBAT, or SHOP n with `shop_op`; with the head word
+    // 0x7EE1 set before it, 0xFF none): the first shop at the goods' own
+    // price (factor 16 or none set) wins over others; -1: none found
+    int16_t shop_pic = -1, temple_pic = -1;
+    uint8_t shop_head = 0xFF, temple_head = 0xFF;
+    bool    shop_pic_normal = false;
 };
-void find_shops(const uint8_t* block, uint32_t len, const OpSet& set, ShopFinds& out);
+// shop_op: the game's 0x3C is SHOP n (its goods the program's lists)
+void find_shops(const uint8_t* block, uint32_t len, const OpSet& set, ShopFinds& out, bool shop_op = false);
 
 } // namespace ecl

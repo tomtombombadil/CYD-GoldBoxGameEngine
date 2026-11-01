@@ -2221,13 +2221,25 @@ static void test_ecl()
         for (int i = 0; i < 5; ++i) { s.push_back(0); op_addr(s, kBase + 20); }
         auto treasure = [&](int b) { s.push_back(0x27); for (int k = 0; k < 7; ++k) op_imm(s, 0); op_imm(s, b); };
         auto save = [&](int v, uint16_t a) { s.push_back(0x09); op_imm(s, v); op_addr(s, a); };
+        auto picture = [&](int p) { s.push_back(0x0E); op_imm(s, p); };
+        save(3, 0x7EE1); picture(3); save(0xFF, 0x7EE1);                       // a shopkeeper: head 3, body 3
         treasure(12); save(1, 0x7F6C); save(8, 0x7F6D); s.push_back(0x24);     // a shop: goods first
         save(1, 0x7F6C); save(32, 0x7F6D); treasure(14); s.push_back(0x24);    // a shop: the word first
         treasure(13); s.push_back(0x24);                                       // a fight's treasure
+        picture(6); save(1, 0x7EE2); s.push_back(0x24);                        // a temple
+        picture(5); save(1, 0x7F6C); save(16, 0x7F6D); s.push_back(0x24);      // a shop at the goods' prices
         s.push_back(0x00);
         ecl::ShopFinds sf;
         ecl::find_shops(s.data(), static_cast<uint32_t>(s.size()), set, sf);
         CHECK(sf.n_blocks == 2 && sf.blocks[0] == 12 && sf.blocks[1] == 14 && sf.factor_lo == 8);
+        // (the pictures: the shop at factor 16 wins over the earlier ones; the temple's)
+        CHECK(sf.shop_pic == 5 && sf.shop_head == 0xFF && sf.shop_pic_normal);
+        CHECK(sf.temple_pic == 6 && sf.temple_head == 0xFF);
+        s.resize(s.size() - 1 - 1 - 6 - 6 - 3);                                // (without the last shop)
+        s.push_back(0x00);
+        ecl::ShopFinds sf2;
+        ecl::find_shops(s.data(), static_cast<uint32_t>(s.size()), set, sf2);
+        CHECK(sf2.shop_pic == 3 && sf2.shop_head == 3 && !sf2.shop_pic_normal);
     }
 
     // Pool of Radiance: the same script loaded at 0x9900, its words at Pool's
