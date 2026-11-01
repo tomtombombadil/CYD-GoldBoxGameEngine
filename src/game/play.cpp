@@ -13235,6 +13235,10 @@ void handle(ecl::Stop r)
     case Then::Move:
         if (!do_move()) {
             then = Then::Door;
+            // (Pool: the step draws the position line again before "Locked."
+            // - a DAMAGE before had taken it away; DOSBox, the Kovel
+            // mansion's scything blade at 12,13 then the door north)
+            if (pool_files()) draw_position(c);
             door_prompt(c);
             return;
         }
