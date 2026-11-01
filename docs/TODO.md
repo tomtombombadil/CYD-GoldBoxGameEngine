@@ -216,9 +216,23 @@ the Project as claude/TODO.md.
       doors (Pick / Bash), Kuto's Well crossed, Podol's auction
       (Disguise, comments, a bid, the disguise blown, cancelled)
       matched; 77119bf a PICTURE counts as the encounter's picture
-      shown (Curse: check). Open: (e) a leader's loot order. Not
-      reached: the council's reward for the auction, the graveyard,
-      the Kovel mansion, Valjevo, Scribe (no scroll in DOS). The Add list's order (DOSBox: the newest .CHA first) not
+      shown (Curse: check). Open: (e) a leader's loot order.
+      Part 13: matched the clerk after the cancelled auction (208 XP,
+      250 gold + 200 platinum, the bishop's new commission), the
+      bishop and Dirten joining, the harbour's boats and payer, the
+      wilderness (steps, the city's west / east / north edges), the
+      merchants' surprise, the graveyard's entry and its 63
+      skeletons (199 XP each both), the northern gates, the Kovel
+      block's Black Hand patrol (Flee). Fixed: the wilderness screen
+      drawn by the menu (not before; rope at 16,16; the rider twice),
+      CLEARBOX only clears there, the 3D frame back on leaving, a
+      load there; ADD NPC on the party's side (Dirten was an enemy);
+      View: no Trade for an NPC; wilderness encounters' sprite;
+      the treasure screen's / camp's frame there; the main loop's
+      redraw by state (DS 0x4432 / LOAD FILES + PIECES). Curse: check
+      ADD NPC's side byte and View's Trade for NPCs. Not reached: the
+      Kovel mansion inside, Valjevo, Scribe (no scroll yet), later
+      commissions. The Add list's order (DOSBox: the newest .CHA first) not
       checked further. Check in Curse's play test: spell-list paging,
       the camp text after View / Magic, Create's lists (Curse has the
       same list routine?), Begin's selection, View - Spells' prompt, PARLAY's prompt, Knock at a door's second locked
