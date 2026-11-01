@@ -827,6 +827,7 @@ struct Fight {
     struct Blast { int8_t caster = -1; uint8_t x = 0, y = 0, area = 0, rounds = 0, pw = 0; };
     Blast    blast[4];
     bool     ai_checked = false;        // this turn's morale and spell choice done
+    bool     flee_told = false;         // this turn's morale part done (a page said: its items and spells after it)
     bool     fx_done = false;           // this turn's start effects (turn_effects) done
     bool     continuing = false;        // "Continue Battle": Yes - the party's turns with no enemies left
     int      use_item = -1;             // Use: the item the spell comes from (its charge goes)
@@ -2932,6 +2933,7 @@ void start_turn(pic::Canvas& c)
     f.received = f.turns = 0;
     f.guarding = false;
     fg->ai_checked = false;
+    fg->flee_told = false;
     fg->use_item = -1;
     fg->spell = 0;
     if (!f.team() || on_screen(fg->cur)) focus(fg->cur, 2);
@@ -3848,7 +3850,8 @@ void ai_step(pic::Canvas& c)
     const int i = fg->cur;
     combat::Fighter& f = b.f[i];
     // Quick party members bandage a dying friend first (at the turn's start)
-    if (!f.team() && !fg->ai_checked && combat::anyone_dying(b)) {
+    if (!f.team() && !fg->ai_checked && !fg->flee_told && combat::anyone_dying(b)) {
+        if (combat::anyone_dying(b)) CYD_TEST_ACT(b, i, Bandage, -1, 0);
         const int k = combat::bandage(b);
         if (k >= 0) {
             add_page(k, fw(profile::kBandaged));
@@ -3858,21 +3861,26 @@ void ai_step(pic::Canvas& c)
             return;
         }
     }
-    // Morale (monsters, NPCs), once a turn
-    if (!fg->ai_checked) {
-        fg->ai_checked = true;
+    // Morale (monsters, NPCs), once a turn (flee_told: done)
+    if (!fg->ai_checked && !fg->flee_told) {
         // The holds it had (engulfing, hugging) let go, as the original does
         combat::release_holds(b, i);
         // (Pool: one already fleeing - turned undead, panic - says so at
         // each of its turns, then runs: "is forced to flee" - ovr10
-        // +0x10D7; DOSBox, Sokal Keep's undead)
+        // +0x10D7; DOSBox, Sokal Keep's undead. Its turn's checks go on
+        // after the page: the items, a spell, Turn Undead - ovr10 +0xC8 on)
         if (pool_files() && f.fleeing) {
+            fg->flee_told = true;
             add_page(i, fw(profile::kForcedFlee));
             say(c, FSt::Ai);
             return;
         }
+        fg->flee_told = true;
+        // (one already fleeing takes no morale test: it neither panics again
+        // nor surrenders - the original's FleeCheck, Pool ovr10 +0x10D7 /
+        // coab's sub_3637F: the test is the other branch)
         b.morale_base = vm->get(0x7EC6) & 0xFF;
-        const combat::Morale mo = combat::morale(b, fg->t, i);
+        const combat::Morale mo = f.fleeing ? combat::Morale::Fight : combat::morale(b, fg->t, i);
         if (mo == combat::Morale::Surrender) {
             // (the original's 0x644A7: "Surrenders" shown while it still
             // stands - its icon, its panel - then it's unconscious, HP 0, off
@@ -3894,12 +3902,20 @@ void ai_step(pic::Canvas& c)
         }
         if (mo == combat::Morale::Flee && !f.fleeing) {
             f.fleeing = true;
+            fg->ai_checked = false;         // (its items and spells next - the original's order)
+            fg->flee_told = true;
             add_page(i, fw(profile::kFleesPanic));
             say(c, FSt::Ai);
             return;
         }
-        // The computer's magic items (monsters, NPCs and Quick members), then spells
-        if (!f.fleeing && f.n_items && f.can_use && combat::standing(b, f.team() ? 0 : 1) && load_magic()) {
+    }
+    if (!fg->ai_checked) {
+        fg->ai_checked = true;
+        // The computer's magic items (monsters, NPCs and Quick members), then
+        // spells, then Turn Undead - one fleeing too: the original tries them
+        // before it runs (Pool ovr10 +0x10F on, coab's PlayerQuickFight -
+        // nothing there asks about the flight)
+        if (f.n_items && f.can_use && combat::standing(b, f.team() ? 0 : 1) && load_magic()) {
             int tg[combat::kMaxFighters], nt = 0;
             const int k = combat::choose_item(b, fg->t, mrules->tables, i, *names, d->prof->fight.spells,
                                               d->prof->fight.n_spells, rng, tg, &nt);
@@ -3915,7 +3931,7 @@ void ai_step(pic::Canvas& c)
                 return;
             }
         }
-        if ((f.team() || f.rec[0xF7] >= 0x80) && !f.fleeing && f.can_cast && load_magic()) {
+        if ((f.team() || f.rec[0xF7] >= 0x80) && f.can_cast && load_magic()) {
             int tg[combat::kMaxFighters], nt = 0;
             const int sp = combat::choose_spell(b, fg->t, mrules->tables, i, d->prof->fight.spells,
                                                 d->prof->fight.n_spells, rng, tg, &nt);
@@ -3943,7 +3959,7 @@ void ai_step(pic::Canvas& c)
         // levels - that hasn't turned yet turns undead when an enemy undead
         // is in sight, before fighting: ovr10 +0x203; DOSBox, Sokal Keep -
         // Brother Sean's first act)
-        if (pool_files() && !f.fleeing && f.rec[0x109] > 0 && !f.turned_undead && fg->t.turn_known) {
+        if (pool_files() && f.rec[0x109] > 0 && !f.turned_undead && fg->t.turn_known) {
             bool undead = false;
             for (int e = 0; e < b.n && !undead; ++e) {
                 const combat::Fighter& o = b.f[e];
