@@ -104,7 +104,7 @@ void stir(combat::Battle& b, int cur)
             f.guarding = true;
             snprintf(t, sizeof t, " r%d:guard>%d", b.round, i);
         } else if (r < 90) {
-            if (!f.team()) continue;        // (the turned: monsters)
+            if (f.member >= 0) continue;    // (the turned: monsters - not a charmed party member)
             f.fleeing = true;
             snprintf(t, sizeof t, " r%d:flee>%d", b.round, i);
         } else {
