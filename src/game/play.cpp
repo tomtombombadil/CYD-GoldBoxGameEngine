@@ -1463,7 +1463,10 @@ void draw_position(pic::Canvas& c)
         snprintf(line, sizeof line, "%d,%d %s %02d:%s%s", x, y, geo::dir_name(g.dir), hours, mins,
                  camping ? " CAMPING" : (vm->get(0x7ECA) & 1) ? " SEARCH" : "");
     else
-        snprintf(line, sizeof line, "%s %02d:%s", geo::dir_name(g.dir), hours, mins);
+        // (Pool: " CAMPING" there too - DOSBox, the nomads' hut, PROGRAM 9
+        // with the area view blocked)
+        snprintf(line, sizeof line, "%s %02d:%s%s", geo::dir_name(g.dir), hours, mins,
+                 d->prof->variant.pool_files && camping ? " CAMPING" : "");
     put(c, line, d->prof->variant.tr ? 18 : 17, 15, 10);      // (Treasures: from column 18 - DOSBox)
     dirty_rows(15, 15);
 }
