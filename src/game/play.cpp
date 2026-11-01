@@ -2915,7 +2915,10 @@ void view_keys(const party::Character& ch, char* keys, size_t cap)
     if (!in_fight() && !new_char) {
         if (any_memorized(ch)) add(vword(profile::kVwSpells));
         const bool money = any_money(ch);
-        if (money) add(vword(profile::kVwTrade));
+        // (Pool, ovr20 +0xBC0: no Trade for an NPC in action, unless its
+        // health byte is 1 - DOSBox, Dirten's View: Items Spells Drop Exit)
+        const bool npc_keeps = pool_files() && ch.npc() && ch.in_combat() && ch.health() != 1;
+        if (money && !npc_keeps) add(vword(profile::kVwTrade));
         if (money) add(vword(vault_on() ? profile::kVwDeposit : profile::kVwDrop));
         if (can_heal(ch)) add(vword(profile::kVwHeal));
         if (can_cure(ch)) add(vword(profile::kVwCure));
