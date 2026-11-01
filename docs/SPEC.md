@@ -2741,6 +2741,11 @@ the game's Settings (As Original: all of them).
   9 8 6 12 7). With Game Fixes on each save is the best of the class's
   rows up to its level (AD&D: none worse for a level gained;
   `classes::class_bonuses`).
+- **The Dark Queen's saves past 18th level** (Game Fixes; the level
+  value tests, 2026-11-01): its saving throw routine (DQK 0x62A0A) keeps
+  the level to 21st, but its table's rows for 19th-21st are empty - 0,
+  so from 19th level every save is made. With Game Fixes on those levels
+  keep the 18th's row (`classes::saving_throws`).
 - **Thief skills below 0** (Game Fixes, every game; the level value
   tests, 2026-11-01): the originals add the Dexterity's minus to the
   level's base in a byte, so a skill the minus takes past 0 wraps round

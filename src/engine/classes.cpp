@@ -466,6 +466,13 @@ void saving_throws(party::Character& c, const Tables& t)
             int lv = c.level(cls);
             if (former && c.old_level(cls) > lv) lv = c.old_level(cls);
             if (lv <= 0) continue;
+            // (the Dark Queen, DQK 0x62A0A: the level kept to 21st, but its
+            // rows past 18th are empty - 0, every save made. Game Fixes:
+            // the last row it fills; SPEC 12)
+            if (t.lay.queen && rules::fixes())
+                while (lv > 1 && !t.save(cls, lv, 0) && !t.save(cls, lv, 1) && !t.save(cls, lv, 2) && !t.save(cls, lv, 3) &&
+                       !t.save(cls, lv, 4))
+                    --lv;
             int v = t.save(cls, lv, kind);
             // (the originals' tables have rows worse than the level before -
             // Curse / Secret / Champions / Darkness / Treasures' paladin at
