@@ -255,6 +255,32 @@ the Project as claude/TODO.md.
       clerk / the bishop, the graveyard's inside, Zhentil Keep,
       Valjevo. Curse: check its SPELL op (the engine reads rec 0x1F +
       k, the list is at 0x1E) and its DAMAGE page break.
+      Part 15: the rest of the Kovel mansion - the four caskets (find
+      traps, Avoid / Disarm, needle / dart / powder / 12 darts: DAMAGE's
+      save and to-hit forms, the "PRESS ANY KEY TO CONTINUE" paging of a
+      line that overflows mid-line and the blank line after an exactly
+      full one; Pick / Break; 428 / 314 / 107 / 714 XP), the crude map
+      (journal 29), the clerk's mansion reward (164 XP, then the
+      graveyard commission: Yes -> 2000 XP, a +1 +3 vs undead two-handed
+      sword, 3 clerical scrolls; the nomads' commission new),
+      Darkstar's MU training (level 2, a spell learned; HP d4 by dice),
+      Scribe on both sides (Bakshi: "YOU ALREADY KNOW THAT SPELL" timed;
+      Darkstar: unidentified MU scrolls -> "no copyable scrolls"), the
+      arena's partner question, the harbour WEST boat, wilderness
+      encounters (driders: party destroyed in DOS by Sleep - avoided by
+      re-syncs; kobolds 65 / 48 XP by dice), the graveyard's entry and
+      a skeleton surprise (155 / 84 XP: the engine's turned skeletons
+      fled - by dice). Fixed: ab240cc the step's position line drawn
+      again before "Locked." after a DAMAGE took it away. Open: (a) the
+      original's Right arrow at a script Yes / No menu (the thieves'
+      trainer, Phlan 9,0) makes the first member selected (View shows
+      Bakshi) - the engine keeps the selection; cause not found (the
+      select routine at START 0x38C9 handles End / Home only). (b) The
+      thieves' rooms 11,2 / 12,3 / 13,6 / 12,7 not repeated (the same
+      script, both choices compared in part 14). Not reached: the
+      graveyard's scripted squares (voice's gifts 8,2, crypt 12,4,
+      tower 15,6, the paladin's wraith 15,8, the vampire 14,0, mummies
+      9,11), Zhentil Keep, the pyramid, Mendor's library, Valjevo.
       Check in Curse's play test: spell-list paging,
       the camp text after View / Magic, Create's lists (Curse has the
       same list routine?), Begin's selection, View - Spells' prompt, PARLAY's prompt, Knock at a door's second locked
