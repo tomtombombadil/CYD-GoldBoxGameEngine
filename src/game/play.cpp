@@ -134,7 +134,7 @@ struct Data {
     // Pool's view modes: the wilderness screen drawn by the menu / the view
     // mode before the last new block (DS 0x49F9 > 1), the block's own (0x49FA > 1)
     bool           ov_up = false, ov_cur = false;
-    int            ov_area_seen = -1;       // the ECL file of the last new block (a new one: the area's start)
+    bool           main_start = false;      // a game loaded: its first new block is the main loop's start
 
     // The wilderness map's places (from the program)
     uint8_t        city_x[32] = {}, city_y[32] = {};
@@ -2637,6 +2637,8 @@ bool load_game(char slot)
         d->wall_set[i] = d->save.wall_set[i];
     }
     load_journal_list(slot);
+    d->main_start = true;
+    vm->pool_main_start();
     plat::log("[play] loaded %s: area %d, %d,%d, script %d, %d characters\n", name, d->gs.game_area, d->gs.x,
                   d->gs.y, vm->get(0x4BF2), pt->count);
     return true;
@@ -12688,6 +12690,25 @@ struct Host : ecl::Host {
         if (cv && screen == Screen::Game && !bigpic_shown()) draw_party(*cv, 17);
     }
     void party_killed() override { party_dead = true; }
+    void redraw_by_state() override
+    {
+        // (Pool's 00BA:27D9: state 3 the wilderness - main_frame(0), the
+        // map; state 4 main_frame(1), the 3D view; the party list, the
+        // status line - DOSBox: the graveyard entered after a load in the
+        // wilderness, the knot at 16,16 and the 3D frame back)
+        pic::Canvas& c = *cv;
+        anim_stop();
+        bigpic = -1;
+        pic_shown = false;
+        head_shown = body_shown = -1;
+        if (pool_overland()) {
+            ov_enter(c);
+            return;
+        }
+        draw_frame(c);
+        draw_view(c);
+        draw_panel(c);
+    }
     void sound(int id) override { sfx(id); }
     void game_sound(int v) override { sfx(v, true); }
     void log(const char* what) override { plat::log("[ecl %d:%04X] %s\n", d->gs.script, vm->pc() + 0x8000, what); }
@@ -13198,19 +13219,12 @@ void handle(ecl::Stop r)
             // of the screen stays, also when no menu came between; DOSBox)
             d->ov_up = d->ov_cur;
             d->ov_cur = pool_overland();
-            const bool new_area = d->gs.game_area != d->ov_area_seen;
-            d->ov_area_seen = d->gs.game_area;
-            if (new_area && !d->ov_cur) {
-                // (a new ECL file: the area's start, ovr4 +0x3308 - after the
-                // first run the frame drawn by its state, here the 3D one's
-                // boxes: the knot at 16,16 and the 3D view's frame back; the
-                // text window keeps its words - DOSBox, the graveyard and the
-                // northern gates from the wilderness)
-                layout::box(c, d->tables, d->frame_tiles, 0, 0, 16, 16);
-                layout::box(c, d->tables, d->frame_tiles, 2, 2, 14, 14);
-                dirty_rows(0, 16);
-                draw_panel(c);
-            } else if (d->ov_up && !d->ov_cur) {
+            // (the main loop's start - a load - redraws a 3D screen after
+            // the first run unless LOAD FILES / PIECES did: ovr4 +0x3371;
+            // in the wilderness it stays to do - Ecl::Vm::pool_main_start)
+            if (d->main_start && !d->ov_cur) vm->pool_redraw_done();
+            d->main_start = false;
+            if (d->ov_up && !d->ov_cur) {
                 layout::box(c, d->tables, d->frame_tiles, 2, 2, 14, 14);
                 dirty_rows(2, 14);
             }

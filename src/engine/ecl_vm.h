@@ -145,6 +145,9 @@ public:
     // The party changed (items gone, a member gone, damage): their values
     // worked out again, the party list drawn again
     virtual void party_changed() {}
+    // Pool: the screen redrawn by its state (00BA:27D9 - the frame, the 3D
+    // view or the wilderness map, the party list)
+    virtual void redraw_by_state() {}
     // DAMAGE killed the whole party ("The entire party is killed!" shown)
     virtual void party_killed() {}
     // A sound effect (the games' sound numbers; CALL B200 - a step, or the
@@ -226,6 +229,11 @@ public:
     Stop resume();
     Stop answer(int value);
     Stop answer_string(const char* text);
+    // Pool's main loop start (a load; ovr4 +0x32F8): the redraw to do (DS
+    // 0x4432) - once both LOAD FILES and LOAD PIECES have run (0x4434 /
+    // 0x4433) or, in a 3D area, after the first run (pool_redraw_done)
+    void pool_main_start() { pool_redraw_ = true; pool_lf_ = 0; }
+    void pool_redraw_done() { pool_redraw_ = false; }
 
     Wait wait() const { return wait_; }
     const char* text() const { return text_; }
@@ -312,6 +320,8 @@ private:
     // one it didn't find (0x7D00 reads 0 once), the writes of 0 to 0x7C00 /
     // 0x7D00 that let LOAD CHARACTER + 0x80 remove a member
     int  start_sel_ = 0;
+    bool    pool_redraw_ = false;       // Pool: DS 0x4432
+    uint8_t pool_lf_ = 0;               // Pool: LOAD FILES (1) / LOAD PIECES (2) run since (0x4434 / 0x4433)
     int  sel_mon_ = -1;                 // LOAD CHARACTER chose loaded monster k (-1: a member)
     uint8_t* sel_rec() const { return sel_mon_ >= 0 ? h_.monster_record(sel_mon_) : nullptr; }
     bool restore_ = false;

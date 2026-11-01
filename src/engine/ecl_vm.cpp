@@ -1800,6 +1800,15 @@ Stop Vm::step()
             h_.load_walls(2, b == 0xFF ? -1 : b);
             h_.load_walls(3, c == 0xFF ? -1 : c);
         }
+        if (set_.pool_map) {
+            // (Pool, ovr4 +0xDBF: both kinds run since the main loop's start
+            // with its redraw still to do - the screen redrawn by its state)
+            pool_lf_ |= op_ == 0x21 ? 1 : 2;
+            if (pool_lf_ == 3 && pool_redraw_) {
+                pool_redraw_ = false;
+                h_.redraw_by_state();
+            }
+        }
         return Stop::Running;
     }
     case 0x22: {                                // PARTY SURPRISE: a ranger (or cleric / ranger) in the party
