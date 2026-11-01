@@ -2746,6 +2746,25 @@ the game's Settings (As Original: all of them).
   free attack of one it steps away from still takes that step in the
   original (coab's move_step_away_attack: only one out of the fight
   stops); with Game Fixes on it stays where it is and its turn is over.
+- **A bounced bolt's length** (Game Fixes, every game - Lightning Bolt,
+  the lightning stroke, Tyranthraxus's and the breath bolts through
+  `combat::bolt_path`; Tom, 2026-11-01: "a lightning bolt has a specific
+  range ... it should go exactly that far and no farther"). The
+  original carries its count of half squares from one leg to the next
+  (coab's sub_5FA44 var_3D) and adds 8 for a bounce within 4 squares of
+  the caster, so after a bounce it goes on by the difference of two
+  legs' lengths: of 2,900 random bounced bolts (scratch model) about
+  half went within a square and a half of their length, 22% shorter,
+  14% longer, and 3.6% - two walls a leg's length apart - bounced for
+  ever (the fight hung, v0.167.1). With Game Fixes on the bolt goes
+  exactly its length from the square aimed at: every square passed
+  counts (straight 2 half squares, slanted 3; a square is within it
+  while half squares / 2 <= length - the games' range measure), also
+  after a bounce and a square passed again (anyone there hit again);
+  the turn at a wall's face costs nothing; no 8 more near the caster.
+  Off: the original's path - but a bolt the original would bounce for
+  ever runs its path only until the squares really passed reach its
+  length.
 - **Money** (Game Fixes, `rules::fixes()`; Tom, 2026-10-31: "All money is
   convertible ... the innkeeper should accept any combination of coins";
   Pool, Curse, Secret, Gateway - the games with AD&D's five coins at the

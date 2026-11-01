@@ -1223,7 +1223,10 @@ int bolt_line(const Battle& b, const Tables& t, int caster, int tx, int ty, int 
 // of the caster costs 8 more - Lightning Bolt's), and the original's byte
 // sums for what's left after a bounce. The fighters it hits in order (not
 // the one on the square aimed at; after a bounce anyone again, the caster
-// too) and its segments (the picture flies along each).
+// too) and its segments (the picture flies along each). With Game Fixes
+// (rules::fixes) it goes exactly `length` squares, bounces included (SPEC
+// 12); off, the original's path, a bolt that would bounce for ever ended
+// at its length.
 int bolt_path(const Battle& b, const Tables& t, int caster, int tx, int ty, int length, bool near_rule, int* hits,
               int hit_cap, BoltSeg* segs, int* n_segs, int seg_cap);
 
