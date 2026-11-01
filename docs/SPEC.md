@@ -2626,6 +2626,13 @@ the game's Settings (As Original: all of them).
 - **Game Fixes** (switch `CYD_ITEM_FIXES`, Tom, v0.90.0; named Item Fixes until v0.139.0 - Tom, 2026-10-23: the originals' behaviour stays in the game, every fix behind this switch): Pool's Flame
   Tongue is the AD&D sword (Long Sword +1 Flame Tongue, as Curse's); the
   original's is a plain +2 sword whose Use casts Find Traps.
+- **Pool's SPELL (ECL 0x3B, "who has it memorized")** (Game Fixes,
+  2026-11-01; START ovr4 +0x2C03): the original's search never runs - its
+  "found" byte is left uninitialised and holds the ON GOTO before it's
+  target high byte - so it always answers the first member, place 1: the
+  Kovel mansion's Cast Knock opens the lock whoever knows Knock. With
+  Game Fixes on, everyone's memorized spells are looked through ("NO ONE
+  IN THE PARTY HAS THE KNOCK SPELL!" when no one has it).
 - **A computer's Cure Light Wounds on a body** (Game Fixes; Curse and
   Pool - coab's find_healing_target, Pool GAME.OVR ovr14 +0x1BF8): with
   no one of its side under 8 hit points next to it, the original's

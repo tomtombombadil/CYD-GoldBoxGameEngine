@@ -1,4 +1,5 @@
 #include "ecl_vm.h"
+#include "magic.h"
 #include "rules.h"
 
 #include <cstdlib>
@@ -2244,7 +2245,23 @@ Stop Vm::step()
         if (!need(3)) return Stop::Error;
         const int sp = value(o[0]) & 0xFF;
         int place = 0xFF, who = 0;
-        if (party_ && party_->count) {
+        if (set_.pool_map && !rules::fixes()) {
+            // (Pool: its search never runs - the "found" byte is left
+            // uninitialised (START ovr4 +0x2C03, [bp-8]) and holds the ON
+            // GOTO before it's target high byte, never 0, so it answers
+            // "place 1 of the first member" every time; the Kovel mansion's
+            // Cast Knock, DOSBox: the knock was cast with no one knowing it.
+            // Game Fixes: everyone's memorized spells looked through)
+            place = 1;
+        } else if (party_ && party_->count && set_.pool_map) {
+            for (int i = 0; i < party_->count && place == 0xFF; ++i)
+                for (int k = 0; k < party::kPoolMemorized; ++k)
+                    if (party_->m[i].rec[magic::kListAt + k] == sp) {
+                        place = k;                  // (its place: the record's 0x17 + place)
+                        who = i;
+                        break;
+                    }
+        } else if (party_ && party_->count) {
             who = party_->count - 1;
             for (int i = 0; i < party_->count && place == 0xFF; ++i)
                 for (int k = 0; k < 0x65; ++k)
