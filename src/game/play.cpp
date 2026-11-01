@@ -8621,6 +8621,7 @@ magic::Scrolls scroll_facts()
     sc.types[1] = d->prof->magic.scroll_types[1];
     sc.count_at = d->prof->magic.scroll_count_at;
     sc.readers = d->prof->magic.scroll_readers;
+    sc.unsorted = pool_files();
     return sc;
 }
 
