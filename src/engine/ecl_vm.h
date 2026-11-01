@@ -194,6 +194,9 @@ public:
     void set_words(const char* const* w) { words_ = w; }
     // Treasure and shop goods the scripts set out (TREASURE)
     void set_ground(items::Ground* g) { ground_ = g; }
+    // The scripts' random numbers start from this (as the originals'
+    // Randomize: the clock). Never 0 - the generator would stay at 0.
+    void seed(uint32_t s) { rng_ = s ? s : 0x2545F491; }
     bool monsters() const { return monsters_; }
     // An arena fight arranged (CALL 0x8000 / 0x8001) for the next COMBAT
     // (the original's flag, cleared after that fight or by a load)

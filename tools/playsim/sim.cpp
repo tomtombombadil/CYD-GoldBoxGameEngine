@@ -625,6 +625,8 @@ int main(int argc, char** argv)
                         getenv("SOUNDRECGAME") ? (games::Game)atoi(getenv("SOUNDRECGAME")) : games::Game::Unknown);
     const char* e = play::open(dir, game, C, getenv("CACHE"));
     if (e) { printf("open: %s\n", e); return 1; }
+    // VMSEED=n: the scripts' random numbers from seed n (the board seeds them at every Play)
+    if (getenv("VMSEED") && play::vm) play::vm->seed(static_cast<uint32_t>(strtoul(getenv("VMSEED"), nullptr, 10)));
     // NOGALLERY=1: the icon editor opens as the original's (the gallery comfort off)
     if (getenv("NOGALLERY")) { play::Options o = play::opts; o.gallery = false; play::set_options(o); }
     // (NOFIXES also as the game's own setting: Play's start sets the rules' switch from it)

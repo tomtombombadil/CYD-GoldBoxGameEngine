@@ -6,6 +6,7 @@
 
 #include <Arduino.h>
 #include <esp_heap_caps.h>
+#include <esp_random.h>
 #include <cstdarg>
 #include <cstdio>
 
@@ -18,6 +19,9 @@
 namespace plat {
 
 uint32_t now_ms() { return millis(); }
+
+// (the chip's hardware random number generator, mixed with the time)
+uint32_t random_seed() { return esp_random() ^ (micros() * 2654435761u); }
 
 void log(const char* fmt, ...)
 {

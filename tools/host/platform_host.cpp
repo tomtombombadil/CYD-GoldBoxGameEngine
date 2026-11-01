@@ -39,6 +39,9 @@ namespace plat {
 
 uint32_t now_ms() { return g_now; }
 
+// (none: the playsim's and the tests' dice repeat from run to run)
+uint32_t random_seed() { return 0; }
+
 void log(const char* fmt, ...)
 {
     va_list a;

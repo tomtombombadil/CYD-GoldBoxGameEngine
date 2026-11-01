@@ -28,6 +28,11 @@ void log(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
 size_t free_heap();
 size_t largest_block();
 
+// A seed for the games' dice that differs from one start to the next (the
+// originals' Randomize took the clock); 0: none - the dice keep their fixed
+// start (the PC tools, so their runs repeat)
+uint32_t random_seed();
+
 // The machine shows the VGA games in their 256 colours (a byte-a-pixel
 // game screen and its palette; the boards with PSRAM - Tom, 2026-10-12);
 // false: in their own EGA mode's 16 (the classic boards)

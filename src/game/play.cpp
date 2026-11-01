@@ -15668,6 +15668,15 @@ const char* open(const char* data_dir, games::Game g, pic::Canvas& c, const char
         return no_memory("the party");
     }
     vm = new (vm_mem) ecl::Vm(d->gs, *host, *d->prof->ecl_ops);
+    // The dice differ from one Play to the next, as the originals' (Randomize
+    // at the start: the clock) - before, the scripts' generator and the
+    // fights' dice began at the same number every time, so a loaded save
+    // met the same encounters / brawls / rolls again (Tom, 2026-10-31: the
+    // tavern brawls). The PC tools keep their fixed start (seed 0).
+    if (const uint32_t s = plat::random_seed()) {
+        vm->seed(s);
+        rng = create::Dice(s * 2654435761u + 0x9E3779B9u);
+    }
     vm->set_party(pt);
     vm->set_ground(ground);
     vm->set_move_affects(d->prof->fight.facts.haste, d->prof->fight.facts.slow);
