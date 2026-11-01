@@ -35,6 +35,7 @@
 #include "logui.h"
 #include "sendlog.h"
 #include "pdfview.h"
+#include "game/companion.h"
 #include "game/play.h"
 #include "game/walk.h"
 #include "ui.h"
@@ -2583,6 +2584,8 @@ enum class Row : uint8_t { Walk, Move, Cursor, Fight };
 bool pad_fight = false;                 // 480x320: the fight's pad shown in the movement pad's place
 Row row = Row::Walk;                    // what 320x240's row shows
 
+bool comp_on();         // (below: the Companion Views comfort is on)
+
 ui::Rect walk_key(int k)
 {
     const int gp = ui::gap();
@@ -2602,6 +2605,19 @@ ui::Rect walk_key(int k)
             // 10 slots, the numeric keypad's order: 7 8 9 4 Select 6 1 2 3, then Game
             static const int kFight[kWKeys] = {-1, -1, -1, -1, -1, -1, 9, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
                                                1, 2, 5, 8, 7, 6, 3, 0, 4};
+            if (comp_on()) {
+                // Companion Views (Tom, 2026-11-01: the battlefield map from
+                // the Map key in a fight): 11 slots - ... 1 2 3 Map Game, the
+                // arrows 2 px narrower, Select and Game just wide enough
+                const int i = k == kWMap ? 9 : k == kWArea ? 10 : kFight[k];
+                if (i < 0) return ui::Rect{};
+                constexpr int kSelW = 42, kMapW = 26, kGameW = 30;
+                const int dw = (pic::kScreenW - gp * 12 - kSelW - kMapW - kGameW) / 8;
+                int x = gp;
+                for (int j = 0; j < i; ++j) x += (j == 4 ? kSelW : j == 9 ? kMapW : dw) + gp;
+                const int ww = i == 4 ? kSelW : i == 9 ? kMapW : i == 10 ? pic::kScreenW - gp - x : dw;
+                return {x, top, ww, h_all};
+            }
             const int i = kFight[k];
             if (i < 0) return ui::Rect{};
             // The arrows narrow; Select and Game wide enough for their words
@@ -2746,6 +2762,8 @@ void draw_companion(const MapSource& ms = kWalkMap)
         ui::text(x0 + 6, ly, "Gold: door", style::kGold, ui::Font::Mono);
         ui::text(x0 + 6 + 11 * 6, ly, "Red: locked", style::kWarn, ui::Font::Mono);
         ui::text(x0 + 6, ly + 9, "S: secret door", style::kGold, ui::Font::Mono);
+        // (Companion Views: the tap's clue - the panel's next view)
+        if (comp_on()) ui::text(ui::width() - 4 - 9 * 6, ly + 9, "Tap:Party", style::kTextMuted, ui::Font::Mono);
     }
     redraw_side_keys();
 }
@@ -2833,10 +2851,13 @@ void draw_map_grid(const geo::Map& map, const MapSource& ms, int mx, int my, int
     g.fillTriangle(fx, fy, lx, ly, rx, ry, style::kParty);
 }
 
+bool draw_battle_page();    // (below: in a fight, Companion Views on - the battlefield instead)
+
 // 320x240's Map key: the map over the game screen, what the 480x320
 // Companion strip shows beside it
 void draw_map_page()
 {
+    if (draw_battle_page()) return;
     LGFX& g = ui::gfx();
     g.fillRect(0, 0, pic::kScreenW, pic::kScreenH, style::kBackground);     // (black: the map's)
     const int cell = 12, mx = 4, my = (pic::kScreenH - cell * geo::kSize - 1) / 2;
@@ -3210,7 +3231,7 @@ void tap_sounds(const ui::Tap& t)
 // ---- The engine comforts' switches (Tom, 2026-10-11, v0.72.0) ----------------
 // One set for all games (settings.h comforts_off), on the one Settings
 // screen (below); a comfort compiled out (app/features.h) isn't listed.
-enum Comfort { kCFont, kCGallery, kCBigIcon, kCJournal, kCDemoTap, kCMoreGuys, kCPortrait, kCItemFixes, kCRolls, kComforts };
+enum Comfort { kCFont, kCGallery, kCBigIcon, kCJournal, kCDemoTap, kCMoreGuys, kCPortrait, kCItemFixes, kCRolls, kCCompanion, kComforts };
 
 bool comfort_built(int c)
 {
@@ -3224,13 +3245,14 @@ bool comfort_built(int c)
     case kCPortrait: return CYD_ICON_PORTRAIT;
     case kCItemFixes: return CYD_ITEM_FIXES;
     case kCRolls: return CYD_COMBAT_ROLLS;
+    case kCCompanion: return CYD_COMPANION_VIEWS;
     default: return true;
     }
 }
 uint8_t comfort_bit(int c)
 {
     static const uint8_t kBits[kComforts] = {0, kOffGallery, kOffBigIcon, kOffJournal, kOffDemoTap, kOffMoreGuys,
-                                             kOffPortrait, kOffItemFixes, kOffRolls};
+                                             kOffPortrait, kOffItemFixes, kOffRolls, 0};   // (Companion: comforts_off2)
     return kBits[c];
 }
 bool comfort_on(int c)
@@ -3238,6 +3260,7 @@ bool comfort_on(int c)
     if (!comfort_built(c)) return false;
     if (c == kCBigIcon && !ui::large()) return cfg->large_icons != 0;      // (320x240: off unless chosen - it covers the editor)
     if (c == kCFont) return cfg->game_font != kFontGame;                   // (the game's own unless chosen - Tom)
+    if (c == kCCompanion) return !(cfg->comforts_off2 & kOff2Companion);
     return !(cfg->comforts_off & comfort_bit(c));
 }
 
@@ -3281,7 +3304,7 @@ ui::Rect comfort_qmark(const ui::Rect& cell)
 
 const char* const kComfortNames[kComforts] = {"Game Font",        "Icon Gallery",    "Large Icon",    "Journal Pop-Up",
                                               "Tap to Stop Demo", "More Characters", "Icon Portrait", "Game Fixes",
-                                              "Show Rolls"};
+                                              "Show Rolls",       "Companion Views"};
 
 // What each option does (sentence case; Tom, v0.84.0)
 const char* comfort_help_text(int c)
@@ -3358,6 +3381,13 @@ const char* comfort_help_text(int c)
                "20, the total needed 20 less the target's AC), \"Damage: 4+3=7\" when it hits. A spell shows its "
                "target's saving throw and its damage as rolled, before saves and resistances. Off: as the "
                "original.";
+    case kCCompanion:
+        return "480x320: a tap on the Companion panel beside the game (the map) shows the party - each "
+               "member's icon, name, hit points with a bar and what ails or helps them - and, in a fight, "
+               "the whole battlefield: green the party and allies, red the enemies, grey walls, blinking "
+               "those asleep, held or down, the game screen's part outlined in blue. A fight starts on the "
+               "battlefield and the panel goes back to your view after it. 320x240: in a fight the Map key "
+               "shows the battlefield over the game screen. Off: the map only, as before.";
     }
     return "";
 }
@@ -3476,6 +3506,8 @@ void toggle_comfort(int c)
                            : cfg->game_font == kFontClearCaps ? kFontDarkness
                                                               : kFontGame;
         cfg->game_font = next == kFontDarkness && !darkness_dir(dd, sizeof dd) ? kFontGame : next;
+    } else if (c == kCCompanion) {
+        cfg->comforts_off2 ^= kOff2Companion;
     } else {
         cfg->comforts_off ^= comfort_bit(c);
     }
@@ -3499,6 +3531,7 @@ void toggle_original()
         on ? 0
            : (kOffGallery | kOffBigIcon | kOffDemoTap | kOffJournal | kOffMoreGuys | kOffPortrait | kOffItemFixes |
               kOffRolls);
+    cfg->comforts_off2 = on ? 0 : kOff2Companion;
     if (!on) cfg->large_icons = 0;
     cfg->game_font = on ? kFontClear : kFontGame;
     settings_save(*cfg);
@@ -4789,12 +4822,149 @@ void draw_big_icon()
     ui::text_center({a.x, by + 24 * s + 2, a.w, lh}, big_action ? "Action" : "Ready", style::kText, ui::Font::Small);
 }
 
+// ---- The Companion panel's views (Tom, 2026-11-01; CYD_COMPANION_VIEWS,
+// app/features.h; the drawing: game/companion.*). 480x320: a tap on the
+// panel cycles Map -> Party -> (in a fight) Battle -> Map; a fight starts
+// on Battle and gives back the player's view as it ends. 320x240: in a
+// fight the Map key shows the Battle view over the game screen. Redrawn
+// when what it shows changes (looked at every 150 ms), blinking dots every
+// 400 ms; nothing kept but these few words.
+struct LgfxPainter final : companion::Painter {
+    void fill(int x, int y, int w, int h, uint16_t c) override { ui::gfx().fillRect(x, y, w, h, c); }
+    void text(int x, int y, const char* s, uint16_t c) override { ui::text(x, y, s, c, ui::Font::Mono); }
+    uint16_t colour(int v) override { return frame::colour(v); }
+};
+companion::View comp_view = companion::View::Map;   // what the panel shows
+companion::View comp_kept = companion::View::Map;   // the player's own view (Map / Party) - back after a fight
+bool     comp_fight = false;        // a fight was on at the last look
+bool     comp_force = true;         // the panel drawn again whatever changed
+bool     comp_blink_on = true;
+uint32_t comp_sig = 0, comp_icon_sig = 0, comp_looked = 0, comp_blinked = 0;
+bool     press_panel_lit = false;   // the panel lit as the stylus touched
+
+bool comp_on() { return comfort_on(kCCompanion); }
+ui::Rect comp_area() { return {pic::kScreenW + 1, 0, ui::width() - pic::kScreenW - 1, pic::kScreenH}; }
+bool comp_tappable(int x, int y)
+{
+    return screen == Screen::Play && ui::large() && comp_on() && !big_icon_on() && !kb_shown && x > pic::kScreenW &&
+           y < pic::kScreenH;
+}
+
+// 320x240's Map key in a fight: the battlefield over the game screen
+bool draw_battle_page()
+{
+    if (ui::large() || !comp_on() || !play::fighting()) return false;
+    LgfxPainter p;
+    ui::gfx().startWrite();
+    companion::draw_battle(p, {0, 0, pic::kScreenW, pic::kScreenH}, comp_blink_on, true);
+    ui::gfx().endWrite();
+    return true;
+}
+
+// The battlefield's blinking dots (the panel's, or 320x240's page)
+void comp_blink()
+{
+    if (millis() - comp_blinked < 400) return;
+    comp_blinked = millis();
+    if (!companion::battle_blinks()) {
+        comp_blink_on = true;
+        return;
+    }
+    comp_blink_on = !comp_blink_on;
+    LgfxPainter p;
+    ui::gfx().startWrite();
+    companion::blink_battle(p, comp_blink_on);
+    ui::gfx().endWrite();
+}
+
+// The panel as it should be now (480x320; big: the icon editor's preview has it)
+void comp_update(bool big)
+{
+    if (!ui::large()) return;
+    using companion::View;
+    const bool fight = play::fighting();
+    if (fight != comp_fight) {
+        comp_fight = fight;
+        if (fight && comp_on()) comp_view = View::Battle;
+        else if (!fight && comp_view == View::Battle) comp_view = comp_kept;
+        comp_force = true;
+    }
+    if (!comp_on() && comp_view != View::Map) {
+        comp_view = comp_kept = View::Map;
+        comp_force = true;
+    }
+    if (big) return;
+    if (comp_view == View::Map) {
+        if (comp_force || play::pos_x() != play_last_x || play::pos_y() != play_last_y ||
+            play::dir() != play_last_dir || play::map() != play_last_map) {
+            play_last_x = play::pos_x();
+            play_last_y = play::pos_y();
+            play_last_dir = play::dir();
+            play_last_map = play::map();
+            draw_companion(kPlayMap);
+        }
+        comp_force = false;
+        return;
+    }
+    // (the map drawn again when it comes back)
+    play_last_map = nullptr;
+    play_last_x = -1;
+    if (!comp_force && millis() - comp_looked < 150) {
+        if (comp_view == View::Battle) comp_blink();
+        return;
+    }
+    comp_looked = millis();
+    LgfxPainter p;
+    const ui::Rect r = comp_area();
+    const companion::Area a{r.x, r.y, r.w, r.h};
+    if (comp_view == View::Party) {
+        const uint32_t is = play::panel_party_sig(true), s = play::panel_party_sig(false);
+        // (no startWrite round it: outside a fight the icons are read from
+        // the card - the C5's card shares the display's bus)
+        if (comp_force || is != comp_icon_sig) companion::draw_party(p, a, true);
+        else if (s != comp_sig) companion::draw_party(p, a, false);
+        comp_icon_sig = is;
+        comp_sig = s;
+    } else {
+        const uint32_t s = play::panel_field_sig();
+        if (comp_force || s != comp_sig) {
+            ui::gfx().startWrite();
+            companion::draw_battle(p, a, comp_blink_on);
+            ui::gfx().endWrite();
+        }
+        comp_sig = s;
+        comp_blink();
+    }
+    comp_force = false;
+}
+
+// A tap on the panel: its next view
+void comp_cycle()
+{
+    using companion::View;
+    comp_view = comp_view == View::Map ? View::Party : comp_view == View::Party && play::fighting() ? View::Battle : View::Map;
+    if (comp_view != View::Battle) comp_kept = comp_view;
+    comp_force = true;
+    comp_update(false);
+}
+
+// The panel lit as the stylus touches it (Tom's tap rule): a gold frame
+// round it, gone with the redraw
+void comp_press_light()
+{
+    const ui::Rect r = comp_area();
+    ui::gfx().drawRect(r.x, r.y, r.w, r.h, style::kGold);
+    ui::gfx().drawRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2, style::kGold);
+    press_panel_lit = true;
+}
+
 void present_play()
 {
     // A VGA game in 256 colours: its palette changed - the whole screen again
     if (play_palette(false)) {
         frame::present();
         big_force = true;
+        if (comp_view == companion::View::Party) comp_force = true;     // (the icons' colours)
     }
     // A fight swaps colours 0 and 8 (the field's black shows dark grey);
     // Gateway's shows 8 black
@@ -4810,6 +4980,7 @@ void present_play()
         }
         frame::present();
         big_force = true;
+        if (comp_view == companion::View::Party) comp_force = true;
     }
     int y0, y1;
     play::take_dirty(y0, y1);
@@ -4821,7 +4992,10 @@ void present_play()
         big_was = big;
         big_action = false;
         big_force = true;
-        if (!big && ui::large()) play_last_map = nullptr;      // the map back in the strip
+        if (!big && ui::large()) {
+            play_last_map = nullptr;      // the map back in the strip
+            comp_force = true;
+        }
     }
     if (big && (y1 > y0 || big_force)) draw_big_icon();
     big_force = false;
@@ -4847,14 +5021,7 @@ void present_play()
     } else if (play::fight_pad() != pad_fight) {
         draw_walk_keys("Look", "Game", true);        // the fight's pad comes and goes
     }
-    if (!big && (play::pos_x() != play_last_x || play::pos_y() != play_last_y || play::dir() != play_last_dir ||
-                 play::map() != play_last_map)) {
-        play_last_x = play::pos_x();
-        play_last_y = play::pos_y();
-        play_last_dir = play::dir();
-        play_last_map = play::map();
-        draw_companion(kPlayMap);
-    }
+    comp_update(big);
 }
 
 void draw_play()
@@ -4879,6 +5046,7 @@ void draw_play()
     draw_walk_keys("Look", "Game", true);    // Play Test: the game's own Area is on its menu line; Game = the engine's Menu
     play_last_map = nullptr;
     play_last_x = -1;
+    comp_force = true;
     present_play();
 }
 
@@ -4979,6 +5147,13 @@ void tap_play(const ui::Tap& t)
         frame::present();
         redraw_side_keys();
         if (t.y < pic::kScreenH || walk_key(kWMap).contains(t.x, t.y)) return;
+    }
+    if (comp_tappable(t.x, t.y)) {
+        // The Companion panel: its next view (a journal entry waiting: that first)
+        press_panel_lit = false;
+        if (play_journal()) return;
+        comp_cycle();
+        return;
     }
     for (int k = 0; k < kWKeys; ++k) {
         const ui::Rect r = walk_key(k);
@@ -5659,6 +5834,10 @@ void press_feedback(const ui::Tap& p)
     }
     if (screen != Screen::Play || play_error || kb_shown || map_shown || dirty) return;
     if (big_icon_on() && big_icon_area().contains(p.x, p.y)) return;
+    if (comp_tappable(p.x, p.y)) {
+        comp_press_light();
+        return;
+    }
     int cx, cy;
     if (!frame::to_canvas(p.x, p.y, cx, cy)) return;
     int y0, y1;
@@ -5710,6 +5889,10 @@ void tick()
             break;
         }
         ui::tap_unflash();           // back as it was, unless the screen changed
+        if (press_panel_lit) {       // (lit, but the tap went elsewhere)
+            press_panel_lit = false;
+            comp_force = true;
+        }
         if (press_canvas_lit) {      // (lit, but the tap went elsewhere - a journal entry, the keyboard)
             press_canvas_lit = false;
             if (screen == Screen::Play) {
@@ -5717,8 +5900,12 @@ void tick()
                 frame::present_rows(press_y0, press_y1);
             }
         }
-    } else if (!ui::pressed() && (press_key_lit || press_canvas_lit)) {
+    } else if (!ui::pressed() && (press_key_lit || press_canvas_lit || press_panel_lit)) {
         // A press that ended without a tap (a drag): put it back
+        if (press_panel_lit) {
+            press_panel_lit = false;
+            comp_force = true;           // (drawn again by the next present)
+        }
         if (press_key_lit) ui::tap_unflash();
         if (press_canvas_lit && screen == Screen::Play) {
             play::tap_highlight_end(frame::canvas());
@@ -5766,6 +5953,9 @@ void tick()
             present_play();
         }
     }
+    if (screen == Screen::Play && !play_error && !dirty && map_shown && !ui::large() && comp_on() &&
+        play::fighting())
+        comp_blink();                // (320x240's battlefield page: its blinking dots)
     if (screen == Screen::Play && !play_error && !dirty && !map_shown) {
         play::tick(millis(), frame::canvas());
         present_play();

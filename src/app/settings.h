@@ -29,6 +29,7 @@ struct Settings {
                                   // (the engine's Clear font), kFontClearCaps (its capitals only), kFontDarkness (the player's Pools of Darkness one)
     uint8_t volume_muted = 0;     // muted (Tom, 2026-10-24): the Mute key (volume keeps its level), or
                                   // Volume's - down to 0% (volume then keeps 5%'s)
+    uint8_t comforts_off2 = 0;    // more comforts switched off (kOff2*; comforts_off's 8 bits are used)
 };
 
 // The Volume key (Tom, 2026-10-24): 0-100% in 5% steps, kept in the 0-255
@@ -57,6 +58,7 @@ inline uint8_t settings_sound_volume(const Settings& s) { return s.volume_muted 
 constexpr uint8_t kFontGame = 0, kFontClear = 1, kFontDarkness = 2, kFontClearCaps = 3;   // (the stored values)
 constexpr uint8_t kOffGallery = 1, kOffBigIcon = 2, kOffDemoTap = 4, kOffJournal = 8, kOffMoreGuys = 16, kOffPortrait = 32,
                   kOffItemFixes = 64, kOffRolls = 128;
+constexpr uint8_t kOff2Companion = 1;   // (comforts_off2)
 
 
 constexpr uint8_t kMinBrightness = 20;

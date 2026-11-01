@@ -126,6 +126,10 @@ static void state_log(const char* name)
         printf("\n");
     }
 }
+// COMPANION=1: with each snapshot the 480x320 Companion panel's Party and
+// (in a fight) Battle views beside the canvas, and 320x240's battlefield
+// page (game/companion.*; the text in the engine's Clear font at 6 px)
+static void panel_shot(const char* name);
 static void shot(const char* tag)
 {
     if (g_quiet) return;
@@ -150,10 +154,84 @@ static void shot(const char* tag)
     if (C.vga && play::palette(&vpal, true)) {
         for (uint8_t v : (getenv("LCD") ? lcd : all)) { const pic::Rgb& c = vpal[v]; fputc(c.r, f); fputc(c.g, f); fputc(c.b, f); }
         fclose(f);
+        if (getenv("COMPANION")) panel_shot(name);
         return;
     }
     for (uint8_t v : (getenv("LCD") ? lcd : all)) { int k = v & 15; if (swap == 1 && (k == 0 || k == 8)) k ^= 8; else if (swap == 2 && k == 8) k = 0; const pic::Rgb& c = pic::kEga[k]; fputc(c.r, f); fputc(c.g, f); fputc(c.b, f); }
     fclose(f);
+    if (getenv("COMPANION")) panel_shot(name);
+}
+#include "game/companion.cpp"
+// The game screen value's colour as the board shows it (the fight's swap, a VGA palette)
+static pic::Rgb sim_colour(int v)
+{
+    const pic::Rgb* vpal = nullptr;
+    if (C.vga && play::palette(&vpal, true)) return vpal[v & 255];
+    const int swap = play::fight_colours();
+    int k = v & 15;
+    if (swap == 1 && (k == 0 || k == 8)) k ^= 8;
+    else if (swap == 2 && k == 8) k = 0;
+    return pic::kEga[k];
+}
+struct SimPainter final : companion::Painter {
+    int W, H;
+    std::vector<uint8_t> px;
+    SimPainter(int w, int h) : W(w), H(h), px((size_t)w * h * 3, 0) {}
+    void dot(int x, int y, uint16_t c)
+    {
+        if (x < 0 || y < 0 || x >= W || y >= H) return;
+        uint8_t* o = &px[((size_t)y * W + x) * 3];
+        o[0] = (uint8_t)((c >> 11) << 3); o[1] = (uint8_t)(((c >> 5) & 63) << 2); o[2] = (uint8_t)((c & 31) << 3);
+    }
+    void fill(int x, int y, int w, int h, uint16_t c) override { for (int j = 0; j < h; ++j) for (int i = 0; i < w; ++i) dot(x + i, y + j, c); }
+    void text(int x, int y, const char* s, uint16_t c) override
+    {
+        for (; *s; ++s, x += 6) {
+            const int ch = (unsigned char)*s;
+            const uint8_t* g = ch >= 'A' && ch <= 'Z' ? font::kClearUpper[ch - 'A'] : ch >= 'a' && ch <= 'z' ? font::kClearLower[ch - 'a']
+                             : ch >= 32 && ch < 64 ? font::kClearText[ch - 32] : nullptr;
+            if (!g) continue;
+            for (int r = 0; r < 8; ++r) for (int i = 0; i < 6; ++i) if (g[r] >> (7 - (i * 8 + 3) / 6) & 1) dot(x + i, y + r, c);
+        }
+    }
+    uint16_t colour(int v) override { const pic::Rgb c = sim_colour(v); return style::rgb(c.r, c.g, c.b); }
+    void canvas(int x0)
+    {
+        std::vector<uint8_t> row(320);
+        for (int y = 0; y < 200; ++y) {
+            C.get_row(0, y, 320, row.data());
+            for (int x = 0; x < 320; ++x) { const pic::Rgb c = sim_colour(row[x]); uint8_t* o = &px[((size_t)y * W + x0 + x) * 3]; o[0] = c.r; o[1] = c.g; o[2] = c.b; }
+        }
+    }
+    void save(const char* name)
+    {
+        FILE* f = fopen(name, "wb");
+        if (!f) return;
+        fprintf(f, "P6 %d %d 255\n", W, H);
+        fwrite(px.data(), 1, px.size(), f);
+        fclose(f);
+    }
+};
+static void panel_shot(const char* name)
+{
+    std::string base(name);
+    base.resize(base.size() - 4);
+    SimPainter a(480, 200);
+    a.canvas(0);
+    a.fill(320, 0, 1, 200, style::kKeyEdge);
+    companion::draw_party(a, {321, 0, 159, 200}, true);
+    a.save((base + "_party.ppm").c_str());
+    if (!play::fighting()) return;
+    SimPainter b(480, 200);
+    b.canvas(0);
+    b.fill(320, 0, 1, 200, style::kKeyEdge);
+    companion::draw_battle(b, {321, 0, 159, 200}, true);
+    printf("  [companion] panel %d px a square", companion::battle_cell());
+    b.save((base + "_battle.ppm").c_str());
+    SimPainter c(320, 200);
+    companion::draw_battle(c, {0, 0, 320, 200}, true, true);
+    printf(", 320x240 page %d px\n", companion::battle_cell());
+    c.save((base + "_page.ppm").c_str());
 }
 // ITEMOPS on the items screen: a digit picks list line n, a letter taps
 // that menu word, @n taps party row n (Trade), '#' lists the items

@@ -15280,6 +15280,215 @@ bool icon_gallery()
 #endif
 }
 
+// ---- The Companion panel's Party and Battle views (CYD_COMPANION_VIEWS,
+// Tom 2026-11-01; game/companion.*): what they show, read as it is - no
+// block kept for them
+namespace {
+
+template <typename Has> uint16_t panel_fx_of(Has has)
+{
+    if (!d || !d->prof) return 0;
+    const combat::Facts& fx = d->prof->fight.facts;
+    auto on = [&](uint8_t t) { return t != 0 && has(t); };
+    uint16_t b = 0;
+    if (on(fx.held[2]) || on(fx.mon.sleep)) b |= kPxAsleep;
+    if (on(fx.held[1]) || on(fx.mon.paralyzed)) b |= kPxParalysed;
+    if (on(fx.held[0]) || on(fx.held[3]) || on(fx.mon.held_fast) || on(fx.entangle)) b |= kPxHeld;
+    if (on(fx.sp.stun)) b |= kPxStunned;
+    if (on(fx.charm)) b |= kPxCharmed;
+    if (on(fx.fear)) b |= kPxAfraid;
+    if (on(fx.mon.poisoned)) b |= kPxPoisoned;
+    if (on(fx.sp.ill) || on(fx.sp.sick) || on(fx.sp.weak)) b |= kPxDiseased;
+    if (on(fx.blinded)) b |= kPxBlind;
+    if (on(fx.curse) || on(fx.bestow)) b |= kPxCursed;
+    if (on(fx.slow)) b |= kPxSlowed;
+    if (on(fx.bless) || on(fx.prayer)) b |= kPxBlessed;
+    if (on(fx.haste)) b |= kPxHasted;
+    if (on(fx.invisible)) b |= kPxInvisible;
+    if (on(fx.prot_evil) || on(fx.prot_good) || on(fx.sp.shield)) b |= kPxProtected;
+    return b;
+}
+
+uint16_t member_fx(const party::Character& ch)
+{
+    return panel_fx_of([&](uint8_t t) { return ch.has_affect(t); });
+}
+
+// The fighter that is party member i (-1: none / no fight)
+int member_fighter(int i)
+{
+    if (!fg) return -1;
+    for (int k = 0; k < fg->b.n; ++k)
+        if (fg->b.f[k].member == i) return k;
+    return -1;
+}
+
+uint32_t sig_mix(uint32_t h, uint32_t v) { return (h ^ v) * 16777619u; }
+
+} // namespace
+
+int panel_members() { return d && pt ? pt->count : 0; }
+
+bool panel_member(int i, PanelMember& m)
+{
+    if (i < 0 || i >= panel_members()) return false;
+    const party::Character& ch = pt->m[i];
+    ch.name(m.name, sizeof m.name);
+    m.hp = static_cast<int16_t>(ch.hp());
+    m.hp_max = static_cast<int16_t>(ch.hp_max());
+    m.health = static_cast<uint8_t>(ch.health());
+    m.fx = member_fx(ch);
+    const int k = member_fighter(i);
+    if (k >= 0 && fg->b.f[k].fleeing) m.fx |= kPxFleeing;
+    m.current = fg ? (fg->cur >= 0 && fg->cur < fg->b.n && fg->b.f[fg->cur].member == i) : pt->selected == i;
+    return true;
+}
+
+bool panel_icon(int i, uint8_t* px, uint8_t* see, int* w, int* h)
+{
+    if (i < 0 || i >= panel_members()) return false;
+    const party::Character& ch = pt->m[i];
+    Pic4 own;
+    const Pic4* ic = nullptr;
+    const int k = member_fighter(i);
+    if (k >= 0 && fg->icon[fg->b.f[k].icon].px[0]) {
+        ic = &fg->icon[fg->b.f[k].icon];        // (the fight's own)
+    } else if (!fg) {
+        // (as View's portrait box: an NPC from the monsters' files its own
+        // picture, else the record's icon - the ready pose alone, let go below)
+        if (!pool_files() && ch.rec[0xF7] >= 0x80 && ch.rec[0x126] && !ch.rec[0x141] && !ch.rec[0x142]) {
+            char file[16];
+            area_fmt(file, sizeof file, "CPIC%d.DAX");
+            int pw = 0, ph = 0;
+            own.px[0] = load_pic4(file, ch.rec[0x126], 0, &pw, &ph);
+            if (own.px[0]) own.w = static_cast<uint8_t>(pw), own.h = static_cast<uint8_t>(ph);
+        }
+        if (!own.px[0]) build_icon(ch.rec, own, true);
+        ic = &own;
+    }
+    bool ok = false;
+    if (ic && ic->px[0] && ic->w && ic->h) {
+        const uint8_t* p = ic->px[0];
+        const uint8_t* mk = mask_of(p, ic->w, ic->h);
+        const int st = ic->w > 24 || ic->h > 24 ? 2 : 1;
+        const int ow = ic->w / st > 24 ? 24 : ic->w / st, oh = ic->h / st > 24 ? 24 : ic->h / st;
+        memset(see, 0, (24 * 24 + 7) / 8);
+        for (int y = 0; y < oh; ++y)
+            for (int x = 0; x < ow; ++x) {
+                const int sx = x * st, sy = y * st, v = nib(p, ic->w, sx, sy), o = y * ow + x;
+                const bool clear = mk ? masked(mk, ic->w, sx, sy) : v == 0;
+                px[o] = static_cast<uint8_t>(blit_swap && fg && (v == 0 || v == 8) ? v ^ 8 : v);
+                if (clear) see[o >> 3] = static_cast<uint8_t>(see[o >> 3] | 1 << (o & 7));
+            }
+        *w = ow;
+        *h = oh;
+        ok = true;
+    }
+    if (ic == &own) free_pic(own);
+    return ok;
+}
+
+uint32_t panel_party_sig(bool icons)
+{
+    uint32_t h = 2166136261u;
+    const int n = panel_members();
+    h = sig_mix(h, static_cast<uint32_t>(n) | (fg ? 0x100u : 0u));
+    for (int i = 0; i < n; ++i) {
+        const party::Character& ch = pt->m[i];
+        for (int k = 0; k < 16; ++k) h = sig_mix(h, ch.rec[k]);
+        if (icons) {
+            for (int k = 0x141; k <= 0x14A; ++k) h = sig_mix(h, ch.rec[k]);
+            h = sig_mix(h, ch.rec[0x126] | ch.rec[0xF7] << 8);
+            continue;
+        }
+        PanelMember m;
+        panel_member(i, m);
+        h = sig_mix(h, static_cast<uint16_t>(m.hp) | static_cast<uint32_t>(m.hp_max) << 16);
+        h = sig_mix(h, m.health | static_cast<uint32_t>(m.fx) << 8 | (m.current ? 1u << 24 : 0u));
+    }
+    return h;
+}
+
+bool panel_field(PanelField& f)
+{
+    if (!fighting()) return false;
+    const combat::Battle& b = fg->b;
+    f.vx = static_cast<int16_t>(b.vx);
+    f.vy = static_cast<int16_t>(b.vy);
+    f.round = static_cast<int16_t>(b.round);
+    f.n = static_cast<int16_t>(b.n);
+    f.tx = f.ty = -1;
+    f.ts = 1;
+    if (fg->st == FSt::Aim) {
+        const int t = fg->manual ? (b.who[fg->my][fg->mx] ? b.who[fg->my][fg->mx] - 1 : -1) : fg->cand[fg->ci];
+        if (t >= 0 && t < b.n && b.f[t].size) {
+            f.tx = b.f[t].x;
+            f.ty = b.f[t].y;
+            f.ts = b.f[t].size > 1 ? 2 : 1;
+        } else if (fg->manual) {
+            f.tx = static_cast<int16_t>(fg->mx);
+            f.ty = static_cast<int16_t>(fg->my);
+        }
+    }
+    return true;
+}
+
+int panel_square(int x, int y)
+{
+    if (!fighting() || x < 0 || y < 0 || x >= combat::kW || y >= combat::kH) return 0;
+    const int g = fg->b.ground[y][x];
+    if (g <= 0 || g >= combat::kGroundValues) return 0;
+    const uint8_t* t = fg->t.ground[g];
+    return t[0] == 0xFF ? 3 : t[2] ? 2 : 1;
+}
+
+bool panel_dot(int i, PanelDot& o)
+{
+    if (!fighting() || i < 0 || i >= fg->b.n) return false;
+    const combat::Fighter& f = fg->b.f[i];
+    // (the monsters' records go before the fight's end - its results)
+    if (f.gone || (f.member < 0 && f.rec.monster() && !ml)) return false;
+    const int st = f.status();
+    const bool body = !f.size && f.member >= 0 &&
+                      (st == party::Unconscious || st == party::Dying || st == party::Dead || st == party::Stoned);
+    if (!f.size && !body) return false;
+    if (f.x < 0 || f.y < 0 || f.x >= combat::kW || f.y >= combat::kH) return false;
+    o.x = f.x;
+    o.y = f.y;
+    o.size = static_cast<uint8_t>(f.size > 1 ? 2 : 1);
+    o.enemy = f.team() != 0;
+    o.current = fg->cur == i;
+    o.down = body;
+    o.dead = body && (st == party::Dead || st == party::Stoned);
+    o.health = static_cast<uint8_t>(st);
+    o.fx = panel_fx_of([&](uint8_t t) { return f.has(t); });
+    if (f.fleeing) o.fx |= kPxFleeing;
+    o.hp = static_cast<int16_t>(f.hp());
+    o.hp_max = static_cast<int16_t>(f.hp_max());
+    fighter_name(f, o.name, sizeof o.name);
+    return true;
+}
+
+uint32_t panel_field_sig()
+{
+    if (!fighting()) return 0;
+    const combat::Battle& b = fg->b;
+    uint32_t h = 2166136261u;
+    for (int y = 0; y < combat::kH; ++y)
+        for (int x = 0; x < combat::kW; ++x) h = sig_mix(h, b.who[y][x] | b.ground[y][x] << 8);
+    PanelField pf;
+    panel_field(pf);
+    h = sig_mix(h, static_cast<uint32_t>(pf.vx | pf.vy << 8 | pf.round << 16));
+    h = sig_mix(h, static_cast<uint32_t>((pf.tx & 0xFF) | (pf.ty & 0xFF) << 8 | fg->cur << 16));
+    for (int i = 0; i < b.n; ++i) {
+        const combat::Fighter& f = b.f[i];
+        if ((!f.size && f.member < 0) || (f.member < 0 && f.rec.monster() && !ml)) continue;
+        h = sig_mix(h, static_cast<uint32_t>(f.status() | f.team() << 8 | f.hp() << 16) ^ (f.fleeing ? 0x80000000u : 0));
+        h = sig_mix(h, panel_fx_of([&](uint8_t t) { return f.has(t); }));
+    }
+    return h;
+}
+
 bool icon_preview(bool action, uint8_t* out)
 {
     if (!icon_editing()) return false;

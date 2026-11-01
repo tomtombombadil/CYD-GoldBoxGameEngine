@@ -8,6 +8,14 @@ the Project as claude/TODO.md.
 ## Tom
 
 - [x] Spell lists open on the first spell with Memorize lit, the highlight stays after Memorize, "Memorize these spells?" on Yes, Pool's rest menu lit by whole words, a menu left by Exit starts on its first word (the shop's Buy) - Tom, 2026-10-31 (v0.161.2)
+- [ ] Companion Views (2026-11-01, Settings, on by default): 480x320 -
+      tap the map beside the game: Party (icons, HP bars, effects), then
+      in a fight Battle (the whole field: green party, red foes, grey
+      walls, blinking asleep / held / down, the screen's part outlined
+      blue); a fight starts on Battle. 320x240 / 5.0": the Map key in a
+      fight (also in the manual Move / Aim row, before Game) shows the
+      battlefield. Are 3 px squares on the 480x320 panel big enough (the
+      field is 50 x 25 in every game)? Effects words enough, or symbols?
 - [ ] Show Rolls (2026-10-31, Settings, on by default): in a fight the
       panel's last rows show "To Hit: 17+2=19" / "Needed: 14" /
       "Damage: 4+3=7", spells' saves and damage. Is the light grey

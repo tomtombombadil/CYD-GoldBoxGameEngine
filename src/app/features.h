@@ -162,6 +162,26 @@
 #define CYD_COMBAT_ROLLS 1
 #endif
 
+// The Companion panel's views (Tom, 2026-11-01): on 480x320 a tap on the
+// panel beside the game cycles Map -> Party -> (in a fight) Battle. Party:
+// each member's combat icon, name, hit points now / most with a bar (green,
+// yellow under half, red under a quarter) and status / effects in words.
+// Battle: the whole 50 x 25 battlefield (the part the fight uses, as
+// large as fits - 3 px a square for an outdoor field, more indoors): walls
+// grey, the party and allies green, the enemies red (charmed ones switch),
+// asleep / held / paralysed / stunned / fleeing / fallen blinking, the
+// game screen's 7 x 7 window outlined, the turn's fighter ringed white,
+// what is aimed at gold. A fight starts on Battle; the view the player had
+// comes back after it. 320x240 (and the 5.0" board's 2x view): in a fight
+// the Map key shows the Battle view over the game screen until a tap. The
+// originals have no such panel. Drawn straight to the screen, no memory
+// kept. 0: the map alone. Settings key "Companion Views" (settings.h
+// comforts_off2). Where: game/companion.* (drawing), play.cpp (panel_*:
+// what they show), viewer.cpp (comp_*: views, taps, blinking).
+#ifndef CYD_COMPANION_VIEWS
+#define CYD_COMPANION_VIEWS 1
+#endif
+
 // Each comfort compiled in can also be switched off by the player: the
 // game's Settings page (Tom, 2026-10-11, v0.72.0; one set for all games,
 // settings.h comforts_off), the one Settings screen (Home, a game's page, the

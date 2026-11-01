@@ -437,6 +437,16 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   (Curse: the 3D view's frame tiles, cols 26-38 rows 1-13); where the game
   has a portrait (Pool) it comes first, a tap swaps; Pool's own portrait
   on View is the original's (from the party menu).
+- Companion Views (Tom, 2026-11-01; `CYD_COMPANION_VIEWS`, Settings key,
+  `comforts_off2`; SPEC 4 / 11): 480x320 - a tap on the Companion panel
+  cycles Map -> Party -> Battle (fights only; a fight starts on Battle,
+  the player's view comes back after). 320x240 / 5.0" - the Map key in a
+  fight shows Battle over the game screen (the fight's key row has Map
+  before Game). Drawing in `game/companion.*` through a Painter (board:
+  viewer.cpp LgfxPainter; playsim COMPANION=1 writes *_party / _battle /
+  _page.ppm beside each snapshot); data via `play::panel_*` - no memory
+  kept, nothing drawn inside a fight's work. Monsters' records go before
+  a fight's results: panel_dot skips them once `ml` is gone.
 - Show Rolls (Tom, 2026-10-31; `CYD_COMBAT_ROLLS`, on by default): fight
   pages show their rolls at the panel's foot (rows 19-21, never over the
   message) - "To Hit: d20+mods=total" / "Needed: N" (counted from THAC0

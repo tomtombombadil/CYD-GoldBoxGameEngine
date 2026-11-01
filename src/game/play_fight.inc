@@ -1292,7 +1292,8 @@ void icon_compose(uint8_t* b, const uint8_t* h, int hh, const uint8_t* colours)
         for (int x = 0; x < kSq; ++x) set_nib(b, kSq, x, y, map[nib(b, kSq, x, y)]);
 }
 
-void build_icon(const uint8_t* rec, Pic4& ic)
+// ready_only: the ready pose alone (the Companion panel's Party view)
+void build_icon(const uint8_t* rec, Pic4& ic, bool ready_only = false)
 {
     free_pic(ic);
 #if CYD_ICON_GALLERY
@@ -1316,7 +1317,7 @@ void build_icon(const uint8_t* rec, Pic4& ic)
     if (hl()) {
         // (Dark Queen: one CBODY picture a character - the record's icon
         // byte, + 128 the attack frame; no head, no recolouring)
-        for (int fr = 0; fr < 2; ++fr) {
+        for (int fr = 0; fr < (ready_only ? 1 : 2); ++fr) {
             int bw = 0, bh = 0;
             ic.px[fr] = q_load_pic4("CBODY", rec[0x142] + fr * 128, &bw, &bh);
             if (fr && ic.px[0] && ic.px[1]) ic.px[1] = fit_masked(ic.px[1], bw, bh, ic.w, ic.h);      // (one size)
@@ -1326,7 +1327,7 @@ void build_icon(const uint8_t* rec, Pic4& ic)
     }
     const int head = rec[0x141], body = rec[0x142];
     const bool small = rec[0x144] == 1;
-    for (int fr = 0; fr < 2; ++fr) {
+    for (int fr = 0; fr < (ready_only ? 1 : 2); ++fr) {
         int bw = 0, bh = 0, hw = 0, hh = 0;
         uint8_t* b = load_pic4("CBODY.DAX", body + (small ? 0 : 0x40) + fr * 0x80, 0, &bw, &bh);
         // (Darkness: one head for both pictures - GAME.OVR 0x3FFC3; its CHEAD has no +0x80 blocks)

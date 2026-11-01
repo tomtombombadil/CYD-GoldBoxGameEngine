@@ -192,4 +192,58 @@ int pos_y();
 int dir();
 void describe(char* line1, char* line2, int cap);
 
+// ---- The Companion panel's Party and Battle views (CYD_COMPANION_VIEWS;
+// drawn by game/companion.*). Nothing here takes memory that stays.
+// A member's effects, as bits (only those the game has)
+enum PanelFx : uint16_t {
+    kPxAsleep = 1, kPxParalysed = 2, kPxHeld = 4, kPxStunned = 8, kPxFleeing = 16, kPxCharmed = 32,
+    kPxAfraid = 64, kPxPoisoned = 128, kPxDiseased = 256, kPxBlind = 512, kPxCursed = 1024, kPxSlowed = 2048,
+    kPxBlessed = 4096, kPxHasted = 8192, kPxInvisible = 16384, kPxProtected = 32768,
+};
+// (the ones a Battle view's dot blinks for)
+constexpr uint16_t kPxBlink = kPxAsleep | kPxParalysed | kPxHeld | kPxStunned | kPxFleeing;
+struct PanelMember {
+    char     name[16];
+    int16_t  hp, hp_max;
+    uint8_t  health;                    // party::Health
+    bool     current;                   // the one whose turn it is (a fight), else the selected
+    uint16_t fx;                        // PanelFx
+};
+int  panel_members();
+bool panel_member(int i, PanelMember& m);
+// Member i's combat icon, ready pose, as the game screen's values (a
+// fight's: its own pictures; else made from the record, then let go):
+// px w x h (24 x 24 at most - a 48-pixel picture halved), see bit k = pixel
+// k see-through. False: none.
+bool panel_icon(int i, uint8_t* px, uint8_t* see, int* w, int* h);
+// Changes when what the Party view shows changes (icons: when its icons would)
+uint32_t panel_party_sig(bool icons);
+// A fight is on (the Battle view)
+bool fighting();
+struct PanelField {
+    int16_t vx, vy;                     // the game screen's 7 x 7 window
+    int16_t round;
+    int16_t tx = -1, ty = -1, ts = 1;   // the square aimed at (-1: none), its footprint
+    int16_t n;                          // fighters (panel_dot's range)
+};
+bool panel_field(PanelField& f);
+// A battlefield square: 0 off the field, 1 open, 2 an obstacle that can be
+// crossed, 3 a wall / barrier
+int panel_square(int x, int y);
+struct PanelDot {
+    int16_t  x, y;
+    uint8_t  size;                      // squares a side
+    bool     enemy;                     // the other side (charmed ones switch)
+    bool     current;                   // its turn
+    bool     down;                      // a fallen party member's body
+    bool     dead;
+    uint16_t fx;                        // PanelFx
+    uint8_t  health;
+    int16_t  hp, hp_max;
+    char     name[16];
+};
+// Fighter i (0 .. n-1): false when it isn't on the field
+bool panel_dot(int i, PanelDot& d);
+uint32_t panel_field_sig();
+
 } // namespace play

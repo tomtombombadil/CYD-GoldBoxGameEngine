@@ -87,6 +87,12 @@ The games draw a 320x200 screen. The canvas is presented:
   took for a play option that did nothing) scales only the asset viewer's
   pictures; the game screens stay 1:1. A scaled play screen (480x300, no
   Companion) is not planned unless Tom asks.
+  **The panel's views** (Tom, 2026-11-01; `CYD_COMPANION_VIEWS`, section
+  11): a tap on it cycles Map -> Party (icons, names, HP bars, effects)
+  -> Battle (fights only: the whole battlefield as dots, walls grey,
+  party green, enemies red); a fight starts on Battle. On 320x240 (and
+  the 5.0" board) the Map key in a fight shows the Battle view over the
+  game screen; the fight's key row has a Map key for it.
 
 ### Controls (Tom, 2026-10-06; mockup `docs/controls-proposal.png`)
 
@@ -2540,6 +2546,38 @@ a PC, PortMaster handhelds):
     the switch on (`combat::g_rolls`; nothing reads them back - fights are
     the same roll for roll either way; 656 bytes while a fight runs).
     Settings key **Show Rolls** (on by default; As Original turns it off).
+  - `CYD_COMPANION_VIEWS` (Tom, 2026-11-01): the Companion panel's views
+    (section 4). 480x320: a tap on the panel cycles **Map -> Party ->
+    Battle** (Battle only in a fight); a fight starts on Battle and the
+    player's own view (Map / Party, the last picked) comes back as it
+    ends. Party: a row a member (24 px; 23 with 8) - the combat icon (the
+    fight's own pictures; outside a fight made from the record, ready
+    pose only, then let go), the name (gold: the selected / the turn's),
+    "HP now/most", a bar (green, yellow under half, red under a quarter),
+    the health word unless Okay, then the effects worst first (Asleep,
+    Paralysed, Held, Stunned, Fleeing, Charmed, Afraid, Poisoned,
+    Diseased, Blind, Cursed, Slowed, Blessed, Hasted, Invisible,
+    Protected - from the game's own effect numbers, profile fight.facts),
+    whole words while they fit, "+" for more. Battle: the field is 50 x
+    25 squares in every game (`combat::kW / kH`); the part it uses (ground
+    or fighters) fitted as large as fits, square cells (panel: 159 x 200,
+    at most 8 px - the full field 3 px = 150 x 75; turned on its side it
+    would be 3 px too, so it keeps the game's way round; 320x240's page:
+    at most 12 px, the full field 6 px = 300 x 150). Grey walls / barriers
+    (move cost 0xFF), mid grey crossable obstacles, dark open ground; dots
+    green the party and allies, red the other side (team byte - charmed
+    ones switch), dark green a dead member's body, blinking (400 ms) the
+    asleep / paralysed / held / stunned / fleeing and fallen members; the
+    turn's fighter ringed white, what Aim points at gold, the game
+    screen's 7 x 7 window outlined blue; under it the turn's name and HP,
+    the aim's, the colours. Redrawn when what it shows changes (checked
+    every 150 ms), straight to the display - no memory kept; the
+    playsim's COMPANION=1 writes each view beside its snapshots.
+    320x240 (and the 5.0" board's 2x view; Tom, 2026-11-01): in a fight
+    the **Map** key shows the Battle view over the game screen until a
+    tap; the fight's own key row (manual Move / Aim) gets a Map key before
+    Game for it (its arrows 2 px narrower). Settings key **Companion
+    Views** (on by default; As Original turns it off: the map alone).
 
 ## 12. Where the engine differs from the original games (Tom, 2026-10-10: keep this list up to date)
 

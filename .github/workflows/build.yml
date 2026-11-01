@@ -83,7 +83,7 @@ jobs:
       # runs on the PC's platform (tools/host) - the playsim and the sweeps
       - name: Game code builds with no board (src/game + the platform layer)
         run: |
-          for f in play look walk; do g++ -std=c++17 -O1 -Wall -Wno-class-memaccess -Wno-format-truncation -Isrc -c src/game/$f.cpp -o $f.o; done
+          for f in play look walk companion; do g++ -std=c++17 -O1 -Wall -Wno-class-memaccess -Wno-format-truncation -Isrc -c src/game/$f.cpp -o $f.o; done
           g++ -std=c++17 -O1 -Wall -Werror -fsanitize=address,undefined -Itools/host -Isrc -o test_platform tools/host_tests/test_platform.cpp tools/host/*.cpp src/engine/dax.cpp
           ./test_platform
           g++ -std=c++17 -O1 -Itools/host -Isrc -o playsim tools/playsim/sim.cpp src/engine/*.cpp tools/host/*.cpp
