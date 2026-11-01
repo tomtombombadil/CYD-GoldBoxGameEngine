@@ -134,6 +134,24 @@ the Project as claude/TODO.md.
       sharing by the rules, encumbrance and movement, wands / scrolls /
       potions' use outside fights, poison / disease clocks over a rest,
       level drain and Restoration in the later games.
+      Round 3 (Tom, 2026-11-01: "did you check if they were correct?"):
+      `behave levels` parts values / multi check every value at every
+      level against each game's own program tables (scratch oracles
+      oracle_lv_<game>.txt from lv_oracle.py) - single classes (Krynn
+      gods / robes / orders too) to their last level: THAC0, saves,
+      attacks, hit points (dice, Constitution 18 / 16 / 12 / 5, past the
+      hit dice), slots by Wisdom / Intelligence, thief skills by
+      Dexterity, experience, last level; multi-classes a class at a time.
+      Clean on the nine games. Fixed (Game Fixes): thief skills below 0
+      (wrapped to 251%), the Dark Queen's empty save rows past 18th, its
+      hit points (signed, at least 1), the Krynn paladins' hit points.
+      Open for Tom: Curse's / Gateway's / Pool's multi-class hit points
+      add the Constitution for every class held (not only the one
+      trained) and never the fighter's 17+ bonus (the record's class is
+      the multi-class) - the originals' (coab); AD&D's PHB is unclear -
+      fix behind Game Fixes? Not in round 3: turn undead, spells learned
+      at training, Krynn moons, demihuman race limits past Curse /
+      Gateway.
 
 - [ ] Money with Game Fixes (Tom, 2026-10-31; SPEC 12 "Money"): done for
       Pool, Curse, Secret, Gateway. Open: (1) Champions' coin worths

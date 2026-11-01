@@ -10,12 +10,18 @@
 //   L4 hit points: the maximum and the hit points now both rise, by the
 //      same amount, at least 1
 //   L5 no spell slot is lost
+// (parts "values" and "multi", further down: every value at every level
+// against the original program's own tables - oracle_lv_<game>.txt)
 // and the cleric's Wisdom bonus (AD&D's Players Handbook, the table every
 // game's training follows - coab's / the listings' cleric slot routine):
 // Wisdom 13 +1 1st, 14 +1 1st, 15 +1 2nd, 16 +1 2nd, 17 +1 3rd, 18 +1 4th,
 // each only at a spell level the cleric already has slots for; none for
 // paladins, rangers or druids (their slots never follow Wisdom). The
 // expectations are the rules', never the engine's tables.
+
+#include <fstream>
+#include <map>
+#include <sstream>
 
 namespace blv {
 
@@ -368,6 +374,471 @@ void camp()
     expect(P, w, checked > 0 && wrong == 0, "%d wrong", wrong);
 }
 
+// ---- The values at every level (part "values"; Tom, 2026-11-01: "did you
+// check if they were correct?"): each single class the game has - and the
+// Krynn games' cleric by god, magic-user by robe, knight by order - trained
+// from 1st level to its last by the training routine, dice all highest and
+// all lowest, Constitution 18 / 16 / 12 / 5, Game Fixes off (the original)
+// and on; at every level against the oracle oracle_lv_<game>.txt (scratch
+// lv_oracle.py: the original program's own tables read from the player's
+// program, composed by the facts' rules - never the engine's):
+//   V1 the level reached, and the last one (no training past it)
+//   V2 the experience training wants: one short is refused, the figure trains
+//   V3 THAC0 (record 0x73)            V4 the five saves (Game Fixes: each the
+//   best of the levels up to it)      V5 half attacks a round
+//   V6 hit points gained (the dice's, the Constitution's, past the hit dice
+//      the fixed gain; Game Fixes: at least 1)
+//   V7 spell slots of every kind and level (Wisdom and Intelligence 18, 16,
+//      13, 9: the cleric's Wisdom bonus, the 6th / 7th levels' Wisdom, the
+//      magic-user's high levels' Intelligence)
+//   V8 thief skills (Dexterity 18, 14, 9)
+// Multi-classes (part "multi"): every multi-class of the game's creation
+// lists, a class trained at a time: THAC0 the best of the classes', each save
+// the best (V3 / V4), attacks the best (V5), slots the sum of the classes'
+// (V7), hit points (V6m) the rolled classes' dice and Constitution shared by
+// the classes held - by each game's rule (oracle `hpmulti`)
+std::map<std::string, std::vector<std::vector<int>>> lvo;
+bool lvo_load(const char* game)
+{
+    lvo.clear();
+    const char* dir = getenv("ORACLE_DIR");
+    std::string path = std::string(dir ? dir : "/tmp/claude-0/bt") + "/oracle_lv_" + game + ".txt";
+    std::ifstream in(path);
+    if (!in) return false;
+    std::string line;
+    while (std::getline(in, line)) {
+        const size_t h = line.find('#');
+        if (h != std::string::npos) line.erase(h);
+        std::istringstream s(line);
+        std::string key;
+        if (!(s >> key)) continue;
+        std::vector<int> row;
+        int v;
+        while (s >> v) row.push_back(v);
+        lvo[key].push_back(row);
+    }
+    return !lvo.empty();
+}
+// The row of `key` whose first values are `pre`
+const std::vector<int>* lvr(const char* key, std::initializer_list<int> pre)
+{
+    auto it = lvo.find(key);
+    if (it == lvo.end()) return nullptr;
+    for (const auto& r : it->second) {
+        if (r.size() < pre.size()) continue;
+        size_t i = 0;
+        bool ok = true;
+        for (int p : pre) ok = ok && r[i++] == p;
+        if (ok) return &r;
+    }
+    return nullptr;
+}
+const char* game_name()
+{
+    static const char* kNames[10] = {"", "pool", "curse", "secret", "darkness", "champions", "deathknights", "queen",
+                                     "gateway", "treasures"};
+    const int g = getenv("GAME") ? atoi(getenv("GAME")) : 2;
+    return g >= 1 && g <= 9 ? kNames[g] : "";
+}
+bool krynn() { return m->tables.lay.krynn; }
+// The Krynn variants: tag 0 god 1 / robe 1 / knight 1, tag 1 god 5 / robe 2 /
+// knight 2 (the Sword), tag 2 knight 3 (the Rose)
+void variant(party::Character& c, int tag)
+{
+    c.ext[party::kExtGod] = tag == 1 ? 5 : 1;
+    c.ext[party::kExtRobe] = tag == 1 ? 2 : 1;
+    c.ext[party::kExtKnight] = tag == 1 ? 2 : tag == 2 ? 3 : 1;
+    if (krynn()) c.ext[party::kExtRace] = 6;            // (a human in its own numbers)
+}
+int vfails = 0;
+long vchecks = 0;
+void vbad(const char* what, const char* fmt, ...) __attribute__((format(printf, 2, 3)));
+void vbad(const char* what, const char* fmt, ...)
+{
+    ++vfails;
+    if (vfails > 60) return;
+    char t[300];
+    va_list a;
+    va_start(a, fmt);
+    vsnprintf(t, sizeof t, fmt, a);
+    va_end(a);
+    expect(P, what, false, "%s", t);
+}
+// The saves the oracle wants at level L (with Game Fixes the best of the levels up to it)
+// (the oracle's `saveorig`: the original's own quirk where it differs from
+// its table - Champions' knights; `savefix`: the Game Fixes' row where the
+// table's is a mistake - the Dark Queen's empty rows past 18th)
+bool want_saves(int k, int L, int out[5])
+{
+    auto row = [&](int l) {
+        const std::vector<int>* r = rules::fixes() ? lvr("savefix", {k, l}) : lvr("saveorig", {k, l});
+        return r ? r : lvr("save", {k, l});
+    };
+    const auto* r = row(L);
+    if (!r || r->size() < 7) return false;
+    for (int s = 0; s < 5; ++s) out[s] = (*r)[2 + s];
+    for (int l = 1; rules::fixes() && l < L; ++l)
+        if (const auto* e = row(l))
+            for (int s = 0; s < 5; ++s) out[s] = std::min(out[s], (*e)[2 + s]);
+    return true;
+}
+// Slots of every kind and level as the oracle's 27 (cleric, druid, magic-user x 9)
+void got_slots(const party::Character& c, int out[27])
+{
+    for (int kind = 0; kind < 3; ++kind)
+        for (int l = 0; l < 9; ++l) out[kind * 9 + l] = slot(c, kind, l);
+}
+std::string slot_text(const int* s)
+{
+    std::string t;
+    for (int kind = 0; kind < 3; ++kind) {
+        t += kind ? " |" : "";
+        for (int l = 0; l < 9; ++l) t += " " + std::to_string(s[l + kind * 9]);
+    }
+    return t;
+}
+// Every value of a single class at its level against the oracle (V3-V5, V7, V8)
+void check_level(const party::Character& c, int k, int tag, int L, int stat, const char* how)
+{
+    char w[200];
+    if (tag == 0) {
+        if (const auto* t = lvr("thac0", {k, L})) {
+            ++vchecks;
+            if (c.rec[0x73] != (*t)[2]) {
+                snprintf(w, sizeof w, "V3 THAC0 class %d level %d (%s)", k, L, how);
+                vbad(w, "%d (shown %d), the original's %d", c.rec[0x73], 60 - c.rec[0x73], (*t)[2]);
+            }
+        }
+        int sv[5];
+        if (want_saves(k, L, sv)) {
+            ++vchecks;
+            bool ok = true;
+            for (int s = 0; s < 5; ++s) ok = ok && c.rec[0xDF + s] == sv[s];
+            if (!ok) {
+                snprintf(w, sizeof w, "V4 saves class %d level %d (%s)", k, L, how);
+                vbad(w, "%d %d %d %d %d, the original's %d %d %d %d %d", c.rec[0xDF], c.rec[0xE0], c.rec[0xE1], c.rec[0xE2],
+                     c.rec[0xE3], sv[0], sv[1], sv[2], sv[3], sv[4]);
+            }
+        }
+        if (const auto* a = lvr("att", {k, L})) {
+            ++vchecks;
+            if (c.rec[0x11C] != (*a)[2]) {
+                snprintf(w, sizeof w, "V5 attacks class %d level %d (%s)", k, L, how);
+                vbad(w, "%d half attacks, the original's %d", c.rec[0x11C], (*a)[2]);
+            }
+        }
+        if (k == 6)
+            if (const auto* t = lvr("thief", {L, stat == 18 ? 18 : stat == 16 ? 14 : 9})) {
+                ++vchecks;
+                // (the originals' byte wraps below 0; Game Fixes: 0)
+                int want[8];
+                bool ok = true;
+                for (int s = 0; s < 8; ++s) {
+                    want[s] = rules::fixes() ? std::max(0, (*t)[2 + s]) : (*t)[2 + s] & 0xFF;
+                    ok = ok && c.rec[0xEA + s] == want[s];
+                }
+                if (!ok) {
+                    snprintf(w, sizeof w, "V8 thief skills level %d Dexterity %d (%s)", L, (*t)[1], how);
+                    vbad(w, "%d %d %d %d %d %d %d %d, the original's %d %d %d %d %d %d %d %d", c.rec[0xEA], c.rec[0xEB],
+                         c.rec[0xEC], c.rec[0xED], c.rec[0xEE], c.rec[0xEF], c.rec[0xF0], c.rec[0xF1], want[0], want[1],
+                         want[2], want[3], want[4], want[5], want[6], want[7]);
+                }
+            }
+    }
+    if (const auto* s = lvr("slots", {k, tag, L, stat})) {
+        ++vchecks;
+        int got[27];
+        got_slots(c, got);
+        bool ok = true;
+        for (int i = 0; i < 27; ++i) ok = ok && got[i] == (*s)[4 + i];
+        if (!ok) {
+            snprintf(w, sizeof w, "V7 slots class %d/%d level %d Wis/Int %d (%s)", k, tag, L, stat, how);
+            vbad(w, "%s, the original's %s", slot_text(got).c_str(), slot_text(s->data() + 4).c_str());
+        }
+    }
+}
+// A human of class k (variant tag), every ability 18 but `stat` for Wisdom,
+// Intelligence, Dexterity and `con` for Constitution
+void fresh_v(party::Character& c, int k, int tag, int stat, int con)
+{
+    fresh(c, k);
+    variant(c, tag);
+    set_stat(c, 1, stat);
+    set_stat(c, 2, stat);
+    set_stat(c, 3, stat == 16 ? 14 : stat == 18 ? 18 : 9);
+    set_stat(c, 4, con);
+    classes::class_bonuses(c, m->tables);
+}
+void values()
+{
+    const char* g = game_name();
+    if (!lvo_load(g)) {
+        expect(P, "values: the oracle oracle_lv_<game>.txt", false, "none for %s", g);
+        return;
+    }
+    static party::Character c, was;
+    int classes_done = 0, levels_done = 0;
+    const bool fixes0 = rules::fixes();
+    for (const auto& cr : lvo["class"]) {
+        const int k = cr[0], tag = cr[1], last = cr[2];
+        if (k == 1 || (k == 7 && !krynn()) || last < 2) continue;      // (no druids; Curse's monk unused)
+        ++classes_done;
+        for (int fx = 0; fx < 2; ++fx) {
+            rules::set_fixes(fx == 1);
+            for (int con : {18, 16, 12, 5})
+                for (int hi = 0; hi < 2; ++hi) {
+                    if (tag && con != 18) continue;
+                    char how[48];
+                    snprintf(how, sizeof how, "fixes %s, Con %d, dice %s", fx ? "on" : "off", con, hi ? "high" : "low");
+                    fresh_v(c, k, tag, 18, con);
+                    if (con == 18 && hi) check_level(c, k, tag, 1, 18, how);
+                    for (int L = 1; L < 50; ++L) {
+                        char w[160];
+                        const auto* xr = lvr("xp", {k, tag, L});
+                        const int need = xr ? (*xr)[3] : -1;
+                        const int bit = m->tables.u8(static_cast<uint16_t>(m->tables.lay.class_masks + k));
+                        // V1 / V2
+                        if (need < 0) {
+                            put32(c.rec, 0x127, 0x3FFFFFFF);
+                            ++vchecks;
+                            if (create::trainable(c, m->tables) & bit) {
+                                snprintf(w, sizeof w, "V1 last level class %d/%d (%s)", k, tag, how);
+                                vbad(w, "trains past %d (the original's last %d)", L, last);
+                            }
+                            if (L != last) {
+                                snprintf(w, sizeof w, "V1 last level class %d/%d", k, tag);
+                                vbad(w, "stopped at %d, the original's %d", L, last);
+                            }
+                            break;
+                        }
+                        put32(c.rec, 0x127, static_cast<uint32_t>(need - 1));
+                        const bool short_ok = !(create::trainable(c, m->tables) & bit);
+                        put32(c.rec, 0x127, static_cast<uint32_t>(need));
+                        const bool at_ok = (create::trainable(c, m->tables) & bit) != 0;
+                        ++vchecks;
+                        if (!short_ok || !at_ok) {
+                            snprintf(w, sizeof w, "V2 experience class %d/%d level %d -> %d (%s)", k, tag, L, L + 1, how);
+                            vbad(w, "%s at %d", !short_ok ? "trains one short" : "won't train", need);
+                            put32(c.rec, 0x127, 0x3FFFFFFF);
+                            if (!(create::trainable(c, m->tables) & bit)) break;
+                        }
+                        was = c;
+                        create::g_die_hook = hi ? die_high : die_low;
+                        create::train_classes(c, m->tables, m->facts, m->dice, bit, false);
+                        create::g_die_hook = nullptr;
+                        ++levels_done;
+                        ++vchecks;
+                        if (c.level(k) != L + 1) {
+                            snprintf(w, sizeof w, "V1 one level class %d/%d level %d (%s)", k, tag, L, how);
+                            vbad(w, "level %d after training", c.level(k));
+                            break;
+                        }
+                        // (`hpfix`: the Game Fixes' gain where the original's is a mistake -
+                        // the Krynn games' paladins, not fighters for their hit points)
+                        const auto* hr = tag ? lvr("hpv", {k, tag, L + 1}) : nullptr;
+                        if (!tag && rules::fixes()) hr = lvr("hpfix", {k, L + 1, con});
+                        if (!tag && !hr) hr = lvr("hp", {k, L + 1, con});
+                        if (hr) {
+                            int want = (*hr)[tag ? 3 + (hi ? 0 : 1) : 3 + (hi ? 0 : 1)];
+                            if (rules::fixes() && want < 1) want = 1;
+                            const int up = c.hp_max() - was.hp_max();
+                            ++vchecks;
+                            if (up != want || c.hp() - was.hp() != up) {
+                                snprintf(w, sizeof w, "V6 hit points class %d/%d level %d (%s)", k, tag, L + 1, how);
+                                vbad(w, "+%d (now +%d), the original's +%d", up, c.hp() - was.hp(), want);
+                            }
+                        }
+                        if (con == 18 && hi) check_level(c, k, tag, L + 1, 18, how);
+                    }
+                }
+            // V7 / V8 at the other Wisdoms, Intelligences and Dexterities
+            for (int st : {16, 13, 9}) {
+                char how[48];
+                snprintf(how, sizeof how, "fixes %s", fx ? "on" : "off");
+                fresh_v(c, k, tag, st, 18);
+                for (int L = 1; L <= last; ++L) {
+                    if (lvr("slots", {k, tag, L, st}) || (k == 6 && st != 13)) check_level(c, k, tag, L, st, how);
+                    if (L == last) break;
+                    put32(c.rec, 0x127, 0x3FFFFFFF);
+                    const int bit = m->tables.u8(static_cast<uint16_t>(m->tables.lay.class_masks + k));
+                    if (!(create::trainable(c, m->tables) & bit)) break;
+                    create::train_classes(c, m->tables, m->facts, m->dice, bit, false);
+                }
+            }
+        }
+    }
+    rules::set_fixes(fixes0);
+    char w[200];
+    snprintf(w, sizeof w, "values: %d classes trained to their last levels (%d levels), %ld checks: V1-V8", classes_done,
+             levels_done, vchecks);
+    expect(P, w, classes_done > 0 && vfails == 0, "%d wrong", vfails);
+}
+
+// The classes a multi-class id holds (bits by class)
+int multi_bits(int id)
+{
+    static const uint8_t bits[17] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80,
+                                     0x05, 0x25, 0x11, 0x21, 0x41, 0x24, 0x44, 0x64, 0x60};
+    return id >= 0 && id < 17 ? bits[id] : 0;
+}
+int ov(const char* key, std::initializer_list<int> pre, int at, int dflt)
+{
+    const auto* r = lvr(key, pre);
+    return r && static_cast<int>(r->size()) > at ? (*r)[at] : dflt;
+}
+void multi()
+{
+    const char* g = game_name();
+    if (lvo.empty() && !lvo_load(g)) {
+        expect(P, "multi: the oracle oracle_lv_<game>.txt", false, "none for %s", g);
+        return;
+    }
+    const int fam = ov("hpfam", {}, 0, -1);
+    static party::Character c, was;
+    const bool fixes0 = rules::fixes();
+    int combos = 0, steps = 0;
+    long checks0 = vchecks;
+    const int fails0 = vfails;
+    for (int id = 8; id <= 16; ++id) {
+        // (a race whose list has it - its creation lists, the program's)
+        int race = -1;
+        for (int rc = 1; rc <= 7 && race < 0; ++rc) {
+            int list[24];
+            const int n = create::classes_for(m->tables, krynn() ? rc - 1 + classes::kKrynnRace : rc, list, 24);
+            for (int i = 0; i < n; ++i)
+                if (list[i] == id) race = rc;
+        }
+        if (race < 0) continue;
+        const int bits = multi_bits(id);
+        bool have = true;
+        for (int k = 0; k < 8; ++k)
+            if (bits >> k & 1) have = have && lvr("class", {k, 0}) != nullptr;
+        if (!have) continue;
+        ++combos;
+        for (int fx = 0; fx < 2; ++fx)
+            for (int con : {18, 16, 12, 5})
+                for (int hi = 0; hi < 2; ++hi) {
+                    rules::set_fixes(fx == 1);
+                    char how[64];
+                    snprintf(how, sizeof how, "fixes %s, Con %d, dice %s", fx ? "on" : "off", con, hi ? "high" : "low");
+                    // A half-elf (no race saves; its limits only end the run sooner) of the multi-class, each class 1st
+                    fresh(c, 0);
+                    variant(c, 0);
+                    c.rec[0x74] = 4;
+                    c.rec[0x75] = static_cast<uint8_t>(id);
+                    for (int k = 0; k < 8; ++k) c.rec[0x109 + k] = static_cast<uint8_t>(bits >> k & 1);
+                    set_stat(c, 4, con);
+                    classes::class_bonuses(c, m->tables);
+                    int held = 0;
+                    for (int k = 0; k < 8; ++k) held += bits >> k & 1;
+                    for (int step = 0; step < 150; ++step) {
+                        // the lowest class that may train
+                        put32(c.rec, 0x127, 0x3FFFFFFF);
+                        const int ready = create::trainable(c, m->tables);
+                        int pick = -1;
+                        for (int k = 0; k < 8; ++k)
+                            if ((bits >> k & 1) && (m->tables.u8(static_cast<uint16_t>(m->tables.lay.class_masks + k)) & ready) &&
+                                (pick < 0 || c.level(k) < c.level(pick)))
+                                pick = k;
+                        if (pick < 0) break;
+                        const int bit = m->tables.u8(static_cast<uint16_t>(m->tables.lay.class_masks + pick));
+                        was = c;
+                        create::g_die_hook = hi ? die_high : die_low;
+                        create::train_classes(c, m->tables, m->facts, m->dice, bit, false);
+                        create::g_die_hook = nullptr;
+                        ++steps;
+                        char w[200];
+                        int lv[8];
+                        for (int k = 0; k < 8; ++k) lv[k] = c.level(k);
+                        ++vchecks;
+                        if (lv[pick] != was.level(pick) + 1) {
+                            snprintf(w, sizeof w, "M1 one level multi %d class %d (%s)", id, pick, how);
+                            vbad(w, "%d -> %d", was.level(pick), lv[pick]);
+                            break;
+                        }
+                        // V6m: hit points
+                        if (fam >= 0) {
+                            const int L = lv[pick];
+                            const int sides = ov("hd", {pick}, 2, 0), stop = ov("hd", {pick}, 3, 99);
+                            const bool dice = fam == 3 || L < stop;
+                            const int n = fam == 3 ? ov("hd", {pick}, 1, 1) : 1;
+                            int past = ov("past", {pick}, 1, 0);
+                            if (rules::fixes() && lvr("pastfix", {pick})) past = ov("pastfix", {pick}, 1, past);
+                            int fig = ov("mfig", {pick, con}, 2, 0);
+                            if (rules::fixes() && lvr("mfigfix", {pick, con})) fig = ov("mfigfix", {pick, con}, 2, fig);
+                            const int roll = dice ? n * (hi ? sides : 1) : past;
+                            int want;
+                            if (fam == 0 || fam == 3) {
+                                int adj = 0;
+                                for (int k = 0; k < 8; ++k)
+                                    if (lv[k] > 0 && (fam == 3 || lv[k] < ov("hd", {k}, 3, 99))) adj += ov("mfig", {k, con}, 2, 0);
+                                want = std::max(1, (roll + adj) / held);
+                            } else {
+                                const int inc = std::max(1, roll / held);
+                                const int cb = (dice ? fig : 0) & 0xFF;
+                                int cp = rules::fixes() ? static_cast<int8_t>(cb) / held : cb / held;
+                                if (rules::fixes() && inc + cp < 1) cp = 1 - inc;
+                                want = inc + cp;
+                            }
+                            const int up = static_cast<uint8_t>(c.hp_max() - was.hp_max());
+                            ++vchecks;
+                            if (up != (want & 0xFF)) {
+                                snprintf(w, sizeof w, "V6m hit points multi %d class %d level %d (%s)", id, pick, L, how);
+                                vbad(w, "+%d, the original's +%d", up, want);
+                            }
+                        }
+                        if (con != 18 || !hi) continue;
+                        // V3 / V4 / V5 / V7: the classes' best, the slots' sum
+                        int t0 = 0, sv[5] = {99, 99, 99, 99, 99}, att = 0, sl[27] = {};
+                        bool ok = true;
+                        for (int k = 0; k < 8 && ok; ++k) {
+                            if (!lv[k]) continue;
+                            const auto* t = lvr("thac0", {k, lv[k]});
+                            const auto* a = lvr("att", {k, lv[k]});
+                            const auto* s = lvr("slots", {k, 0, lv[k], 18});
+                            int s5[5];
+                            if (!t || !a || !s || !want_saves(k, lv[k], s5)) ok = false;
+                            if (!ok) break;
+                            t0 = std::max(t0, (*t)[2]);
+                            att = std::max(att, (*a)[2]);
+                            for (int i = 0; i < 5; ++i) sv[i] = std::min(sv[i], s5[i]);
+                            for (int i = 0; i < 27; ++i) sl[i] += (*s)[4 + i];
+                        }
+                        if (!ok) continue;
+                        // (the Wisdom bonus once: each class's row has it only where it is the cleric's)
+                        vchecks += 4;
+                        if (c.rec[0x73] != t0) {
+                            snprintf(w, sizeof w, "V3 THAC0 multi %d levels %d/%d/%d", id, lv[0], lv[2], lv[5]);
+                            vbad(w, "%d, the classes' best %d", c.rec[0x73], t0);
+                        }
+                        bool sok = true;
+                        for (int i = 0; i < 5; ++i) sok = sok && c.rec[0xDF + i] == sv[i];
+                        if (!sok) {
+                            snprintf(w, sizeof w, "V4 saves multi %d levels %d/%d/%d/%d/%d (%s)", id, lv[0], lv[2], lv[4], lv[5],
+                                     lv[6], how);
+                            vbad(w, "%d %d %d %d %d, the classes' best %d %d %d %d %d", c.rec[0xDF], c.rec[0xE0], c.rec[0xE1],
+                                 c.rec[0xE2], c.rec[0xE3], sv[0], sv[1], sv[2], sv[3], sv[4]);
+                        }
+                        if (c.rec[0x11C] != att) {
+                            snprintf(w, sizeof w, "V5 attacks multi %d levels %d/%d/%d", id, lv[2], lv[3], lv[4]);
+                            vbad(w, "%d, the classes' best %d", c.rec[0x11C], att);
+                        }
+                        int got[27];
+                        got_slots(c, got);
+                        if (memcmp(got, sl, sizeof got) != 0) {
+                            snprintf(w, sizeof w, "V7 slots multi %d levels %d/%d/%d/%d", id, lv[0], lv[4], lv[5], lv[3]);
+                            vbad(w, "%s, the classes' sum %s", slot_text(got).c_str(), slot_text(sl).c_str());
+                        }
+                    }
+                }
+    }
+    rules::set_fixes(fixes0);
+    char w[200];
+    snprintf(w, sizeof w, "multi: %d multi-classes trained a class at a time (%d trainings), %ld checks: V3-V7, V6m", combos,
+             steps, vchecks - checks0);
+    expect(P, w, combos > 0 && vfails == fails0, "%d wrong", vfails - fails0);
+}
+
 void run()
 {
     if (!monkey_boot()) {
@@ -389,6 +860,8 @@ void run()
     if (!only || strstr(only, "wisdom")) wisdom();
     if (!only || strstr(only, "money")) money();
     if (!only || strstr(only, "camp")) camp();
+    if (!only || strstr(only, "values")) values();
+    if (!only || strstr(only, "multi")) multi();
 }
 
 } // namespace blv
