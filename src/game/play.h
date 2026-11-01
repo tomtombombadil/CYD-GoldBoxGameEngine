@@ -103,7 +103,7 @@ bool walk_pending();
 // The Cheats tab (Tom, 2026-11-01; features.h CYD_CHEATS, Options::cheats):
 // ready only while the party stands at the exploring menu; cheat_open opens
 // 0 Healer (the game's temple, free), 1 Merchant (its shops' goods
-// together, the best price), 2 Sanctuary (its camp, rests never
+// together, normal prices, Id free), 2 Sanctuary (its camp, rests never
 // interrupted) on the game screen - false when not ready
 bool cheats_ready();
 bool cheat_open(int which, pic::Canvas& c);

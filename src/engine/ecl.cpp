@@ -177,10 +177,12 @@ MapLoad find_map_load(const uint8_t* block, uint32_t len, const OpSet& set)
     return m;
 }
 
-void find_shops(const uint8_t* block, uint32_t len, const OpSet& set, ShopFinds& out)
+void find_shops(const uint8_t* block, uint32_t len, const OpSet& set, ShopFinds& out, bool shop_op)
 {
-    constexpr uint8_t kSave = 0x09, kTreasure = 0x27, kCombat = 0x24;
-    constexpr uint16_t kShopWord = 0x7F6C, kPriceWord = 0x7F6D;
+    constexpr uint8_t kSave = 0x09, kTreasure = 0x27, kCombat = 0x24, kPicture = 0x0E, kShop = 0x3C;
+    constexpr uint16_t kShopWord = 0x7F6C, kPriceWord = 0x7F6D, kHeadWord = 0x7EE1;
+    // (the temple's word: Darkness's / Treasures' / the Dark Queen's own byte)
+    const uint16_t temple_word = set.byte_map && !set.curse_bytes ? 0x14 : 0x7EE2;
     const uint32_t pre = set.no_prefix ? 0 : 2;
     if (len < pre + 1) return;
     const uint8_t* c = block + pre;
@@ -197,22 +199,45 @@ void find_shops(const uint8_t* block, uint32_t len, const OpSet& set, ShopFinds&
     // TREASURE's block (0xFFFF: none) since the last COMBAT - both before
     // it, in either order, are a shop's goods (taken at once: the COMBAT
     // may be code shared by several shops)
-    bool shop = false;
+    bool shop = false, opens_shop = false, opens_temple = false;
     uint16_t items = 0xFFFF;
+    // (the block's: the last picture and the head word as it was drawn, the
+    // head word, the price factor)
+    int pic = -1, head = 0xFF, pic_head = 0xFF, factor = 0;
+    auto shop_seen = [&]() {
+        const bool normal = factor == 0 || factor == 0x10;
+        if (pic < 0 || (out.shop_pic >= 0 && (out.shop_pic_normal || !normal))) return;
+        out.shop_pic = static_cast<int16_t>(pic);
+        out.shop_head = static_cast<uint8_t>(pic_head);
+        out.shop_pic_normal = normal;
+    };
     auto look = [&](const Insn& in) {
         int v = 0;
         if (in.op == kSave && in.count >= 2 && address(in.ops[1]) && plain(in.ops[0], &v)) {
             const uint16_t a = in.ops[1].word();
-            if (a == kShopWord && v == 1) shop = true;
+            if (a == kShopWord && v == 1) shop = opens_shop = true;
+            if (a == temple_word && v == 1) opens_temple = true;
+            if (a == kHeadWord) head = v & 0xFF;
             if (a == kPriceWord || (set.byte_map && a == 0x28)) {      // (Darkness / Treasures: its byte 0x28)
                 const int f = v == 0 ? 0x10 : v;
+                factor = f;
                 if ((f & (f - 1)) == 0 && f <= 0x80 && (!out.factor_lo || f < out.factor_lo))
                     out.factor_lo = static_cast<uint8_t>(f);
             }
+        } else if (in.op == kPicture && in.count >= 1 && plain(in.ops[0], &v)) {
+            pic = (v & 0xFF) == 0xFF ? -1 : (v & 0xFF);
+            pic_head = head;                    // (the head word as the picture is drawn)
+        } else if (in.op == kShop && shop_op && in.count >= 1 && plain(in.ops[0], &v)) {     // (a list named)
+            shop_seen();
         } else if (in.op == kTreasure && in.count >= 8 && plain(in.ops[7], &v) && (v & 0xFF) < 0x80) {
             items = static_cast<uint16_t>(v & 0xFF);
         } else if (in.op == kCombat) {
-            shop = false;
+            if (opens_shop) shop_seen();
+            if (opens_temple && pic >= 0 && out.temple_pic < 0) {
+                out.temple_pic = static_cast<int16_t>(pic);
+                out.temple_head = static_cast<uint8_t>(pic_head);
+            }
+            shop = opens_shop = opens_temple = false;
             items = 0xFFFF;
         }
         if (shop && items != 0xFFFF) {

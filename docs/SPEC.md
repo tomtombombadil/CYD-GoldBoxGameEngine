@@ -2596,18 +2596,30 @@ a PC, PortMaster handhelds):
     the exploring screen waiting on the card (`_CYD/CHEAT.TMP`); leaving
     it puts that screen back and the exploring menu, no script involved.
     Healer: the game's temple (its own list and words; Darkness's Repair
-    too), every cure free - no price asked, nothing paid. Merchant: the
+    too), every cure free - no price asked, nothing paid. Healer and
+    Merchant (Tom, 2026-11-01: "so the user knows they're in a store")
+    show the picture the game's own temples / shops show in place of the
+    3D view - the last PICTURE (and the head word with it: Pool's / Curse's
+    shopkeepers are a head and a body) before a script's temple / shop
+    opens (`ecl::ShopFinds` shop_pic / temple_pic; SHOP n in the list
+    games), a person or event picture before a big one, a shop at the
+    goods' own prices first, never the game's camp / treasure picture;
+    drawn from its script's file (`pic_file_override`), read once a game;
+    the exploring screen, its picture state and VGA colours come back on
+    leaving. Checked in the playsim: Pool, Curse, Secret, Darkness,
+    Gateway, Treasures, Champions, Death Knights, Dark Queen. Merchant: the
     game's shop with the goods of all its shops (Curse-style games: the
     ITEM blocks every script's shop sets out - `ecl::find_shops`, SAVE 1
     into the shop word with a TREASURE before the COMBAT; Darkness,
     Treasures, Death Knights, Dark Queen: every SHOP n list of the
     program), each kind once, on the heap while open (Curse 72, Pool 88,
     Darkness 144, Treasures 167 goods); Buy / View (Sell, Id) / Appraise
-    as the game's shops; the price factor the lowest any of its shops
-    sets (Curse 8 = half; most 16 = the goods' value; the Dark Queen's
-    scripts aren't read: 16, or less if the word asks less); selling is
-    the games' one rule (half value); the coin exchange Game Fix as in any
-    shop. Sanctuary: the game's camp opened without the area's
+    as the game's shops; the goods' own prices - factor 16, the games'
+    ordinary shops' (Tom, 2026-11-01: not Curse's / Death Knights'
+    half-price merchant's); Id free (no price taken; the game's question
+    from its "I'll identify your ..." without the price before it);
+    selling is the games' one rule (half value); the coin exchange Game
+    Fix as in any shop. Sanctuary: the game's camp opened without the area's
     before-camp script, its rests (and Fix) never interrupted - no
     wandering monsters, no city watch, no camp-interrupted script -
     Darkness's towns allow Rest and Fix there. Settings key **Cheats Tab**
@@ -2749,6 +2761,25 @@ the game's Settings (As Original: all of them).
   free attack of one it steps away from still takes that step in the
   original (coab's move_step_away_attack: only one out of the fight
   stops); with Game Fixes on it stays where it is and its turn is over.
+- **A bounced bolt's length** (Game Fixes, every game - Lightning Bolt,
+  the lightning stroke, Tyranthraxus's and the breath bolts through
+  `combat::bolt_path`; Tom, 2026-11-01: "a lightning bolt has a specific
+  range ... it should go exactly that far and no farther"). The
+  original carries its count of half squares from one leg to the next
+  (coab's sub_5FA44 var_3D) and adds 8 for a bounce within 4 squares of
+  the caster, so after a bounce it goes on by the difference of two
+  legs' lengths: of 2,900 random bounced bolts (scratch model) about
+  half went within a square and a half of their length, 22% shorter,
+  14% longer, and 3.6% - two walls a leg's length apart - bounced for
+  ever (the fight hung, v0.167.1). With Game Fixes on the bolt goes
+  exactly its length from the square aimed at: every square passed
+  counts (straight 2 half squares, slanted 3; a square is within it
+  while half squares / 2 <= length - the games' range measure), also
+  after a bounce and a square passed again (anyone there hit again);
+  the turn at a wall's face costs nothing; no 8 more near the caster.
+  Off: the original's path - but a bolt the original would bounce for
+  ever runs its path only until the squares really passed reach its
+  length.
 - **Money** (Game Fixes, `rules::fixes()`; Tom, 2026-10-31: "All money is
   convertible ... the innkeeper should accept any combination of coins";
   Pool, Curse, Secret, Gateway - the games with AD&D's five coins at the
