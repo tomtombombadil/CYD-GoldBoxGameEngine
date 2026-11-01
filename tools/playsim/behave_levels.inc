@@ -265,6 +265,109 @@ void money()
     expect(P, "money: M5 pooling and sharing keep the worth", bad5 == 0, "%d wrong; %s", bad5, first.c_str());
 }
 
+// ---- The camp's cures (every game's camp spells by what they do; AD&D's
+// spells, the dice the game's own): C1 a cure of wounds gives its dice's
+// hit points - all lowest, all highest - never past the maximum, nothing
+// to the dead (each cast by the one it heals: the potions' are their
+// drinker's); C2 Cure Blindness / Cure Disease / Neutralize Poison /
+// Remove Curse take their effects away; Slow Poison puts its own on
+int die_low(int) { return 0; }
+int die_high(int n) { return n - 1; }
+void camp()
+{
+    if (!load_magic() || !mrules || !pt || pt->count < 2) {
+        expect(P, "camp: the magic tables and a party of two", false);
+        return;
+    }
+    const auto& mg = d->prof->magic;
+    const rules::CureFacts& cu = d->prof->cures;
+    static party::Party p;
+    int checked = 0, wrong = 0;
+    auto fresh_party = [&]() {
+        p = *pt;
+        for (int i = 0; i < 2; ++i) {
+            party::Character& c = p.m[i];
+            c.rec[0x195] = party::Okay;
+            c.rec[0x78] = 60;
+            c.rec[0x1A4] = 60;
+            c.n_affects = 0;
+        }
+    };
+    auto say_bad = [&](const char* what, int sp, const char* fmt, int a, int b) {
+        ++wrong;
+        if (wrong > 16) return;
+        snprintf(w, sizeof w, "camp spell %02X: %s", sp, what);
+        expect(P, w, false, fmt, a, b);
+    };
+    for (int k = 0; k < mg.n_camp; ++k) {
+        const spells::CampSpell& cs = mg.camp[k];
+        spells::Line lines[16];
+        party::Character& t = p.m[1];
+        switch (cs.does) {
+        case spells::Does::Heal: {
+            if (!cs.n && !cs.plus) break;
+            for (int hi = 0; hi < 2; ++hi) {
+                fresh_party();
+                t.rec[0x1A4] = 1;
+                create::g_die_hook = hi ? die_high : die_low;
+                spells::cast(p, 1, 1, cs, mrules->tables, cu, mg.facts, rng, lines, 16);
+                create::g_die_hook = nullptr;
+                const int want = std::min(60, 1 + cs.n * (hi ? cs.sides : 1) + cs.plus);
+                ++checked;
+                if (t.hp() != want) say_bad(hi ? "C1 heals its dice, all highest" : "C1 heals its dice, all lowest", cs.spell, "HP %d, the dice's %d", t.hp(), want);
+            }
+            fresh_party();
+            t.rec[0x1A4] = 58;
+            create::g_die_hook = die_high;
+            spells::cast(p, 1, 1, cs, mrules->tables, cu, mg.facts, rng, lines, 16);
+            create::g_die_hook = nullptr;
+            ++checked;
+            if (t.hp() != 60) say_bad("C1 never past the maximum", cs.spell, "HP %d of %d", t.hp(), 60);
+            fresh_party();
+            t.rec[0x1A4] = 0;
+            t.rec[0x195] = party::Dead;
+            spells::cast(p, 1, 1, cs, mrules->tables, cu, mg.facts, rng, lines, 16);
+            ++checked;
+            if (t.hp() != 0 || t.rec[0x195] != party::Dead) say_bad("C1 nothing to the dead", cs.spell, "HP %d status %d", t.hp(), t.rec[0x195]);
+            break;
+        }
+        case spells::Does::CureBlind:
+        case spells::Does::CureDisease:
+        case spells::Does::Neutralize:
+        case spells::Does::RemoveCurse: {
+            uint8_t types[8];
+            int nt = 0;
+            if (cs.does == spells::Does::CureBlind && cu.blinded) types[nt++] = cu.blinded;
+            if (cs.does == spells::Does::CureDisease)
+                for (int i = 0; i < 3; ++i)
+                    if (mg.facts.disease[i]) types[nt++] = mg.facts.disease[i];
+            if (cs.does == spells::Does::Neutralize && cu.poisoned) types[nt++] = cu.poisoned;
+            if (cs.does == spells::Does::RemoveCurse && cu.curse) types[nt++] = cu.curse;
+            for (int i = 0; i < nt; ++i) {
+                fresh_party();
+                spells::add_affect(t, types[i], 60, 0, false);
+                spells::cast(p, 1, 1, cs, mrules->tables, cu, mg.facts, rng, lines, 16);
+                ++checked;
+                if (spells::find_affect(t, types[i]) >= 0) say_bad("C2 takes its effect away", cs.spell, "effect %02X still there (%d)", types[i], 0);
+            }
+            break;
+        }
+        case spells::Does::SlowPoison:
+            if (cu.poisoned && cu.slow_poison) {
+                fresh_party();
+                spells::add_affect(t, cu.poisoned, 60, 0, false);
+                spells::cast(p, 1, 1, cs, mrules->tables, cu, mg.facts, rng, lines, 16);
+                ++checked;
+                if (spells::find_affect(t, cu.slow_poison) < 0) say_bad("C2 Slow Poison's effect on", cs.spell, "none (%d %d)", 0, 0);
+            }
+            break;
+        default: break;
+        }
+    }
+    snprintf(w, sizeof w, "camp: the cures (%d cases, %d camp spells)", checked, mg.n_camp);
+    expect(P, w, checked > 0 && wrong == 0, "%d wrong", wrong);
+}
+
 void run()
 {
     if (!monkey_boot()) {
@@ -285,6 +388,7 @@ void run()
     if (!only || strstr(only, "classes")) classes_up();
     if (!only || strstr(only, "wisdom")) wisdom();
     if (!only || strstr(only, "money")) money();
+    if (!only || strstr(only, "camp")) camp();
 }
 
 } // namespace blv
