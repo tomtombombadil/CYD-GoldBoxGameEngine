@@ -569,6 +569,7 @@ struct Fighter {
     bool    escaped = false;            // turned gaseous and escaped (Pool's vampire): away, not down
     uint8_t was_control = 0;            // its control byte before Animate Dead (back after the fight)
     uint8_t undead_turns = 0;           // Darkness: its Turn Undeads this fight (R13)
+    uint8_t flee_last = 8, flee_back = 0;   // fleeing: this turn's last step (8 none), its steps back the way it came
     uint8_t blows = 0;                  // Darkness: its blows in the attack made now (Kalistes' weapons by number - R14)
     // Secret's record bytes with no Curse place (secret_facts_2.md 19): flags
     // 2 (0x15E: 8 = unharmed by Slay Living and the Death Spell) and magic

@@ -2925,6 +2925,10 @@ void start_turn(pic::Canvas& c)
     combat::Battle& b = fg->b;
     combat::Fighter& f = b.f[fg->cur];
     CYD_TEST_ACT(b, fg->cur, TurnStart, -1, f.delay);
+    if (!fg->fx_done) {                 // (a turn begins - not one resumed after a page)
+        f.flee_last = 8;
+        f.flee_back = 0;
+    }
     f.received = f.turns = 0;
     f.guarding = false;
     fg->ai_checked = false;

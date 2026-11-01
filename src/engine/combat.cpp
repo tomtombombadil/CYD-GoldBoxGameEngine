@@ -3318,9 +3318,14 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
     if (!f.up() || !f.size || f.delay <= 0) return p;
     const int my = f.team() ? 1 : 0;
     auto enemy = [&](int c) { return seen_enemy(b, i, c); };
-    if (f.fleeing) {
+    if (f.fleeing && f.moves == 1) {
+        // (half a square left: it guards - coab's moralFailureEscape, its
+        // move / 2 = 0 -> TryGuarding)
+        p.act = Act::Guard;
+        return p;
+    }
+    if (f.fleeing && f.moves >= 2) {
         // Away from the nearest enemy, off the field's edge
-        if (f.moves < 2) return p;
         int near = -1, best = 9999;
         for (int c = 0; c < b.n; ++c) {
             int sq;
@@ -3353,10 +3358,56 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
                 return p;
             }
             if (cost == 0xFF || cost > f.moves) continue;
+            // Back the way it came: the second time its target is dropped,
+            // the third ends the run (coab's moralFailureEscape, its
+            // byte_1AB18 / byte_1AB19 - one turn's count; a ground costing
+            // nothing had a cornered gargoyle step to and fro for ever)
+            if (f.flee_last < 8 && ((dir + 4) & 7) == f.flee_last) {
+                if (++f.flee_back > 2) break;
+                if (f.flee_back > 1) f.target = -1;
+            }
+            f.flee_last = static_cast<uint8_t>(dir);
             p.act = Act::Step;
             p.dir = dir;
             return p;
         }
+        // Cornered - no step away and no edge: the run is given up (its
+        // moves 0, its target dropped) and it fights where it stands - the
+        // original's (coab's moralFailureEscape: a third try with no way
+        // sets its moves to 0, and its turn goes on to the attack -
+        // sub_35DB1). (Pool's turned mummies, plain weapons no use, kept a
+        // fight going for ever when they never struck back - part 16)
+        f.moves = 0;
+        f.target = -1;
+    }
+    if (f.fleeing) {
+        // Its run over (moves 0): an enemy next to it or in a missile's
+        // reach is attacked, else it guards (coab: no near target ->
+        // TryGuarding)
+        pick_target(b, t, i, d);
+        if (f.target < 0 || (f.attacks[0] <= 0 && f.attacks[1] <= 0)) {
+            p.act = Act::Guard;
+            return p;
+        }
+        for (int c = -1; c < b.n; ++c) {
+            const int e = c < 0 ? f.target : c;            // (its target first)
+            if ((c < 0 || enemy(c)) && adjacent(b, i, e)) {
+                f.target = e;
+                p.act = Act::Attack;
+                p.target = e;
+                return p;
+            }
+        }
+        int ammo = -1, sq = 0;
+        const int reach = missile(b, f, &ammo);
+        if (reach > 0 && range(b, t, i, f.target, false, &sq) && sq <= reach) {
+            p.act = Act::Attack;
+            p.target = f.target;
+            p.missile = true;
+            p.ammo = ammo;
+            return p;
+        }
+        p.act = Act::Guard;
         return p;
     }
     // The target: kept while it's an enemy in sight
