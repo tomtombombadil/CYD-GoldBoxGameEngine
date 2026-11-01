@@ -466,7 +466,14 @@ void saving_throws(party::Character& c, const Tables& t)
             int lv = c.level(cls);
             if (former && c.old_level(cls) > lv) lv = c.old_level(cls);
             if (lv <= 0) continue;
-            const int v = t.save(cls, lv, kind);
+            int v = t.save(cls, lv, kind);
+            // (the originals' tables have rows worse than the level before -
+            // Curse / Secret / Champions / Darkness / Treasures' paladin at
+            // 8th, poison 9 after 8; Darkness's / Treasures' thief at 19th,
+            // the 13th-16th row again. Game Fixes: AD&D's - a save never
+            // worse for a level gained; SPEC 12)
+            for (int l = 1; rules::fixes() && l < lv; ++l)
+                if (t.save(cls, l, kind) < v) v = t.save(cls, l, kind);
             if (v < best) best = v;
         }
         // Champions (GAME.OVR 0x3A8E2): after its class loop the former

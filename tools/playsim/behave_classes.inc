@@ -56,7 +56,20 @@ int othac0(int cls, int lvl)
     const auto* r = b_row("thac0", cls);
     return r && lvl + 1 < static_cast<int>(r->size()) ? (*r)[lvl + 1] : 40;
 }
-const std::vector<int>* osave(int cls, int lvl) { return b_row("save", cls, lvl); }
+// The original's saves at a level - with the Game Fixes each the best of
+// the levels up to it (AD&D: no save worse for a level gained; the
+// original's paladin row 8 has poison 9 after 8 - SPEC 12)
+const std::vector<int>* osave(int cls, int lvl)
+{
+    const std::vector<int>* r = b_row("save", cls, lvl);
+    if (!r || !rules::fixes()) return r;
+    static std::vector<int> best;
+    best = *r;
+    for (int l = 1; l < lvl; ++l)
+        if (const std::vector<int>* e = b_row("save", cls, l))
+            for (size_t i = 2; i < best.size() && i < e->size(); ++i) best[i] = std::min(best[i], (*e)[i]);
+    return &best;
+}
 
 // The class levels the multi-class ids hold
 int class_bits(int cls)

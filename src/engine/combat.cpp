@@ -2398,7 +2398,24 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
             else ac = ac < 58 ? ac + 2 : 60;
         }
         // (protection from evil / good: the original's -2 to hit comes before
-        // the roll and is lost; only the saves count)
+        // the roll and is lost; only the saves count. With the Game Fixes
+        // the AD&D spell: an evil / good attacker -2 to hit one warded -
+        // SPEC 12)
+        if (rules::fixes()) {
+            const int al = at.rec[0x11B];
+            bool warded = false;
+            if ((al == 0 || al == 3 || al == 6) && hasx(tg, fx.prot_good)) warded = true;
+            if (!warded && (al == 2 || al == 5 || al == 8)) {
+                warded = hasx(tg, fx.prot_evil) || hasx(tg, fx.mon.prot_evil_near);
+                for (int k = 0; !warded && fx.mon.prot_evil_near && k < b.n; ++k) {
+                    const Fighter& o = b.f[k];
+                    if (&o == &tg || !o.size || !tg.size || !o.has(fx.mon.prot_evil_near)) continue;
+                    const int ddx = o.x - tg.x, ddy = o.y - tg.y;
+                    warded = ddx >= -1 && ddx <= 1 && ddy >= -1 && ddy <= 1;
+                }
+            }
+            if (warded) side -= 2;
+        }
         // Attacking makes them seen
         const int inv = find_aff(at, fx.invisible);
         if (inv >= 0) drop_aff(at, inv);
