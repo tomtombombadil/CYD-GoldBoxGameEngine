@@ -2183,6 +2183,12 @@ Stop Vm::step()
         if (set_.sizes[0x34] == 1) {
             // Pool's: one operand, the clock's slot 1 (its program's handler)
             if (!need(1)) return Stop::Error;
+            // (Pool's handler, START ovr4 +0x2AC1, fetches the operand by an
+            // index it never sets - [bp-1], left by the GOSUB before it - and
+            // the clock doesn't move: DOSBox, the nomads' escort to the hut
+            // (ECL7 block 17, its only use) leaves it at 22:48. Game Fixes:
+            // the minutes the script asks for)
+            if (set_.pool_map && !rules::fixes()) return Stop::Running;
             advance_clock(1, value(o[0]) & 0xFF);
             return Stop::Running;
         }

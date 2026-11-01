@@ -2633,6 +2633,11 @@ the game's Settings (As Original: all of them).
   Kovel mansion's Cast Knock opens the lock whoever knows Knock. With
   Game Fixes on, everyone's memorized spells are looked through ("NO ONE
   IN THE PARTY HAS THE KNOCK SPELL!" when no one has it).
+- **Pool's ECL CLOCK (0x34)** (Game Fixes, 2026-11-01; START ovr4
+  +0x2AC1): the handler fetches its operand by an index byte it never
+  sets (left over from the GOSUB before it), and the clock stays put -
+  the nomads' escort to their hut (ECL7 block 17, the op's only use) takes
+  no time. With Game Fixes on, the minutes the script asks for pass.
 - **A computer's Cure Light Wounds on a body** (Game Fixes; Curse and
   Pool - coab's find_healing_target, Pool GAME.OVR ovr14 +0x1BF8): with
   no one of its side under 8 hit points next to it, the original's
