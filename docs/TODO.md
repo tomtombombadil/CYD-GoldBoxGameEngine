@@ -192,13 +192,22 @@ the Project as claude/TODO.md.
       a tap takes the line). Matched: Create (race ... "Keep this
       character?", name, icon, saved .CHA), Remove / Add, Modify (DOSBox
       moves with Up / Down, not Home / End), the commissions list.
-      (b) still open - Pool's ovr10 +0x2EB judges a computer's spell
-      usable without a target check when its row's byte 14 is 0 (its
-      own side), and with a target count otherwise; whether the cast
-      then finds none and is lost needs a fight. Not reached: Valjevo,
-      the cemetery, the Kovel mansion, the later commissions, Sokal
-      Keep's reward (this party's keep not cleared), Scribe (no scroll
-      in DOS). The Add list's order (DOSBox: the newest .CHA first) not
+      (b) done (part 11): the computer's spells by their row's byte 14
+      (Curse / Pool, Facts::foe_byte) - own-side ones at itself, cast
+      again while on (the engine had sent aim-4 own-side spells at the
+      enemy); Cure Light Wounds at the hurt one next to it, a body
+      lying there of either side (Game Fixes: own side only, SPEC 12).
+      Part 11 also: Pool's COMBAT clips the distance to the party's
+      sight (Sokal's frogs), NEWECL forgets the selection to put back,
+      PICTURE 0xFF takes a sprite away. Matched: Sokal Keep finished
+      (Ferran, the stands, the boat back), its reward at the clerk
+      (1308 XP), the inn's rest, the city hall locked after 14:00.
+      Open (LOG part 11): (c) entering the city hall the original
+      selects the last member, (d) the slums' kobold wander loads 60
+      monsters in DOS, 63 in the engine (placement differs after it),
+      (e) a leader's loot order. Not reached: Podol's auction (the
+      council's commission), the graveyard, the Kovel mansion,
+      Valjevo, Scribe (no scroll in DOS). The Add list's order (DOSBox: the newest .CHA first) not
       checked further. Check in Curse's play test: spell-list paging,
       the camp text after View / Magic, Create's lists (Curse has the
       same list routine?), Begin's selection, View - Spells' prompt, PARLAY's prompt, Knock at a door's second locked
@@ -210,7 +219,10 @@ the Project as claude/TODO.md.
       monsters' valueless items, part 3's: the
       selected member after a fight, SURPRISE's result, the coin list,
       the placement routine, copies' item order; and part 4's: yes/no
-      start / colours, Loot / Take Exits, 0x7EC0 / 0x7EC1, 0x7EC8.
+      start / colours, Loot / Take Exits, 0x7EC0 / 0x7EC1, 0x7EC8; part 11's:
+      the computer's own-side spells and Cure Light Wounds target
+      (coab agrees - check it plays), PICTURE 0xFF over a sprite, NEWECL
+      and the selection, COMBAT's distance against sight.
       Decided (Tom, 2026-10-31, v0.160.9; SPEC 12): Quick lasts one fight
       (part 3's carry-over undone), typed fields keep the cursor ("How
       much", script questions), lists stay lit while a question asks
