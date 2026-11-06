@@ -2741,7 +2741,9 @@ the game's Settings (As Original: all of them).
   goes back to the list's start after each pick); "Memorize these
   spells?" starts on Yes (the originals: No, Gateway Yes). A menu left
   by Exit starts on its first word when shown again (the shop's Buy, not
-  Exit). Pool's rest
+  Exit). The Dark Queen's fight move line "Undo Done" starts on
+  Undo (the original lights neither); Trade's and View's party picks box
+  the chosen member as the party menu does (the originals: white letters). Pool's rest
   menu "Rest daYs Hours ..." lights each whole word (the original: from
   capital to capital). The party menu shows its highlight from the start
   in every game (the originals light none until a key; Tom, 2026-11-01);

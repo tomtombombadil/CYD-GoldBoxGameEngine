@@ -1679,6 +1679,19 @@ bool is_exit_word(int k)
     if (k < 0 || k >= menu.count) return false;
     return menu.end[k] - menu.start[k] + 1 == 4 && strncasecmp(menu.s + menu.start[k], "exit", 4) == 0;
 }
+// The menu word a tap at canvas (x, y) is on (-1: none): a menu on two rows
+// (Darkness's, Gateway's, Krynn's fights) by the tap's row - the Dark
+// Queen's buttons from y 176, row 23 above 188 (navcheck: the tap
+// highlight and the kept place took row 24's word at that column)
+int menu_item_at(int x, int y)
+{
+    if (!text::two_rows(menu)) return text::hit(menu, x / 8);
+    int row = y / 8;
+    if (hl()) row = y < 188 ? text::kMenuRow - 1 : text::kMenuRow;
+    if (row < text::kMenuRow - 1) row = text::kMenuRow - 1;
+    if (row > text::kMenuRow) row = text::kMenuRow;
+    return text::hit_row(menu, x / 8, row);
+}
 // A word picked on the menu line (a tap, or Select at the highlight)
 void hl_remember(int at)
 {
@@ -1702,7 +1715,18 @@ void hl_remember(int at)
 #endif
 }
 // The player moved the highlight: theirs from now on
-void hl_moved() { hl_hold_sig = -1; }
+// (the menu shown is the one moved on: a pick made before - on another
+// menu, or one whose screen drew it without the line's routine - no longer
+// puts the highlight back on its kept word at the key's redraw; navcheck
+// N3, the first Left / Right after a pick jumped to the word kept)
+void hl_moved()
+{
+    hl_hold_sig = -1;
+#if CYD_MENU_HIGHLIGHT
+    hl_shown_sig = hl_sig();
+    hl_after_pick = false;
+#endif
+}
 // A question about to be shown: it starts on the word its game starts it
 // on, never where the same question was answered before (CLAUDE.md's kept
 // exception; DOSBox, Pool's shop: Is It a Deal? on No after an Id's Yes)
@@ -3828,6 +3852,10 @@ void drop_item(int i, pic::Canvas& c)
 // over a list of the party alone
 int trade_col() { return pool_files() ? 17 : 1; }
 void draw_camp_screen(pic::Canvas& c);
+// The party as a list to pick from (Trade's "with whom", View's "Trade to?" /
+// "Heal whom?" / "Cure whom?"): the chosen one in the highlight's box, as
+// the party menu's (CYD_MENU_HIGHLIGHT - navcheck N2: white letters only)
+void draw_pick_party(pic::Canvas& c, int col) { draw_party(c, col, true, CYD_MENU_HIGHLIGHT); }
 
 void draw_trade(pic::Canvas& c)
 {
@@ -3840,10 +3868,11 @@ void draw_trade(pic::Canvas& c)
             draw_panel(c);
         }
         text::clear(c, text::kTextArea);
+        if (pt->count) draw_pick_party(c, trade_col());
     } else {
         c.clear(0);
         layout::outer(c, d->tables, d->frame_tiles);
-        draw_party(c, 1);
+        draw_pick_party(c, 1);
     }
     char keys[24];
     snprintf(keys, sizeof keys, "%s%s", iw(profile::kSelect), d->w_exit);
@@ -3891,7 +3920,7 @@ void trade_tap(int x, int y, pic::Canvas& c)
     if (y < text::kMenuTapTop) {
         if (row >= 4 && row < 4 + pt->count && col >= trade_col()) {
             pt->selected = row - 4;
-            draw_party(c, trade_col());
+            draw_pick_party(c, trade_col());
         }
         return;
     }
@@ -6627,6 +6656,13 @@ bool create_yes_no(Ask what, char k, pic::Canvas& c)
             rules::recalc(mk->ch, *names, d->facts);
             show_new_character(c);
             ask_create(c, Ask::Reroll, mk->words[5]);
+            // (a reroll asks again on the word picked - CLAUDE.md's menu
+            // highlight rule; navcheck N6: Secret's came back on No)
+            for (int w = 0; w < menu.count; ++w)
+                if (text::key(menu, w) == k && menu.selected != w) {
+                    menu.selected = w;
+                    show_menu_line(c);
+                }
         } else {
             ask_name(c);
         }
@@ -7797,7 +7833,7 @@ void draw_view_who(pic::Canvas& c)
 {
     c.clear(0);
     layout::outer(c, d->tables, d->frame_tiles);
-    draw_party(c, 1);
+    draw_pick_party(c, 1);
     char keys[24], prompt[28];
     snprintf(keys, sizeof keys, "%s%s", iw(profile::kSelect), d->w_exit);
     snprintf(prompt, sizeof prompt, "%s",
@@ -7845,7 +7881,7 @@ void view_who_tap(int x, int y, pic::Canvas& c)
     if (y < text::kMenuTapTop) {
         if (row >= 4 && row < 4 + pt->count && col >= 1) {
             pt->selected = row - 4;
-            draw_party(c, 1);
+            draw_pick_party(c, 1);
         }
         return;
     }
@@ -8948,7 +8984,9 @@ void draw_spells(pic::Canvas& c)
         snprintf(t, sizeof t, "%s%s", a, b);
     put(c, t, static_cast<int>(strlen(nm)) + 4, 1, ink);
     const int rows = list_rows();
-    if ((darkness_files() || gateway()) && (sl.sel < sl.top || sl.sel >= sl.top + rows)) dk_page_sel();   // (a turned page)
+    // (a turned page: its first spell lit - the engine's rule in every game,
+    // SPEC 12; Curse, Secret, Krynn's lit none - navcheck N2)
+    if ((darkness_files() || gateway() || sl.sel >= 0) && (sl.sel < sl.top || sl.sel >= sl.top + rows)) dk_page_sel();
     for (int r = 0; r < rows && sl.top + r < sl.n; ++r) {
         const int i = sl.top + r;
         const int row = 5 + r;
@@ -17174,14 +17212,14 @@ bool nav_list(int step, pic::Canvas& c)
     }
     if (screen == Screen::TradeWho && pt->count) {
         pt->selected = (pt->selected + step + pt->count) % pt->count;
-        draw_party(c, trade_col());
+        draw_pick_party(c, trade_col());
         return true;
     }
     // View's "Trade to?" / "Heal whom?" / "Cure whom?" over the party list
     // (Tom, 2026-11-06: the keys didn't move it)
     if (screen == Screen::ViewWho && pt->count) {
         pt->selected = (pt->selected + step + pt->count) % pt->count;
-        draw_party(c, 1);
+        draw_pick_party(c, 1);
         return true;
     }
     if (screen == Screen::Modify && modder) {
@@ -17386,8 +17424,12 @@ bool nav_point(int* x, int* y)
     keys_used = true;
     auto at_word = [&]() {
         const int sel = menu.selected >= 0 && menu.selected < menu.count ? menu.selected : 0;
-        *x = text::word_col(menu, sel) * 8 + 2;
-        *y = text::kMenuRow * 8 + 2;
+        // (a menu on two rows - Darkness's, Gateway's, Krynn's fights - the
+        // word's own row and column: navcheck N5, Select tapped row 24's)
+        int col = 0, row = text::kMenuRow;
+        text::item_cell(menu, sel, &col, &row);
+        *x = col * 8 + 2;
+        *y = row * 8 + 2;
         return true;
     };
     auto anywhere = [&]() {                 // "press a key": a tap on the text
@@ -17470,8 +17512,7 @@ bool tap_target(int x, int y, int* row, int* c0, int* c1)
     if (note_until) return false;                   // the tap puts a message away
     auto menu_word = [&](int item) {
         if (item < 0 || item >= menu.count) return false;
-        *row = text::kMenuRow;
-        *c0 = text::word_col(menu, item);
+        text::item_cell(menu, item, c0, row);       // (a two-row menu's word on its own row)
         *c1 = *c0 + menu.end[item] - menu.start[item];
         return true;
     };
@@ -17485,7 +17526,7 @@ bool tap_target(int x, int y, int* row, int* c0, int* c1)
         *c1 = *c0 + menu.end[k] - menu.start[k];
         return true;
     }
-    if (menu_on && y >= text::kMenuTapTop) return menu_word(text::hit(menu, col));
+    if (menu_on && y >= text::kMenuTapTop) return menu_word(menu_item_at(x, y));
     if (screen == Screen::Modify) {
         const int i = modify_item_at(r, col);
         if (i < 0 || input_mode != Input::None) return false;
@@ -17529,8 +17570,9 @@ bool tap_target(int x, int y, int* row, int* c0, int* c1)
         *c1 = 38;
         return true;
     }
-    // The party menu's characters, Trade's party (a tap picks one)
-    if ((screen == Screen::PartyMenu || screen == Screen::TradeWho) && col >= 1 && r >= 4 && r < 4 + pt->count) {
+    // The party menu's characters, Trade's party, View's Trade to / Heal whom (a tap picks one)
+    if ((screen == Screen::PartyMenu || screen == Screen::TradeWho || screen == Screen::ViewWho) && col >= 1 && r >= 4 &&
+        r < 4 + pt->count) {
         if (screen == Screen::TradeWho && col < trade_col()) return false;
         *row = r;
         *c0 = screen == Screen::TradeWho ? trade_col() : 1;
@@ -17540,7 +17582,8 @@ bool tap_target(int x, int y, int* row, int* c0, int* c1)
     if ((screen == Screen::Items || screen == Screen::ShopBuy || screen == Screen::AddList ||
          screen == Screen::CreatePick || screen == Screen::Heal || screen == Screen::Take || screen == Screen::Loot ||
          screen == Screen::QInv) &&
-        r >= plist.row0 && r <= plist.row1 && plist.top + r - plist.row0 < plist.n) {
+        r >= plist.row0 && r <= plist.row1 && plist.top + r - plist.row0 < plist.n &&
+        !(screen == Screen::CreatePick && plist.top + r - plist.row0 < 1)) {    // (creation's heading line: not a pick)
         *row = r;
         *c0 = plist.col0;
         *c1 = 38;
@@ -17727,9 +17770,9 @@ void tap(int x, int y, pic::Canvas& c)
         return;
     }
     // (Darkness: the menu's place follows the word picked - facts L8)
-    if (kept_hl() && menu_on && y >= text::kMenuTapTop && menu.count > 0) hl_picked(text::hit(menu, x / 8));
+    if (kept_hl() && menu_on && y >= text::kMenuTapTop && menu.count > 0) hl_picked(menu_item_at(x, y));
     // (every game: the menu's place kept for when it comes back - hl_apply)
-    if (menu_on && y >= text::kMenuTapTop && menu.count > 0) hl_remember(text::hit(menu, x / 8));
+    if (menu_on && y >= text::kMenuTapTop && menu.count > 0) hl_remember(menu_item_at(x, y));
     if (screen != Screen::Game) {
         pm_tap(x, y, c);
         return;
