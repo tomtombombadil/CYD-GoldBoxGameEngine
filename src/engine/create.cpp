@@ -1761,11 +1761,15 @@ int hp_most(const party::Character& c, const classes::Tables& t, const Facts& f)
     return v < 1 ? 1 : v > 255 ? 255 : v;
 }
 
+int g_modify_keep_hp = 0;
+
 void modify_hp(party::Character& c, const classes::Tables& t, const Facts& f, int dir)
 {
     uint8_t* r = c.rec;
     int hp = r[kHpMax] + (dir > 0 ? 1 : dir < 0 ? -1 : 0);
-    const int lo = hp_least(c, t, f), hi = hp_most(c, t, f);
+    const int lo = hp_least(c, t, f);
+    int hi = hp_most(c, t, f);
+    if (hi < g_modify_keep_hp) hi = g_modify_keep_hp;
     if (hp > hi) hp = hi;
     if (hp < lo) hp = lo;
     r[kHpMax] = static_cast<uint8_t>(hp);

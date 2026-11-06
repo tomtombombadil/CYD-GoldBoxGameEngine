@@ -220,6 +220,10 @@ bool can_modify(const party::Character& c, bool pool = false, bool secret = fals
 void modify_stat(party::Character& c, const classes::Tables& t, const Facts& f, int stat, int dir);
 // The hit points a step up or down, within their bounds
 void modify_hp(party::Character& c, const classes::Tables& t, const Facts& f, int dir);
+// The hit points Modify never pulls a character below (0: the game's own
+// bounds only) - the Cheats tab's Trainer keeps a trained character's own
+// (Tom, 2026-11-06: the originals' bounds were made for new characters)
+extern int g_modify_keep_hp;
 // The bounds for the levels held: the least (a point a hit die, with the
 // Constitution adjustment) and the most (every die at its highest, with
 // each class's Constitution bonus), averaged over the classes

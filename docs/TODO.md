@@ -22,13 +22,9 @@ the Project as claude/TODO.md.
 - [ ] Try (2026-11-06, not pushed yet): Cheats - Trainer (the game's
       training hall party menu: Train any class free, Modify on anyone)
       and the Max Hit Points switch (Cheats tab or Settings, off by
-      default: training's hit dice at their highest). The Modify hit
-      point bounds are the originals' (made for new characters): a
-      trained character can be above them, and touching HP or
-      Constitution in Modify pulls the HP down to the bound (Exit undoes
-      it). Keep that as the original's rule, or let the Trainer's Modify
-      keep the HP the character has as the least upper bound? Tom's call.
-
+      default: training's hit dice at their highest). The Trainer's Modify keeps a trained character's own hit points as
+      the highest allowed when the game's bound (made for new characters)
+      is lower (Claude's choice, v0.169.0).
 - [x] Spell lists open on the first spell with Memorize lit, the highlight stays after Memorize, "Memorize these spells?" on Yes, Pool's rest menu lit by whole words, a menu left by Exit starts on its first word (the shop's Buy) - Tom, 2026-10-31 (v0.161.2)
 - [ ] Companion Views (2026-11-01, Settings, on by default): 480x320 -
       tap the map beside the game: Party (icons, HP bars, effects), then

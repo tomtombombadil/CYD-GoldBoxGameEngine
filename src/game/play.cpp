@@ -11234,6 +11234,9 @@ void start_modify(pic::Canvas& c)
 {
     party::Character* ch = pt->sel();
     if (!ch) return;
+    // (the Trainer's Modify: a trained character's hit points stay its own
+    // highest allowed - the originals' bounds are a new character's)
+    create::g_modify_keep_hp = cheat == Cheat::Trainer ? ch->hp_max() : 0;
     // (the Cheats tab's Trainer: any character, any time - the bounds as the game's)
     if (cheat != Cheat::Trainer &&
         !create::can_modify(*ch, d->prof->variant.pool_files, secret_files(), darkness_files(), gateway(), krynn_rules(),
