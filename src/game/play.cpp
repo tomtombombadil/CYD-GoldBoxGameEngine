@@ -1679,6 +1679,19 @@ bool is_exit_word(int k)
     if (k < 0 || k >= menu.count) return false;
     return menu.end[k] - menu.start[k] + 1 == 4 && strncasecmp(menu.s + menu.start[k], "exit", 4) == 0;
 }
+// The menu word a tap at canvas (x, y) is on (-1: none): a menu on two rows
+// (Darkness's, Gateway's, Krynn's fights) by the tap's row - the Dark
+// Queen's buttons from y 176, row 23 above 188 (navcheck: the tap
+// highlight and the kept place took row 24's word at that column)
+int menu_item_at(int x, int y)
+{
+    if (!text::two_rows(menu)) return text::hit(menu, x / 8);
+    int row = y / 8;
+    if (hl()) row = y < 188 ? text::kMenuRow - 1 : text::kMenuRow;
+    if (row < text::kMenuRow - 1) row = text::kMenuRow - 1;
+    if (row > text::kMenuRow) row = text::kMenuRow;
+    return text::hit_row(menu, x / 8, row);
+}
 // A word picked on the menu line (a tap, or Select at the highlight)
 void hl_remember(int at)
 {
@@ -17462,8 +17475,7 @@ bool tap_target(int x, int y, int* row, int* c0, int* c1)
     if (note_until) return false;                   // the tap puts a message away
     auto menu_word = [&](int item) {
         if (item < 0 || item >= menu.count) return false;
-        *row = text::kMenuRow;
-        *c0 = text::word_col(menu, item);
+        text::item_cell(menu, item, c0, row);       // (a two-row menu's word on its own row)
         *c1 = *c0 + menu.end[item] - menu.start[item];
         return true;
     };
@@ -17477,7 +17489,7 @@ bool tap_target(int x, int y, int* row, int* c0, int* c1)
         *c1 = *c0 + menu.end[k] - menu.start[k];
         return true;
     }
-    if (menu_on && y >= text::kMenuTapTop) return menu_word(text::hit(menu, col));
+    if (menu_on && y >= text::kMenuTapTop) return menu_word(menu_item_at(x, y));
     if (screen == Screen::Modify) {
         const int i = modify_item_at(r, col);
         if (i < 0 || input_mode != Input::None) return false;
@@ -17720,9 +17732,9 @@ void tap(int x, int y, pic::Canvas& c)
         return;
     }
     // (Darkness: the menu's place follows the word picked - facts L8)
-    if (kept_hl() && menu_on && y >= text::kMenuTapTop && menu.count > 0) hl_picked(text::hit(menu, x / 8));
+    if (kept_hl() && menu_on && y >= text::kMenuTapTop && menu.count > 0) hl_picked(menu_item_at(x, y));
     // (every game: the menu's place kept for when it comes back - hl_apply)
-    if (menu_on && y >= text::kMenuTapTop && menu.count > 0) hl_remember(text::hit(menu, x / 8));
+    if (menu_on && y >= text::kMenuTapTop && menu.count > 0) hl_remember(menu_item_at(x, y));
     if (screen != Screen::Game) {
         pm_tap(x, y, c);
         return;
