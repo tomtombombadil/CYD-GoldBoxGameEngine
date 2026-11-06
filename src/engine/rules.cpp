@@ -462,7 +462,11 @@ void recalc_values(party::Character& c, const items::Names& names, const ItemFac
         hit = static_cast<int8_t>(r[kThac0]);
         if (t.flags & 0x02) hit += dex_missile(c);
         dmg = t.bonus;
-        if (t.flags & 0x04) {
+        // (Strength: the melee weapons' (flags 4) only - a thrown one that
+        // isn't also a melee weapon (darts, javelins: flags 0x10 alone) gets
+        // none in the originals; AD&D's hurled weapons take it, to hit and
+        // damage, with the Game Fixes - Tom, 2026-11-06; SPEC 12)
+        if ((t.flags & 0x04) || ((t.flags & 0x10) && fixes())) {
             hit += str_hit(c);
             dmg += str_damage(c.rec);
         }

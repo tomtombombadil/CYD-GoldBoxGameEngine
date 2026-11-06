@@ -2563,9 +2563,17 @@ void attack_pages(int a, int t, const combat::Attack& at, bool behind, bool shot
 {
     char line[48];
     bool first = true;
+    // With the rolls shown (CYD_COMBAT_ROLLS) and more than one blow (darts'
+    // three, a fighter's two ...): every blow its own page in turn - a miss
+    // too ("Misses", its roll), each shot flying - so the player sees each
+    // one (Tom, 2026-11-06: "only 1 dart thrown"). The originals page the
+    // hits only, a miss just when nothing hit; play is the same either way.
+    bool each = fg->rolls && at.n > 1 && !at.slain;
+    for (int k = 0; each && k < at.n; ++k)
+        if (at.image[k]) each = false;          // (Secret's images: the original's pages)
     // The sounds: a shot's flight, then a blow each hit, a swish for no hit at all
     auto hit_page = [&]() {
-        if (first && shot) {
+        if ((first || each) && shot) {
             page_fx_set(0, fly);
             Fx blow;
             blow.sound = sound::kHit;
@@ -2595,7 +2603,16 @@ void attack_pages(int a, int t, const combat::Attack& at, bool behind, bool shot
             first = false;
             continue;
         }
-        if (!at.hits[k].hit) continue;
+        if (!at.hits[k].hit) {
+            if (each) {
+                add_page(a, fw(at.backstab ? profile::kBackstabs : profile::kAttacksW), fw(profile::kMisses), t);
+                page_roll(take_roll(combat::RollKind::Hit, t, k));
+                if (shot) page_fx_set(0, fly);
+                else page_sound(sound::kMiss);
+                first = false;
+            }
+            continue;
+        }
         const int dmg = at.hits[k].damage;
         snprintf(line, sizeof line, "%s%s%d%s%s", behind ? fw(profile::kFromBehind) : "", fw(profile::kHittingFor), dmg,
                  dmg == 1 ? fw(profile::kPointW) : fw(profile::kPointsW), fw(profile::kOfDamage));

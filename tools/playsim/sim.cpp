@@ -519,6 +519,9 @@ static void run_fight()
                         f.n_items = ch.n_items;
                     }
                     if (w >= 0) { f.items[w][0x2E] = (uint8_t)ty; f.items[w][0x39] = 5; }
+                    if (f.member >= 0) rules::recalc(play::pt->m[f.member], *play::names, play::d->facts);
+                    combat::recount_attacks(play::fg->b, m);
+                    printf("  fighter %d: attacks %d\n", m, f.attacks[0]);
                     printf("  fighter %d: weapon %d now type %d\n", m, w, ty);
                     if (play::fg->st == play::FSt::Menu) play::fight_menu(C);
                 }

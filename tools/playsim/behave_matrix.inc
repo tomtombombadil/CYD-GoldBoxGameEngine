@@ -337,6 +337,100 @@ void weapons()
     }
 }
 
+// ---- T12 darts (Tom, 2026-11-06): AD&D 1e's rate of fire - 3 darts a
+// round (the ITEMS file's 6 half attacks, every game's); one aimed throw
+// rolls all three at its target; Strength (AD&D's table) to hit and
+// damage for a hurled weapon - the originals give it to melee weapons
+// (flags 4) only, so the dart gets it with the Game Fixes alone
+int adnd_str_hit(int s, int e)
+{
+    if (s <= 3) return -3;
+    if (s <= 5) return -2;
+    if (s <= 7) return -1;
+    if (s <= 16) return 0;
+    if (s == 17 || (s == 18 && e <= 50)) return 1;
+    if (s == 18 && e <= 99) return 2;
+    return 3;                           // 18/00
+}
+int adnd_str_dmg(int s, int e)
+{
+    if (s <= 5) return -1;
+    if (s <= 15) return 0;
+    if (s <= 17) return 1;
+    if (s == 18 && e == 0) return 2;
+    if (s == 18 && e <= 75) return 3;
+    if (s == 18 && e <= 90) return 4;
+    if (s == 18 && e <= 99) return 5;
+    return 6;                           // 18/00
+}
+void darts()
+{
+    const int dart = play::d->prof->items.dart;
+    if (!dart || !play::names || play::names->type(dart).range <= 1) {
+        printf("  (matrix: no darts)\n");
+        return;
+    }
+    combat::Battle& b = play::fg->b;
+    put(A, 0, 10, 10);
+    put(B, 1, 13, 10, 200);
+    static uint8_t pile[1][items::kRecordSize];
+    memset(pile, 0, sizeof pile);
+    pile[0][0x2E] = static_cast<uint8_t>(dart);
+    pile[0][0x34] = 1;
+    pile[0][0x39] = 10;
+    auto* keep = F(A).items;
+    const int keep_n = F(A).n_items;
+    F(A).items = pile;
+    F(A).n_items = 1;
+    const int keep_round = b.round;
+    for (int r = 0; r < 2; ++r) {
+        b.round = r;
+        bool ranged = false;
+        const int n = combat::slot1_attacks(b, F(A), &ranged);
+        snprintf(w, sizeof w, "darts readied x round %d: 3 throws", r + 1);
+        expect(P, w, n == 3 && ranged, "attacks %d ranged %d", n, (int)ranged);
+    }
+    b.round = keep_round;
+    F(A).attacks[0] = 3;
+    F(A).attacks[1] = 0;
+    dice(2);                            // (every d20 a 2: all miss, the target stays)
+    play::fg->cur = A;
+    const combat::Attack at = combat::attack(b, A, B, play::names, play::rng);
+    dice_off();
+    expect(P, "darts x one aimed throw: three blows rolled", at.n == 3 && at.shots == 3, "blows %d shots %d", at.n, at.shots);
+    F(A).items = keep;
+    F(A).n_items = keep_n;
+    // Strength with darts readied: the member's own record, 18/00
+    if (F(A).member < 0 || !play::pt) return;
+    party::Character& ch = play::pt->m[F(A).member];
+    static party::Character save;
+    save = ch;
+    ch.n_items = 1;
+    memset(ch.items[0], 0, sizeof ch.items[0]);
+    memcpy(ch.items[0], pile[0], items::kRecordSize);
+    for (int s = 0; s < 3; ++s) {
+        static const int kStr[3][2] = {{18, 100}, {17, 0}, {12, 0}};
+        ch.rec[0x10] = ch.rec[0x11] = static_cast<uint8_t>(kStr[s][0]);
+        ch.rec[0x1C] = ch.rec[0x1D] = static_cast<uint8_t>(kStr[s][1]);
+        ch.rec[0x125] = 1;
+        int hit[2], dmg[2];
+        for (int fix = 0; fix < 2; ++fix) {
+            rules::set_fixes(fix == 1);
+            rules::recalc(ch, *play::names, play::d->facts);
+            hit[fix] = static_cast<int8_t>(ch.rec[0x199]);
+            dmg[fix] = static_cast<int8_t>(ch.rec[0x1A2]);
+        }
+        rules::set_fixes(true);
+        const int wh = adnd_str_hit(kStr[s][0], kStr[s][1]), wd = adnd_str_dmg(kStr[s][0], kStr[s][1]);
+        snprintf(w, sizeof w, "darts x Strength %d/%02d: +%d to hit, +%d damage with the Game Fixes, none without",
+                 kStr[s][0], kStr[s][1], wh, wd);
+        expect(P, w, hit[1] - hit[0] == wh && dmg[1] - dmg[0] == wd, "hit %d -> %d, damage %d -> %d", hit[0], hit[1], dmg[0],
+               dmg[1]);
+    }
+    ch = save;
+    rules::recalc(ch, *play::names, play::d->facts);
+}
+
 // ---- T11 Mirror Image and Displacement against blows (dice highest: the
 // image die takes it when the game's images take blows). Mirror: Curse's /
 // Pool's images only take spells (coab's MirrorImage: spell_id > 0); Secret's
@@ -686,6 +780,7 @@ void run()
         }
     }
     weapons();
+    darts();
     images();
     morale_tests();
     prot_evil();

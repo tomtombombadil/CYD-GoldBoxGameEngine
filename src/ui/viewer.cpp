@@ -3367,7 +3367,7 @@ const char* comfort_help_text(int c)
                    "character creation (the original never applies them); a cleric's experience bonus from "
                    "Wisdom 16; Power Word Blind lasts its worked-out time (the original blinds for good); "
                    "everyone a year older each year of game time (the original: every hundred). "
-                   "Off: as the original.";
+                   "Thrown weapons (darts, javelins) add Strength to hit and damage. Off: as the original.";
         if (game_dirs[game_sel].game == games::Game::SecretOfTheSilverBlades)
             return "The original game's mistakes made as AD&D has them: the elves' +1 to hit with their "
                    "weapons for elves alone; a dwarf's or gnome's -4 when giants attack, and the Constitution "
@@ -3375,29 +3375,30 @@ const char* comfort_help_text(int c)
                    "a paladin's spells and Strength; a cleric's experience bonus from Wisdom 16; Harm; the "
                    "Periapt of Health; a multi-class character's hit points; Sell's weight of coins; "
                    "money: any coins worth a price pay it (the original takes platinum alone), the change "
-                   "exact, and money kept in the highest coins. Off: as the original.";
+                   "exact, and money kept in the highest coins. Thrown weapons (darts, javelins) add Strength to hit and damage. Off: as the original.";
         if (game_dirs[game_sel].game == games::Game::CurseOfTheAzureBonds)
             return "Money as AD&D has it: any coins worth a price pay it (1 platinum = 5 gold = 10 electrum = "
                    "100 silver = 1000 copper, the game's own rates) - the original takes some prices in "
                    "platinum alone - with exact change; afterwards money is kept in the highest coins, so a "
-                   "pile of copper doesn't weigh a character down. Off: as the original.";
+                   "pile of copper doesn't weigh a character down. Thrown weapons (darts, javelins) add Strength to hit and damage. Off: as the original.";
         if (game_dirs[game_sel].game == games::Game::GatewayToTheSavageFrontier)
             return "The original game's mistakes made as AD&D has them: the stirge's and the squid's holds "
                    "hurt; the magic and missile sounds; a new game starts with an empty vault; money: any "
                    "coins worth a price pay it, the change exact, and money kept in the highest coins. "
-                   "Off: as the original.";
+                   "Thrown weapons (darts, javelins) add Strength to hit and damage. Off: as the original.";
         return "Items the original game got wrong, made as AD&D describes them. Pool of Radiance's Flame Tongue: "
                "in the original it is a plain long sword +2 whose blows aren't fire, so a troll it fells gets back "
                "up (and Use casts Find Traps). Fixed it is a long sword +1 Flame Tongue, as in Curse: +2 against "
                "regenerating creatures such as trolls, +3 against cold-using and flying ones, +4 against undead, "
                "and its blows are fire. Your files keep the original's item. Money: any coins worth a price pay "
                "it - the inn's 1 platinum from 5 gold - with exact change, and money is kept in the highest "
-               "coins. Off: as the original.";
+               "coins. Thrown weapons (darts, javelins) add Strength to hit and damage. Off: as the original.";
     case kCRolls:
         return "In a fight, under each message, the dice it tells of: the roll as it came up, the modifiers' "
                "total and the result - \"To Hit: 17+2=19\" and \"Needed: 14\" (the modifiers counted from THAC0 "
                "20, the total needed 20 less the target's AC), \"Damage: 4+3=7\" when it hits. A spell shows its "
-               "target's saving throw and its damage as rolled, before saves and resistances. Off: as the "
+               "target's saving throw and its damage as rolled, before saves and resistances. An attack of several "
+               "blows (three darts) shows each one, misses too. Off: as the "
                "original.";
     case kCCampFix:
         return "Pool of Radiance's camp gets Fix, as every later game has it: the party's clerics cast their "
