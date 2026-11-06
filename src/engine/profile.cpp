@@ -2681,7 +2681,7 @@ const Profile kProfiles[] = {
                // items::kSecretPassive; the Boots of Speed's 0x4A)
                .stat_fx = {0x26, 0x71, 0x0C, 0x0E, 0x44, 0x3E},
                .passive = items::kSecretPassive,
-               .light_magic_armour = true, .speed_fx = 0x4A, .sell_secret = true},
+               .light_magic_armour = true, .speed_fx = 0x4A, .sell_secret = true, .sell_keep = 0x49},
      // Character rules (secret_facts.md 9): the tables in Secret's shapes
      // (classes::Layout secret: 7 classes, levels to 18, 119 spells, its
      // own race order), the rest of character making not known yet
@@ -2902,15 +2902,19 @@ const Profile kProfiles[] = {
      .view = {{0xCBBA, 27, 18}, {0xCDA0, 16, 8}, {0xCE20, 17, 9}, {0xCF35, 7, 2}, {0xCF43, 11, 7}, {0xCF90, 13, 9},
               0, 0x26DAA, 0x26DF0, 0x26DDC, 0x26DE4, 0x26DA2, 0x274EF, 0x274E3, 0x27507, 0x2751F, 0x274FB, 0x27510,
               0x27ABA, 5},
-     .items = {.words = {0xD005, 21, 255}, .types_file = "ITEMS", .arrow = 73, .quarrel = 28, .dart = 9,
-               .flask = 86, .keep1 = 0x87, .keep2 = 0xB1, .elf_bonus = {41, 42, 43, 44, 37, 36},
+     // (its ITEMS type table is Secret's, row for row: arrows 30, quarrels 12,
+     // darts 5 - its Sell tests 0x1E / 0x0C, GAME.OVR 0x295BC; an elf's +1
+     // with types 0x16-0x1A, 0x13, 0x12 and the kender's hoopak +2, 0x36744)
+     .items = {.words = {0xD005, 21, 255}, .types_file = "ITEMS", .arrow = 30, .quarrel = 12, .dart = 5,
+               .flask = 86, .keep1 = 0x87, .keep2 = 0xB1, .elf_bonus = {22, 23, 24, 25, 26, 18, 19},
                .buy_items = 0x70E2, .buy = 0x7FAC, .list_next = 0x3C195, .list_prev = 0x3C19B, .list_exit = 0x73FA,
                .shop_menu = 0x8699, .shop_menu_money = 0x8672, .no_money = 0x83D4, .overloaded = 0x28ED8,
                .title = 0x2851E, .heading = 0x28524, .ready = 0x284EF, .yes = 0x36A19, .no = 0x36A20,
                .cursed = 0x28BAC, .wrong_class = 0x28BB8, .already = 0x28BC4, .hands_full = 0x28BD3,
                .plural_s = 0x37F40, .weapon = 0, .armour = 0,
                .stat_fx = {0x26, 0x92, 0x0C, 0x0E, 0x44, 0x3E},
-               .hammer = {0x17, 20, 20, 243}, .detect = {0x05, 0x05, 0x0B, 0x4D}, .berserk = 0x4D},
+               .hammer = {0x17, 20, 20, 243}, .detect = {0x05, 0x05, 0x0B, 0x4D}, .berserk = 0x4D,
+               .race_weapon = {5, 0x43, 2}},
      // Character rules (champions_facts.md 4): Curse's shapes at Champions'
      // places (the knight in the monk's column; 108 spells), its race-indexed
      // tables by its own races (the code reading each: GAME.OVR ovl 0xA4),
@@ -3091,6 +3095,9 @@ const Profile kProfiles[] = {
      // darts 5), the ITEMS type file (Champions', its 2-byte head); the shop,
      // the items screen and its words as Darkness's (deathknights_facts.md 6)
      .items = {.words = {0xF4DF, 21, 125}, .types_file = "ITEMS", .arrow = 30, .quarrel = 12, .dart = 5,
+               // (an elf's +1 with types 0x16-0x1A, 0x13, 0x12, the kender's
+               // hoopak +2 - GAME.OVR 0x3233B)
+               .elf_bonus = {22, 23, 24, 25, 26, 18, 19},
                // "items : ", "Buy", the shop's menu one string, "not enough money.", "OverLoaded"
                .buy_items = kP | 0xEE3D, .buy = kP | 0xF1CD,
                .list_next = kP | 0xF4BE, .list_prev = kP | 0xF4C9, .list_exit = kP | 0xF4D4,
@@ -3101,6 +3108,7 @@ const Profile kProfiles[] = {
                .title = kP | 0xCDBF, .heading = kP | 0xCDCA, .yes = kP | 0xE8E2, .no = kP | 0xE8ED, .cursed = 0x2533D,
                .wrong_class = 0x25349, .already = 0x25355, .hands_full = 0x25364, .plural_s = 0x33CCF,
                .detect = {5, 0x4D, 0, 0},
+               .race_weapon = {5, 0x43, 2},
                .sell_secret = true,
                // "Ready Use Trade Deposit Drop Halve Join Sell Id Exit"
                .menu = kP | 0xEFA7,
@@ -3323,6 +3331,8 @@ const Profile kProfiles[] = {
      // Secret's numbering - arrows 30, quarrels 12, darts 5), the ITEMS type
      // file without a head; "Items" (DS 0x1738)
      .items = {.words = {0xD1C4, 21, 125}, .types_file = "ITEMS", .arrow = 30, .quarrel = 12, .dart = 5,
+               // (an elf's +1 with types 0x16-0x1A, 0x13, 0x12 - GAME.OVR 0x34043)
+               .elf_bonus = {22, 23, 24, 25, 26, 18, 19},
                // the shop (facts_shops.md 2): "items : ", "Buy", its menu one string
                // (Take and Share left out with no coins on the counter), "not
                // enough money.", Buy's "OverLoaded"
@@ -3604,8 +3614,13 @@ const Profile kProfiles[] = {
                0x2EA77, 0x2EA7D, 0x2EA3F, 0x3F04B, 0x3F052, 0x2F5E1, 0x2F5ED, 0x2F5F9, 0x2F608, 0x4084B,
                0x2DA43, 0x2DA4A, {0x26, 0x92, 0x0C, 0x0E, 0x44, 0x3E},
                {0x17, 20, 20, 243}, {0x05, 0x05, 0x0B, 0x4D}, 0x4D,
-               // (positional to types_stride: C++20 doesn't mix designators)
-               nullptr, 0xFF, 0xA0, 0, 0, {}, {}, {}, false, 0, false, 2, 24},
+               // (positional to types_stride: C++20 doesn't mix designators;
+               // every field spelt out - race_weapon's arrival once slid the
+               // stride into speed_fx: Gateway's types read 16 a row and effect
+               // 0x18 doubling the movement. Armour's +3 for magic armour only
+               // - its GAME.OVR 0x3EE63)
+               nullptr, 0xFF, 0xA0, 0, 0, {}, {}, {}, /* light_magic_armour */ true, /* race_weapon */ {},
+               /* speed_fx */ 0, /* sell_secret */ false, /* sell_keep */ 0, /* types_head */ 2, /* types_stride */ 24},
      // Character rules: Curse's tables at a shift (DS 0x435E on; stat limits
      // 28 bytes further - gateway_facts.md 6), its effects and words
      .create = {0x4C70,
@@ -3748,6 +3763,8 @@ const Profile kProfiles[] = {
      // Items: 181 name words of 21 bytes (DS 0x3470; 1-125 Darkness's), the
      // ITEMS type file; the rest as Darkness's
      .items = {.words = {0xF850, 21, 181}, .types_file = "ITEMS", .arrow = 30, .quarrel = 12, .dart = 5,
+               // (an elf's +1 with types 0x16-0x1A, 0x13, 0x12 - GAME.OVR 0x3DE92)
+               .elf_bonus = {22, 23, 24, 25, 26, 18, 19},
                // the shop (facts_shops.md 2): "items : ", "Buy", its menu one string
                // (Take and Share left out with no coins on the counter), "not
                // enough money.", Buy's "OverLoaded"

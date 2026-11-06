@@ -5126,7 +5126,8 @@ static void test_items()
     rules::recalc(ch, n, f);
     CHECK(ch.ac() == -1);                                // plate 57 + shield 1 + dex 3 = 61
     CHECK(ch.thac0() == 16 && ch.dice() == 1 && ch.dice_sides() == 8 && ch.damage_bonus() == 7);   // +1 sword, Str 18/00
-    CHECK(ch.movement() == 9 && ch.encumbrance() == 217 + 60 + 450 + 100);
+    // (plain plate: 6 - the +3 only for magic armour, GAME.OVR 0x37920)
+    CHECK(ch.movement() == 6 && ch.encumbrance() == 217 + 60 + 450 + 100);
     CHECK(items::readied_in(ch.items, ch.n_items, n, items::kSlotArmour) == 1);
     int pool[7] = {50, 0, 0, 0, 0, 0, 0};
     CHECK(rules::gold_worth(pool) == 0);
@@ -6411,10 +6412,11 @@ static void test_item_piles()
     CHECK(rules::join(c, 1) == 0);
     rules::remove_item(c, 0);
     CHECK(c.n_items == 2 && c.items[0][0x2E] == 73);
-    // Sell: half the value; arrows each, other piles / 20
+    // Sell: half the value; every pile / 20 (Curse's arrows' test never
+    // holds - GAME.OVR 0x2984E)
     const rules::ItemFacts f{73, 28, {}};
     CHECK(rules::sell_value(sword, f) == 150);
-    CHECK(rules::sell_value(arrows, f) == 21);                    // 21 x (2 / 2)
+    CHECK(rules::sell_value(arrows, f) == 1);                     // 21 x (2 / 2) / 20
     uint8_t darts[items::kRecordSize];
     memcpy(darts, arrows, sizeof darts);
     darts[0x2E] = 9; darts[0x3A] = 100; darts[0x39] = 10;

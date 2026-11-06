@@ -160,10 +160,33 @@ the Project as claude/TODO.md.
       fix behind Game Fixes? Not in round 3: turn undead, spells learned
       at training, Krynn moons, demihuman race limits past Curse /
       Gateway.
+      the party can hurt) - not bugs, the player would act. Round 3
+      (2026-11-06): `behave economy` (weight, armour / load movement,
+      Sell, Id, Buy, Share, Take, Appraise, Cheats, wear / unwear, rest
+      healing and effect clocks) and `sweep campfuzz` (random camp
+      actions, CF1-CF3 + the party checker) - clean on all nine. Fixed
+      from each program: Curse's family sells every pile count / 20,
+      Secret's type 0x49 one's price; Sell's coins as each pays them
+      (Champions steel); Id 100 in Secret / Champions; Curse / Gateway
+      pay rounded as Pool; Champions' coin worths (DS 0x0F46); plain
+      armour gets no +3 movement in any game (Curse did; coab's facts
+      leave the test out); Gateway's item facts had slid (types read 16
+      a row, effect 0x18 doubling movement); Champions' arrows are 30 /
+      12; elves' / kender's weapon bonus in Champions, Death Knights,
+      Darkness, Treasures; the Dark Queen's Sell / Id; View's coin
+      Trade / Drop Esc and a late coin number opened the last shop's
+      counter in camp. Open: (2) wands / scrolls / potions' use outside
+      fights, poison / disease over a rest, level drain / Restoration,
+      ageing - not checked by rule yet; (3) Darkness's rest isn't
+      reached by the camp fuzzer (0 rests: its own menu words);
+      (4) Champions' Sell / Appraise in its other coins (only steel
+      checked); (5) Curse's plain-armour movement: confirm once in
+      DOSBox (a fighter in chain mail: 9 here, 12 before).
 
 - [ ] Money with Game Fixes (Tom, 2026-10-31; SPEC 12 "Money"): done for
       Pool, Curse, Secret, Gateway. Open: (1) Champions' coin worths
-      (copper, bronze, steel, platinum - from its program) before its
+      (found 2026-11-06: DS 0x0F46 - copper 5, bronze 10, platinum 25,
+      steel 50 to the 50; payments use them now) before its
       money joins in; (2) Tom's rates were 2e's (1 pp = 50 sp); the engine
       keeps the games' own (1e: 1 gp = 20 sp) - tell Tom; (3) the wagon
       driver (Pool 2:9's whole-party payer) not run in the playsim yet.

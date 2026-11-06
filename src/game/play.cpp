@@ -3973,7 +3973,9 @@ void sell_dk(int i, pic::Canvas& c)
 void sell_item(int i, pic::Canvas& c)
 {
     if (!can_part_with(i, c)) return;
-    if (darkness_files()) {
+    if (dk_ui()) {
+        // (the Dark Queen's too: "I'll give you %u steel pieces for your %s"
+        // - the price in its one coin, as Darkness's)
         sell_dk(i, c);
         return;
     }
@@ -4015,12 +4017,19 @@ void add_coins(party::Character& ch, int kind, int n)
 }
 
 // Pool's payments - a shop's Buy, Id, a temple's cure (ovr7 +0x3F3, ovr20
-// +0x1FDA, ovr5 +0x18F): the coins' worth in gold less the price, set back
-// as all platinum and the odd gold (ovr22 +0x130 / +0x185; gems and
-// jewellery kept). The character's, else the counter's
+// +0x1FDA, ovr5 +0x18F): the coins' worth in gold (rounded: + 100 copper
+// before / 200 - Pool GAME.OVR 0x2394E) less the price, set back as all
+// platinum and the odd gold (ovr22 +0x130 / +0x185; gems and jewellery
+// kept; the 16-bit word the routine takes). The character's, else the
+// counter's. Curse's and Gateway's the same (Curse's Id GAME.OVR 0x29B11:
+// its worth 0x2A40B rounded, the money set by 0x2BDE2)
+bool gold_set_pay()
+{
+    return pool_files() || d->prof->game == games::Game::CurseOfTheAzureBonds || gateway();
+}
 void pool_pay(party::Character& ch, int cost)
 {
-    const int left = rules::gold_worth(ch) - cost;
+    const int left = (rules::gold_worth(ch, true) - cost) & 0xFFFF;
     for (int m = 0; m < 5; ++m) {
         const int v = m == 4 ? left / 5 : m == 3 ? left % 5 : 0;
         ch.rec[0xFB + m * 2] = static_cast<uint8_t>(v);
@@ -4029,9 +4038,44 @@ void pool_pay(party::Character& ch, int cost)
 }
 void pool_pay(int money[7], int cost)
 {
-    const int left = rules::gold_worth(money) - cost;
+    const int left = (rules::gold_worth(money, true) - cost) & 0xFFFF;
     for (int m = 0; m < 5; ++m) money[m] = m == 4 ? left / 5 : m == 3 ? left % 5 : 0;
 }
+
+// Champions of Krynn's money (GAME.OVR 0x2A18F / 0x2BA47; DS 0x0F46 its
+// worths 1 5 10 25 50 for the record's 0xEB, copper, bronze, platinum,
+// steel - a price in steel, its last): the worth in steel rounded down;
+// a payment sets the coins to the steel left, the others none
+bool champions_money() { return krynn() && !dk_ui(); }
+int champ_worth(const int m[7]) { return static_cast<int>((m[0] * 5L + m[1] * 10L + m[4] * 25L + m[3] * 50L) / 50); }
+int champ_worth(const party::Character& ch)
+{
+    int m[7];
+    for (int i = 0; i < 7; ++i) m[i] = ch.money(i);
+    return champ_worth(m);
+}
+void champ_pay(int m[7], int cost)
+{
+    const int left = (champ_worth(m) - cost) & 0xFFFF;
+    for (int k = 0; k < 5; ++k) m[k] = k == 3 ? left : 0;
+}
+void champ_pay(party::Character& ch, int cost)
+{
+    int m[7];
+    for (int i = 0; i < 7; ++i) m[i] = ch.money(i);
+    champ_pay(m, cost);
+    for (int k = 0; k < 5; ++k) {
+        ch.rec[0xFB + k * 2] = static_cast<uint8_t>(m[k]);
+        ch.rec[0xFC + k * 2] = static_cast<uint8_t>(m[k] >> 8);
+    }
+}
+// What a purse is worth in the game's price unit (gold; Champions' steel)
+int price_worth(const party::Character& ch) { return champions_money() ? champ_worth(ch) : rules::gold_worth(ch, gold_set_pay()); }
+int price_worth(const int m[7]) { return champions_money() ? champ_worth(m) : rules::gold_worth(m, gold_set_pay()); }
+
+// Id's price in gold (the game's gold-place coin): Secret's "For 100 gold
+// pieces" (GAME.OVR 0x2A270), Champions' 100 steel (0x29860); the others 200
+int id_cost() { return secret_files() || (krynn() && !dk_ui()) ? 100 : 200; }
 
 // Game Fixes' money (Tom, 2026-10-31; SPEC 12): in the games with AD&D's
 // five coins any coins worth a price pay it - the payer's, what they lack
@@ -4053,11 +4097,18 @@ bool shop_pay(party::Character& ch, int cost)
         rules::coins_up(ground->money);
         return true;
     }
-    if (cost <= rules::gold_worth(ch)) {
-        if (pool_files()) pool_pay(ch, cost);
+    if (champions_money()) {
+        if (cost <= champ_worth(ch)) champ_pay(ch, cost);
+        else if (cost <= champ_worth(ground->money)) champ_pay(ground->money, cost);
+        else return false;
+        return true;
+    }
+    const bool set = gold_set_pay();
+    if (cost <= rules::gold_worth(ch, set)) {
+        if (set) pool_pay(ch, cost);
         else rules::pay(ch, cost);
-    } else if (cost <= rules::gold_worth(ground->money)) {
-        if (pool_files()) pool_pay(ground->money, cost);
+    } else if (cost <= rules::gold_worth(ground->money, set)) {
+        if (set) pool_pay(ground->money, cost);
         else rules::pay(ground->money, cost);
     } else {
         return false;
@@ -4085,7 +4136,7 @@ bool items_yes_no(Ask what, char k, pic::Canvas& c)
         back_to_items(c);
         return true;
     }
-    if (what == Ask::SellDeal && darkness_files()) {
+    if (what == Ask::SellDeal && dk_ui()) {
         // Darkness: "Sold!" / "I will give it to one of my sons." / "Very
         // well.  I'll take them."; the platinum - what the character can't
         // carry goes on the counter ("Overloaded.  Money will be put in pool.")
@@ -4105,9 +4156,10 @@ bool items_yes_no(Ask what, char k, pic::Canvas& c)
         note(c, over ? iw(profile::kOverloadPool) : price > 0 ? iw(profile::kSold) : t);
         return true;
     }
-    if (what == Ask::IdDeal && darkness_files()) {
+    if (what == Ask::IdDeal && dk_ui()) {
         // Darkness: 20 platinum - the character's, else theirs and the counter's
-        // (the Cheats tab's Merchant: free)
+        // (the Dark Queen's "For 20 steel pieces": its one coin in platinum's
+        // place; the Cheats tab's Merchant: free)
         const int own = ch.money(4);
         if (cheat == Cheat::Merchant) {
         } else if (own >= 20) {
@@ -4159,24 +4211,36 @@ bool items_yes_no(Ask what, char k, pic::Canvas& c)
             note(c, over ? iw(profile::kOverloadPool) : iw(profile::kSold));
             return true;
         }
-        add_coins(ch, 4, plat);
-        add_coins(ch, 3, gold % 5);
         rules::recalc(ch, *names, d->facts);
-        if (ch.encumbrance() > rules::max_load(ch)) {
-            add_coins(ch, 4, -plat);              // the platinum goes on the counter
-            ground->money[4] += plat;
-            rules::recalc(ch, *names, d->facts);
-            over = true;
+        int room = rules::max_load(ch) - ch.encumbrance();
+        if (room < 0) room = 0;
+        if (krynn()) {
+            // Champions (GAME.OVR 0x296AF): the price in steel (its gold's
+            // place); what won't fit goes on the counter
+            over = gold > room;
+            add_coins(ch, 3, over ? room : gold);
+            if (over) ground->money[3] += gold - room;
+        } else {
+            // Curse's family (Curse GAME.OVR 0x2996A, Pool 0x22E76, Gateway
+            // 0x300B2): when platinum and gold won't both fit the character
+            // takes the platinum it has room for, the rest goes on the
+            // counter; the odd gold always to the character
+            over = plat + gold % 5 > room;
+            const int p = over && plat > room ? room : plat;
+            add_coins(ch, 4, p);
+            ground->money[4] += plat - p;
+            add_coins(ch, 3, gold % 5);
         }
+        rules::recalc(ch, *names, d->facts);
         coins_up(ch);
         back_to_items(c);
         note(c, over ? iw(profile::kOverloadPool) : iw(profile::kSold));
         return true;
     }
-    // Id: 200 gold, from the character or the counter (the Cheats tab's
-    // Merchant: free)
+    // Id: 200 gold (Secret's and Champions' 100: id_cost), from the
+    // character or the counter (the Cheats tab's Merchant: free)
     // (DOSBox: Brother Sean's 2000 gold -> platinum 321 gold 2 after two Ids and a sale)
-    if (cheat != Cheat::Merchant && !shop_pay(ch, 200)) {
+    if (cheat != Cheat::Merchant && !shop_pay(ch, id_cost())) {
         back_to_items(c);
         note(c, iw(profile::kNoMoney));
         return true;
@@ -6950,7 +7014,7 @@ void buy(int i, pic::Canvas& c)
     const int cost = rules::price(it, vm->get(0x7F6D) & 0xFF);
     const long have = coin_fix() ? rules::copper_worth(*ch) + rules::copper_worth(ground->money) : 0;
     if (coin_fix() ? have < cost * 200L
-                   : cost > rules::gold_worth(*ch) && cost > rules::gold_worth(ground->money)) {
+                   : cost > price_worth(*ch) && cost > price_worth(ground->money)) {
         note(c, d->w_no_money);
         return;
     }
@@ -11800,6 +11864,7 @@ __attribute__((noinline)) void load_party_text(dax::ByteSource& exe, const exepa
         d->facts.unarmed_no_str_hit = hl();
         d->facts.speed_fx = pi.speed_fx;
         d->facts.sell_secret = pi.sell_secret;
+        d->facts.sell_keep = pi.sell_keep;
         rules::set_berserk_fx(pi.berserk);
         items::set_passive(pi.passive);
         items::set_flame_fix(&pi.flame, CYD_ITEM_FIXES && opts.item_fixes);
@@ -18109,6 +18174,13 @@ bool back(pic::Canvas& c)
             draw_take(c);
             return true;
         }
+        if (screen == Screen::Take && take_mode) {
+            // (View's Trade / Drop of coins: back to View, as its Exit -
+            // the camp fuzzer: Esc here opened the last shop in camp, its
+            // counter's coins there to take)
+            view_coins_done(c);
+            return true;
+        }
         screen = Screen::Shop;
         draw_shop(c);
         return true;
@@ -18229,7 +18301,11 @@ void input_key(char k, pic::Canvas& c)
         clear_menu_line(c);
         if (engine_ask == EngineAsk::Coins) {
             engine_ask = EngineAsk::Name;
-            take_coins(atoi(input_buf), c);
+            // (only on the coin list it was asked on: a tap that left the
+            // list - its Exit - while the number was being typed left the
+            // question open, and a Trade / Drop's number then took the last
+            // counter's coins in camp - the camp fuzzer)
+            if (screen == Screen::Take) take_coins(atoi(input_buf), c);
             return;
         }
         if (engine_ask == EngineAsk::BlastDelay) {

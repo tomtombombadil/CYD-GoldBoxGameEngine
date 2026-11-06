@@ -254,7 +254,8 @@ static BVals b_expect(const party::Character& c)
         if (t.slot == 2) {
             const int w = it[0x37] | it[0x38] << 8;
             v.move = w <= 150 ? r[0xE4] : w <= 399 ? 9 : 6;
-            if (v.move != 0 && v.move <= 9) v.move += 3;
+            // (+3 only for armour with a plus: GAME.OVR 0x37920 tests byte 0x32 - coab leaves it out)
+            if (v.move != 0 && v.move <= 9 && plus != 0) v.move += 3;
         }
         if (t.ac < 0x80) continue;
         const int a = t.ac & 0x7F;
@@ -473,11 +474,12 @@ static void b_adnd_tables()
             expect("items", what, ch.ac() == both, "AC %d", ch.ac());
         }
     }
-    // Heavy armour slows: over 150 weight movement 12 (base) -> 12 if <= 150, 9+3 = 12 for 151-399?
-    // (the original: 151-399 -> 9, 400+ -> 6, then +3 when 9 or less: 12 / 9)
+    // Heavy armour slows: 151-399 -> 9, 400+ -> 6, then +3 when 9 or less
+    // only for armour with a plus (GAME.OVR 0x37920 tests byte 0x32; coab
+    // leaves the test out): plain plate mail 12 / 12 / 9 / 9 / 6 / 6
     {
         const int weights[] = {100, 150, 151, 399, 400, 450};
-        const int want[] = {12, 12, 12, 12, 9, 9};
+        const int want[] = {12, 12, 9, 9, 6, 6};
         const uint8_t* plate = b_plain_of_type(58);
         for (int j = 0; plate && j < 6; ++j) {
             party::Character& ch = b_fresh(kA);
@@ -735,15 +737,14 @@ static void b_names_detect()
 static void b_money()
 {
     using namespace play;
-    // Sell (coab ShopSellItem): half the value; piles of arrows / quarrels each one, others count / 20 of each
+    // Sell (GAME.OVR 0x2981F): half the value; every pile count x that / 20
+    // (its arrows' test - type 0x49 AND 0x1C - never holds; coab reads it as
+    // OR), the product 16-bit
     for (int k = 0; k < b_n_items; ++k) {
         const uint8_t* r = b_rec(k);
         const int value = r[0x3A] | r[0x3B] << 8, n = r[0x39];
         int want = value > 0 ? value / 2 : 0;
-        if (n > 1) {
-            if (r[0x2E] != d->facts.arrow && r[0x2E] != d->facts.quarrel) want = n * want / 20;
-            else want *= n;
-        }
+        if (n > 1) want = ((n * want) & 0xFFFF) / 20;
         const int got = rules::sell_value(r, d->facts);
         char what[96];
         snprintf(what, sizeof what, "record %d %s sells for %d gold", k, b_nm(r), want);

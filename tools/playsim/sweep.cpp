@@ -24,6 +24,8 @@
 //   monkey [seed [n]] n random taps, keys, moves and cursor keys anywhere, checking
 //                    the party's invariants and screens that can't be left
 //                    (MAREA / MBLOCK: start in that script block)
+//   campfuzz [seed [n]] n random camp actions (rest, magic, items, Fix, Alter ...)
+//                    with the party checker and the camp's rules (camp_fuzz.inc)
 // Env: GAME=n (games::Game: 1 Pool of Radiance), BLOCK (events: one block), FIGHTLOG / PAGELOG / TURNLOG / STLOG (a fight's
 // progress), AIMLOG, ENTRIES, ONLY. Each run saves over the slots: give each
 // its own copy of the game folder.
@@ -1681,10 +1683,14 @@ static void dice_faces(std::initializer_list<int> f) { dice_usual(); b_faces.ass
 #ifdef BEHAVE_LEVELS
 #include "behave_levels.inc"
 #endif
+#ifdef BEHAVE_ECONOMY
+#include "behave_economy.inc"
+#endif
 
 #ifdef CYD_TEST_HOOKS
 #include "fight_fuzz.inc"
 #endif
+#include "camp_fuzz.inc"
 
 int main(int argc, char** argv)
 {
@@ -1708,6 +1714,7 @@ int main(int argc, char** argv)
     else if (mode == "saveload") sweep_saveload();
     else if (mode == "session") sweep_session();
     else if (mode == "memloop") sweep_memloop(arg);
+    else if (mode == "campfuzz") cfz::run(static_cast<unsigned>(arg ? arg : 1), argc > 4 ? atoi(argv[4]) : 3000);
     else if (mode == "monkey") {
         rnd.seed(static_cast<unsigned>(arg ? arg : 1));
         sweep_monkey(argc > 4 ? atoi(argv[4]) : 20000);
@@ -1764,6 +1771,9 @@ int main(int argc, char** argv)
 #endif
 #ifdef BEHAVE_LEVELS
         if (want("levels")) behave_levels();
+#endif
+#ifdef BEHAVE_ECONOMY
+        if (want("economy")) behave_economy();
 #endif
 #ifdef BEHAVE_TREASURES
         if (want("treasures")) behave_darkness();       // (Darkness's checks, Treasures' oracles)

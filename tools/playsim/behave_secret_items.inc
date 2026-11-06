@@ -750,7 +750,7 @@ void s_money()
     const int div = s_col("it_sell", 0), per = s_col("it_sell", 1);
     for (const SItem& s : s_items) {
         int v = (s.r[0x3A] | s.r[0x3B] << 8) / div;
-        if (s.r[0x39] > 1) {
+        if (s.r[0x39] > 1 && s.r[0x2E] != 0x49) {          // (a pile of type 0x49: one's price - 0x29D6E)
             if (s.r[0x2E] == 30 || s.r[0x2E] == 12) v = ((s.r[0x39] * v) & 0xFFFF) / per;
             else v = (s.r[0x39] * v) & 0xFFFF;
         }
