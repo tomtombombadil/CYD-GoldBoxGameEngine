@@ -152,6 +152,25 @@ int hp_dice(const int lv[8], int mask_classes, int face)
     return total;
 }
 
+// A multi-class's hit points with the Game Fixes (Tom, 2026-11-06): each class
+// in mask as a single class - its dice (or its fixed gain past them) and its
+// own Constitution figure (fighters' extra; a 1st-level ranger's twice), at
+// least 1 - summed, over the classes held, at least 1; *share the dice's part
+int fix_gain(const int lv[8], int mask_classes, int con, int face, int held, int* share)
+{
+    int sum = 0, dice = 0;
+    for (int k = 0; k < 8; ++k) {
+        if (lv[k] <= 0 || !(mask_classes & (1 << k))) continue;
+        const int r = hp_dice(lv, 1 << k, face);
+        const int cf = lv[k] < max_hd(k) ? con_hp_of(con, k == 2 || k == 3 || k == 4) * (k == 4 && lv[k] == 1 ? 2 : 1) : 0;
+        sum += std::max(1, r + cf);
+        dice += r;
+    }
+    *share = std::max(1, dice / held);
+    return std::max(1, sum / held);
+}
+bool fix_multi(int held) { return rules::fixes() && held > 1; }
+
 // ---- 1. The tables: THAC0, saves, spell slots, thief skills, attacks, by level
 void tables()
 {
@@ -546,6 +565,7 @@ void fixed_dice()
                     int adj = con_adj(lv, con, cls);
                     int hp = adj < 0 ? (rolled > -adj + held ? (rolled + adj) / held : 1) : (rolled + adj) / held;
                     int rolled_kept = rolled / held;
+                    if (fix_multi(held)) hp = fix_gain(lv, mask, con, high ? 0 : 1, held, &rolled_kept);
                     // silent training, round by round
                     const uint32_t xp = c.exp();
                     for (int round = 0; round < 20; ++round) {
@@ -565,6 +585,11 @@ void fixed_dice()
                         rolled_kept += inc;
                         int up = (gain + con_adj(lv, con, cls)) / held;
                         if (up < 1) up = 1;
+                        if (fix_multi(held)) {
+                            rolled_kept -= inc;
+                            up = fix_gain(lv, tm, con, high ? 0 : 1, held, &inc);
+                            rolled_kept += inc;
+                        }
                         hp += up;
                     }
                     snprintf(w, sizeof w, "%s: hit points", tag);
@@ -669,7 +694,9 @@ void levelling()
         dice_usual();
         lv[2] = 4;
         const int gain = hp_dice(lv, 1 << 2, 0);
-        const int up = (gain + con_adj(lv, 16, 13)) / 2;
+        int share = 0;
+        // (Game Fixes: the fighter's own d10 + 2, shared by 2 - Tom, 2026-11-06)
+        const int up = rules::fixes() ? fix_gain(lv, 1 << 2, 16, 0, 2, &share) : (gain + con_adj(lv, 16, 13)) / 2;
         expect(P, "F/MU fighter 3 -> 4: hit points shared by 2", c.hp_max() == 40 + up && c.rec[0x12C] == 30 + gain / 2,
                "+%d (rolled +%d), the original's +%d (+%d)", c.hp_max() - 40, c.rec[0x12C] - 30, up, gain / 2);
     }

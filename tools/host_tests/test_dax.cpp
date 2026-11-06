@@ -5661,10 +5661,18 @@ static void test_pool_rules()
     bare(7, create::ClericFighter);
     p.rec[0x109] = p.rec[0x109 + 2] = 1;
     p.rec[0x19] = 18;
+    const bool fixes0 = rules::fixes();
+    rules::set_fixes(false);
     CHECK(create::con_hp_adj(p, t) == 4);                  // (2 a class, no fighter's extra)
     // Modify's bounds: the most every die high, then the adjustment (4) once, averaged
     CHECK(create::hp_most(p, t, f) == (f.hp_dice[0] * f.hp_count[0] + f.hp_dice[2] * f.hp_count[2] + 4) / 2);
     CHECK(create::hp_least(p, t, f) == (f.hp_count[0] + f.hp_count[2] + 4) / 2);
+    // (Game Fixes - Tom, 2026-11-06: each class's own figure, the fighter's extra too: 2 + 4)
+    rules::set_fixes(true);
+    CHECK(create::con_hp_adj(p, t) == 6);
+    CHECK(create::hp_most(p, t, f) == (f.hp_dice[0] * f.hp_count[0] + f.hp_dice[2] * f.hp_count[2] + 6) / 2);
+    CHECK(create::hp_least(p, t, f) == (f.hp_count[0] + f.hp_count[2] + 6) / 2);
+    rules::set_fixes(fixes0);
     // Modify: Strength 17 -> 18 first, then a fighter's 18/01
     bare(7, create::Fighter);
     p.rec[0x109 + 2] = 1;

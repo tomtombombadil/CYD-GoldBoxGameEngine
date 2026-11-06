@@ -6419,6 +6419,7 @@ void picked(int i, pic::Canvas& c)
     case 4: change_picked(v, c); return;
     default:
         create::begin(mk->ch, mk->tables, mk->facts, mk->dice, mk->race, mk->sex, mk->cls, v, mk->god);
+        mk->dice.max = CYD_MAX_HP && opts.max_hp;      // (the Max Hit Points cheat: a new character's dice too - Tom)
         create::roll(mk->ch, mk->tables, mk->facts, mk->dice);
         rules::recalc(mk->ch, *names, d->facts);
         show_new_character(c);
@@ -6621,6 +6622,7 @@ bool create_yes_no(Ask what, char k, pic::Canvas& c)
     if (what == Ask::Reroll) {
         // Pool asks "Keep this character? " (No rolls again)
         if (d->prof->create.keep_question ? k != 'Y' : k == 'Y') {
+            mk->dice.max = CYD_MAX_HP && opts.max_hp;      // (the Max Hit Points cheat: a new character's dice too - Tom)
             create::roll(mk->ch, mk->tables, mk->facts, mk->dice);
             rules::recalc(mk->ch, *names, d->facts);
             show_new_character(c);

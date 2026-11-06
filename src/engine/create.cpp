@@ -20,6 +20,14 @@ constexpr int kOldLevels = 0x111, kListAt = 0x1E, kListSize = 84;   // former le
 // Constitution's hit point adjustment by Con (coab's table)
 constexpr int8_t kConHp[26] = {0, 0, 0, -2, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2};
 
+// Hit point dice being rolled (Dice::hp - the Max Hit Points cheat's dice)
+struct HpDice {
+    Dice& d;
+    bool was;
+    explicit HpDice(Dice& x) : d(x), was(x.hp) { d.hp = true; }
+    ~HpDice() { d.hp = was; }
+};
+
 // The levels each class starts with: bits cleric, druid, fighter,
 // paladin, ranger, magic-user, thief, monk
 constexpr uint8_t kStartLevels[17] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80,
@@ -175,6 +183,7 @@ bool restore_limited(const party::Character& c, int cls, int lvl)
 // the hit dice
 int hp_roll(const party::Character& c, const classes::Tables& t, const Facts& f, Dice& d, int mask)
 {
+    HpDice hp_dice(d);
     int total = 0;
     for (int k = 0; k < classes::kClasses; ++k) {
         const int lv = c.level(k);
@@ -214,6 +223,7 @@ int stat_full(const party::Character& c, int i) { return c.rec[kStats + i * 2 + 
 // penalty comes out a large gain (with the rules fixes: signed)
 void secret_hp(party::Character& c, const classes::Tables& t, const Facts& f, Dice& d, int mask, int held)
 {
+    HpDice hp_dice(d);
     uint8_t* r = c.rec;
     int rolled = 0, con = 0;
     const int cv = stat_full(c, 4);
@@ -293,7 +303,7 @@ int Dice::random(int n)
 
 int Dice::roll(int sides, int count)
 {
-    if (max) return sides > 0 && count > 0 ? sides * count : 0;
+    if (max && hp) return sides > 0 && count > 0 ? sides * count : 0;
     int t = 0;
     for (int i = 0; i < count; ++i) t += sides > 0 ? random(sides) + 1 : 0;
     return t;
@@ -349,6 +359,22 @@ int con_hp_adj(const party::Character& c, const classes::Tables& t)
 {
     int adj = 0;
     const int con = stat_full(c, 4);
+    int held = 0;
+    for (int k = 0; k <= classes::Monk; ++k) held += c.level(k) > 0;
+    if (held > 1 && rules::fixes()) {
+        // (a multi-class with the Game Fixes: each class's figure as a single
+        // class of it gets it - multi_hp; Modify Character's bounds)
+        for (int k = 0; k <= classes::Monk; ++k) {
+            const int lv = c.level(k);
+            if (lv <= 0 || (!t.lay.pool && lv >= t.max_hit_dice(k))) continue;
+            int v = con >= 0 && con < 26 ? kConHp[con] : 0;
+            if (t.lay.pool) v += k == Fighter ? (con > 16) + (con > 17) : 0;
+            else if (k == Fighter || k == Paladin || k == Ranger)
+                v += con == 17 ? 1 : con == 18 ? 2 : con == 19 || con == 20 ? 3 : con >= 21 && con <= 23 ? 4 : con >= 24 ? 5 : 0;
+            adj += !t.lay.pool && k == Ranger && lv == 1 ? v * 2 : v;
+        }
+        return adj;
+    }
     if (t.lay.pool) {
         // Pool (create_facts.md 2.5): the table's figure per class held; a
         // single-class fighter +1 over 16 and +1 more over 17
@@ -518,6 +544,7 @@ int queen_con(const party::Character& c, const classes::Tables& t, int k)
 // points now the most less the damage taken
 void queen_hp(party::Character& c, const classes::Tables& t, Dice& d, int mask, int held)
 {
+    HpDice hp_dice(d);
     uint8_t* r = c.rec;
     static const uint8_t kPast[11] = {1, 1, 3, 2, 2, 2, 2, 1, 1, 2, 3};
     int rolled = 0;
@@ -716,6 +743,102 @@ int queen_held(const party::Character& c)
     return n;
 }
 
+// A Constitution figure as a single class of k gets it (every game but Pool
+// and the Dark Queen): the table's, fighters / paladins / rangers (the Krynn
+// games: fighters, rangers, knights - and with the Game Fixes paladins)
+// more from 17
+int single_con_fig(const classes::Tables& t, int k, int con)
+{
+    int v = con >= 0 && con < 26 ? kConHp[con] : 0;
+    const bool fighter = k == Fighter || k == Ranger || k == Paladin || (t.lay.krynn && k == Monk);
+    if (fighter && (k != Paladin || !t.lay.krynn || rules::fixes())) {
+        if (con == 17) v += 1;
+        else if (con == 18) v += 2;
+        else if (con == 19 || con == 20) v += 3;
+        else if (con >= 21 && con <= 23) v += 4;
+        else if (con >= 24 && con <= 25) v += 5;
+    }
+    return v;
+}
+
+// A multi-class's hit points with the Game Fixes (Tom, 2026-11-06; SPEC 12):
+// each class in `mask` gains what a single class of it gets in this game
+// (its dice - the better of two rolls, Pool's one roll raised at 1st level -
+// with the Constitution figure a single class of it gets, or the fixed gain
+// past its hit dice; at least 1), the gains summed and divided by the
+// classes held, at least 1. Creation: every class's 1st level; training: the
+// classes trained (one, or Pool's / the Dark Queen's every ready class) - so
+// a class's levels each add its share, the division done once a training.
+// `dice_share`: the dice's part (record 0xAC, hit points rolled), the same
+// way. The originals' own (shared dice, the Constitution per class held or
+// the fighter's 17+ never) is kept with the switch off
+int multi_hp(const party::Character& c, const classes::Tables& t, const Facts& f, Dice& d, int mask, int held,
+             int* dice_share)
+{
+    HpDice hp_dice(d);
+    const int con = stat_full(c, 4);
+    const bool kr = t.lay.krynn, curse = !t.lay.pool && !t.lay.secret && !kr;
+    static const int kOrder[8] = {0, 1, 2, 3, 4, 5, 6, 7};
+    int sum = 0, dice = 0;
+    for (int i = 0; i < (t.lay.queen ? 7 : 8); ++i) {
+        const int k = t.lay.queen ? kQueenOrder[i] : kOrder[i];
+        const int lv = c.level(k);
+        if (lv <= 0 || !(t.u8(static_cast<uint16_t>(t.lay.class_masks + k)) & mask)) continue;
+        int roll = 0, cf = 0;
+        if (t.lay.pool) {
+            // (Pool: one roll, a 1st level's at least 2/3 of the die; the
+            // figure once, a fighter's more over 16 - create_facts.md 1.12 / 2.5)
+            roll = d.roll(f.hp_dice[k], f.hp_count[k]);
+            if (lv == 1 && roll < f.hp_dice[k] * 2 / 3) roll = f.hp_dice[k] * 2 / 3;
+            cf = (con >= 0 && con < 26 ? kConHp[con] : 0) + (k == Fighter ? (con > 16) + (con > 17) : 0);
+        } else if (lv < t.max_hit_dice(k)) {
+            int n, sides;
+            if (t.lay.queen) {
+                n = lv > 1 ? 1 : t.u8(static_cast<uint16_t>(t.lay.q_hp_count + k));
+                sides = t.u8(static_cast<uint16_t>(t.lay.q_hp_sides + k));
+            } else {
+                n = lv > 1 || (kr && k == Cleric && c.ext[party::kExtGod] > 4) ? 1 : f.hp_count[k];
+                sides = f.hp_dice[k];
+            }
+            const int a = d.roll(sides, n), b = d.roll(sides, n);
+            roll = a > b ? a : b;
+            const int fig = t.lay.queen ? queen_con(c, t, k) : single_con_fig(t, k, con);
+            // (Curse's / Gateway's figure once a level, a 1st level ranger's
+            // twice; the others' a die)
+            cf = curse ? fig * (k == Ranger && lv == 1 ? 2 : 1) : fig * n;
+        } else if (t.lay.queen) {
+            static const uint8_t kPast[11] = {1, 1, 3, 2, 2, 2, 2, 1, 1, 2, 3};
+            const int row = t.xp_row(&c, k);
+            roll = row >= 0 && row < 11 ? kPast[row] : 1;
+        } else if (k == Fighter || k == Paladin || (kr && k == Monk)) {
+            roll = 3;                   // (the Krynn paladin's 3: Game Fixes, as its single class)
+        } else if (k == Ranger || k == Cleric || k == Thief) {
+            roll = 2;
+        } else if (k == MagicUser) {
+            roll = 1;
+        }
+        const int g = roll + cf;
+        sum += g < 1 ? 1 : g;
+        dice += roll;
+    }
+    if (held < 1) held = 1;
+    if (dice_share) *dice_share = dice / held < 1 ? 1 : dice / held;
+    return sum / held < 1 ? 1 : sum / held;
+}
+
+// A training's multi_hp: the most and the rolled hit points grow, the hit
+// points now the most less the damage taken
+void multi_gain(party::Character& c, const classes::Tables& t, const Facts& f, Dice& d, int mask, int held)
+{
+    uint8_t* r = c.rec;
+    int dice = 0;
+    const int up = multi_hp(c, t, f, d, mask, held, &dice);
+    const int lost = (r[kHpMax] - r[kHp]) & 0xFF;
+    r[kHpRolled] = static_cast<uint8_t>(r[kHpRolled] + dice);
+    r[kHpMax] = static_cast<uint8_t>(r[kHpMax] + up);
+    r[kHp] = static_cast<uint8_t>(lost > r[kHpMax] ? 0 : r[kHpMax] - lost);
+}
+
 } // namespace
 
 int queen_icon(int sex, int qrace, int qcls, int alignment)
@@ -781,7 +904,13 @@ void queen_roll(party::Character& c, const classes::Tables& t, const Facts& f, D
     }
     put16(r, kMoney + 4 * 2, f.platinum);
     r[kHpMax] = r[kHp] = r[kHpRolled] = 0;
-    queen_hp(c, t, d, 0xFF, queen_held(c));
+    if (queen_held(c) > 1 && rules::fixes()) {
+        int dice = 0;                   // (a multi-class with the Game Fixes: multi_hp)
+        r[kHpMax] = r[kHp] = static_cast<uint8_t>(multi_hp(c, t, f, d, 0xFF, queen_held(c), &dice));
+        r[kHpRolled] = static_cast<uint8_t>(dice);
+    } else {
+        queen_hp(c, t, d, 0xFF, queen_held(c));
+    }
     classes::class_bonuses(c, t);
     while (train(c, t, f, d, true)) {
     }
@@ -1098,6 +1227,20 @@ void roll(party::Character& c, const classes::Tables& t, const Facts& f, Dice& d
         put16(r, kMoney + 4 * 2, f.platinum ? f.platinum : 300);   // 300 platinum (Secret's start with none; Gateway 35)
     }
 
+    if (held > 1 && rules::fixes()) {
+        // (a multi-class with the Game Fixes: each class's 1st level as a
+        // single class's, shared - Tom, 2026-11-06; multi_hp)
+        int dice = 0;
+        r[kHpMax] = r[kHp] = static_cast<uint8_t>(multi_hp(c, t, f, d, 0xFF, held, &dice));
+        r[kHpRolled] = static_cast<uint8_t>(dice);
+        classes::class_bonuses(c, t);
+        // (then trained as the game's own creation goes on: not Pool's or Champions')
+        if (!pool && (!t.lay.krynn || t.lay.dkk))
+            while (train(c, t, f, d, true)) {
+            }
+        if (t.lay.dk && c.level(classes::MagicUser) > 0) dk_mu_book(c, t, f);
+        return;
+    }
     if (t.lay.secret) {
         // Secret's creation: its hit point routine on nothing (GAME.OVR 0x1F5B4)
         r[kHpMax] = r[kHp] = r[kHpRolled] = 0;
@@ -1243,7 +1386,8 @@ void train_classes(party::Character& c, const classes::Tables& t, const Facts& f
             if (c.level(k) > 0 && (t.u8(static_cast<uint16_t>(t.lay.class_masks + k)) & mask)) ++r[kLevels + k];
         classes::class_bonuses(c, t);
         if (silent) queen_mu_spells(c);
-        queen_hp(c, t, d, mask, queen_held(c));
+        if (queen_held(c) > 1 && rules::fixes()) multi_gain(c, t, f, d, mask, queen_held(c));
+        else queen_hp(c, t, d, mask, queen_held(c));
         return;
     }
     int held = 0;
@@ -1280,6 +1424,10 @@ void train_classes(party::Character& c, const classes::Tables& t, const Facts& f
                 if (s) learn(c, s);
     }
     if (r[kHitDice] <= r[kMultiLevel]) return;
+    if (held > 1 && rules::fixes()) {
+        multi_gain(c, t, f, d, mask, held);
+        return;
+    }
     if (t.lay.secret || t.lay.krynn) {
         secret_hp(c, t, f, d, mask, held);
         return;

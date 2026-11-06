@@ -222,13 +222,14 @@
 // Max Hit Points (Tom, 2026-11-06): a cheat the player opts into - the
 // Settings key Max Hit Points (also on the Cheats tab), OFF by default.
 // On: every level gained by training (the halls, the Cheats tab's
-// Trainer) takes each hit die at its highest (fighter d10 -> 10, cleric
+// Trainer) and a new character's levels (Tom, 2026-11-06: creation too)
+// take each hit die at its highest (fighter d10 -> 10, cleric
 // d8 -> 8, thief d6 -> 6, magic-user d4 -> 4; two dice at 1st level as
 // the game rolls them), the rest of the game's sum unchanged (Constitution,
 // the multi-class division, past the last hit die, Pool's 2/3 rule
-// moot). Not at character creation. The save files are written as the
+// moot; with the Game Fixes a multi-class's per-class rule). The save files are written as the
 // game would with those rolls. 0: no such switch. Where: engine/create.*
-// (Dice::max), play.cpp (train_yes_no), viewer.cpp (the keys).
+// (Dice::max), play.cpp (train_yes_no, the creation's rolls), viewer.cpp (the keys).
 #ifndef CYD_MAX_HP
 #define CYD_MAX_HP 1
 #endif

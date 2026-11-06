@@ -2659,8 +2659,14 @@ a PC, PortMaster handhelds):
     two dice at 1st level as the game rolls them, the Krynn games' and the
     Dark Queen's tables alike) and the rest of the game's sum is unchanged
     - Constitution, the multi-class division, the fixed gains past the
-    last hit die. Not at character creation (Tom: "when they level up").
-    The save files are what the game would write with those rolls.
+    last hit die. Since 2026-11-06 (Tom: "newly created characters should
+    get the max hit points for first level") a new character's too: every
+    class's 1st-level dice at their highest (rangers' / monks' / the
+    Krynn games' two dice all), and the levels its experience trains to at
+    creation, then the game's own creation sum (with Game Fixes a
+    multi-class's per-class rule, section 12); only the hit point dice
+    (`Dice::hp`, set by create's hit point routines) - the stats and money
+    stay rolled. The save files are what the game would write with those rolls.
     Checked by hand in the playsim: Curse paladin Con 17 +13, cleric Con
     16 +10, F/T +7, F/MU +7 / +4; Pool C/F/MU Con 12 (8+10+4)/3 = +7;
     Treasures F/MU/T Con 18 (MU) 4/3 + 2/3 = +1; Champions knight Con 18
@@ -2839,6 +2845,35 @@ the game's Settings (As Original: all of them).
   paladin's place - so a paladin gets neither (past 9th level 1 a level,
   the least). With Game Fixes on a paladin is a fighter for both, as
   AD&D's (`create::secret_hp`); the Dark Queen's own already does.
+- **A multi-class's hit points** (Game Fixes, every game; Tom,
+  2026-11-06: "you calculate each class' hitpoints as if they were a
+  single class, then total up all the classes and divide by the number of
+  classes"): the originals share one sum - Curse / Gateway / Pool add the
+  Constitution figure for every class held (Curse / Gateway: a 1st-level
+  ranger doubles the running sum) and never give a multi-class the
+  fighter's 17+ extra; Secret's family and the Krynn games split the dice
+  and the Constitution separately (a byte, unsigned); past a class's hit
+  dice its fixed gain replaces the whole sum. With Game Fixes on
+  (`create::multi_hp`): each class gains what a single class of it gets
+  in that game - its dice (the better of two rolls; Pool's one roll, at
+  1st level at least 2/3 of the die), plus the Constitution figure a
+  single class of it gets (fighters / paladins / rangers and the Krynn
+  knights from 17: +3 at 17, +4 at 18 ...; Pool: a fighter +1 over 16
+  and +1 over 17, its rangers and paladins none, as its single classes;
+  the Dark Queen's own table), or past its hit dice its fixed gain (3 / 2
+  / 1; the Dark Queen's by its experience row), at least 1 - summed over
+  the classes gaining and divided by the classes held (rounded down, at
+  least 1). Creation: every class's 1st level; a training: the classes
+  it trains (one in a hall - Curse, Secret, Darkness, Gateway, Treasures,
+  Champions, Death Knights; every ready class at once in Pool's / the
+  Dark Queen's halls and the silent training at creation), so over the
+  levels a class adds its single-class hit points divided by the classes
+  (a remainder lost at each training, as the originals round). Example:
+  a fighter / thief, Constitution 18 - each fighter level (d10 + 4) / 2,
+  each thief level (d6 + 2) / 2. The dice's part goes to the rolled hit
+  points (record 0x12C) the same way; Modify's bounds use each class's
+  own figure. Dual-class / human class change: unchanged. Max Hit Points
+  (section 11) puts the dice at their highest in the same sum.
 - **Thief skills below 0** (Game Fixes, every game; the level value
   tests, 2026-11-01): the originals add the Dexterity's minus to the
   level's base in a byte, so a skill the minus takes past 0 wraps round

@@ -818,7 +818,8 @@ int main(int argc, char** argv)
         shot("hl_off");
     }
     if (getenv("CREATE")) {
-        // CREATE=race,sex,class,alignment (list positions), NAME=...
+        // CREATE=race,sex,class,alignment (list positions), NAME=...; MAXHP=1 the Max Hit Points cheat
+        if (getenv("MAXHP")) { play::Options o = play::opts; o.max_hp = true; play::set_options(o); }
         auto tap_word = [](char k) { for (int i = 0; i < play::menu.count; ++i) if (text::key(play::menu, i) == k) { int cx, cy; text::item_cell(play::menu, i, &cx, &cy); play::tap(cx * 8 + 2, cy * 8 + 2, C); return true; } return false; };
         pm_tap_line('C');
         const char* q = getenv("CREATE");

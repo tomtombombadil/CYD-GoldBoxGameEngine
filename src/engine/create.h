@@ -28,10 +28,13 @@ public:
     explicit Dice(uint32_t seed = 0x2545F491u) : s_(seed ? seed : 1) {}
     int roll(int sides, int count);
     int random(int n);                  // 0 .. n-1
-    // Every roll at its highest (sides x count) - the Max Hit Points cheat
-    // (features.h CYD_MAX_HP): set only on the dice training's hit points
-    // roll with; random() is unchanged
+    // The Max Hit Points cheat (features.h CYD_MAX_HP): the hit point dice
+    // at their highest (sides x count) - creation's and training's; only
+    // while `hp` is set (create.cpp's hit point routines set it), so the
+    // stats and money rolled with the same dice stay rolled; random() is
+    // unchanged
     bool max = false;
+    bool hp = false;
 private:
     uint32_t next();
     uint32_t s_;
