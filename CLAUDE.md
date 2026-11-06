@@ -904,6 +904,20 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   rules. Findings,
   fixes and progress per game in docs/TODO.md / the Project's
   claude/playtest_<game>.md.
+- **Testing method since 2026-11-06** (Tom approved, after a cost review:
+  side-by-side walks ~125k tokens a fix and blind to timing, frames
+  within an attack, the board's cursor keys / taps and our own
+  features): (1) no more full side-by-side walks - only targeted ones
+  for a specific question (the fast differ /tmp/claude-0/pt/auto);
+  (2) rule checks first (fight_check / fuzz / matrix / levels /
+  economy / campfuzz; ~70k tokens a fix); (3) new checks for the blind
+  spots - waits against the originals' delay rules, the frames within
+  an attack (sweeps, skulls, flights), the real cursor-key / tap layer
+  on every list and menu (the highlight moves, Select acts), and our
+  own features (cheats, comforts) against what Tom specified; (4) every
+  bug Tom reports: fix it, then check every screen / game of that kind
+  so it can't recur elsewhere. Never report "tested" without saying what
+  the checks compared against what.
 - **Standing answer for originals' mistakes** (Tom, 2026-10-23): the game
   keeps the original's behaviour; the fixed (AD&D) version goes behind
   Game Fixes - don't ask, just do it and list each such case in the

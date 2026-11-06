@@ -998,3 +998,14 @@ the Project as claude/TODO.md.
       lifecycle, packaging). The engine / game code is already portable;
       src/ui (~8.6K lines, LovyanGFX + Arduino SD) and src/hal are the
       board-bound parts. Keep new code portable meanwhile.
+
+## Testing method (Tom, 2026-11-06 - CLAUDE.md "Testing method")
+
+- [ ] Blind-spot checks: the cursor-key / tap layer on every list and menu
+      of every game; waits against the originals' delay rules; the frames
+      within an attack; the cheats and comforts against Tom's specs.
+- [ ] Rule-check gaps: items used outside fights, poison / disease over a
+      rest, level drain / Restoration, ageing, turn undead tables, spells
+      learned at training, Krynn moon bonuses, dual-class / class change.
+- [ ] Pool's story beyond the nomads' camp: targeted differ runs only
+      (scripted places), fights judged by the rule checks.
