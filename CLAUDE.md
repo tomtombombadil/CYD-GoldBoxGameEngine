@@ -168,6 +168,13 @@ HAL, CI, flasher and UI rules come from there; copy from it freely.
   Map, Esc too); Select gives 8 px so Up / Down / Left / Right are each
   2 px wider ("Right" fits) - widths change in multiples of 4, and
   Select's text must still fit.
+  **Right Hand / Left Hand** (Tom, 2026-11-06; Settings key, default
+  Right Hand, not in As Original; SPEC 4): Right Hand puts Game / Map /
+  the row switch at the LEFT end of the 320x240 rows (cursor row: Game
+  Map Move-Keys Up Down Left Right Select; movement: Game Map Menu-Keys
+  + arrows; fight: Game (Map) 7 8 9 4 Select 6 1 2 3) and on 480x320 the
+  movement / fight pad left, cursor pad right; Left Hand the other way
+  (cursor row mirrored). All placement in `walk_key` (cfg->left_hand).
   Tom, 2026-10-10: Map then Game (Game last on the right); the Game menu's
   Esc became **Exit Game** (out of the Play Test; both sizes). A fight's
   own keys while a fighter moves or aims by hand (`play::fight_pad`): the
@@ -866,7 +873,9 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   fighter's menu) starts on the word picked last. Kept exceptions,
   decided before: questions start on the word their game starts them on
   (No; Darkness's / Gateway's Yes), and Darkness's menus with a place of
-  their own (`hl_own`, Alter's / the icon editor's kept place). New menus
+  their own (`hl_own`, Alter's / the icon editor's kept place); the party
+  list beside a menu line keeps its chosen member in white letters as the
+  originals do, no box (Tom, 2026-11-06). New menus
   go through `show_menu_line` and so take part.
 - Tap on Play shows "Loading <game>..." at once (Tom, 2026-10-24;
   viewer.cpp `draw_loading`) until the game's first screen is drawn.

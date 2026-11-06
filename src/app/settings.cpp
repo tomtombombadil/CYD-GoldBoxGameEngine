@@ -20,7 +20,7 @@ constexpr uint32_t    kMagic = 0x53455431;   // "SET1"
 struct File1 {
     uint32_t magic;
     Settings s;
-    uint8_t  reserved[5];         // (the file stays 20 bytes: new fields come out of here as 0)
+    uint8_t  reserved[4];       // (the file stays 20 bytes: new fields come out of here as 0)
 };
 
 static_assert(sizeof(File1) == 20, "the settings file's size");
@@ -44,6 +44,7 @@ Settings settings_load()
     if (s.sound == kSoundUnset || s.sound > kSoundTreasures) s.sound = kSoundTandy;     // (Tom: Tandy unless chosen otherwise)
     if (s.volume < kMinVolume) s.volume = kDefaultVolume;
     if (s.volume_muted > 1) s.volume_muted = 1;
+    if (s.left_hand > 1) s.left_hand = 1;
     return s;
 }
 

@@ -11218,6 +11218,10 @@ void draw_modify(pic::Canvas& c)
         draw_character(c);
     }
     char t[24];
+    // The item being changed in its colour - not in the Cheats tab's Trainer
+    // (Tom, 2026-11-06: "For the cheat modify, no, don't mark the stat. Leave
+    // the marking in the normal game modify"): there the View's own colours
+    const bool mark = cheat != Cheat::Trainer;
     if (darkness_files() && modder) {
         // Darkness marks a stat Modify has changed (its in-use value no longer
         // its own until Keep) with a "*" at column 12 - the highlight colour
@@ -11225,7 +11229,7 @@ void draw_modify(pic::Canvas& c)
         for (int i = 0; i < 6; ++i) {
             const bool changed = ch->stat(i) != modder->ch.stat(i) || (i == 0 && ch->str00() != modder->ch.str00());
             c.fill(12 * 8, (9 + i) * 8, 8, 8, 0);
-            if (changed) put(c, "*", 12, 9 + i, mod_item == i ? 13 : 10);
+            if (changed) put(c, "*", 12, 9 + i, mark && mod_item == i ? 13 : 10);
         }
     }
     if (hl()) {
@@ -11241,9 +11245,10 @@ void draw_modify(pic::Canvas& c)
         };
         for (int i = 0; modder && i < 6; ++i) {
             const bool changed = ch->stat(i) != modder->ch.stat(i) || (i == 0 && ch->str00() != modder->ch.str00());
-            if (changed) put(c, "*", 12, 9 + i, mod_item == i ? 15 : 7);
+            if (changed) put(c, "*", 12, 9 + i, mark && mod_item == i ? 15 : 7);
         }
-        if (mod_item < 6) {
+        if (!mark) {
+        } else if (mod_item < 6) {
             stat_text(mod_item, t, sizeof t);
             put(c, t, 1 + static_cast<int>(strlen(d->v_stat[mod_item])), 9 + mod_item, 15);
         } else if (mod_item == 6) {
@@ -11262,7 +11267,9 @@ void draw_modify(pic::Canvas& c)
         // Secret's View: the stats from row 9 (the number at column 5), the
         // hit points "95/95" at row 3, column 31; its menu "Add Subtract
         // Keep Exit" (Add / Subtract: the arrows' up / down)
-        if (mod_item < 6) {
+        if (!mark) {
+            if (mod_item == 7) mod_name_seen = true;
+        } else if (mod_item < 6) {
             const int v = ch->stat(mod_item);
             c.fill(5 * 8, (9 + mod_item) * 8, 7 * 8, 8, 0);
             if (mod_item == 0 && v == 18 && ch->str00() > 0) {
@@ -11295,7 +11302,8 @@ void draw_modify(pic::Canvas& c)
         // column 5, the hit points "13/13" right-aligned to column 37 of row 3
         // (Tom, 2026-10-24: Curse's rows put the changing number on the
         // wrong lines)
-        if (mod_item < 6) {
+        if (!mark) {
+        } else if (mod_item < 6) {
             const int v = ch->stat(mod_item);
             c.fill(5 * 8, (9 + mod_item) * 8, 7 * 8, 8, 0);
             if (mod_item == 0 && v == 18 && ch->str00() > 0) {
@@ -11318,7 +11326,8 @@ void draw_modify(pic::Canvas& c)
         show_menu_line(c);
         return;
     }
-    if (mod_item < 6) {
+    if (!mark) {
+    } else if (mod_item < 6) {
         const int v = ch->stat(mod_item);
         c.fill(5 * 8, (7 + mod_item) * 8, 6 * 8, 8, 0);
         snprintf(t, sizeof t, "%d", v);

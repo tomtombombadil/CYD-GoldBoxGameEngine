@@ -155,6 +155,18 @@ The games draw a 320x200 screen. The canvas is presented:
     script / map lines) drawn over the game screen until the next tap; the
     game waits meanwhile. Look is on the game's menu line there. The Walk
     Test keeps its row of 8 (no cursor keys).
+  - **Right Hand / Left Hand** (Tom, 2026-11-06; Settings key, a board
+    setting like Rotate 180, not in As Original; Settings `left_hand`,
+    viewer.cpp `walk_key`): the keys move so the tapping hand covers less
+    of the game. 320x240 / 5.0" rows, Right Hand (the default): cursor row
+    Game, Map, Move Keys, Up, Down, Left, Right, Select; movement row
+    Game, Map, Menu Keys, then the six arrows; fight row Game, (Map,) 7 8 9
+    4 Select 6 1 2 3. Left Hand: the cursor row mirrored (Select, Left,
+    Right, Up, Down, Move Keys, Map, Game), the movement and fight rows
+    with Game / Map / Menu Keys moved to the right end. 480x320: Right Hand
+    the movement (or fight) pad left, the cursor pad right; Left Hand
+    swapped; the Companion with Game / Look stays on the right. The Walk
+    Test's 320x240 row stays as it is.
 - **The Game key** (Tom, 2026-10-09; v0.16.0; called Menu until v0.50.0):
   the Play Test's key where the Walk Test has Area (320x240 row: 8th key;
   480x320: the first key under the map) opens the engine's own screen,
@@ -2642,7 +2654,9 @@ a PC, PortMaster handhelds):
     level - the originals' formulas, made for new characters: a trained
     character's hit points can be above the upper bound, and touching the
     hit points or Constitution pulls them into it; Exit puts all back),
-    Keep recalculates as the game does. Begin Adventuring goes back to the
+    Keep recalculates as the game does; the item being changed is not
+    marked there (Tom, 2026-11-06 - the game's own Modify keeps its
+    colour). Begin Adventuring goes back to the
     exploring menu as it was; a Load (the Dark Queen's menu has it) ends
     the cheat. Checked in the playsim (TRAINTEST=n, MODTEST, MAXHP;
     TRAINFORCE=1 opens it where the save's start stops): Pool, Curse,

@@ -1020,7 +1020,12 @@ the Project as claude/TODO.md.
 - [ ] Tom (2026-11-06): the 480x320 Game / Look keys are too large - that
       space under the Companion panel was meant for Companion features once
       the games run well; revisit then.
-- [ ] Tom: the party list beside a menu line (exploring, camp, Magic,
+- [x] Tom: the party list beside a menu line (exploring, camp, Magic,
       Alter) shows the chosen member in white letters, as the originals do;
       should it get the white box too ("lists' lines too")? Krynn's Modify
-      marks the stat being changed in magenta. Both left as they are.
+      marks the stat being changed in magenta. Tom, 2026-11-06: the party
+      list keeps the white letters, no box (no change); the Cheats
+      Trainer's Modify marks no stat, the game's own Modify keeps its
+      marking (play.cpp draw_modify `mark`; next version).
+- [x] Tom (2026-11-06): Right Hand / Left Hand setting for the Play
+      Test's keys (Settings key; next version).

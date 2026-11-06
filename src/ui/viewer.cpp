@@ -63,7 +63,7 @@ bool      dirty = true;            // redraw the current screen
 // game; pages with arrows bottom right. (The code: after Dev Tools.)
 enum class SetFrom : uint8_t { Home, Game, InGame };
 SetFrom set_from = SetFrom::Home;
-enum SetItem : uint8_t { kBright, kVolume, kSound, kInvert, kSwap, kRotate, kCalibrate, kScale, kLogs, kInfo };
+enum SetItem : uint8_t { kBright, kVolume, kSound, kInvert, kSwap, kRotate, kCalibrate, kScale, kLogs, kHand, kInfo };
 struct SetEntry {
     bool    comfort = false;    // a Comfort (below), else a SetItem
     uint8_t id = 0;
@@ -2572,7 +2572,9 @@ void tap_look(const ui::Tap& t)
 // state changes. A fighter moving or aiming by hand (play::fight_pad) gets
 // the fight's keys instead: the 8 ways and Select (320x240: a row of 10 in
 // the numeric keypad's order, then Game; 480x320: a 3 x 3 pad in the
-// movement pad's place).
+// movement pad's place). Since 2026-11-06 (Tom) the Settings' Right Hand /
+// Left Hand decides the order: walk_key below (the orders above: Left Hand's
+// movement and fight rows).
 enum WalkKey { kWTurnL, kWStepL, kWFwd, kWStepR, kWTurnR, kWAround, kWArea, kWNext, kWEsc,
                kWUp, kWLeft, kWSel, kWRight, kWDown, kWCursor, kWMove, kWMap,
                // a fight's own keys (Tom, 2026-10-10): the 8 ways (0 north ... 7
@@ -2585,6 +2587,15 @@ bool pad_fight = false;                 // 480x320: the fight's pad shown in the
 Row row = Row::Walk;                    // what 320x240's row shows
 
 bool comp_on();         // (below: the Companion Views comfort is on)
+
+// 480x320: where the movement pad (or the fight's 3 x 3 pad) starts - the
+// left half for Right Hand, the right half for Left Hand (the cursor pad in
+// the other half; the Companion and Game / Look stay on the right)
+int move_pad_x()
+{
+    const int gp = ui::gap(), pad_w = (pic::kScreenW - gp * 3) / 2;
+    return cfg->left_hand ? gp * 2 + pad_w : gp;
+}
 
 ui::Rect walk_key(int k)
 {
@@ -2601,53 +2612,56 @@ ui::Rect walk_key(int k)
             const int w = (pic::kScreenW - gp * 9) / 8;
             return {gp + i * (w + gp), top, w, h_all};
         }
+        // The Play Test's rows (Tom, 2026-11-06: Right Hand / Left Hand - the
+        // other keys at the tapping hand's side, so the hand covers less of
+        // the game): each row its keys in order from the left with their
+        // widths. Left Hand's cursor row is Right Hand's mirrored; the
+        // movement and fight rows keep the arrows' order and put Game / Map /
+        // Menu Keys at the other end.
+        constexpr int kMaxSeg = 11;
+        int keys[kMaxSeg], ws[kMaxSeg], n = 0;
+        auto add = [&](int key, int w) { keys[n] = key; ws[n] = w; ++n; };
+        const bool left = cfg->left_hand;
         if (row == Row::Fight) {
-            // 10 slots, the numeric keypad's order: 7 8 9 4 Select 6 1 2 3, then Game
-            static const int kFight[kWKeys] = {-1, -1, -1, -1, -1, -1, 9, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                                               1, 2, 5, 8, 7, 6, 3, 0, 4};
-            if (comp_on()) {
-                // Companion Views (Tom, 2026-11-01: the battlefield map from
-                // the Map key in a fight): 11 slots - ... 1 2 3 Map Game, the
-                // arrows 2 px narrower, Select and Game just wide enough
-                const int i = k == kWMap ? 9 : k == kWArea ? 10 : kFight[k];
-                if (i < 0) return ui::Rect{};
-                constexpr int kSelW = 42, kMapW = 26, kGameW = 30;
-                const int dw = (pic::kScreenW - gp * 12 - kSelW - kMapW - kGameW) / 8;
-                int x = gp;
-                for (int j = 0; j < i; ++j) x += (j == 4 ? kSelW : j == 9 ? kMapW : dw) + gp;
-                const int ww = i == 4 ? kSelW : i == 9 ? kMapW : i == 10 ? pic::kScreenW - gp - x : dw;
-                return {x, top, ww, h_all};
+            // The numeric keypad's order: 7 8 9 4 Select 6 1 2 3
+            static const int kPad[9] = {kWD7, kWD0, kWD1, kWD6, kWFSel, kWD2, kWD5, kWD4, kWD3};
+            // Companion Views (Tom, 2026-11-01): a Map key for the battlefield.
+            // The arrows narrow; Select, Map and Game just wide enough for
+            // their words (the small font: "Select" 36 px, "Game" 24)
+            const bool map = comp_on();
+            const int sel_w = map ? 42 : 52, map_w = map ? 26 : 0, gaps = gp * (map ? 12 : 11);
+            const int dw = (pic::kScreenW - gaps - sel_w - map_w - (map ? 30 : 40)) / 8;
+            const int game_w = pic::kScreenW - gaps - sel_w - map_w - dw * 8;
+            if (!left) { add(kWArea, game_w); if (map) add(kWMap, map_w); }
+            for (int key : kPad) add(key, key == kWFSel ? sel_w : dw);
+            if (left) { if (map) add(kWMap, map_w); add(kWArea, game_w); }
+        } else {
+            const int w = (pic::kScreenW - gp * 10) / 9;
+            if (row == Row::Move) {
+                // Side-step Left, Turn Left, Forward, Turn Right, Side-step Right, Turn Around
+                static const int kArrows[6] = {kWStepL, kWTurnL, kWFwd, kWTurnR, kWStepR, kWAround};
+                if (!left) { add(kWArea, w); add(kWMap, w); add(kWCursor, w); }
+                for (int key : kArrows) add(key, w);
+                if (left) { add(kWCursor, w); add(kWMap, w); add(kWArea, w); }
+            } else {
+                // Right Hand: Game Map Move-Keys Up Down Left Right Select. Select
+                // (Tom, v0.66.1) gives 8 px so each direction key is 2 wider
+                // ("Right" fits); its text still fits the rest
+                constexpr int kGive = 8, kEach = kGive / 4;
+                const int dw = w + kEach, sw = w * 2 + gp - kGive;
+                static const int kOrder[8] = {kWArea, kWMap, kWMove, kWUp, kWDown, kWLeft, kWRight, kWSel};
+                for (int j = 0; j < 8; ++j) {
+                    const int key = kOrder[left ? 7 - j : j];
+                    add(key, key == kWSel ? sw : key >= kWUp && key <= kWDown ? dw : w);
+                }
             }
-            const int i = kFight[k];
-            if (i < 0) return ui::Rect{};
-            // The arrows narrow; Select and Game wide enough for their words
-            // (the small font: "Select" 36 px, "Game" 24)
-            const int dw = (pic::kScreenW - gp * 11 - 52 - 40) / 8;
-            const int ww = i == 4 ? 52 : i == 9 ? pic::kScreenW - gp * 11 - dw * 8 - 52 : dw;
-            const int x = gp + i * (dw + gp) + (i > 4 ? 52 - dw : 0);
-            return {x, top, ww, h_all};
         }
-        // 9 slots; Map then Game, the Game menu last on the right (Tom, 2026-10-10)
-        static const int kMove[kWKeys] = {1, 0, 2, 4, 3, 5, 8, -1, -1, -1, -1, -1, -1, -1, 6, -1, 7,
-                                          -1, -1, -1, -1, -1, -1, -1, -1, -1};
-        static const int kCur[kWKeys] = {-1, -1, -1, -1, -1, -1, 8, -1, -1, 0, 4, 2, 5, 1, -1, 6, 7,
-                                         -1, -1, -1, -1, -1, -1, -1, -1, -1};
-        const int i = (row == Row::Move ? kMove : kCur)[k];
-        if (i < 0) return ui::Rect{};
-        const int w = (pic::kScreenW - gp * 10) / 9;
-        if (row == Row::Cursor && i < 6) {
-            // Up Down Select Left Right in slots 0-5 (Tom, v0.66.1): Select
-            // gives 8 px so each direction key is 2 wider ("Right" fits);
-            // Select's text still fits the rest
-            constexpr int kGive = 8, kEach = kGive / 4;
-            const int dw = w + kEach, sw = w * 2 + gp - kGive;
-            static const int kSlotOf[6] = {0, 1, 2, 2, 3, 4};   // slot -> place in the row
-            const int p = kSlotOf[i];
-            const int x = gp + p * (dw + gp) + (p > 2 ? sw - dw : 0);
-            return {x, top, p == 2 ? sw : dw, h_all};
+        int x = gp;
+        for (int j = 0; j < n; ++j) {
+            if (keys[j] == k) return {x, top, ws[j], h_all};
+            x += ws[j] + gp;
         }
-        const int span = k == kWSel ? 2 : 1;            // Select: two slots
-        return {gp + i * (w + gp), top, w * span + gp * (span - 1), h_all};
+        return ui::Rect{};
     }
     if (k == kWCursor || k == kWMove || k == kWMap) return ui::Rect{};
     const int pad_w = (pic::kScreenW - gp * 3) / 2;
@@ -2660,11 +2674,12 @@ ui::Rect walk_key(int k)
     if (fight_key) {
         static const int kCol[9] = {1, 2, 2, 2, 1, 0, 0, 0, 1}, kRow[9] = {0, 0, 1, 2, 2, 2, 1, 0, 1};
         const int fh = (h_all - gp * 2) / 3;
-        return ui::Rect{gp + kCol[k - kWD0] * (kw + gp), top + kRow[k - kWD0] * (fh + gp), kw, fh};
+        return ui::Rect{move_pad_x() + kCol[k - kWD0] * (kw + gp), top + kRow[k - kWD0] * (fh + gp), kw, fh};
     }
     const int ch = (h_all - gp * 2) / 3;                // the cursor pad: 3 rows
-    auto move = [&](int col, int r) { return ui::Rect{gp + col * (kw + gp), top + r * (mh + gp), kw, mh}; };
-    const int cx0 = gp * 2 + pad_w;
+    const int mx0 = move_pad_x();                       // Right Hand: the movement pad left, the cursor pad right
+    auto move = [&](int col, int r) { return ui::Rect{mx0 + col * (kw + gp), top + r * (mh + gp), kw, mh}; };
+    const int cx0 = mx0 == gp ? gp * 2 + pad_w : gp;
     auto cur = [&](int col, int r) { return ui::Rect{cx0 + col * (kw + gp), top + r * (ch + gp), kw, ch}; };
     const int sx = pic::kScreenW + gp, sw = ui::width() - sx - gp;
     // The Play Test: Game and Look only, each half the height - no Esc (Tom,
@@ -2886,7 +2901,7 @@ void draw_walk_keys(const char* side_label, const char* area_label, bool cursor)
     if (ui::large()) {
         // (the movement pad's place: its keys or the fight's - cleared first)
         const int gp = ui::gap();
-        ui::clear_area({0, pic::kScreenH, (pic::kScreenW - gp * 3) / 2 + gp * 2, ui::height() - pic::kScreenH});
+        ui::clear_area({move_pad_x() - gp, pic::kScreenH, (pic::kScreenW - gp * 3) / 2 + gp * 2, ui::height() - pic::kScreenH});
     }
     if (!ui::large()) {
         // The row: cleared first (it changes between the movement and cursor keys)
@@ -5347,7 +5362,7 @@ void tap_play(const ui::Tap& t)
 // calibration, when made, wins); Asset Viewer's scale only on 480x320, not in the
 // game (the game is always 1:1).
 int set_page = 0;
-constexpr int kSetMax = 24;
+constexpr int kSetMax = 28;
 
 // Whether the game in hand has mistakes the engine fixes (Game Fixes)
 bool game_has_fixes() { return set_from != SetFrom::Home && profile::has_item_fixes(game_dirs[game_sel].game); }
@@ -5365,6 +5380,7 @@ int set_entries(SetEntry* out)
     add(false, kSwap);
     add(false, kRotate);
     add(false, kCalibrate);
+    add(false, kHand);
     if (ui::large() && set_from != SetFrom::InGame) add(false, kScale);
     add(false, kLogs);
     for (int c = 0; c < kComforts; ++c)
@@ -5416,13 +5432,14 @@ const char* set_name(const SetEntry& e)
     case kCalibrate: return "Recalibrate Touch";
     case kScale: return "Asset Viewer";
     case kLogs: return "Logs";
+    case kHand: return cfg->left_hand ? "Left Hand" : "Right Hand";
     default: return "";
     }
 }
 bool set_has_help(const SetEntry& e)
 {
     return e.comfort || e.id == kVolume || e.id == kSound || e.id == kInvert || e.id == kSwap || e.id == kRotate ||
-           e.id == kScale;
+           e.id == kScale || e.id == kHand;
 }
 const char* set_help_text(const SetEntry& e)
 {
@@ -5447,6 +5464,10 @@ const char* set_help_text(const SetEntry& e)
     case kScale:
         return "Dev Tools' Resource Test: its pictures 1:1 or 1.5 times their size. The game itself is always "
                "shown 1:1, with the Companion panel beside it.";
+    case kHand:
+        return "Which hand taps the keys under the game. The keys move so that hand covers less of the game: "
+               "Right Hand puts Game, Map and the key switch at the left end of the row and the arrows at the "
+               "right; Left Hand the other way round. On 480x320 the movement and cursor pads change sides.";
     }
     return "";
 }
@@ -5724,6 +5745,7 @@ void draw_set_entry(const ui::Rect& cell, const SetEntry& e)
         case kSwap: draw_swap(r, pp.swap_rb); break;
         case kRotate: ui::key2(r, "Rotate 180", cfg->flipped ? "On" : "Off", lit(cfg->flipped)); break;
         case kCalibrate: ui::key(r, "Recalibrate Touch"); break;
+        case kHand: ui::key(r, cfg->left_hand ? "Left Hand" : "Right Hand"); break;
         case kScale: ui::key2(r, "Asset Viewer", cfg->scale_15x ? "1.5x" : "1:1", lit(cfg->scale_15x)); break;
         case kLogs: ui::key(r, "Logs"); break;
         case kInfo: draw_info(r); break;
@@ -5825,6 +5847,7 @@ bool tap_settings_body(const ui::Tap& t)
             env_.apply_rotation(cfg->flipped);
             break;
         case kCalibrate: env_.recalibrate(); break;
+        case kHand: cfg->left_hand = !cfg->left_hand; break;       // (the game's keys: drawn so on Back to Game)
         case kScale:
             cfg->scale_15x = !cfg->scale_15x;
             frame::set_scale(cfg->scale_15x ? frame::Scale::OneAndHalf : frame::Scale::One);
