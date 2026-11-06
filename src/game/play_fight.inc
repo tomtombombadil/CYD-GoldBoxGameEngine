@@ -3397,7 +3397,9 @@ void move_prompt(pic::Canvas& c)
         // (the Dark Queen: the line in its prompt box, then "Undo Done" -
         // DS 0x50F8, DOSBox)
         text::build(menu, t, d->w_undo_done);
-        menu.selected = -1;
+        // (the original lights neither; the engine's rule: a menu on its
+        // first word - CYD_MENU_HIGHLIGHT, navcheck N1 / N3)
+        menu.selected = CYD_MENU_HIGHLIGHT ? 0 : -1;
         show_menu_line(c);
         return;
     }
