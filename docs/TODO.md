@@ -1017,3 +1017,6 @@ the Project as claude/TODO.md.
       learned at training, Krynn moon bonuses, dual-class / class change.
 - [ ] Pool's story beyond the nomads' camp: targeted differ runs only
       (scripted places), fights judged by the rule checks.
+- [ ] Tom (2026-11-06): the 480x320 Game / Look keys are too large - that
+      space under the Companion panel was meant for Companion features once
+      the games run well; revisit then.
