@@ -3326,8 +3326,14 @@ static void test_ecl_vm()
     memcpy(gs.code, an.data(), an.size());
     gs.code_len = static_cast<uint32_t>(an.size());
     CHECK(vm.init_script());
+    vm.set(0x4BFC, 4);
     r = vm.run(vm.entry(0));
     CHECK(r == ecl::Stop::Waiting && vm.wait() == ecl::Wait::Pause && vm.pause_ms() == 400 && host.frames == 1);
+    CHECK(vm.resume() == ecl::Stop::Stopped);
+    // speed 0, the fastest: no delay at all (Turbo Pascal's Delay(0))
+    vm.set(0x4BFC, 0);
+    r = vm.run(vm.entry(0));
+    CHECK(r == ecl::Stop::Waiting && vm.wait() == ecl::Wait::Pause && vm.pause_ms() == 0 && host.frames == 2);
     CHECK(vm.resume() == ecl::Stop::Stopped);
 
     // SETUP MONSTER sprite 7, at most 1 square away, picture 9: the sprite

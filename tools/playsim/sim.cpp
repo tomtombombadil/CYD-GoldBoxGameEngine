@@ -492,8 +492,10 @@ static void run_fight()
             if (play::fg) for (int i = 0; i < play::fg->b.n; ++i) { const auto& f = play::fg->b.f[i]; char nm[16] = {}; f.rec.read(reinterpret_cast<uint8_t*>(nm), 1, 15); printf("  fighter %d [%.15s] at %d,%d size %d icon %d px %p up %d rec141 %d 142 %d 144 %d hp %d/%d xp %d+%dx%d\n", i, nm, f.x, f.y, f.size, f.icon, (void*)play::fg->icon[f.icon].px[0], f.up(), (int)f.rec[0x141], (int)f.rec[0x142], (int)f.rec[0x144], (int)f.rec[0x1A4], (int)f.rec[0x78], (int)(f.rec[0x13C] | f.rec[0x13D] << 8), (int)f.rec[0x13E], (int)f.rec[0x12C]); }
             int turns = 0, n = 0;
             const char* fops = getenv("FIGHTOPS");      // taps while the fight waits: letters, &rr rows; then Quick
+            const uint32_t fight_t0 = g_now;            // (the fight's time on the game clock, at its results)
+            const uint32_t ftick = getenv("FTICK") ? (uint32_t)atoi(getenv("FTICK")) : 50;     // (FTICK=ms: the fight's tick)
             for (int k = 0; k < 200000 && (play::screen == play::Screen::Fight || play::screen == play::Screen::SpellList || play::screen == play::Screen::Items); ++k) {
-                g_now += 50;
+                g_now += ftick;
                 play::tick(g_now, C);
                 if (!play::fg) continue;
                 static int marked_round = -1;
@@ -620,7 +622,8 @@ static void run_fight()
                     static bool told = false;
                     if (!told) { told = true; printf("  the 3D view's walls at the results: %s\n", world_hash() == w0 ? "as before" : "CHANGED"); }
                     shot("fight_results");
-                    printf("  fight over: result %d, each %d xp, round %d\n", play::vm->get(0x7EC7), play::fg->share, play::fg->b.round);
+                    printf("  fight over: result %d, each %d xp, round %d, %u ms at speed %d\n", play::vm->get(0x7EC7), play::fg->share, play::fg->b.round,
+                           g_now - fight_t0, play::vm->get(0x4BFC) & 0xFF);
                     for (int i = 0; i < play::pt->count; ++i) { char nm[20]; play::pt->m[i].name(nm, 20); printf("   %s HP %d/%d status %d xp %u", nm, play::pt->m[i].hp(), play::pt->m[i].hp_max(), play::pt->m[i].health(), play::pt->m[i].exp()); for (int k = 0; k < play::pt->m[i].n_items; ++k) if (play::pt->m[i].items[k][0x3D]) printf(" [item %d: %d x spell %02X]", k, play::pt->m[i].items[k][0x3C], play::pt->m[i].items[k][0x3D]); else printf(" [type %d x%d]", play::pt->m[i].items[k][0x2E], play::pt->m[i].items[k][0x39]); printf("\n"); }
                     play::tap(2, 2, C);
                 }

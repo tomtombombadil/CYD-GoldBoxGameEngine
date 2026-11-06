@@ -792,6 +792,7 @@ struct Fight {
     FSt      after = FSt::Turn;         // where the pages go on to
     int      cur = -1;
     uint32_t until = 0;
+    bool     attack_pause = false;      // an attack's frame drawn: its 100 ms before the pages
     Page     page[kPages];
     int      pages = 0, at = 0;
     char     ptext[kPageText];          // the pages' lines, one after another
@@ -2052,8 +2053,10 @@ void say(pic::Canvas& c, FSt next)
     fg->st = FSt::Pages;
     fg->at = 0;
     if (menu_on) clear_menu_line(c);
-    if (fg->pages) show_page(c);
+    if (fg->pages && fg->attack_pause) fg->until = plat::now_ms() + 100;     // (the first page after it: fight_tick)
+    else if (fg->pages) show_page(c);
     else fg->until = 1;
+    fg->attack_pause = false;
 }
 
 // ---- Turns
@@ -2069,6 +2072,7 @@ void end_turn(pic::Canvas& c)
         f.delay = 0;
         f.moves = 0;
     }
+    fg->attack_pause = false;
     status_line(c, "");
     next_turn(c);
 }
@@ -2551,6 +2555,10 @@ int do_attack(pic::Canvas& c, int a, int t, bool behind, bool shot = false, int 
     }
     draw_icon(c, a, true);
     dirty(kViewY, kViewY + 7 * kSq);
+    // (the originals' attack: the attack frame, then Delay(100) - fixed, not
+    // the game speed's - before the blow's messages: Curse GAME.OVR 0x14E59,
+    // Pool 0x14132, Secret 0x1670B, Darkness 0x20013, the same in the others)
+    fg->attack_pause = true;
     Fx fly;
     if (shot) {
         const combat::Fighter& f = b.f[a];
@@ -2665,7 +2673,7 @@ void after_attack(pic::Canvas& c)
     if (left && target_down) {
         if (f.quick || f.team()) {
             fg->st = FSt::Ai;
-            fg->until = plat::now_ms() + 100;
+            fg->until = 1;                  // (no wait of the originals' here)
         } else {
             fight_menu(c);
         }
@@ -4103,8 +4111,12 @@ void ai_step(pic::Canvas& c)
             end_turn(c);
             return;
         }
+        // (the next step at the next tick: the originals' steps wait nothing -
+        // their only fixed waits in a fight are Quick's 200 ms, an attack's
+        // 100, the burst's 70 a frame, the skull's 10 and a flight's own;
+        // v0.32.0 to v0.170.1 waited 150 ms a step on screen)
         fg->st = FSt::Ai;
-        fg->until = plat::now_ms() + (on_screen(i) ? 150 : 1);
+        fg->until = 1;
         return;
     }
     case combat::Act::Guard:

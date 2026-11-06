@@ -27,9 +27,10 @@ const uint8_t kClockScale[7] = {10, 10, 6, 24, 30, 12, 0};   // 0 = 256
 
 uint32_t Vm::game_delay() const
 {
-    int speed = get(0x4BFC) & 0xFF;
-    if (speed == 0) speed = 4;
-    return static_cast<uint32_t>(speed) * 100;
+    // The games' delay: Turbo Pascal Delay(speed x 100 ms) - Pool's x 225
+    // (START.EXE 0x7E4E); speed 0 waits nothing (each program's own routine)
+    const int speed = get(0x4BFC) & 0xFF;
+    return static_cast<uint32_t>(speed) * (set_.pool_map ? 225 : 100);
 }
 
 int Vm::sight() const
@@ -2048,9 +2049,7 @@ Stop Vm::step()
         } else if (w == 0x6803) {
             // The event picture's next frame, then the game's delay
             h_.anim_step();
-            int speed = get(0x4BFC) & 0xFF;
-            if (speed == 0) speed = 4;
-            pause_ms_ = static_cast<uint32_t>(speed) * 100;
+            pause_ms_ = game_delay();
             return wait_for(Wait::Pause);
         } else if (w == set_.sound_call && set_.sound_word) {
             // Gateway: the effect 0x03DE names (its own number); 0x80 up music
@@ -2314,9 +2313,7 @@ Stop Vm::step()
         return wait_for(Wait::Who);
     case 0x3A: {                                // DELAY: the game's delay (speed x 0.1 s)
         ++pc_;
-        int speed = get(0x4BFC) & 0xFF;
-        if (speed == 0) speed = 4;
-        pause_ms_ = static_cast<uint32_t>(speed) * 100;
+        pause_ms_ = game_delay();
         return wait_for(Wait::Pause);
     }
     case 0x3B: {                                // SPELL: who has it memorized (place, member)

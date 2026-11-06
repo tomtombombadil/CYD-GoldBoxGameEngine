@@ -25,6 +25,10 @@ the Project as claude/TODO.md.
       default: training's hit dice at their highest). The Trainer's Modify keeps a trained character's own hit points as
       the highest allowed when the game's bound (made for new characters)
       is lower (Claude's choice, v0.169.0).
+- [ ] Try (2026-11-06, not pushed yet): fights at game speed 0 - the
+      engine waited 0 as 4 everywhere; now 0 waits nothing, as the
+      originals (playsim: Curse's test fight 116 s -> 11 s, Pool's 181 ->
+      9 s). A new game starts at 4 (Pool 1), a saved game at its own.
 - [x] Spell lists open on the first spell with Memorize lit, the highlight stays after Memorize, "Memorize these spells?" on Yes, Pool's rest menu lit by whole words, a menu left by Exit starts on its first word (the shop's Buy) - Tom, 2026-10-31 (v0.161.2)
 - [ ] Companion Views (2026-11-01, Settings, on by default): 480x320 -
       tap the map beside the game: Party (icons, HP bars, effects), then
@@ -98,6 +102,12 @@ the Project as claude/TODO.md.
 
 ## Claude
 
+- [ ] Game speed (2026-11-06): check the rest messages' pause (ours:
+      speed x 0.3 s) against the rest routine; Gateway's / Treasures' /
+      Dark Queen's letter wait (taken as speed x 3 ms) and Dark Queen's
+      game delay (taken as x 100 - its program isn't Turbo Pascal).
+      Cheap draw win if needed: dirty columns as well as rows (a flight
+      step pushes 320 / 480-wide rows for a 24 px picture).
 - [ ] Cheats' Trainer / Max Hit Points (2026-11-06): playsim-checked in
       all nine games (TRAINTEST / MODTEST / MAXHP); the Cheats tab's two
       columns of keys (5 keys) only built, not seen on a board.

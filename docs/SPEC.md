@@ -2673,6 +2673,19 @@ the originals is a bug. Engine comforts with a `features.h` switch are
 marked (switch); since v0.72.0 the player can also turn each one off in
 the game's Settings (As Original: all of them).
 
+- **Game speed** (Tom, 2026-11-06: fights sluggish at speed 0): no
+  longer ours - speed 0 waits nothing, as the originals' Turbo Pascal
+  Delay(speed x 100 ms; Pool x 225) (until v0.170.1 the engine waited 0
+  as 4). A game starts at its program's own speed - 4, Pool 1 (each
+  program's start-up / per-run reset; `start_speed`) - and a saved game
+  brings its own (the game block's speed byte, as the originals load it).
+  The fight's fixed waits are the originals' (Quick 200 ms, an attack's
+  frame 100 ms, a burst 70 ms a frame, the skull 10, a flight's steps);
+  a monster's steps wait nothing (150 ms each before). A script's text
+  prints speed x 3 ms a letter (Pool x 10; 12 ms at every speed before;
+  Gateway's / Treasures' / Dark Queen's letter waits not found - theirs
+  taken as x 3). Still ours: a rest's messages stay speed x 0.3 s (not
+  checked against the rest routine).
 - **Pool's elven runes** (Tom, 2026-11-06): the parchment on Sokal Keep's
   elf (ECL op 0x3C, PROTECTION: a word in runes - font glyphs, each
   cell's byte + 1, in white in the cleared left box from row 5, as the

@@ -693,7 +693,21 @@ int          input_max = ecl::kMaxInput;
 char         input_buf[ecl::kMaxInput + 1];
 int          input_len = 0;
 
-constexpr int kCharMs = 12;
+// A printed letter's wait: speed x 3 ms (Pool: x 10 - START.EXE 0x778D;
+// Curse 0x510D, Secret 0x584A, Darkness 0x4C37 ...); speed 0 prints at once
+uint32_t char_ms();
+// Letters due since `last` (-1: all that fit); `last` moved on by them
+int chars_due(uint32_t now, uint32_t& last)
+{
+    const uint32_t ms = char_ms();
+    if (!ms) {
+        last = now;
+        return -1;
+    }
+    const int n = static_cast<int>((now - last) / ms);
+    if (n > 0) last += static_cast<uint32_t>(n) * ms;
+    return n;
+}
 
 // The tap highlight's place on the canvas (rows y0..y1), and whether
 // anything was drawn there since (then it isn't put back)
@@ -1290,6 +1304,7 @@ void draw_tr_overland(pic::Canvas& c)
 
 uint32_t text_wipe_at = 0;               // (Pool's treasure Detect: its lines cleared then)
 uint32_t game_delay_ms();
+uint8_t start_speed();
 bool world_parked = false;           // the 3D view's walls on the card during a fight (play_fight.inc)
 // The scripts' text colour: light green (Darkness: game byte 0x39 - its
 // scripts give speech 14, yellow; 0 or past 15 is 10 - darkness_facts.md S2)
@@ -3432,11 +3447,10 @@ void note(pic::Canvas& c, const char* t)
 {
     clear_menu_line(c);
     put(c, t, 0, text::kMenuRow, 10);
-    int speed = vm->get(0x4BFC) & 0xFF;
-    if (speed == 0) speed = 4;
-    // (Pool: its status line waits its one game delay, speed x 225 ms -
-    // START.EXE 0x2233 -> 0x7E4E)
-    note_until = plat::now_ms() + static_cast<uint32_t>(speed) * (pool_files() ? 225 : 300);
+    // (one game delay: the games' menu-line message routine prints and
+    // waits it once - Curse's START image 0x579F, the same in Secret,
+    // Champions, Death Knights, Darkness; Pool's START.EXE 0x2233 -> 0x7E4E)
+    note_until = plat::now_ms() + game_delay_ms();
     if (!note_until) note_until = 1;
 }
 
@@ -4258,9 +4272,7 @@ bool items_yes_no(Ask what, char k, pic::Canvas& c)
         // menu line, for the game's delay - then the items again: START
         // ovr20 +0x20F8 -> 0x709:0xDBE; DOSBox, the shop at 9,11)
         say_item(c, t);
-        int speed = vm->get(0x4BFC) & 0xFF;
-        if (speed == 0) speed = 4;
-        note_until = plat::now_ms() + static_cast<uint32_t>(speed) * 225;
+        note_until = plat::now_ms() + game_delay_ms();
         if (!note_until) note_until = 1;
         items_after_note = true;
         return true;
@@ -5013,9 +5025,8 @@ void lk_tick(uint32_t now, pic::Canvas& c)
             t_last = now;
             t_started = true;
         }
-        const int n = static_cast<int>((now - t_last) / kCharMs);
-        if (n > 0) {
-            t_last += static_cast<uint32_t>(n) * kCharMs;
+        const int n = chars_due(now, t_last);
+        if (n != 0) {
             text::step(w, c, d->font, n);
             dirty_rows(17, 22);
         }
@@ -9117,9 +9128,7 @@ void show_scrolls(pic::Canvas& c)
             // (Pool: its words wait the game's delay and go - START ovr16
             // +0xC26 -> 0xBA:0x16EC with its "timed" flag: 0x709:0xDBE, then
             // the rows cleared; DOSBox, Scribe with no scroll: gone at once)
-            int speed = vm->get(0x4BFC) & 0xFF;
-            if (speed == 0) speed = 4;
-            note_until = plat::now_ms() + static_cast<uint32_t>(speed) * 225;
+            note_until = plat::now_ms() + game_delay_ms();
             if (!note_until) note_until = 1;
             status_after_note = true;
         }
@@ -9527,9 +9536,9 @@ void rest_tick(uint32_t now, pic::Canvas& c)
             return;
         }
     }
-    int speed = vm->get(0x4BFC) & 0xFF;
-    if (speed == 0) speed = 4;
-    const uint32_t delay = static_cast<uint32_t>(speed) * 300;
+    // (a rest message stays 3 tenths a speed step - ours, not checked
+    // against the originals' rest routine)
+    const uint32_t delay = static_cast<uint32_t>(vm->get(0x4BFC) & 0xFF) * 300;
     for (int k = 0; k < 6 && rest.left > 0; ++k) {
         rest.left -= 5;
         if (rest.left < 0) rest.left = 0;
@@ -9782,11 +9791,27 @@ void ow(uint32_t at, char* out, size_t cap)
 
 uint32_t game_delay_ms()
 {
-    int speed = vm->get(0x4BFC) & 0xFF;
-    if (speed == 0) speed = 4;
+    const int speed = vm->get(0x4BFC) & 0xFF;
     // the games' delay: speed x 100 ms (Pool: x 225 - its delay routine,
-    // START.EXE 0x7E4E, waits speed x 0xE1 ms)
+    // START.EXE 0x7E4E, waits speed x 0xE1 ms); speed 0, the fastest, waits
+    // nothing (Turbo Pascal's Delay(0))
     return static_cast<uint32_t>(speed) * (pool_files() ? 225 : 100);
+}
+
+// The speed a game starts with (its program's start-up and per-run reset;
+// a saved game brings its own - the game block's speed byte, copied to the
+// program's speed at a load): 4 in Curse (GAME.OVR 0xF9FC / 0xFD93), Secret,
+// Gateway, Champions, Death Knights (their speed bytes set to 4 twice),
+// Darkness and Treasures (the game block's +0x11), Dark Queen (a new
+// game's save A: 4); Pool 1 (its one, GAME.OVR 0xE99B)
+uint8_t start_speed()
+{
+    return pool_files() ? 1 : 4;
+}
+
+uint32_t char_ms()
+{
+    return static_cast<uint32_t>(vm->get(0x4BFC) & 0xFF) * (pool_files() ? 10 : 3);
 }
 
 struct CastRun {
@@ -13411,6 +13436,7 @@ void handle(ecl::Stop r)
         party_dead = false;
         while (pt->count) leave_party(pt->count - 1);
         anim_stop();
+        vm->set(0x4BFC, start_speed());     // (the programs' per-run reset)
         screen = Screen::PartyMenu;
         draw_party_menu(c);
         return;
@@ -13627,10 +13653,11 @@ void begin_adventuring()
     ecl::GameState& gs = d->gs;
     camping = false;
     if (!d->loaded && !in_demo) vault_new_game();
-    // (Pool: a new game's speed is 1 - DOSBox, Alter's Speed after the tour)
+    // (Pool: a new game's speed is 1 - DOSBox, Alter's Speed after the tour;
+    // set at the start as every game's own - start_speed - so a 0 the
+    // player picked before Begin stays 0)
     if (!d->loaded && !in_demo && d->prof->game == games::Game::PoolOfRadiance) {
-        if (!vm->get(0x4BFC)) vm->set(0x4BFC, 1);
-        // (and its program's words a new game's save holds - DOSBox: area
+        // (its program's words a new game's save holds - DOSBox: area
         // words 0x4AFB-0x4AFF (here 0x4CFB-) -1 -1 1 -1 -1, game word 0x6DC0 2;
         // no script reads them)
         static const uint16_t kWords[5] = {0xFFFF, 0xFFFF, 1, 0xFFFF, 0xFFFF};
@@ -15403,7 +15430,7 @@ void end_demo(pic::Canvas& c)
     ecl::GameState& gs = d->gs;
     gs.game_area = d->prof->start_area;
     vm->set(0x7F12, gs.game_area);
-    vm->set(0x4BFC, 4);
+    vm->set(0x4BFC, start_speed());
     vm->set(0x7F70, 0);
     vm->set(0x7F71, 0);
     vm->set(0x7ECB, 0);
@@ -16750,6 +16777,7 @@ const char* open(const char* data_dir, games::Game g, pic::Canvas& c, const char
     open_script_words();
     vm->set_words(d->script_words);
     vm->set(0x4BFF, 3);                     // Pics and Animation on, as the game starts (a save says its own)
+    vm->set(0x4BFC, start_speed());         // the game's own start speed (a save says its own)
     load_sound();
     if (sound_on()) audio_prepare();    // (the S3's codec and amplifier awake before the first sound)
     note_until = 0;
@@ -18017,9 +18045,8 @@ void tick_screens(uint32_t now, pic::Canvas& c)
             t_last = now;
             t_started = true;
         }
-        const int n = static_cast<int>((now - t_last) / kCharMs);
-        if (n > 0) {
-            t_last += static_cast<uint32_t>(n) * kCharMs;
+        const int n = chars_due(now, t_last);
+        if (n != 0) {
             text::step(w, c, d->font, n);
             dirty_rows(17, 22);
         }
