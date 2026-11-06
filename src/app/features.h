@@ -202,8 +202,8 @@
 // The Cheats tab (Tom, 2026-11-01): the in-game Game menu's Cheats tab -
 // Healer (the game's own temple, every cure free), Merchant (the game's
 // own shop with the goods of all its shops together, Buy / Sell / Id /
-// Appraise as its shops have them, at the best price any of its shops
-// asks) and Sanctuary (the game's own camp - Rest, Magic, Fix, View, Alter,
+// Appraise as its shops have them, at the goods' normal prices, Id free;
+// the shop's / temple's own picture in the view) and Sanctuary (the game's own camp - Rest, Magic, Fix, View, Alter,
 // Save - where nothing interrupts a rest: no wandering monsters, no city
 // watch, no camp scripts). Only while the party stands at the exploring
 // menu; leaving one goes back there as it was. Hidden with the Settings

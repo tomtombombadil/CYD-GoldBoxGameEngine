@@ -460,7 +460,7 @@ int q_pm_button_at(int x, int y)
     return -1;
 }
 
-int q_pm_sel_button() { return keys_used && pm_lines ? pm_item[pm_sel] : -1; }
+int q_pm_sel_button() { return pm_lit() && pm_lines ? pm_item[pm_sel] : -1; }
 
 __attribute__((noinline)) void q_pm_buttons(pic::Canvas& c, const bool on[])
 {

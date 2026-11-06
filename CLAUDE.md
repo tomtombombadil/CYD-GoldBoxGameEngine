@@ -687,6 +687,11 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   /tmp/claude-0/dk/tools (ecldk: the scripts decoded with its operand
   counts).
 - PortMaster ports are a stretch goal (Tom): keep everything portable.
+  Tom, 2026-11-01: a PortMaster version and an Android version are planned
+  "sequels" after the CYD work (not now): the route is an SDL2 front end
+  (the engine / game code already builds on the PC; the src/ui screens and
+  hal are the board-bound parts) - keep new code off Arduino / LovyanGFX
+  outside src/ui and src/hal.
 - Game screens (Walk Test, Play Test now, the games later): canvas 1:1 at the top left
   (`frame::set_left`), controls below it, on 480x320 the Companion strip on
   the right (SPEC section 4). Which map / walls an area uses comes from its

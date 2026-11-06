@@ -2221,13 +2221,25 @@ static void test_ecl()
         for (int i = 0; i < 5; ++i) { s.push_back(0); op_addr(s, kBase + 20); }
         auto treasure = [&](int b) { s.push_back(0x27); for (int k = 0; k < 7; ++k) op_imm(s, 0); op_imm(s, b); };
         auto save = [&](int v, uint16_t a) { s.push_back(0x09); op_imm(s, v); op_addr(s, a); };
+        auto picture = [&](int p) { s.push_back(0x0E); op_imm(s, p); };
+        save(3, 0x7EE1); picture(3); save(0xFF, 0x7EE1);                       // a shopkeeper: head 3, body 3
         treasure(12); save(1, 0x7F6C); save(8, 0x7F6D); s.push_back(0x24);     // a shop: goods first
         save(1, 0x7F6C); save(32, 0x7F6D); treasure(14); s.push_back(0x24);    // a shop: the word first
         treasure(13); s.push_back(0x24);                                       // a fight's treasure
+        picture(6); save(1, 0x7EE2); s.push_back(0x24);                        // a temple
+        picture(5); save(1, 0x7F6C); save(16, 0x7F6D); s.push_back(0x24);      // a shop at the goods' prices
         s.push_back(0x00);
         ecl::ShopFinds sf;
         ecl::find_shops(s.data(), static_cast<uint32_t>(s.size()), set, sf);
         CHECK(sf.n_blocks == 2 && sf.blocks[0] == 12 && sf.blocks[1] == 14 && sf.factor_lo == 8);
+        // (the pictures: the shop at factor 16 wins over the earlier ones; the temple's)
+        CHECK(sf.shop_pic == 5 && sf.shop_head == 0xFF && sf.shop_pic_normal);
+        CHECK(sf.temple_pic == 6 && sf.temple_head == 0xFF);
+        s.resize(s.size() - 1 - 1 - 6 - 6 - 3);                                // (without the last shop)
+        s.push_back(0x00);
+        ecl::ShopFinds sf2;
+        ecl::find_shops(s.data(), static_cast<uint32_t>(s.size()), set, sf2);
+        CHECK(sf2.shop_pic == 3 && sf2.shop_head == 3 && !sf2.shop_pic_normal);
     }
 
     // Pool of Radiance: the same script loaded at 0x9900, its words at Pool's
@@ -8518,6 +8530,8 @@ static void test_spells_batch2()
     combat::occupancy(b);
     int bh[16], nsg = 0;
     combat::BoltSeg sg[16];
+    const bool was_fix = rules::fixes();
+    rules::set_fixes(false);                                                         // the original's path
     int nh = combat::bolt_path(b, t, 0, 13, 10, 7, true, bh, 16, sg, &nsg, 16);
     CHECK(nh == 0 && nsg == 1 && sg[0].x1 == 20 && sg[0].y1 == 10);                 // open floor: 7 squares on
     b.ground[10][16] = 0x01;                                                         // a wall 6 squares out
@@ -8526,6 +8540,54 @@ static void test_spells_batch2()
     b.indoors = false;                                                               // outdoors: no bounce
     nh = combat::bolt_path(b, t, 0, 13, 10, 7, true, bh, 16, sg, &nsg, 16);
     CHECK(nh == 0 && sg[nsg - 1].x1 == 20);
+    // Game Fixes: exactly the range - 7 squares from the square aimed at,
+    // every square passed counting (straight 2 half squares, slanted 3; a
+    // square within range while half squares / 2 <= 7), the turn at a
+    // wall's face free
+    b.indoors = true;
+    rules::set_fixes(true);
+    b.ground[10][16] = 0x37;
+    nh = combat::bolt_path(b, t, 0, 13, 10, 7, true, bh, 16, sg, &nsg, 16);
+    CHECK(nh == 0 && nsg == 1 && sg[0].x1 == 20 && sg[0].y1 == 10);                 // straight: 14..20
+    nh = combat::bolt_path(b, t, 0, 13, 13, 7, true, bh, 16, sg, &nsg, 16);         // slanted: 5 squares (15)
+    CHECK(nh == 0 && nsg == 1 && sg[0].x1 == 18 && sg[0].y1 == 18);
+    b.ground[10][16] = 0x01;                                                         // one bounce: 14, 15, then
+    nh = combat::bolt_path(b, t, 0, 13, 10, 7, true, bh, 16, sg, &nsg, 16);         // 15 .. 11 - not the caster
+    CHECK(nh == 0 && nsg == 2 && sg[0].x1 == 16 && sg[1].x0 == 16 && sg[1].x1 == 11);
+    b.ground[10][12] = 0x01;                                                         // two walls: 14 15 | 15 14 13 |
+    nh = combat::bolt_path(b, t, 0, 13, 10, 7, true, bh, 16, sg, &nsg, 16);         // 13 14 - ends at 14
+    CHECK(nh == 0 && nsg == 3 && sg[1].x1 == 12 && sg[2].x1 == 14);
+    b.ground[10][12] = 0x37;
+    // One on the way, the wall behind it: hit going and again coming back
+    b.f[1].x = 14; b.f[1].y = 10; b.f[1].size = 1;
+    combat::occupancy(b);
+    nh = combat::bolt_path(b, t, 0, 13, 10, 7, true, bh, 16, sg, &nsg, 16);
+    CHECK(nh == 2 && bh[0] == 1 && bh[1] == 1 && nsg == 4 && sg[3].x1 == 11);
+    b.f[1].size = 0; b.f[1].x = 30;
+    combat::occupancy(b);
+    b.ground[10][16] = 0x37;
+    // Slanted into a corner: aimed at (12, 8), on (13, 7) 3, (14, 6) 6,
+    // turns at the wall (15, 5), back (14, 6) 9, (13, 7) 12, (12, 8) 15
+    b.ground[5][15] = 0x01;
+    nh = combat::bolt_path(b, t, 0, 12, 8, 7, true, bh, 16, sg, &nsg, 16);
+    CHECK(nh == 0 && nsg == 2 && sg[0].x1 == 15 && sg[0].y1 == 5 && sg[1].x1 == 12 && sg[1].y1 == 8);
+    b.ground[5][15] = 0x37;
+    // Two walls a square apart (the original bounces for ever there): the
+    // square between passed 7 times (2 .. 14), then it ends - both ways
+    b.f[0].x = 14;
+    combat::occupancy(b);
+    b.ground[10][10] = 0x01;
+    b.ground[10][12] = 0x01;
+    nh = combat::bolt_path(b, t, 0, 11, 10, 7, false, bh, 16, sg, &nsg, 16);
+    CHECK(nh == 0 && nsg == 8 && sg[nsg - 1].x1 == 11);
+    rules::set_fixes(false);
+    nh = combat::bolt_path(b, t, 0, 11, 10, 7, false, bh, 16, sg, &nsg, 16);
+    CHECK(nh == 0 && nsg >= 1 && nsg <= 8);
+    b.ground[10][10] = 0x37;
+    b.ground[10][12] = 0x37;
+    b.f[0].x = 10;
+    combat::occupancy(b);
+    rules::set_fixes(was_fix);
 }
 
 // Slow Poison, Spiritual Hammer, Animate Dead, Restoration

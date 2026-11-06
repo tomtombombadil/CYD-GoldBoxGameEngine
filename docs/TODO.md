@@ -947,3 +947,12 @@ the Project as claude/TODO.md.
 - v0.87.2: flasks of oil burn.
 - v0.87.0-v0.87.1: 4-bit screen (32 KB), lighter fights, heap budget.
 - v0.86.0-v0.86.1: Send Logs, Logs in the Game menu, no Esc, memory recovery.
+
+## Sequels (later, not now - Tom, 2026-11-01)
+
+- [ ] A PortMaster version and an Android version of the engine. Route: an
+      SDL2 front end (desktop first - Linux / Windows / PortMaster - then
+      Android via SDL's Android project: storage access, touch layout,
+      lifecycle, packaging). The engine / game code is already portable;
+      src/ui (~8.6K lines, LovyanGFX + Arduino SD) and src/hal are the
+      board-bound parts. Keep new code portable meanwhile.

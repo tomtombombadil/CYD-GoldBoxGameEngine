@@ -4912,22 +4912,27 @@ struct Stepper {
     }
 };
 
-} // namespace
-
-int bolt_path(const Battle& b, const Tables& t, int caster, int tx, int ty, int length, bool near_rule, int* hits,
-              int hit_cap, BoltSeg* segs, int* n_segs, int seg_cap)
+// The original's bolt (curse_finish_facts.md 2.3). `cap`: the bolt also
+// ends where the half squares it has really gone would pass its range -
+// used only for a bolt the original would bounce for ever. `looped`: set
+// when the same state came round again (a segment that used nothing, four
+// times running - the original's carried count)
+int bolt_original(const Battle& b, const Tables& t, int caster, int tx, int ty, int length, bool near_rule, int* hits,
+                  int hit_cap, BoltSeg* segs, int* n_segs, int seg_cap, bool cap, bool* looped)
 {
     int nh = 0;
     *n_segs = 0;
+    *looped = false;
     const int cx = b.f[caster].x, cy = b.f[caster].y;
-    if (cx == tx && cy == ty) return 0;
     // The square's move cost (-1: off the field) and who's on it (0 none, fighter + 1)
     auto cost = [&](int x, int y) { return on_field(x, y) && b.ground[y][x] ? tile(b, t, x, y)[0] : -1; };
     auto who = [&](int x, int y) { return on_field(x, y) ? static_cast<int>(b.who[y][x]) : 0; };
     int Tx = tx, Ty = ty, sign = 1, prev = 0;
     int last = who(tx, ty);
-    bool wall = false, near = near_rule;
+    bool wall = false, near = near_rule, capped = false;
     int budget = (length * 2) & 0xFF;
+    const int limit = length * 2 + 1;               // the range in half squares (range = half squares / 2)
+    int gone = 0;                                   // half squares really gone
     int idle = 0;                                   // segments in a row that used no steps
     while (budget > 0) {
         Stepper p(Tx, Ty, Tx + (Tx - cx) * sign * budget, Ty + (Ty - cy) * sign * budget);
@@ -4935,21 +4940,31 @@ int bolt_path(const Battle& b, const Tables& t, int caster, int tx, int ty, int 
         while (true) {
             if (p.x != p.tx || p.y != p.ty) {
                 while (true) {
+                    if (cap) {
+                        Stepper n = p;
+                        if (n.step() && gone + ((n.steps - p.steps) & 0xFF) > limit) {
+                            capped = true;
+                            break;
+                        }
+                    }
+                    const int before = p.steps;
                     const bool moved = p.step();
+                    gone += (p.steps - before) & 0xFF;
                     const int g = cost(p.x, p.y), c = who(p.x, p.y);
                     if (g == 1) wall = false;
                     if (!(moved && (c == 0 || c == last) && g >= 0 && g <= 1 && p.steps < budget)) break;
                 }
             }
             const int g = cost(p.x, p.y), c = who(p.x, p.y);
-            if (g < 0) budget = 0;
-            if (*n_segs < seg_cap) {
+            if (g < 0 || capped) budget = 0;
+            if (*n_segs < seg_cap && !(capped && p.x == px && p.y == py)) {
                 BoltSeg& s = segs[(*n_segs)++];
                 s.x0 = static_cast<uint8_t>(px);
                 s.y0 = static_cast<uint8_t>(py);
                 s.x1 = static_cast<uint8_t>(p.x < 0 ? 0 : p.x >= kW ? kW - 1 : p.x);
                 s.y1 = static_cast<uint8_t>(p.y < 0 ? 0 : p.y >= kH ? kH - 1 : p.y);
             }
+            if (capped) break;                      // (the squares before it were passed: nobody new on them)
             px = p.x;
             py = p.y;
             wall = g == 0xFF && b.indoors && !wall;
@@ -4970,18 +4985,105 @@ int bolt_path(const Battle& b, const Tables& t, int caster, int tx, int ty, int 
             const int used = (p.steps - prev) & 0xFF;
             budget = used < budget ? budget - used : 0;
             prev = p.steps;
-            // (the original's count of half steps carries over from one
-            // segment to the next - coab's sub_5FA44 var_3D - so a bolt
-            // bouncing between two walls with a segment as long as the last
-            // uses nothing and bounces for ever: the fight fuzzer's Darkness
-            // lightning bolt, seed 5 fight 444. The same state again and
-            // again - stopped, whatever the switches: nothing else changes)
+            // (the count of half steps carries over from one segment to the
+            // next - coab's sub_5FA44 var_3D - so a bolt bouncing between
+            // two walls with a segment as long as the last uses nothing and
+            // bounces for ever: the fight fuzzer's Darkness lightning bolt,
+            // seed 5 fight 444. The same state again and again)
             if (used) idle = 0;
-            else if (++idle > 3) budget = 0;
+            else if (++idle > 3) {
+                *looped = true;
+                budget = 0;
+            }
             if (wall || budget == 0) break;
         }
     }
     return nh;
+}
+
+// The bolt with Game Fixes: exactly its range (AD&D: a bolt that meets a
+// wall rebounds for what is left of its length). Every square it passes
+// through counts - a straight step 2 half squares, a slanted one 3, the
+// games' own measure (range = half squares / 2) - also after a bounce and
+// a square passed again; the step into the wall it bounces off costs
+// nothing (it turns at the wall's face); no 8 more near the caster. It
+// enters a square only while that stays within the range. Its stops,
+// hits, bounces and segments otherwise as the original's.
+int bolt_exact(const Battle& b, const Tables& t, int caster, int tx, int ty, int length, int* hits, int hit_cap,
+               BoltSeg* segs, int* n_segs, int seg_cap)
+{
+    int nh = 0;
+    *n_segs = 0;
+    const int cx = b.f[caster].x, cy = b.f[caster].y;
+    auto cost = [&](int x, int y) { return on_field(x, y) && b.ground[y][x] ? tile(b, t, x, y)[0] : -1; };
+    auto who = [&](int x, int y) { return on_field(x, y) ? static_cast<int>(b.who[y][x]) : 0; };
+    const int limit = length * 2 + 1;
+    const int far = length * 2 + 2;                 // a leg's aim: past anywhere it can reach
+    int Tx = tx, Ty = ty, sign = 1, gone = 0, last = who(tx, ty);
+    bool wall = false;
+    auto seg = [&](int x0, int y0, int x1, int y1) {
+        if ((x0 == x1 && y0 == y1) || *n_segs >= seg_cap) return;
+        BoltSeg& s = segs[(*n_segs)++];
+        s.x0 = static_cast<uint8_t>(x0);
+        s.y0 = static_cast<uint8_t>(y0);
+        s.x1 = static_cast<uint8_t>(x1 < 0 ? 0 : x1 >= kW ? kW - 1 : x1);
+        s.y1 = static_cast<uint8_t>(y1 < 0 ? 0 : y1 >= kH ? kH - 1 : y1);
+    };
+    for (int legs = 0; legs < 64; ++legs) {         // (each bounce needs a floor square gone: ends far sooner)
+        Stepper p(Tx, Ty, Tx + (Tx - cx) * sign * far, Ty + (Ty - cy) * sign * far);
+        int px = Tx, py = Ty;
+        while (true) {
+            Stepper n = p;
+            const bool moved = n.step();
+            const int step = (n.steps - p.steps) & 0xFF;
+            if (!moved || gone + step > limit) {    // the range used up
+                seg(px, py, p.x, p.y);
+                return nh;
+            }
+            p = n;
+            gone += step;
+            const int g = cost(p.x, p.y), c = who(p.x, p.y);
+            if (g == 1) wall = false;
+            if (g < 0) {                            // off the field: it ends
+                seg(px, py, p.x, p.y);
+                return nh;
+            }
+            if ((c == 0 || c == last) && g <= 1) continue;
+            // A stop: a creature, an obstacle or a wall
+            seg(px, py, p.x, p.y);
+            px = p.x;
+            py = p.y;
+            wall = g == 0xFF && b.indoors && !wall;
+            if (c > 0 && c != last && nh < hit_cap) hits[nh++] = c - 1;
+            last = c;
+            if (wall) {
+                gone -= step;                       // (it turns at the wall's face)
+                Tx = p.x;
+                Ty = p.y;
+                sign = -sign;
+                last = 0;
+                break;
+            }
+        }
+    }
+    return nh;
+}
+
+} // namespace
+
+int bolt_path(const Battle& b, const Tables& t, int caster, int tx, int ty, int length, bool near_rule, int* hits,
+              int hit_cap, BoltSeg* segs, int* n_segs, int seg_cap)
+{
+    *n_segs = 0;
+    if (b.f[caster].x == tx && b.f[caster].y == ty) return 0;
+    if (rules::fixes()) return bolt_exact(b, t, caster, tx, ty, length, hits, hit_cap, segs, n_segs, seg_cap);
+    bool looped = false;
+    const int nh = bolt_original(b, t, caster, tx, ty, length, near_rule, hits, hit_cap, segs, n_segs, seg_cap,
+                                 false, &looped);
+    if (!looped) return nh;
+    // The original would bounce for ever: its path, ended at its range
+    return bolt_original(b, t, caster, tx, ty, length, near_rule, hits, hit_cap, segs, n_segs, seg_cap, true,
+                         &looped);
 }
 
 const FightSpell* fight_spell(const FightSpell* table, int n, int spell)

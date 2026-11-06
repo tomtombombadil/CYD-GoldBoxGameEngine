@@ -577,7 +577,7 @@ void q_form_draw(pic::Canvas& c)
         int x, y;
         q_choice(i, &x, &y);
         q_radio(c, x, y, q_choice_on(i), q_choice_picked(i));
-        const bool cur = i == mk->q_cur && keys_used;
+        const bool cur = i == mk->q_cur && pm_lit();
         q_text(c, q_choice_name(i), x + 12, y, cur ? 0 : 7, cur ? 15 : 0);
     }
     char words[16];
