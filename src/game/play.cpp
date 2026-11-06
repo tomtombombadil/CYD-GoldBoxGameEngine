@@ -13208,6 +13208,28 @@ void after_move_redraw(bool step = false)
 
 // The step the player asked for (dir = the way the party goes)
 int step_dir = 0;
+// A side-step (ours: "the same checks as a step into that square" - SPEC
+// 12): its step script sees the party facing the way it goes (the facing
+// and the wall ahead, C04D / C04E), as a step forward that way would; the
+// facing comes back when the script is done (unless the script moved or
+// turned the party), before the move and the arrival script. -1: none.
+// (Pool's Kuto's Well and city hall step scripts ask "facing the well /
+// the hall's locked door?" - a side-step away while facing them asked and
+// was held back - Tom, 2026-11-06)
+int side_face = -1, side_x = 0, side_y = 0;
+
+void side_back()
+{
+    if (side_face < 0) return;
+    ecl::GameState& g = d->gs;
+    // (a script that puts the party back where it was isn't a move: Kuto's
+    // Well's step script looks at the square ahead and writes x / y back)
+    if (g.x == side_x && g.y == side_y && g.dir == step_dir) {
+        g.dir = static_cast<uint8_t>(side_face);
+        if (d->map.loaded) g.wall_ahead = static_cast<uint8_t>(geo::wall(d->map, g.x, g.y, g.dir));
+    }
+    side_face = -1;
+}
 // Look: search mode before it (put back after the search script)
 uint16_t look_search = 0;
 bool look_pending = false;
@@ -13425,6 +13447,7 @@ void handle(ecl::Stop r)
         begin_wait(c);
         return;
     }
+    side_back();                         // (a side-step's script done: the party's own facing again)
     waiting = false;
     w.col = w.r.x0;                      // EXIT puts the text cursor back
     w.row = w.r.y0;
@@ -13559,6 +13582,16 @@ void step(int dir_of_step)
     // key: a "don't move" left by an earlier script (a block's first run)
     // doesn't hold back this step - only this step's script can
     vm->set(0x7EC9, 0);
+    side_face = -1;
+    if (dir_of_step != d->gs.dir) {
+        // a side-step: the script sees the party facing the way it goes
+        ecl::GameState& g = d->gs;
+        side_face = g.dir;
+        side_x = g.x;
+        side_y = g.y;
+        g.dir = static_cast<uint8_t>(dir_of_step);
+        if (d->map.loaded) g.wall_ahead = static_cast<uint8_t>(geo::wall(d->map, g.x, g.y, g.dir));
+    }
     gw_way_ahead();
     // The step script runs before the move, on the square the party is on
     run_entry(0, Then::Move);
