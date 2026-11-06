@@ -1020,3 +1020,7 @@ the Project as claude/TODO.md.
 - [ ] Tom (2026-11-06): the 480x320 Game / Look keys are too large - that
       space under the Companion panel was meant for Companion features once
       the games run well; revisit then.
+- [ ] Tom: the party list beside a menu line (exploring, camp, Magic,
+      Alter) shows the chosen member in white letters, as the originals do;
+      should it get the white box too ("lists' lines too")? Krynn's Modify
+      marks the stat being changed in magenta. Both left as they are.
