@@ -41,7 +41,13 @@ struct ItemFacts {
     // for every race (the original's; AD&D's elves alone when fixes()),
     // armour's +3 movement only for magic armour, and the Boots of Speed's
     // effect doubling the movement
-    bool    light_magic_armour = false, sell_secret = false;
+    bool    light_magic_armour = true, sell_secret = false;
+    // Sell: a pile's price - Curse's family: every pile count x value / 20
+    // (their arrows' test can never hold - Curse GAME.OVR 0x2984E, Pool
+    // 0x22D57, Gateway 0x2FF90, Champions 0x295BC); sell_secret: arrows /
+    // quarrels count x value / 20, others count x value, a pile of type
+    // sell_keep (Secret's 0x49, GAME.OVR 0x29D6E) one's price
+    uint8_t sell_keep = 0;
     uint8_t speed_fx = 0;
     // A race's own weapon (the Dark Queen's kender and the hoopak): the
     // engine race, the item type, its to-hit bonus (type 0: none)

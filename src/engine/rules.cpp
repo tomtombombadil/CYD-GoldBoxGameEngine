@@ -1071,14 +1071,17 @@ int sell_value(const uint8_t* item, const ItemFacts& f)
     const items::Item it{item};
     int v = it.value() > 0 ? it.value() / 2 : 0;
     if (it.count() > 1 && f.sell_secret) {
-        // Secret (GAME.OVR 0x29D61): arrows and quarrels the count / 20, the
-        // other piles the count - the other way round from Curse's (its
-        // arrows' value is a bundle of 20's); 16-bit products
+        // Secret (GAME.OVR 0x29D61), Darkness (0x25A98), Treasures: arrows
+        // and quarrels the count / 20, the other piles the count; Secret's
+        // type 0x49 one's price; 16-bit products
+        if (f.sell_keep && it.type() == f.sell_keep) return v;
         if (it.type() == f.arrow || it.type() == f.quarrel) v = ((it.count() * v) & 0xFFFF) / 20;
         else v = (it.count() * v) & 0xFFFF;
     } else if (it.count() > 1) {
-        if (it.type() != f.arrow && it.type() != f.quarrel) v = it.count() * v / 20;
-        else v *= it.count();
+        // Curse's family: every pile the count / 20 (its arrows' test, type
+        // 0x49 AND 0x1C, never holds; the value is a bundle of 20's - the
+        // shops sell a pile for its value); a 16-bit product
+        v = ((it.count() * v) & 0xFFFF) / 20;
     }
     return v;
 }

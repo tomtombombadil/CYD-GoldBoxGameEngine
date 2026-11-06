@@ -377,12 +377,18 @@ struct Profile {
         // An item the original got wrong, fixed when wanted (items::FlameFix:
         // Pool's Flame Tongue; type 0 - nothing to fix)
         items::FlameFix flame = {};
-        // Secret (rules::ItemFacts): the weapons' +1 for every race, armour's
-        // +3 movement for magic armour only, the Boots of Speed's effect
-        bool        light_magic_armour = false;
+        // Secret (rules::ItemFacts): the weapons' +1 for every race, the
+        // Boots of Speed's effect; armour's +3 movement for magic armour only
+        // - every game's own routine (Curse GAME.OVR 0x37920, Secret 0x3839C,
+        // Darkness 0x34121, Gateway 0x3EE63, Treasures 0x3DF77, Champions
+        // 0x36843, Death Knights 0x32439, the Dark Queen's 0x9DCF test the
+        // armour's plus, byte 0x32): false only for a game whose routine
+        // gives any armour the +3
+        bool        light_magic_armour = true;
         uint8_t     race_weapon[3] = {};           // (rules::ItemFacts)
         uint8_t     speed_fx = 0;
         bool        sell_secret = false;           // a pile's price: Secret's rule (rules::sell_value)
+        uint8_t     sell_keep = 0;                 // (Secret: a pile of this type sells for one's price)
         uint8_t     types_head = 2;                // the type file's bytes before row 0 (Darkness 0)
         uint8_t     types_stride = 16;             // a row's bytes (Gateway's ITEMS.1 24: 8 more each)
         // Darkness: the items screen's menu as one string ("Ready Use Trade
