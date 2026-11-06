@@ -17365,8 +17365,12 @@ bool nav_point(int* x, int* y)
     keys_used = true;
     auto at_word = [&]() {
         const int sel = menu.selected >= 0 && menu.selected < menu.count ? menu.selected : 0;
-        *x = text::word_col(menu, sel) * 8 + 2;
-        *y = text::kMenuRow * 8 + 2;
+        // (a menu on two rows - Darkness's, Gateway's, Krynn's fights - the
+        // word's own row and column: navcheck N5, Select tapped row 24's)
+        int col = 0, row = text::kMenuRow;
+        text::item_cell(menu, sel, &col, &row);
+        *x = col * 8 + 2;
+        *y = row * 8 + 2;
         return true;
     };
     auto anywhere = [&]() {                 // "press a key": a tap on the text
