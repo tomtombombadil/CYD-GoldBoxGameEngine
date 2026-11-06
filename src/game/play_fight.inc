@@ -711,6 +711,23 @@ struct Fx {
     uint8_t x0 = 0, y0 = 0, x1 = 0, y1 = 0;     // Fly: from, to (field squares)
 };
 
+// (tests: the fight's pages, pictures and waits told as they happen - the
+// sweep's fx_check.inc: the waits against the originals' rules, the order
+// of an attack's frames; `wait` the ms set, `n` a skull frame's squares
+// drawn / a sweep's blow number). Board builds have none of it.
+enum class FxEv : uint8_t { Page, Frame, PageWait, AttackPause, FieldBack, SweepBlow, Quick };
+#ifdef CYD_TEST_HOOKS
+void (*g_fx_hook)(FxEv ev, uint32_t wait, int n) = nullptr;
+#define CYD_TEST_FX(ev, wait, n)                                                 \
+    do {                                                                         \
+        if (g_fx_hook) g_fx_hook(FxEv::ev, static_cast<uint32_t>(wait), (n));     \
+    } while (0)
+#else
+#define CYD_TEST_FX(ev, wait, n) \
+    do {                         \
+    } while (0)
+#endif
+
 constexpr int kPages = 24;            // a turn's messages at most (a fireball on a crowd: the rest dropped)
 
 // A page's lines are in the fight's text pool (v0.86.1: 24 x 5 x 48 fixed
@@ -1815,6 +1832,7 @@ bool fx_step(pic::Canvas& c)
         under_save(c, x, y);
         fx_draw(c, x, y, e.fl.slot[e.fl.frames ? k % e.fl.frames : 0]);
         fg->until = plat::now_ms() + (e.fl.delay ? e.fl.delay : 1);
+        CYD_TEST_FX(Frame, e.fl.delay ? e.fl.delay : 1, 1);
         return true;
     }
     case Fx::Burst: {
@@ -1825,6 +1843,7 @@ bool fx_step(pic::Canvas& c)
         under_save(c, x, y);
         fx_draw(c, x, y, e.fl.slot[k & 3]);
         fg->until = plat::now_ms() + 70;
+        CYD_TEST_FX(Frame, 70, 1);
         return true;
     }
     case Fx::Skull: {
@@ -1842,6 +1861,7 @@ bool fx_step(pic::Canvas& c)
         }
         fg->fx_redraw = true;
         fg->until = plat::now_ms() + 10;
+        CYD_TEST_FX(Frame, 10, p ? n : 0);
         return true;
     }
     default: return false;
@@ -1904,6 +1924,7 @@ void page_fx(pic::Canvas& c)
     }
     fg->until = plat::now_ms() + game_delay_ms() * 2;
     if (!fg->until) fg->until = 1;
+    CYD_TEST_FX(PageWait, game_delay_ms() * 2, 0);
 }
 
 // The running picture done (or cut short by a tap): the field put back
@@ -1920,6 +1941,7 @@ void page_over(pic::Canvas& c)
 {
     if (!fg->fx_redraw) return;
     fg->fx_redraw = false;
+    CYD_TEST_FX(FieldBack, 0, 0);
     draw_field(c);
     if (fg->cur >= 0 && fg->b.f[fg->cur].up()) mark(c, fg->cur);
 }
@@ -1980,6 +2002,7 @@ void show_rolls(pic::Canvas& c, const combat::Roll* pr, int row)
 void show_page(pic::Canvas& c)
 {
     page_over(c);
+    CYD_TEST_FX(Page, 0, fg->at);
     const Page& p = fg->page[fg->at++];
     if (log_pages) plat::log("[page] %s %s %s\n", p.lines > 0 ? page_line(p, 0) : "", p.lines > 1 ? page_line(p, 1) : "",
                                  p.lines > 2 ? page_line(p, 2) : "");
@@ -2059,6 +2082,7 @@ void say(pic::Canvas& c, FSt next)
         int speed = vm ? vm->get(0x4BFC) & 0xFF : 0;
         if (speed > 9) speed = 9;
         fg->until = plat::now_ms() + 10 + 10 * speed;          // (the first page after it: fight_tick)
+        CYD_TEST_FX(AttackPause, 10 + 10 * speed, 0);
     }
     else if (fg->pages) show_page(c);
     else fg->until = 1;
@@ -2772,6 +2796,7 @@ bool sweep_next(pic::Canvas& c)
         if (!b.f[t].up()) continue;
         f.attacks[0] = 1;
         f.attacks[1] = 0;
+        CYD_TEST_FX(SweepBlow, 0, fg->sweep_at);
         do_attack(c, fg->sweep_by, t, false);
         did = true;
         break;
@@ -5804,6 +5829,7 @@ void fight_menu_key(pic::Canvas& c, char key)
         f.quick = true;
         fg->st = FSt::Ai;
         fg->until = plat::now_ms() + 200;
+        CYD_TEST_FX(Quick, 200, 0);
         clear_menu_line(c);
         break;
     case 'D': done_menu(c); break;
@@ -5863,6 +5889,7 @@ void done_key(pic::Canvas& c, char key)
         f.quick = true;
         fg->st = FSt::Ai;
         fg->until = plat::now_ms() + 200;
+        CYD_TEST_FX(Quick, 200, 0);
         clear_menu_line(c);
         break;
     default: break;

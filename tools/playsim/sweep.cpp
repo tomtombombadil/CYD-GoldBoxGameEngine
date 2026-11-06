@@ -24,6 +24,8 @@
 //   monkey [seed [n]] n random taps, keys, moves and cursor keys anywhere, checking
 //                    the party's invariants and screens that can't be left
 //                    (MAREA / MBLOCK: start in that script block)
+//   navcheck [seed [n]] the monkey, with the board's cursor keys / Select / tap
+//                    highlight checked on every menu and list (nav_check.inc)
 //   campfuzz [seed [n]] n random camp actions (rest, magic, items, Fix, Alter ...)
 //                    with the party checker and the camp's rules (camp_fuzz.inc)
 // Env: GAME=n (games::Game: 1 Pool of Radiance), BLOCK (events: one block), FIGHTLOG / PAGELOG / TURNLOG / STLOG (a fight's
@@ -329,6 +331,7 @@ static bool pump(int max_iter = 400000)
 }
 
 // The Play Test opened, the title passed, saved game `slot` loaded, BEGIN
+static void (*boot_probe)() = nullptr;      // (navcheck: the party menu as it first shows)
 static bool boot(char slot = 0)
 {
     // (BOOTSLOT=x: the saved game booted when none is named - Death Knights'
@@ -354,6 +357,7 @@ static bool boot(char slot = 0)
         }
         play::tap(2, 2, C);
     }
+    if (boot_probe) boot_probe();
     { int px_, py_; play::pm_line_point(pm_line('L'), &px_, &py_); play::tap(px_, py_, C); };
     if (play::load_where) tap_item(0);          // (Darkness, Death Knights: "Load from where?" - the game's own)
     const char* p = strchr(play::pm_saves, slot);
@@ -1313,6 +1317,7 @@ static void sweep_saveload()
 // screens, broken invariants)
 // A boot, then (MAREA / MBLOCK set) into that script block as a NEWECL would
 static int fights_seen = 0;
+static void (*monkey_probe)() = nullptr;    // (navcheck: after every action)
 static bool monkey_boot()
 {
     using namespace play;
@@ -1365,6 +1370,19 @@ static void sweep_monkey(int rounds)
                 play::tick(g_now, C);
             }
             pcheck::check();
+            continue;
+        }
+        // NFIGHT=n: n in 1000 of the exploring turns boot again and start the
+        // saved game's own fight (start_fight: its LOAD MONSTER, FIGHTAT=)
+        if (play::walking() && getenv("NFIGHT") && pick(1000) < atoi(getenv("NFIGHT"))) {
+            if (system(back_up.c_str()) != 0 || !monkey_boot()) break;
+            start_fight();
+            continue;
+        }
+        // NCHEAT=n: n in 100 of the exploring turns open a Cheats tab screen
+        if (play::walking() && getenv("NCHEAT") && pick(100) < atoi(getenv("NCHEAT")) && play::cheats_ready()) {
+            play::cheat_open(pick(4), C);
+            if (monkey_probe) monkey_probe();
             continue;
         }
         if (play::walking() && pick(100) < 60) {
@@ -1476,7 +1494,7 @@ static void sweep_monkey(int rounds)
             {
                 // A party member's turn begins: Move offered (unless held or slowed to nothing)
                 static int last_cur = -1, last_round = -1;
-                if (fg && fg->st == FSt::Menu && fg->cur >= 0 && fg->cur < fg->b.party_size &&
+                if (fg && fg->st == FSt::Menu && screen == Screen::Fight && fg->cur >= 0 && fg->cur < fg->b.party_size &&
                     (fg->cur != last_cur || fg->b.round != last_round)) {
                     last_cur = fg->cur;
                     last_round = fg->b.round;
@@ -1511,6 +1529,8 @@ static void sweep_monkey(int rounds)
             }
         }
         pcheck::check();
+        if (monkey_probe && d && pt) monkey_probe();
+        if (!d || !pt) continue;
         if (pt->count < 0 || pt->count > party::kMaxParty) problem("party size out of range");
         if (pt->count && (pt->selected < 0 || pt->selected >= pt->count)) {
             char t[64];
@@ -1688,9 +1708,11 @@ static void dice_faces(std::initializer_list<int> f) { dice_usual(); b_faces.ass
 #endif
 
 #ifdef CYD_TEST_HOOKS
+#include "fx_check.inc"
 #include "fight_fuzz.inc"
 #endif
 #include "camp_fuzz.inc"
+#include "nav_check.inc"
 
 int main(int argc, char** argv)
 {
@@ -1715,6 +1737,13 @@ int main(int argc, char** argv)
     else if (mode == "session") sweep_session();
     else if (mode == "memloop") sweep_memloop(arg);
     else if (mode == "campfuzz") cfz::run(static_cast<unsigned>(arg ? arg : 1), argc > 4 ? atoi(argv[4]) : 3000);
+    else if (mode == "navcheck") {
+        rnd.seed(static_cast<unsigned>(arg ? arg : 1));
+        boot_probe = [] { nvc::no_select = true; nvc::probe(); nvc::no_select = false; };
+        monkey_probe = nvc::probe;
+        sweep_monkey(argc > 4 ? atoi(argv[4]) : 5000);
+        nvc::report();
+    }
     else if (mode == "monkey") {
         rnd.seed(static_cast<unsigned>(arg ? arg : 1));
         sweep_monkey(argc > 4 ? atoi(argv[4]) : 20000);

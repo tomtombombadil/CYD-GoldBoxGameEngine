@@ -160,12 +160,15 @@ bool fight(int k)
     int moves_made = 0, aim_tries = 0;
 
     int same = 0, last_sig = -1;
+    // (FUZZTICK=ms: the clock's step - 1 for the fight's waits measured to the ms)
+    static const uint32_t step = getenv("FUZZTICK") ? static_cast<uint32_t>(atoi(getenv("FUZZTICK"))) : 20;
+    const int every = step >= 20 ? 50 : static_cast<int>(50 * 20 / step);
     while (fg || screen == Screen::Fight) {
-        if (++it > 3000000) {
+        if (++it > 3000000L * (step >= 20 ? 1 : 20 / step)) {
             fc::bad("R10", "the fuzzer's tick limit (" + steps.substr(0, 200) + ")");
             return false;
         }
-        g_now += 20;
+        g_now += step;
         play::tick(g_now, C);
         fc::tick();
         if (!d) return false;
@@ -185,7 +188,7 @@ bool fight(int k)
             fc::bad("STUCK", t);
             return false;
         }
-        if (it % 50) continue;
+        if (it % every) continue;
         if (screen != Screen::Fight) {
             if (screen == Screen::Cast) {
                 if (cr.stage == CastRun::Whom) {
@@ -250,7 +253,17 @@ static void sweep_fightfuzz(unsigned seed, int fights)
 {
     using namespace play;
     fc::install();
-    fc::after_turn_start = [](combat::Battle& b, int cur) { if (play::ml) ff::stir(b, cur); };
+    if (getenv("FXCHECK")) {
+        fxc::install();
+        fxc::speed = getenv("FXSPEED") ? atoi(getenv("FXSPEED")) : 4;
+    }
+    fc::after_turn_start = [](combat::Battle& b, int cur) {
+        if (play::ml) ff::stir(b, cur);
+        // FUZZSWEEP=1: the monsters under 1 hit die (record 0xE5 = 0), so a
+        // fighter's blow sweeps them (fx_check F3: a sweep's frames in order)
+        if (getenv("FUZZSWEEP"))
+            for (int i = b.party_size; i < b.n; ++i) b.f[i].rec[0xE5] = 0;
+    };
     ff::list_monsters();
     printf("  %zu monsters\n", ff::mons.size());
     if (ff::mons.empty()) return;
@@ -270,17 +283,25 @@ static void sweep_fightfuzz(unsigned seed, int fights)
         const ff::Mon m = ff::mons[ff::fpick(static_cast<int>(ff::mons.size()))];
         const int copies = 1 + ff::fpick(6);
         play::rng = create::Dice(fs);
+        if (getenv("FXCHECK")) vm->set(0x4BFC, static_cast<uint16_t>(fxc::speed));     // (the speed the waits are checked at)
         char t[120];
         snprintf(t, sizeof t, "seed %u fight %d (FUZZONE=%d) MON%d #%d x%d", seed, k, k, m.area, m.id, copies);
         fc::ctx = t;
         ff::steps.clear();
-        if (!start_fight(m.area, m.id, copies)) {
+        // (FUZZOWN=1: the saved game's own fight, its monsters as they are - Pool's goblins: sweeps)
+        if (getenv("FUZZOWN") ? !start_fight() : !start_fight(m.area, m.id, copies)) {
             ++skipped;
             continue;
         }
         ++run;
         before = fc::broken;
+        if (getenv("FXCHECK")) {
+            fxc::begin(t);
+            if (vm->get(0x4BFC) != fxc::speed) fxc::bad("W0", "the fight began at another speed");
+            fxc::rules();
+        }
         const bool ok = ff::fight(k);
+        fxc::on = false;
         if (ok) {
             ++ended;
             pump(200000);          // (the treasure, the script after it)
@@ -291,4 +312,5 @@ static void sweep_fightfuzz(unsigned seed, int fights)
     }
     printf("== fuzz: %d fights run (%d skipped: no monster), %d ended, %d statuses put on\n", run, skipped, ended, ff::fxs_put);
     fc::report();
+    if (getenv("FXCHECK")) fxc::report();
 }
