@@ -6643,6 +6643,13 @@ bool create_yes_no(Ask what, char k, pic::Canvas& c)
             rules::recalc(mk->ch, *names, d->facts);
             show_new_character(c);
             ask_create(c, Ask::Reroll, mk->words[5]);
+            // (a reroll asks again on the word picked - CLAUDE.md's menu
+            // highlight rule; navcheck N6: Secret's came back on No)
+            for (int w = 0; w < menu.count; ++w)
+                if (text::key(menu, w) == k && menu.selected != w) {
+                    menu.selected = w;
+                    show_menu_line(c);
+                }
         } else {
             ask_name(c);
         }
