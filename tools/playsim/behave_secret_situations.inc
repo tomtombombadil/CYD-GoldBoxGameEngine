@@ -351,6 +351,7 @@ void class_tables()
                         v = adj + base;
                         if (sk < 6) v += (*dd)[sk];
                     }
+                    if (v < 0 && rules::fixes()) v = 0;         // (the original's byte wraps; Game Fixes: 0 - SPEC 12)
                     v &= 0xFF;
                     if (c.rec[0xEA + sk - 1] != v) {
                         ok = false;

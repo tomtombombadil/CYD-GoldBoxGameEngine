@@ -197,6 +197,7 @@ void class_values()
                     const int base = (*tb)[i], r = (*tr)[i];
                     int want = r < 0 && -r > base ? 0 : base + r;
                     if (i <= 5 && !(r < 0 && -r > base)) want += (*td)[i];
+                    if (want < 0 && rules::fixes()) want = 0;   // (the original's byte wraps; Game Fixes: 0 - SPEC 12)
                     ++done;
                     if (c.rec[0xEA + i - 1] != static_cast<uint8_t>(want) && !bad++) {
                         char t[96];
