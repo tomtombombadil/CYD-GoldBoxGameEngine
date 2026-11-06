@@ -1262,6 +1262,97 @@ int main(int argc, char** argv)
         }
         shot("cheat");
     }
+    if (getenv("TRAINTEST")) {      // TRAINTEST=n: the Cheats tab's Trainer - each member given the experience
+        // for its next level, trained n times (gold, levels, hit points printed); MAXHP=1 the Max Hit
+        // Points cheat; MODTEST=1 Modify on each member (hit points and stats pushed up / down, then Exit)
+        if (getenv("MAXHP")) { play::Options o = play::opts; o.max_hp = true; play::set_options(o); }
+        bool ok = play::cheat_open(3, C);
+        if (!ok && getenv("TRAINFORCE")) {      // (TRAINFORCE=1: opened wherever the start stopped - a script's wait)
+            play::waiting = false;
+            play::then = play::Then::Idle;
+            play::screen = play::Screen::Game;
+            play::cheat_trainer(C);
+            ok = true;
+        }
+        printf("  trainer: %s, screen %d, hall word %d\n", ok ? "open" : "not ready", (int)play::screen, play::vm->get(0x7EA8));
+        if (ok) {
+            bool on[play::Data::kItems];
+            play::pm_flags(on);
+            printf("  trainer's menu:");
+            for (int i = 0; i < play::d->items; ++i) if (on[i]) printf(" [%s]", play::d->item[i]);
+            printf("\n");
+        }
+        shot("trainer");
+        const int times = atoi(getenv("TRAINTEST"));
+        for (int i = 0; ok && i < play::pt->count; ++i) {
+            party::Character& ch = play::pt->m[i];
+            char nm[20];
+            ch.name(nm, sizeof nm);
+            for (int n = 0; n < times; ++n) {
+                play::pt->selected = i;
+                // (the experience for the next level of every class held)
+                uint32_t need = 0;
+                if (!play::trainer) play::load_rules(play::trainer);
+                for (int k = 0; play::trainer && k < classes::kClasses; ++k)
+                    if (ch.level(k) > 0) {
+                        const uint32_t e = (uint32_t)play::trainer->tables.exp_needed(k, ch.level(k), &ch);
+                        if (e > need && e < 0x7FFFFFF) need = e;
+                    }
+                if (ch.exp() < need) for (int b = 0; b < 4; ++b) ch.rec[0x127 + b] = (uint8_t)(need >> (8 * b));
+                const int hp0 = ch.hp_max(), hr0 = ch.rec[0x12C];
+                const uint32_t g0 = rules::gold_worth(ch, play::pool_files());
+                int lv0[classes::kClasses];
+                for (int k = 0; k < classes::kClasses; ++k) lv0[k] = ch.level(k);
+                play::pm_picked = true;
+                play::pm_choose_key('T', C);
+                const bool asked = play::screen == play::Screen::YesNo && play::ask == play::Ask::Train;
+                const char* note = play::menu.prompt;
+                char said[64];
+                snprintf(said, sizeof said, "%s", note);
+                if (asked) play::yes_no_key('Y', C);
+                const bool learning = play::screen == play::Screen::SpellList;
+                if (learning) { play::sl.sel = 0; play::learn_tap('L', C); }
+                printf("  %-15s con %2d:", nm, ch.rec[0x11 + 2 * (4)]);
+                for (int k = 0; k < classes::kClasses; ++k)
+                    if (ch.level(k) > 0) printf(" c%d %d->%d", k, lv0[k], ch.level(k));
+                printf("  hp max %d->%d (+%d) rolled %d->%d gold %u->%u%s%s [%s]\n", hp0, ch.hp_max(), ch.hp_max() - hp0,
+                       hr0, ch.rec[0x12C], (unsigned)g0, (unsigned)rules::gold_worth(ch, play::pool_files()),
+                       asked ? "" : " (no question)", learning ? " (spell learned)" : "", said);
+                if (!asked) break;
+            }
+        }
+        if (getenv("MODTEST"))
+            for (int i = 0; ok && i < play::pt->count; ++i) {
+                party::Character& ch = play::pt->m[i];
+                play::pt->selected = i;
+                const party::Character was = ch;
+                play::pm_picked = true;
+                play::pm_choose_key('M', C);
+                char nm[20];
+                ch.name(nm, sizeof nm);
+                if (play::screen != play::Screen::Modify) { printf("  modify %s: not opened [%s]\n", nm, play::menu.prompt); continue; }
+                play::mod_item = 6;
+                for (int k = 0; k < 300; ++k) play::modify_step(1, C);
+                const int hi = ch.hp_max();
+                for (int k = 0; k < 300; ++k) play::modify_step(-1, C);
+                const int lo = ch.hp_max();
+                printf("  modify %-15s hp %d..%d (was %d)  stats", nm, lo, hi, was.hp_max());
+                for (int s2 = 0; s2 < 6; ++s2) {
+                    play::mod_item = s2;
+                    for (int k = 0; k < 40; ++k) play::modify_step(1, C);
+                    const int up = ch.rec[0x11 + 2 * (s2)], ex = ch.rec[0x11 + 2 * (6)];
+                    for (int k = 0; k < 140; ++k) play::modify_step(-1, C);
+                    printf(" %d..%d%s", ch.rec[0x11 + 2 * (s2)], up, s2 == 0 && ex ? "/xx" : "");
+                }
+                play::end_modify(C, false);
+                printf("  exit: %s\n", memcmp(was.rec, ch.rec, sizeof was.rec) ? "CHANGED" : "as it was");
+            }
+        play::pm_picked = false;
+        play::pm_choose_key('B', C);
+        settle(0, 3000);
+        printf("  trainer left: screen %d, hall word %d, cheat %d\n", (int)play::screen, play::vm->get(0x7EA8), (int)play::cheat);
+        shot("trained");
+    }
     if (getenv("CAMPRUN")) run_ops(getenv("CAMPRUN"));
     shot("start");
     if (getenv("PICTURE")) {            // PICTURE=id: the event picture shown, each of its animation's frames a snapshot

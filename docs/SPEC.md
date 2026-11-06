@@ -2622,9 +2622,46 @@ a PC, PortMaster handhelds):
     Fix as in any shop. Sanctuary: the game's camp opened without the area's
     before-camp script, its rests (and Fix) never interrupted - no
     wandering monsters, no city watch, no camp-interrupted script -
-    Darkness's towns allow Rest and Fix there. Settings key **Cheats Tab**
+    Darkness's towns allow Rest and Fix there. **Trainer** (Tom,
+    2026-11-06): the game's own training hall - its party menu as a hall's
+    PROGRAM 0 opens it (Train, Human Change / Knight Change where the game
+    has them, View, Modify ...) - with every class trained (the hall word
+    0x7EA8 = 0xFF while it is open; the word as the game had it on leaving
+    and in a save made there) and free (`train_free`: no gold check or
+    payment, Gateway's "who pays" skipped - the games' training has no
+    other cost); otherwise the game's training (`train_character`: one
+    level a visit, the experience held, race limits, the new spell, the
+    hit points, its messages). Modify Character works there on anyone at
+    any time (the game's `can_modify` experience check skipped), within
+    the game's own Modify bounds (stats by race / class, hit points by
+    level - the originals' formulas, made for new characters: a trained
+    character's hit points can be above the upper bound, and touching the
+    hit points or Constitution pulls them into it; Exit puts all back),
+    Keep recalculates as the game does. Begin Adventuring goes back to the
+    exploring menu as it was; a Load (the Dark Queen's menu has it) ends
+    the cheat. Checked in the playsim (TRAINTEST=n, MODTEST, MAXHP;
+    TRAINFORCE=1 opens it where the save's start stops): Pool, Curse,
+    Secret, Darkness, Gateway, Treasures, Champions, Death Knights, Dark
+    Queen - every member trained, no gold taken, Modify opened and left
+    unchanged. Settings key **Cheats Tab**
     (on by default; off hides the tab). Where: play.cpp (cheat_*),
     viewer.cpp (the tab), engine/ecl.* (find_shops).
+  - `CYD_MAX_HP` (Tom, 2026-11-06): **Max Hit Points**, a cheat the
+    player opts into - the Settings key (with its help) and the same
+    switch on the Cheats tab (both show and change `Settings::max_hp`; OFF
+    by default; As Original turns it off, All On leaves it). On: every
+    level gained by training (a hall, the Trainer) takes each hit die at
+    its highest (`create::Dice::max`: fighter / paladin d10 -> 10, ranger
+    / cleric / druid d8 -> 8, thief d6 -> 6, magic-user / monk d4 -> 4,
+    two dice at 1st level as the game rolls them, the Krynn games' and the
+    Dark Queen's tables alike) and the rest of the game's sum is unchanged
+    - Constitution, the multi-class division, the fixed gains past the
+    last hit die. Not at character creation (Tom: "when they level up").
+    The save files are what the game would write with those rolls.
+    Checked by hand in the playsim: Curse paladin Con 17 +13, cleric Con
+    16 +10, F/T +7, F/MU +7 / +4; Pool C/F/MU Con 12 (8+10+4)/3 = +7;
+    Treasures F/MU/T Con 18 (MU) 4/3 + 2/3 = +1; Champions knight Con 18
+    +14.
 
 ## 12. Where the engine differs from the original games (Tom, 2026-10-10: keep this list up to date)
 
@@ -2634,7 +2671,8 @@ marked (switch); since v0.72.0 the player can also turn each one off in
 the game's Settings (As Original: all of them).
 
 - **Pool's camp has Fix** and **every game has the Cheats tab** (Tom,
-  2026-11-01; switches `CYD_CAMP_FIX`, `CYD_CHEATS` - section 11).
+  2026-11-01; switches `CYD_CAMP_FIX`, `CYD_CHEATS` - section 11; its
+  Trainer and the Max Hit Points switch since 2026-11-06, `CYD_MAX_HP`).
 - **Every game** (Tom, 2026-10-31): a one-choice "PRESS ENTER TO
   CONTINUE" menu goes on with any key or a tap, movement keys included
   (the originals wait for Return); after a script moves the party, the

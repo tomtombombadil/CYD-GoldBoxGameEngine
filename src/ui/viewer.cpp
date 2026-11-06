@@ -3236,7 +3236,7 @@ void tap_sounds(const ui::Tap& t)
 // One set for all games (settings.h comforts_off), on the one Settings
 // screen (below); a comfort compiled out (app/features.h) isn't listed.
 enum Comfort { kCFont, kCGallery, kCBigIcon, kCJournal, kCDemoTap, kCMoreGuys, kCPortrait, kCItemFixes, kCRolls,
-               kCCampFix, kCCheats, kCCompanion, kComforts };
+               kCCampFix, kCCheats, kCCompanion, kCMaxHp, kComforts };
 
 bool comfort_built(int c)
 {
@@ -3253,6 +3253,7 @@ bool comfort_built(int c)
     case kCCampFix: return CYD_CAMP_FIX;
     case kCCheats: return CYD_CHEATS;
     case kCCompanion: return CYD_COMPANION_VIEWS;
+    case kCMaxHp: return CYD_MAX_HP;
     default: return true;
     }
 }
@@ -3261,7 +3262,7 @@ uint16_t comfort_bit(int c)
 {
     static const uint16_t kBits[kComforts] = {0, kOffGallery, kOffBigIcon, kOffJournal, kOffDemoTap, kOffMoreGuys,
                                               kOffPortrait, kOffItemFixes, kOffRolls, kOff2CampFix << 8,
-                                              kOff2Cheats << 8, kOff2Companion << 8};
+                                              kOff2Cheats << 8, kOff2Companion << 8, 0};
     return kBits[c];
 }
 uint16_t comforts_off() { return static_cast<uint16_t>(cfg->comforts_off | cfg->comforts_off2 << 8); }
@@ -3275,6 +3276,7 @@ bool comfort_on(int c)
     if (!comfort_built(c)) return false;
     if (c == kCBigIcon && !ui::large()) return cfg->large_icons != 0;      // (320x240: off unless chosen - it covers the editor)
     if (c == kCFont) return cfg->game_font != kFontGame;                   // (the game's own unless chosen - Tom)
+    if (c == kCMaxHp) return cfg->max_hp != 0;                             // (a cheat: off unless chosen - Tom)
     return !(comforts_off() & comfort_bit(c));
 }
 
@@ -3291,6 +3293,7 @@ void apply_options()
     o.rolls = comfort_on(kCRolls);
     o.camp_fix = comfort_on(kCCampFix);
     o.cheats = comfort_on(kCCheats);
+    o.max_hp = comfort_on(kCMaxHp);
     o.font = comfort_on(kCFont) ? cfg->game_font : kFontGame;
     play::set_options(o);
 }
@@ -3322,7 +3325,8 @@ ui::Rect comfort_qmark(const ui::Rect& cell)
 
 const char* const kComfortNames[kComforts] = {"Game Font",        "Icon Gallery",    "Large Icon",    "Journal Pop-Up",
                                               "Tap to Stop Demo", "More Characters", "Icon Portrait", "Game Fixes",
-                                              "Show Rolls",       "Camp Fix",        "Cheats Tab",      "Companion Views"};
+                                              "Show Rolls",       "Camp Fix",        "Cheats Tab",      "Companion Views",
+                                              "Max Hit Points"};
 
 // What each option does (sentence case; Tom, v0.84.0)
 const char* comfort_help_text(int c)
@@ -3410,7 +3414,14 @@ const char* comfort_help_text(int c)
                "its shops at their normal prices, identifying for free, and buying from you as its shops do "
                "(both with the picture the game's own temples and shops show); "
                "Sanctuary - the game's own camp, where nothing interrupts a rest (no wandering monsters, no "
-               "city watch). Off: no Cheats tab.";
+               "city watch); Trainer - the game's own training hall for every class it has, free, with "
+               "Modify Character for anyone there. Off: no Cheats tab.";
+    case kCMaxHp:
+        return "A cheat: each level gained by training (a training hall or the Cheats tab's Trainer) gets "
+               "the most its hit dice can give - 10 a fighter, 8 a cleric, 6 a thief, 4 a magic-user - "
+               "instead of a roll; the rest of the game's sum stays (Constitution, multi-classes' share). "
+               "Not when a character is made. Also on the Cheats tab. Off (the default): rolled, as the "
+               "original.";
     case kCCompanion:
         return "480x320: a tap on the Companion panel beside the game (the map) shows the party - each "
                "member's icon, name, hit points with a bar and what ails or helps them - and, in a fight, "
@@ -3538,6 +3549,8 @@ void toggle_comfort(int c)
         cfg->game_font = next == kFontDarkness && !darkness_dir(dd, sizeof dd) ? kFontGame : next;
     } else if (c == kCCompanion) {
         cfg->comforts_off2 ^= kOff2Companion;
+    } else if (c == kCMaxHp) {
+        cfg->max_hp = !cfg->max_hp;
     } else {
         set_comforts_off(comforts_off() ^ comfort_bit(c));
     }
@@ -3561,6 +3574,7 @@ void toggle_original()
     for (int c = 0; c < kComforts; ++c) all = static_cast<uint16_t>(all | comfort_bit(c));
     set_comforts_off(on ? 0 : all);
     if (!on) cfg->large_icons = 0;
+    cfg->max_hp = 0;                    // (a cheat: As Original turns it off, All On leaves it to the player)
     cfg->game_font = on ? kFontClear : kFontGame;
     settings_save(*cfg);
     apply_options();
@@ -3575,25 +3589,33 @@ ui::Rect game_settings_area()
 
 
 // ---- The Cheats tab (Tom, 2026-11-01; features.h CYD_CHEATS) ----------------
-// Healer, Merchant, Sanctuary - each the game's own screen (play::cheat_open),
-// only while the party stands at the exploring menu; Back to Game
+// Healer, Merchant, Sanctuary, Trainer - each the game's own screen
+// (play::cheat_open), only while the party stands at the exploring menu -
+// and the Max Hit Points switch (the Settings key's, CYD_MAX_HP; any time);
+// two columns; Back to Game
 struct CheatKey {
     const char* name;
     const char* sub;
 };
-constexpr CheatKey kCheatKeys[3] = {
-    {"Healer", "The temple's cures, all free"},
-    {"Merchant", "Every shop's goods, Id free"},
-    {"Sanctuary", "Camp and rest, never interrupted"},
+constexpr int kCheatOpen = 4;
+constexpr CheatKey kCheatKeys[kCheatOpen] = {
+    {"Healer", "Temple cures, all free"},
+    {"Merchant", "Shops' goods, Id free"},
+    {"Sanctuary", "Rest never interrupted"},
+    {"Trainer", "Every class, free"},
 };
+int cheat_keys() { return CYD_MAX_HP ? kCheatOpen + 1 : kCheatOpen; }
 ui::Rect cheat_key(int i)
 {
     const ui::Rect a = journal_area();
     const int gp = ui::gap(), top = a.y + ui::line_h(ui::Font::Small) * 2 + gp * 3;
-    int h = (a.y + a.h - top - gp * 3) / 3;
+    const int rows = (cheat_keys() + 1) / 2;
+    int h = (a.y + a.h - top - gp * (rows + 1)) / rows;
     if (h > ui::key_h() * 2) h = ui::key_h() * 2;
-    const int w = ui::large() ? ui::width() * 2 / 3 : ui::width() - gp * 6;
-    return {(ui::width() - w) / 2, top + i * (h + gp), w, h};
+    const int all = ui::large() ? ui::width() * 9 / 10 : ui::width() - gp * 4;
+    const int w = (all - gp) / 2;
+    const int x0 = (ui::width() - all) / 2;
+    return {x0 + (i % 2) * (w + gp), top + (i / 2) * (h + gp), w, h};
 }
 void draw_cheats()
 {
@@ -3605,8 +3627,13 @@ void draw_cheats()
               ready ? "The game's own screens, without their costs or dangers."
                     : "Only at the exploring menu - not in a fight, camp, shop or question.",
               ui::Font::Small, ready ? style::kText : style::kTextMuted, true);
-    for (int i = 0; i < 3; ++i)
+    for (int i = 0; i < kCheatOpen; ++i)
         ui::key2(cheat_key(i), kCheatKeys[i].name, kCheatKeys[i].sub, ready ? ui::KeyStyle::Normal : ui::KeyStyle::Dim);
+    if (CYD_MAX_HP) {
+        const bool on = comfort_on(kCMaxHp);
+        ui::key2(cheat_key(kCheatOpen), "Max Hit Points", on ? "On: level-ups" : "Off",
+                 on ? ui::KeyStyle::Lit : ui::KeyStyle::Normal);
+    }
 }
 void tap_cheats(const ui::Tap& t)
 {
@@ -3614,7 +3641,12 @@ void tap_cheats(const ui::Tap& t)
         leave_menu();
         return;
     }
-    for (int i = 0; i < 3; ++i) {
+    if (CYD_MAX_HP && cheat_key(kCheatOpen).contains(t.x, t.y)) {
+        toggle_comfort(kCMaxHp);            // (the Settings key's switch)
+        dirty = true;
+        return;
+    }
+    for (int i = 0; i < kCheatOpen; ++i) {
         if (!cheat_key(i).contains(t.x, t.y)) continue;
         if (!play::cheats_ready()) return;          // (dimmed: the note says why)
         leave_menu();

@@ -20,7 +20,7 @@ constexpr uint32_t    kMagic = 0x53455431;   // "SET1"
 struct File1 {
     uint32_t magic;
     Settings s;
-    uint8_t  reserved[6];         // (the file stays 20 bytes: new fields come out of here as 0)
+    uint8_t  reserved[5];         // (the file stays 20 bytes: new fields come out of here as 0)
 };
 
 static_assert(sizeof(File1) == 20, "the settings file's size");

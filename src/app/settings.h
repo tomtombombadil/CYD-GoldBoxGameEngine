@@ -30,6 +30,7 @@ struct Settings {
     uint8_t volume_muted = 0;     // muted (Tom, 2026-10-24): the Mute key (volume keeps its level), or
                                   // Volume's - down to 0% (volume then keeps 5%'s)
     uint8_t comforts_off2 = 0;    // more comforts switched off (kOff2*; 0 in older files = all on)
+    uint8_t max_hp = 0;           // the Max Hit Points cheat (CYD_MAX_HP): off unless the player turns it on
 };
 
 // The Volume key (Tom, 2026-10-24): 0-100% in 5% steps, kept in the 0-255

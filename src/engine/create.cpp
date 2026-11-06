@@ -293,6 +293,7 @@ int Dice::random(int n)
 
 int Dice::roll(int sides, int count)
 {
+    if (max) return sides > 0 && count > 0 ? sides * count : 0;
     int t = 0;
     for (int i = 0; i < count; ++i) t += sides > 0 ? random(sides) + 1 : 0;
     return t;
