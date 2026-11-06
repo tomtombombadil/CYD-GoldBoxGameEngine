@@ -16924,6 +16924,15 @@ bool nav_list(int step, pic::Canvas& c)
         }
         return false;
     }
+    if (screen == Screen::PartyMenu && (pm_pick_for || pm_picking) && !hl() && pt->count) {
+        // (a member being picked - Gateway's who pays, Darkness's Drop: the
+        // party's highlight, as a tap on the next line)
+        pt->selected = (pt->selected + step + pt->count) % pt->count;
+        draw_party_menu(c);
+        show_menu_line(c);
+        keep_menu_choice(keep, c);
+        return true;
+    }
     if (screen == Screen::PartyMenu) {
         if (!pm_lines) return false;
         pm_sel = (pm_sel + step + pm_lines) % pm_lines;
@@ -16933,6 +16942,13 @@ bool nav_list(int step, pic::Canvas& c)
     if (screen == Screen::TradeWho && pt->count) {
         pt->selected = (pt->selected + step + pt->count) % pt->count;
         draw_party(c, trade_col());
+        return true;
+    }
+    // View's "Trade to?" / "Heal whom?" / "Cure whom?" over the party list
+    // (Tom, 2026-11-06: the keys didn't move it)
+    if (screen == Screen::ViewWho && pt->count) {
+        pt->selected = (pt->selected + step + pt->count) % pt->count;
+        draw_party(c, 1);
         return true;
     }
     if (screen == Screen::Modify && modder) {
@@ -17062,7 +17078,7 @@ bool nav(Nav n, pic::Canvas& c)
     if ((n == Nav::Left || n == Nav::Right) && mk && screen == Screen::QForm) mk->q_cur = -1;
     if ((n == Nav::Up || n == Nav::Down) && (nav_list(step, c) || party_nav(step, c))) return true;
     // The party menu has no menu line: left / right pick the character
-    if (screen == Screen::PartyMenu && (n == Nav::Left || n == Nav::Right)) {
+    if (screen == Screen::PartyMenu && (n == Nav::Left || n == Nav::Right) && !((pm_pick_for || pm_picking) && !hl())) {
         if (pt->count < 2) return false;
         pt->selected = (pt->selected + step + pt->count) % pt->count;
         draw_party_menu(c);
@@ -17171,6 +17187,8 @@ bool nav_point(int* x, int* y)
         return menu_on && menu.count ? at_word() : false;
     }
     if (screen == Screen::QForm && mk && mk->q_cur >= 0) return q_form_point(x, y);
+    // (a member being picked on the party menu: Select is the menu line's word)
+    if (screen == Screen::PartyMenu && (pm_pick_for || pm_picking) && !hl() && menu_on && menu.count) return at_word();
     if (screen == Screen::PartyMenu) {
         if (!pm_lines) return false;
         if (hl()) {
