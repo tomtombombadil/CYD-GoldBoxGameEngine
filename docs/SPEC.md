@@ -170,7 +170,9 @@ The games draw a 320x200 screen. The canvas is presented:
   4 / 6 send the same keys as the arrows), so for Curse at least the engine
   adds them: one square left or right of the facing, without turning, with
   the same wall / door / event checks as a normal step into that square (as
-  if the party turned, stepped and turned back). If a game has its own
+  if the party turned, stepped and turned back). The step script sees the
+  party facing the way it goes (facing and wall ahead); the facing is back
+  before the move and the arrival script (SPEC 12). If a game has its own
   side-step, use its behaviour.
 - Typed text (names, numbers): an on-screen keyboard until it's done.
 
@@ -2679,6 +2681,17 @@ the originals is a bug. Engine comforts with a `features.h` switch are
 marked (switch); since v0.72.0 the player can also turn each one off in
 the game's Settings (As Original: all of them).
 
+- **Side-steps** (ours, every game; Tom, 2026-11-06): a side-step's step
+  script (entry 0, before the move) sees the party facing the way it
+  steps - C04D the step's direction, C04E the wall that way - as the
+  original's step after a turn would; the party's own facing is back when
+  that script is done (unless it moved or turned the party), so the move,
+  the view and the arrival script (entry 1) have the party's real facing.
+  Until v0.172.0 the step script saw the facing: Pool's step scripts that
+  ask "facing the well / a locked door?" (Kuto's Well's kobolds, the city
+  hall's "THE DOOR IS LOCKED" late in the day - its step script tests
+  the hour 0x4BC9 against 14; seen at 22:00) fired on a side-step away and
+  their No / fight held the party back.
 - **Game speed** (Tom, 2026-11-06: fights sluggish at speed 0): no
   longer ours - except the attack frame's pause before a blow's messages:
   10 ms + 10 ms a speed step (100 ms at 9; the originals 100 ms always - Tom,

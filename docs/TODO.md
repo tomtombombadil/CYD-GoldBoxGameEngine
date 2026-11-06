@@ -102,6 +102,14 @@ the Project as claude/TODO.md.
 
 ## Claude
 
+- [ ] Side-steps (2026-11-06, Tom: Pool's city hall / Kuto's Well asked
+      and held the party on a move away): a side-step's step script now
+      sees the step's direction (SPEC 12). Pool checked by autodiff
+      around both places; every other game's play test must check
+      side-steps beside facing-dependent step scripts (doors "locked",
+      wells, "you can't go that way", NO-MOVE 0x7EC9 squares) - a
+      side-step away must not ask, a side-step into one must ask as a
+      step forward that way does.
 - [ ] Game speed (2026-11-06): check the rest messages' pause (ours:
       speed x 0.3 s) against the rest routine; Gateway's / Treasures' /
       Dark Queen's letter wait (taken as speed x 3 ms) and Dark Queen's
