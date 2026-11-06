@@ -396,7 +396,9 @@ void camp()
 // lists, a class trained at a time: THAC0 the best of the classes', each save
 // the best (V3 / V4), attacks the best (V5), slots the sum of the classes'
 // (V7), hit points (V6m) the rolled classes' dice and Constitution shared by
-// the classes held - by each game's rule (oracle `hpmulti`)
+// the classes held - by each game's rule (oracle `hpmulti`); with the Game
+// Fixes (Tom, 2026-11-06) each class's single-class gain (`hp` / `hpfix`)
+// divided by the classes held
 std::map<std::string, std::vector<std::vector<int>>> lvo;
 bool lvo_load(const char* game)
 {
@@ -686,6 +688,13 @@ int ov(const char* key, std::initializer_list<int> pre, int at, int dflt)
     const auto* r = lvr(key, pre);
     return r && static_cast<int>(r->size()) > at ? (*r)[at] : dflt;
 }
+// The Constitutions the multi-classes are tried with (LVCON=n: that one
+// alone - a hand check with LVSHOW; values without an oracle row aren't checked)
+std::vector<int> multi_cons()
+{
+    if (const char* e = getenv("LVCON")) return {atoi(e)};
+    return {18, 16, 12, 5};
+}
 void multi()
 {
     const char* g = game_name();
@@ -716,7 +725,7 @@ void multi()
         if (!have) continue;
         ++combos;
         for (int fx = 0; fx < 2; ++fx)
-            for (int con : {18, 16, 12, 5})
+            for (int con : multi_cons())
                 for (int hi = 0; hi < 2; ++hi) {
                     rules::set_fixes(fx == 1);
                     char how[64];
@@ -768,10 +777,24 @@ void multi()
                             if (rules::fixes() && lvr("mfigfix", {pick, con})) fig = ov("mfigfix", {pick, con}, 2, fig);
                             const int roll = dice ? n * (hi ? sides : 1) : past;
                             int want;
-                            if (fam == 0 || fam == 3) {
+                            // (Game Fixes - Tom, 2026-11-06: each class's gain as a single
+                            // class's - the oracle's `hp` / `hpfix` rows, at least 1 - over
+                            // the classes held, at least 1)
+                            const auto* sr = rules::fixes() ? lvr("hpfix", {pick, L, con}) : nullptr;
+                            if (rules::fixes() && !sr) sr = lvr("hp", {pick, L, con});
+                            const bool unknown = rules::fixes() && !sr;      // (no single-class row: not checked)
+                            if (sr) {
+                                const int g = std::max(1, (*sr)[hi ? 3 : 4]);
+                                want = std::max(1, g / held);
+                            } else if (fam == 0 || fam == 3) {
                                 int adj = 0;
                                 for (int k = 0; k < 8; ++k)
-                                    if (lv[k] > 0 && (fam == 3 || lv[k] < ov("hd", {k}, 3, 99))) adj += ov("mfig", {k, con}, 2, 0);
+                                    if (lv[k] > 0 && (fam == 3 || lv[k] < ov("hd", {k}, 3, 99))) {
+                                        adj += ov("mfig", {k, con}, 2, 0);
+                                        // (Curse's / Gateway's: a 1st level ranger doubles the running
+                                        // sum - ovr026, classes_report "original quirks")
+                                        if (fam == 0 && k == 4 && lv[k] == 1) adj *= 2;
+                                    }
                                 want = std::max(1, (roll + adj) / held);
                             } else {
                                 const int inc = std::max(1, roll / held);
@@ -781,8 +804,12 @@ void multi()
                                 want = inc + cp;
                             }
                             const int up = static_cast<uint8_t>(c.hp_max() - was.hp_max());
-                            ++vchecks;
-                            if (up != (want & 0xFF)) {
+                            vchecks += !unknown;
+                            if (getenv("LVSHOW"))       // (a line a training: hand checks)
+                                printf("  hp multi %d class %d -> %d Con %d dice %s fixes %s: +%d (want %d%s)\n", id, pick, L,
+                                       con, hi ? "high" : "low", rules::fixes() ? "on" : "off", up, want,
+                                       unknown ? ", not checked" : "");
+                            if (!unknown && up != (want & 0xFF)) {
                                 snprintf(w, sizeof w, "V6m hit points multi %d class %d level %d (%s)", id, pick, L, how);
                                 vbad(w, "+%d, the original's +%d", up, want);
                             }

@@ -96,8 +96,16 @@ int ocon_adj(int con, int cls)
     const int per = ocol("con_hp", con);
     int a = per * held(cls);
     if (cls == 2) a += (con > 16) + (con > 17);
+    // (Game Fixes, Tom 2026-11-06: a multi-class's classes each their single
+    // class's figure - the fighter's extra too)
+    if (rules::fixes() && held(cls) > 1 && (class_bits(cls) & 4)) a += (con > 16) + (con > 17);
     return a;
 }
+// A class's single-class Constitution figure (2.5) and a multi-class's hit
+// points with the Game Fixes (Tom, 2026-11-06): each class's roll + figure
+// (at least 1) summed over the classes, divided by the classes held
+int ocf(int k, int con) { return ocol("con_hp", con) + (k == 2 ? (con > 16) + (con > 17) : 0); }
+bool ofix_multi(int cls) { return rules::fixes() && held(cls) > 1; }
 int ohp(int R, int A, int n)                  // 1.12 / 2.6: the averaging with A
 {
     if (A < 0) return R > -A + n ? (R + A) / n : 1;
@@ -382,16 +390,17 @@ void creation()
                             note(bad_gold, f_gold, tag, t);
                         }
                         // Hit points (step 12)
-                        int R = 0;
+                        int R = 0, G = 0;
                         for (int k = 0; k < 8; ++k)
                             if (class_bits(cls) & (1 << k)) {
                                 const int cnt = ocount(k), sd = osides(k);
                                 int v = dice ? cnt : cnt * sd;
                                 v = std::max(v, sd * 2 / 3);
                                 R += v;
+                                G += std::max(1, v + ocf(k, want_s[4]));
                             }
                         const int A = ocon_adj(want_s[4], cls);
-                        const int hp = ohp(R, A, n);
+                        const int hp = ofix_multi(cls) ? std::max(1, G / n) : ohp(R, A, n);
                         if (c.hp_max() != hp || c.hp() != hp || c.rec[0x12C] != R / n) {
                             snprintf(t, sizeof t, "hp %d/%d rolled %d, the original's %d rolled %d (R %d A %d)", c.hp(),
                                      c.hp_max(), c.rec[0x12C], hp, R / n, R, A);
@@ -554,19 +563,21 @@ void training()
                 c.rec[0x78] = 30;
                 c.rec[0x1A4] = 25;
                 c.rec[0x12C] = 20;
-                int mask = 0, R = 0, n = 0;
+                int mask = 0, R = 0, n = 0, G = 0;
                 for (int k = 0; k < 8; ++k)
                     if (lv[k]) {
                         ++n;
                         mask |= ocol("class_masks", k);
-                        R += dice ? ocount(k) : ocount(k) * osides(k);
+                        const int v = dice ? ocount(k) : ocount(k) * osides(k);
+                        R += v;
+                        G += std::max(1, v + ocf(k, con));
                     }
                 if (dice) dice_low();
                 else dice_high();
                 create::train_classes(c, m->tables, m->facts, m->dice, mask, false);
                 dice_usual();
                 const int A = ocon_adj(con, cls);
-                const int gain = std::max(1, (R + A) / n), roll = std::max(1, R / n);
+                const int gain = ofix_multi(cls) ? std::max(1, G / n) : std::max(1, (R + A) / n), roll = std::max(1, R / n);
                 bool ok = c.hp_max() == 30 + gain && c.hp() == 25 + gain && c.rec[0x12C] == 20 + roll;
                 for (int k = 0; k < 8; ++k) ok = ok && c.level(k) == (lv[k] ? 3 : 0);
                 snprintf(w, sizeof w, "training hit points class %d Con %d dice %s", cls, con, dice ? "low" : "high");

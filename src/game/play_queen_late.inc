@@ -781,6 +781,7 @@ void q_rolled(pic::Canvas& c)
     const int align = (mk->q_law - 1) * 3 + mk->q_good - 1;
     create::begin(mk->ch, mk->tables, mk->facts, mk->dice, classes::kKrynnRace + mk->q_race, mk->q_sex,
                   q_ecls(mk->q_cls), align, mk->god);
+    mk->dice.max = CYD_MAX_HP && opts.max_hp;      // (the Max Hit Points cheat: a new character's dice too - Tom)
     create::roll(mk->ch, mk->tables, mk->facts, mk->dice);
     mk->ch.rec[0x142] = static_cast<uint8_t>(create::queen_icon(mk->q_sex, mk->q_race, mk->q_cls, align));
     rules::recalc(mk->ch, *names, d->facts);
@@ -798,6 +799,7 @@ void q_rolled_tap(int x, int y, pic::Canvas& c)
     menu.selected = k;
     switch (text::key(menu, k)) {
     case 'R':
+        mk->dice.max = CYD_MAX_HP && opts.max_hp;      // (the Max Hit Points cheat: a new character's dice too - Tom)
         create::roll(mk->ch, mk->tables, mk->facts, mk->dice);
         rules::recalc(mk->ch, *names, d->facts);
         show_new_character(c);

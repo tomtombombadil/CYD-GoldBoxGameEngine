@@ -390,6 +390,27 @@ int con_fig(int con, int k)
 // The gain for classes `mask` (levels already raised); *inc the rolled part
 int want_gain(const int lv[8], int mask, int con, bool high, int held, int* inc)
 {
+    if (rules::fixes() && held > 1) {
+        // (Game Fixes - Tom, 2026-11-06: each class as a single class - its
+        // roll + Constitution x count, or past the hit dice its fixed gain, at
+        // least 1 - summed, over the classes held, at least 1)
+        int sum = 0, dice = 0;
+        for (int k = 0; k < 7; ++k) {
+            if (lv[k] <= 0 || !(sval("sit_classmask", k) & mask)) continue;
+            int r = 0, cf = 0;
+            if (lv[k] < sval("sit_maxhd", k)) {
+                const int n = lv[k] > 1 ? 1 : sval("sit_hpcount", k);
+                r = high ? n * sval("sit_hpdice", k) : n;
+                cf = con_fig(con, k) * n;
+            } else {
+                r = k == 2 || k == 3 ? 3 : k == 4 || k == 0 || k == 6 ? 2 : 1;
+            }
+            sum += std::max(1, r + cf);
+            dice += r;
+        }
+        *inc = std::max(1, dice / held);
+        return std::max(1, sum / held);
+    }
     int rolled = 0, cs = 0;
     for (int k = 0; k < 7; ++k) {
         if (lv[k] <= 0 || !(sval("sit_classmask", k) & mask)) continue;

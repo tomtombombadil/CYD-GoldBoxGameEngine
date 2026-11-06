@@ -4267,6 +4267,9 @@ bool has_item_fixes(games::Game g)
         if (p.game == g && (p.items.flame.type || p.variant.secret_files || p.variant.darkness_files ||
                             p.fight.facts.gw.ways || p.clips.as_nine || (p.ecl_ops && p.ecl_ops->five_coins)))
             return true;                    // (Secret, Darkness, Gateway: rules::fixes; the five coins' money)
+    // (every game: a multi-class's hit points - create::multi_hp; Tom, 2026-11-06)
+    for (const Profile& p : kProfiles)
+        if (p.game == g) return true;
     return false;
 }
 

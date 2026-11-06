@@ -153,11 +153,12 @@ the Project as claude/TODO.md.
       Clean on the nine games. Fixed (Game Fixes): thief skills below 0
       (wrapped to 251%), the Dark Queen's empty save rows past 18th, its
       hit points (signed, at least 1), the Krynn paladins' hit points.
-      Open for Tom: Curse's / Gateway's / Pool's multi-class hit points
-      add the Constitution for every class held (not only the one
-      trained) and never the fighter's 17+ bonus (the record's class is
-      the multi-class) - the originals' (coab); AD&D's PHB is unclear -
-      fix behind Game Fixes? Not in round 3: turn undead, spells learned
+      [x] Curse's / Gateway's / Pool's multi-class hit points (the
+      Constitution for every class held, never the fighter's 17+ bonus) -
+      decided by Tom 2026-11-06: each class's hit points as a single
+      class's, summed, divided by the classes - Game Fixes, every game
+      (`create::multi_hp`, SPEC 12; after v0.170.1). Max Hit Points at
+      creation too (Tom, 2026-11-06). Not in round 3: turn undead, spells learned
       at training, Krynn moons, demihuman race limits past Curse /
       Gateway.
       the party can hurt) - not bugs, the player would act. Round 3
