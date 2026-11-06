@@ -715,7 +715,7 @@ struct Fx {
 // sweep's fx_check.inc: the waits against the originals' rules, the order
 // of an attack's frames; `wait` the ms set, `n` a skull frame's squares
 // drawn / a sweep's blow number). Board builds have none of it.
-enum class FxEv : uint8_t { Page, Frame, PageWait, AttackPause, FieldBack, SweepBlow, Quick };
+enum class FxEv : uint8_t { Page, Frame, PageWait, AttackPause, FieldBack, SweepBlow, Quick, RollsClear };
 #ifdef CYD_TEST_HOOKS
 void (*g_fx_hook)(FxEv ev, uint32_t wait, int n) = nullptr;
 #define CYD_TEST_FX(ev, wait, n)                                                 \
@@ -1697,6 +1697,16 @@ void page_sound(int id)
 void rolls_clear()
 {
     if (!fg || !fg->rolls) return;
+#ifdef CYD_TEST_HOOKS
+    {
+        // (tests: the blows whose to-hit roll no page took - Show Rolls' "every blow")
+        int left = 0;
+        const combat::RollLog& l = fg->rolls->log;
+        for (int i = 0; i < l.n; ++i)
+            if (!(l.taken >> i & 1) && l.r[i].kind == combat::RollKind::Hit) ++left;
+        CYD_TEST_FX(RollsClear, fg->page_dropped ? 1 : 0, left);
+    }
+#endif
     fg->rolls->log.n = 0;
     fg->rolls->log.taken = 0;
 }

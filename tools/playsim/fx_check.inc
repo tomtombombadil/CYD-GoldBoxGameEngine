@@ -148,6 +148,34 @@ void hook(play::FxEv ev, uint32_t wait, int n)
         }
         if (n > 1 && skull_open) bad("F3", "a blow with the last one's skull still on the field");
     }
+    // K8 Show Rolls (Tom, 2026-10-31: every blow's roll on its page): an
+    // attack's rolls let go with a to-hit roll no page took
+    if (ev == FxEv::RollsClear && opts.rolls) {
+        ++seen["K8 rolls"];
+        if (n > 0 && !wait) {
+            snprintf(t, sizeof t, "%d blow(s) whose to-hit roll no page showed", n);
+            bad("K8", t);
+        }
+    }
+    // K9 the Battle view (CYD_COMPANION_VIEWS): a dot for each fighter on the
+    // field, where it stands, its side
+    if (ev == FxEv::Page) {
+        PanelField pf;
+        if (panel_field(pf)) {
+            ++seen["K9 battle view"];
+            if (pf.n != fg->b.n) bad("K9", "the Battle view's fighters aren't the fight's");
+            for (int i = 0; i < fg->b.n && i < pf.n; ++i) {
+                const combat::Fighter& f = fg->b.f[i];
+                PanelDot dot;
+                const bool on = panel_dot(i, dot);
+                if (f.up() && f.size && (!on || dot.x != f.x || dot.y != f.y)) {
+                    snprintf(t, sizeof t, "fighter %d at %d,%d: its dot %s at %d,%d", i, f.x, f.y, on ? "" : "missing", dot.x, dot.y);
+                    bad("K9", t);
+                    break;
+                }
+            }
+        }
+    }
     if (ev == FxEv::Quick) {
         ++seen["W4 quick"];
         if (wait != 200) bad("W4", "Quick's wait isn't 200 ms");

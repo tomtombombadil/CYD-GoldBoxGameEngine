@@ -866,6 +866,69 @@ void multi()
     expect(P, w, combos > 0 && vfails == fails0, "%d wrong", vfails - fails0);
 }
 
+// M1 / M2: the Max Hit Points cheat (Tom, 2026-11-06: each hit die at its
+// highest, the rest of the game's sum unchanged; level-ups and creation):
+// a character made / trained with Dice::max on gains exactly what the same
+// one gains with every hit point die forced to its top face (the die hook;
+// the cheat's run has every other face 1, so only Dice::max can raise them)
+int hp_top(int n) { return m && m->dice.hp ? n - 1 : 0; }
+void maxhp()
+{
+    int checks = 0;
+    const int f0 = fails;
+    static party::Character a, b;
+    int races[8];
+    const int nr = create::races(races, 8, secret_files());
+    for (int k = 0; k <= 7; ++k) {
+        if (k == 1 || (k == 7 && !krynn())) continue;
+        // M1: training, levels 1-6
+        fresh(a, k);
+        for (int L = 1; L <= 6; ++L) {
+            put32(a.rec, 0x127, 0x3FFFFFFF);
+            const int bit = m->tables.u8(static_cast<uint16_t>(m->tables.lay.class_masks + k));
+            if (!(create::trainable(a, m->tables) & bit)) break;
+            b = a;
+            const int was = a.hp_max();
+            create::g_die_hook = hp_top;
+            m->dice.max = false;
+            create::train_classes(a, m->tables, m->facts, m->dice, bit, false);
+            m->dice.max = true;
+            create::g_die_hook = die_low;       // (every face 1 but where the cheat sets it)
+            create::train_classes(b, m->tables, m->facts, m->dice, bit, false);
+            m->dice.max = false;
+            create::g_die_hook = nullptr;
+            ++checks;
+            if (a.hp_max() != b.hp_max()) bad("M1 Max Hit Points: training's dice at their highest", k, L, "+%d, the top faces' +%d", b.hp_max() - was, a.hp_max() - was);
+        }
+        // M2: a new character of the class
+        if (nr <= 0) continue;
+        party::Character& x = a;
+        party::Character& y = b;
+        const int race = races[nr - 1];
+        x = party::Character{};
+        y = party::Character{};
+        create::g_die_hook = hp_top;
+        Making* keep = m;
+        // (hp_top reads m->dice.hp: the dice rolled here stand in for it)
+        create::begin(x, m->tables, m->facts, m->dice, race, 0, k, 0);
+        m->dice.max = false;
+        create::roll(x, m->tables, m->facts, m->dice);
+        create::g_die_hook = die_low;
+        create::begin(y, m->tables, m->facts, m->dice, race, 0, k, 0);
+        m->dice.max = true;
+        create::roll(y, m->tables, m->facts, m->dice);
+        m->dice.max = false;
+        create::g_die_hook = nullptr;
+        m = keep;
+        ++checks;
+        if (x.hp_max() != y.hp_max() || x.hp_max() <= 0)
+            bad("M2 Max Hit Points: a new character's dice at their highest", k, 1, "%d, the top faces' %d", y.hp_max(), x.hp_max());
+    }
+    char w[120];
+    snprintf(w, sizeof w, "maxhp: %d checks (M1 training, M2 creation)", checks);
+    expect(P, w, checks > 0 && fails == f0, "%d wrong", fails - f0);
+}
+
 void run()
 {
     if (!monkey_boot()) {
@@ -889,6 +952,7 @@ void run()
     if (!only || strstr(only, "camp")) camp();
     if (!only || strstr(only, "values")) values();
     if (!only || strstr(only, "multi")) multi();
+    if (!only || strstr(only, "maxhp")) maxhp();
 }
 
 } // namespace blv

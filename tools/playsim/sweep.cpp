@@ -1703,6 +1703,9 @@ static void dice_faces(std::initializer_list<int> f) { dice_usual(); b_faces.ass
 #ifdef BEHAVE_LEVELS
 #include "behave_levels.inc"
 #endif
+#ifdef BEHAVE_FEATURES
+#include "behave_features.inc"
+#endif
 #ifdef BEHAVE_ECONOMY
 #include "behave_economy.inc"
 #endif
@@ -1803,6 +1806,9 @@ int main(int argc, char** argv)
 #endif
 #ifdef BEHAVE_ECONOMY
         if (want("economy")) behave_economy();
+#endif
+#ifdef BEHAVE_FEATURES
+        if (want("features")) behave_features();
 #endif
 #ifdef BEHAVE_TREASURES
         if (want("treasures")) behave_darkness();       // (Darkness's checks, Treasures' oracles)
