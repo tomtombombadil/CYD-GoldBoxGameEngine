@@ -1702,7 +1702,18 @@ void hl_remember(int at)
 #endif
 }
 // The player moved the highlight: theirs from now on
-void hl_moved() { hl_hold_sig = -1; }
+// (the menu shown is the one moved on: a pick made before - on another
+// menu, or one whose screen drew it without the line's routine - no longer
+// puts the highlight back on its kept word at the key's redraw; navcheck
+// N3, the first Left / Right after a pick jumped to the word kept)
+void hl_moved()
+{
+    hl_hold_sig = -1;
+#if CYD_MENU_HIGHLIGHT
+    hl_shown_sig = hl_sig();
+    hl_after_pick = false;
+#endif
+}
 // A question about to be shown: it starts on the word its game starts it
 // on, never where the same question was answered before (CLAUDE.md's kept
 // exception; DOSBox, Pool's shop: Is It a Deal? on No after an Id's Yes)
