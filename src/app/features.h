@@ -205,13 +205,32 @@
 // Appraise as its shops have them, at the goods' normal prices, Id free;
 // the shop's / temple's own picture in the view) and Sanctuary (the game's own camp - Rest, Magic, Fix, View, Alter,
 // Save - where nothing interrupts a rest: no wandering monsters, no city
-// watch, no camp scripts). Only while the party stands at the exploring
+// watch, no camp scripts) and Trainer (Tom, 2026-11-06: the game's own
+// training hall - its party menu - training every class the game has,
+// free, otherwise as its training: one level a visit, the experience
+// kept, race limits, spells, hit points, its messages; and Modify
+// Character for any character there, any time, within the game's Modify
+// bounds; Begin Adventuring goes back). Only while the party stands at the exploring
 // menu; leaving one goes back there as it was. Hidden with the Settings
 // key Cheats Tab off. 0: no Cheats tab. Where: play.cpp (cheat_*),
 // engine/ecl.* (find_shops: the goods the game's scripts sell),
 // viewer.cpp (the tab, the key).
 #ifndef CYD_CHEATS
 #define CYD_CHEATS 1
+#endif
+
+// Max Hit Points (Tom, 2026-11-06): a cheat the player opts into - the
+// Settings key Max Hit Points (also on the Cheats tab), OFF by default.
+// On: every level gained by training (the halls, the Cheats tab's
+// Trainer) takes each hit die at its highest (fighter d10 -> 10, cleric
+// d8 -> 8, thief d6 -> 6, magic-user d4 -> 4; two dice at 1st level as
+// the game rolls them), the rest of the game's sum unchanged (Constitution,
+// the multi-class division, past the last hit die, Pool's 2/3 rule
+// moot). Not at character creation. The save files are written as the
+// game would with those rolls. 0: no such switch. Where: engine/create.*
+// (Dice::max), play.cpp (train_yes_no), viewer.cpp (the keys).
+#ifndef CYD_MAX_HP
+#define CYD_MAX_HP 1
 #endif
 
 // Each comfort compiled in can also be switched off by the player: the

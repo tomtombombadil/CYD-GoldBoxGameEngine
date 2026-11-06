@@ -219,8 +219,10 @@ items::Names* names = nullptr;     // item name words and types
 items::Ground* ground = nullptr;   // treasure / a shop's goods (own block: RAM is tight)
 // The Cheats tab's screen on now (Tom, 2026-11-01; features.h CYD_CHEATS):
 // the temple / shop / camp opened by the Game menu, not by a script
-enum class Cheat : uint8_t { None, Healer, Merchant, Sanctuary };
+enum class Cheat : uint8_t { None, Healer, Merchant, Sanctuary, Trainer };
 Cheat cheat = Cheat::None;
+uint16_t cheat_train_was = 0;           // the Trainer: the training hall's word 0x7EA8 as it was
+void cheat_drop();
 // The Merchant's goods (every shop's - more than a counter holds: Pools of
 // Darkness's shops have ~150 kinds): on the heap while it's open
 constexpr int kCheatGoods = 255;
@@ -2584,6 +2586,7 @@ void vault_commit(char slot, bool commit)
 bool load_game(char slot)
 {
     load_problem = nullptr;
+    cheat_drop();                           // (from the Trainer's party menu: the cheat is over)
     vault_loaded(slot);                     // (Darkness, Gateway: the slot's own vault)
     char name[24];
     save_file_name(slot, name, sizeof name);
@@ -2804,6 +2807,7 @@ void secret_to_darkness(party::Character& ch)
 bool load_secret_game(char slot)
 {
     load_problem = nullptr;
+    cheat_drop();
     char path[200];
     snprintf(path, sizeof path, "%s/SAVGAM%c%s", import_dir, slot, earlier().save);
     plat::File f = plat::open(path, "r");
@@ -4302,7 +4306,18 @@ bool save_commit(char slot, const savegame::Header& h, const char* main_path, bo
     return stage_end(main_path, commit) && ok;
 }
 
+bool save_game_now(char slot);
+// (the Trainer: the saved game keeps the hall's word as the game had it)
 bool save_game(char slot)
+{
+    const bool tr = cheat == Cheat::Trainer;
+    const uint16_t now = vm->get(0x7EA8);
+    if (tr) vm->set(0x7EA8, cheat_train_was);
+    const bool ok = save_game_now(slot);
+    if (tr) vm->set(0x7EA8, now);
+    return ok;
+}
+bool save_game_now(char slot)
 {
     if (!vault_saved(slot)) {
         vault_commit(slot, false);
@@ -5342,6 +5357,8 @@ char import_dir[128] = {};
 char darkness_dir[128] = {};    // the player's Pools of Darkness folder ("" if none): its font
 Options opts;                   // the engine comforts switched on (Settings)
 bool camp_fix_on() { return CYD_CAMP_FIX && opts.camp_fix; }
+// Training free: once the game is won (as the originals), or the Cheats tab's Trainer
+bool train_free() { return game_won || cheat == Cheat::Trainer; }
 
 bool in_party(const char* name)
 {
@@ -10844,7 +10861,7 @@ void train_character(pic::Canvas& c)
     }
     // (free once the game is won; Pool rounds; Secret's halls are free - no
     // "Training costs" word: secret_facts_2.md 18)
-    if (!game_won && d->prof->shop_words[profile::kTrainCost] && train_payer < 0 &&
+    if (!train_free() && d->prof->shop_words[profile::kTrainCost] && train_payer < 0 &&
         rules::gold_worth(ch, pool_files()) < 1000) {
         train_note(profile::kTrainCost, c);
         if (d->prof->party.who_pays) {
@@ -10930,7 +10947,7 @@ bool train_yes_no(Ask what, char k, pic::Canvas& c)
     screen = Screen::PartyMenu;
     party::Character* ch = pt->sel();
     if (k == 'Y' && ch && trainer && train_mask) {
-        if (!game_won && d->prof->shop_words[profile::kTrainCost]) {
+        if (!train_free() && d->prof->shop_words[profile::kTrainCost]) {
             party::Character& payer = train_payer >= 0 && train_payer < pt->count ? pt->m[train_payer] : *ch;
             if (!coin_fix() || !rules::pay_any(payer, nullptr, 1000)) rules::pay(payer, 1000);
         }
@@ -10939,6 +10956,9 @@ bool train_yes_no(Ask what, char k, pic::Canvas& c)
         // (Pool's training leaves the carried weight and the movement as they
         // were - the 1000 gp paid count at the next recalculation; DOSBox)
         uint8_t kept[3] = {ch->rec[0x187], ch->rec[0x188], ch->rec[0x1A5]};
+        // (the Max Hit Points cheat: each hit die at its highest, the rest
+        // of the game's sum as it is - features.h CYD_MAX_HP)
+        trainer->dice.max = CYD_MAX_HP && opts.max_hp;
         create::train_classes(*ch, trainer->tables, trainer->facts, trainer->dice, train_mask, false);
         rules::recalc(*ch, *names, d->facts);
         if (pool_files()) {
@@ -11214,7 +11234,9 @@ void start_modify(pic::Canvas& c)
 {
     party::Character* ch = pt->sel();
     if (!ch) return;
-    if (!create::can_modify(*ch, d->prof->variant.pool_files, secret_files(), darkness_files(), gateway(), krynn_rules(),
+    // (the Cheats tab's Trainer: any character, any time - the bounds as the game's)
+    if (cheat != Cheat::Trainer &&
+        !create::can_modify(*ch, d->prof->variant.pool_files, secret_files(), darkness_files(), gateway(), krynn_rules(),
                             hl())) {
         char t[60], nm[20];
         ch->name(nm, sizeof nm);
@@ -13489,6 +13511,12 @@ void back_from_view(pic::Canvas& c)
 void begin_adventuring()
 {
     pic::Canvas& c = *cv;
+    if (cheat == Cheat::Trainer) {
+        // (the Cheats tab's Trainer: back to the exploring menu as it was)
+        in_game_menu = false;
+        cheat_end(c);
+        return;
+    }
     // Won: Begin does nothing any more (area word 0x3FA, as the original)
     if (!in_demo && d->prof->won.begin_word && (vm->get(d->prof->won.begin_word) & 0xFF) != 0) return;
     if (in_game_menu) {
@@ -15451,6 +15479,11 @@ void cheat_end(pic::Canvas& c)
     anim_stop();
     if (was != Cheat::None) cheat_put_state();
     if (was == Cheat::Merchant) vm->set(0x7F6D, cheat_factor_was);
+    if (was == Cheat::Trainer) {
+        vm->set(0x7EA8, cheat_train_was);
+        end_training();
+        in_game_menu = false;
+    }
     cheat_free_goods();
     if (ground) ground->clear();
     temple = false;
@@ -15782,6 +15815,45 @@ void cheat_merchant(pic::Canvas& c)
     open_shop(c);
 }
 
+// The Trainer (Tom, 2026-11-06): the game's own training hall - its
+// party menu (PROGRAM 0's, as a hall's script opens it) with every class
+// trained (word 0x7EA8 = 0xFF) and no cost (train_free); Modify Character
+// for anyone (start_modify). Begin Adventuring goes back to the exploring
+// menu as it was, the word as the game had it.
+void cheat_trainer(pic::Canvas& c)
+{
+    cheat_save_screen(c);
+    cheat_keep_state();
+    cheat = Cheat::Trainer;
+    cheat_train_was = vm->get(0x7EA8);
+    vm->set(0x7EA8, static_cast<uint16_t>((cheat_train_was & 0xFF00) | 0xFF));
+    plat::log("[play] cheat: Trainer (hall word was %d)\n", cheat_train_was);
+    in_game_menu = true;
+    anim_stop();
+    screen = Screen::PartyMenu;
+    draw_party_menu(c);
+}
+
+// A saved game loaded from the Trainer's party menu: the cheat is over -
+// nothing of the exploring screen to put back (the loaded game's own state;
+// the hall's word as it was before the load reads its own)
+void cheat_drop()
+{
+    if (cheat != Cheat::Trainer) return;
+    vm->set(0x7EA8, cheat_train_was);
+    end_training();
+    cheat = Cheat::None;
+    free(cheat_was.now);
+    cheat_was.now = nullptr;
+    pic_file_override = 0;
+    cheat_pic_on = false;
+    char path[96];
+    cheat_park_path(path, sizeof path);
+    if (cheat_screen_saved) plat::remove(path);
+    cheat_screen_saved = false;
+    plat::log("[play] cheat: Trainer left by a load\n");
+}
+
 void cheat_sanctuary(pic::Canvas& c)
 {
     cheat_save_screen(c);
@@ -15805,6 +15877,7 @@ bool cheat_open(int which, pic::Canvas& c)
     case 0: cheat_healer(c); break;
     case 1: cheat_merchant(c); break;
     case 2: cheat_sanctuary(c); break;
+    case 3: cheat_trainer(c); break;
     default: return false;
     }
     return true;
@@ -16721,6 +16794,7 @@ void close()
     delete won;
     won = nullptr;
     in_game_menu = camp_from_script = game_won = items_direct = false;
+    cheat = Cheat::None;                    // (a cheat's screen left by leaving the game)
     waiting = resume_after_note = note_held = false;
     note_until = 0;
     status_after_note = false;

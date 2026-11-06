@@ -462,7 +462,15 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   interrupted); only at the exploring menu (`play::cheats_ready`), the
   screen parked in `_CYD/CHEAT.TMP`. Settings keys Camp Fix / Cheats Tab
   (`comforts_off2`). A "Game Enhancements" list: Tom's open question
-  (TODO).
+  (TODO). Tom, 2026-11-06: Cheats' **Trainer** - the game's own training
+  hall (its party menu, `cheat_trainer`): every class (0x7EA8 = 0xFF while
+  open, restored on leaving and in its saves), free (`train_free`),
+  otherwise the game's training; Modify Character for anyone there
+  (`can_modify` skipped, the game's bounds kept); Begin goes back.
+  **Max Hit Points** (`CYD_MAX_HP`, `Settings::max_hp`, OFF by default):
+  a Settings key and the same switch on the Cheats tab; training's hit
+  dice at their highest (`create::Dice::max`), the rest of the game's sum
+  unchanged; level-ups only, not creation.
 - Gold Box Companion files (Tom, 2026-10-11): its author's work - read
   from the player's copy on the card, NEVER shipped or copied into the
   repo (no license). Its combat icons: `/GOLDBOX/GBC/DAX-Icons-EGA`
