@@ -503,6 +503,15 @@ static void run_fight()
                     snprintf(lab, sizeof lab, "round %d", marked_round);
                     heap_mark(lab);
                 }
+                static bool sweep_set = false;
+                if (!sweep_set && getenv("SWEEPSET")) {
+                    // SWEEPSET=m:level: fighter m sweeps that many (attack level), every monster under 1 HD
+                    sweep_set = true;
+                    const int m = atoi(getenv("SWEEPSET")), lv = atoi(strchr(getenv("SWEEPSET"), ':') + 1);
+                    play::fg->b.f[m].rec[0xDD] = (uint8_t)lv;
+                    for (int i = play::fg->b.party_size; i < play::fg->b.n; ++i) play::fg->b.f[i].rec[0xE5] = 0;
+                    printf("  fighter %d: sweeps %d\n", m, lv);
+                }
                 static bool forced_item = false;
                 if (!forced_item && getenv("FORCEWEAPON")) {
                     // FORCEWEAPON=m:type: fighter m's readied weapon becomes that type (to try shots)
