@@ -3159,6 +3159,71 @@ static void test_coin_fixes()
     rules::set_fixes(true);
 }
 
+// Pool's PROTECTION runes read as the word of the script's that fits
+// (synthetic: SAVE "word" -> 0x7B90 lines; runes 2 cells each)
+static void test_rune_word()
+{
+    const profile::Profile* p = profile::find(games::Game::CurseOfTheAzureBonds, 57789, 62432);
+    CHECK(p && p->ecl_ops);
+    if (!p || !p->ecl_ops) return;
+    auto build = [](std::vector<uint8_t>& c, const char* const* words, int n) {
+        c.clear();
+        for (int i = 0; i < n; ++i) {
+            const char* w = words[i];
+            std::vector<uint8_t> six;
+            for (const char* q = w; *q; ++q) six.push_back(static_cast<uint8_t>(*q - 0x40));
+            while (six.size() % 4) six.push_back(0);
+            std::vector<uint8_t> packed;
+            for (size_t k = 0; k < six.size(); k += 4) {
+                packed.push_back(static_cast<uint8_t>(six[k] << 2 | six[k + 1] >> 4));
+                packed.push_back(static_cast<uint8_t>((six[k + 1] & 0xF) << 4 | six[k + 2] >> 2));
+                packed.push_back(static_cast<uint8_t>((six[k + 2] & 3) << 6 | six[k + 3]));
+            }
+            const size_t bytes = (strlen(w) * 6 + 7) / 8;
+            packed.resize(bytes);
+            c.push_back(0x09);
+            c.push_back(0x80);
+            c.push_back(static_cast<uint8_t>(packed.size()));
+            c.insert(c.end(), packed.begin(), packed.end());
+            c.push_back(0x81);
+            c.push_back(0x90);
+            c.push_back(0x7B);
+        }
+        c.push_back(0x00);
+    };
+    auto cells = [](const char* runes, uint8_t* out) {     // a letter -> its rune's 2 cells (this test's own runes)
+        int n = 0;
+        for (const char* q = runes; *q; ++q) {
+            out[n++] = static_cast<uint8_t>(0x41 + (*q - 'A') * 2);
+            out[n++] = static_cast<uint8_t>(0x42 + (*q - 'A') * 2);
+        }
+        return n;
+    };
+    static const char* const kWords[] = {"LEAVE", "TOPATRY", "ZOB", "TIGTANK"};
+    std::vector<uint8_t> code;
+    build(code, kWords, 4);
+    char map[128] = {}, out[16];
+    uint8_t r[24];
+    int n = cells("ZOB", r);
+    CHECK(ecl::rune_word(code.data(), static_cast<uint32_t>(code.size()), *p->ecl_ops, r, n, map, out, sizeof out) &&
+          strcmp(out, "ZOB") == 0);
+    n = cells("TIGTANK", r);
+    CHECK(ecl::rune_word(code.data(), static_cast<uint32_t>(code.size()), *p->ecl_ops, r, n, map, out, sizeof out) &&
+          strcmp(out, "TIGTANK") == 0);
+    n = cells("TOPATRY", r);
+    CHECK(ecl::rune_word(code.data(), static_cast<uint32_t>(code.size()), *p->ecl_ops, r, n, map, out, sizeof out) &&
+          strcmp(out, "TOPATRY") == 0);
+    // Two words of the same shape and nothing learned: neither said
+    static const char* const kTwo[] = {"ZOB", "AXE"};
+    build(code, kTwo, 2);
+    char fresh[128] = {};
+    n = cells("ZOB", r);
+    CHECK(!ecl::rune_word(code.data(), static_cast<uint32_t>(code.size()), *p->ecl_ops, r, n, fresh, out, sizeof out));
+    // ... but with the runes' letters learned before, the one that fits
+    CHECK(ecl::rune_word(code.data(), static_cast<uint32_t>(code.size()), *p->ecl_ops, r, n, map, out, sizeof out) &&
+          strcmp(out, "ZOB") == 0);
+}
+
 static void test_ecl_vm()
 {
     {
@@ -8886,6 +8951,7 @@ int main()
     test_icon();
     test_ecl();
     test_ecl_vm();
+    test_rune_word();
     test_vm_and();
     test_coin_fixes();
     test_vm_darkness();

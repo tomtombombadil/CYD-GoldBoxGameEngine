@@ -12860,6 +12860,30 @@ void begin_wait(pic::Canvas& c)
             handle(vm->resume());
             return;
         }
+        // Pool's parchment runes (PROTECTION, ovr4 +0x2E7D): the font's
+        // glyphs in white at the text cursor - from the text window they go
+        // to the cleared left box, row 5 column 2 (as its CLEAR BOX left
+        // it: cells 1-15) - and the cursor a row down, its column kept; then
+        // (ours, Tom 2026-11-06 - the original wants the code wheel) the
+        // word they spell on that next row, under them (SPEC 12)
+        const uint8_t* rune = nullptr;
+        if (const int nr = vm->runes(&rune)) {
+            if (w.row > 13) {
+                c.fill(8, 8, 120, 120, 0);
+                pic_shown = false;
+                w.row = 5;
+                w.col = 2;
+            }
+            for (int k = 0; k < nr && w.col + k < font::kCols; ++k)
+                font::draw_glyph(c, d->font, rune[k], (w.col + k) * 8, w.row * 8, 15, 0);
+            ++w.row;
+            if (vm->runes_word()[0] && w.row < font::kRows)
+                font::draw_text(c, d->font, vm->runes_word(), w.col, w.row, script_text_colour(), 0);
+            dirty_rows(1, 15);
+            waiting = false;
+            handle(vm->resume());
+            return;
+        }
         // (Pool: a DAMAGE's lines in white, and the position line taken away
         // until the exploring menu draws it again - START ovr8 +0x20CC prints
         // in colour 15 and redraws the party list (0xBA:0x767) without it;
