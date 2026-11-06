@@ -171,7 +171,8 @@ Values expected(const uint8_t* r, const uint8_t (*it)[items::kRecordSize], int n
         if (ti.slot == items::kSlotArmour) {
             const int w = item.weight();
             v.move = w <= 150 ? r[0xE4] : w <= 399 ? 9 : 6;
-            if (v.move != 0 && v.move <= 9) v.move += 3;
+            // (+3 only for armour with a plus: GAME.OVR 0x37920 tests byte 0x32 - coab leaves it out)
+            if (v.move != 0 && v.move <= 9 && item.plus() != 0) v.move += 3;
         }
         if (ti.ac > 0x7F) {
             const int a = ti.ac & 0x7F;

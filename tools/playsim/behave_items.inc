@@ -254,7 +254,8 @@ static BVals b_expect(const party::Character& c)
         if (t.slot == 2) {
             const int w = it[0x37] | it[0x38] << 8;
             v.move = w <= 150 ? r[0xE4] : w <= 399 ? 9 : 6;
-            if (v.move != 0 && v.move <= 9) v.move += 3;
+            // (+3 only for armour with a plus: GAME.OVR 0x37920 tests byte 0x32 - coab leaves it out)
+            if (v.move != 0 && v.move <= 9 && plus != 0) v.move += 3;
         }
         if (t.ac < 0x80) continue;
         const int a = t.ac & 0x7F;

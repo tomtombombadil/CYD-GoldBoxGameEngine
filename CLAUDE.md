@@ -584,7 +584,12 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   Wisdom bonus and the coin exchange's sums; `tools/playsim/party_check.inc`
   (P1-P7: hit points, coins / charges wrapping, memorized past the slots,
   abilities, levels) runs on every monkey action - MCAMP=n biases the
-  monkey to the camp's screens.
+  monkey to the camp's screens. Round 3: `behave economy` (-DBEHAVE_ECONOMY, any
+  game; ONLY= weight, armour, sell, id, buy, share, appraise, cheats,
+  wear, rest) checks money, goods and weight against each GAME.OVR's
+  routine (addresses in the .inc), and `sweep <folder> campfuzz <seed>
+  <n>` (camp_fuzz.inc: CF1 no money made in camp, CF2 no items
+  multiplied, CF3 weight up to date; CFRING=1 traces) plays the camp.
 - **DOSBox here** (2026-10-12): the ORIGINAL games run on Claude's side -
   `apt-get install dosbox xdotool x11-apps imagemagick`, a virtual display
   (`Xvfb :5`), `DISPLAY=:5 SDL_AUDIODRIVER=dummy dosbox -conf <conf>`
