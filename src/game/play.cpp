@@ -13667,7 +13667,11 @@ void begin_adventuring()
         vm->set(0x7EC0, 2);
     }
     const int last = vm->get(0x4BF2) & 0xFF;
-    const bool resume = d->loaded && last != 0;
+    // (a game whose start block is 0 - Pool's Phlan, ECL3 block 0 - keeps a
+    // save made there in that block's own words too: the per-block words
+    // 0x4C00- stay as saved - DOSBox: the city hall's "YOU ARE OUTSIDE THE
+    // CITY HALL" (shown once, 0x4C13) not shown again after a load there)
+    const bool resume = d->loaded && (last != 0 || d->prof->start_script == 0);
     const bool dungeon = !d->loaded || vm->get(0x4BE6) != 0;
     gs.script = static_cast<uint8_t>(resume ? last : d->prof->start_script);
     screen = Screen::Game;
