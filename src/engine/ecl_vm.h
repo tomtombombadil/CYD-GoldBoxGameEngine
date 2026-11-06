@@ -238,6 +238,10 @@ public:
     Wait wait() const { return wait_; }
     const char* text() const { return text_; }
     bool clear() const { return clear_; }
+    // Pool's parchment runes on the Print waiting (font glyphs; 0: none) and
+    // their word ("" when no word of the script's fits)
+    int runes(const uint8_t** cells) const { *cells = runes_; return wait_ == Wait::Print ? n_runes_ : 0; }
+    const char* runes_word() const { return rune_text_; }
     int items() const { return n_items_; }
     const char* item(int i) const { return i >= 0 && i < n_items_ ? item_[i] : ""; }
     const char* prompt() const { return prompt_; }
@@ -400,6 +404,12 @@ private:
 
     const char* text_ = "";
     bool clear_ = false;
+    // Pool's PROTECTION runes on the Print waiting (rune_word): the cells
+    // to draw before text_ (its word), and the runes' letters learned so far
+    uint8_t runes_[24] = {};
+    uint8_t n_runes_ = 0;
+    char    rune_text_[20] = {};
+    char    rune_map_[128] = {};
     const char* item_[kMaxStrings] = {};
     int n_items_ = 0;
     const char* prompt_ = "";
@@ -408,5 +418,15 @@ private:
 
 // Unpacks a packed ECL string (n bytes) into out.
 void unpack_string(const uint8_t* p, size_t n, char* out, size_t cap);
+
+// Pool's PROTECTION (0x3C - Sokal Keep's parchment): the runes it draws
+// (font glyphs, each cell's byte + 1; a rune 1-3 cells wide) read as the
+// one word, among those the script SAVEs (0x09) to compare a typed word
+// with, whose letters fit them - the same rune the same letter, as `map`
+// (rune cell - 0x40 -> letter, 0 unknown) learned from the words before.
+// The code wheel's translation, from the player's own script; false: no
+// single word fits. Tom, 2026-11-06 (SPEC 12).
+bool rune_word(const uint8_t* code, uint32_t len, const OpSet& set, const uint8_t* cells, int n, char map[128],
+               char* out, size_t cap);
 
 } // namespace ecl

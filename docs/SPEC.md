@@ -2538,7 +2538,10 @@ a PC, PortMaster handhelds):
     and 20 - the target's AC as it stood against the blow), "Damage:
     4+3=7" when it hit (the dice, then everything else up to the points
     done); a miss page the last d20 missed; each hit of several its own
-    page's. Spells, breath, monster touches: the target's save ("Save:
+    page's. An attack of several blows (darts' 3, a fighter's 2) pages
+    EVERY blow in turn while the rolls show - a miss "Misses" with its
+    d20, each shot flying (Tom, 2026-11-06: only one dart seemed thrown;
+    the originals page the hits alone, a miss only when nothing hit). Spells, breath, monster touches: the target's save ("Save:
     12+1=13", "Needed: 14", "immune") and the damage as rolled, before
     the target's defences and save (the message says what was taken); a
     touch spell's d20. Light grey (the Dark Queen: cyan - its words are
@@ -2670,6 +2673,21 @@ the originals is a bug. Engine comforts with a `features.h` switch are
 marked (switch); since v0.72.0 the player can also turn each one off in
 the game's Settings (As Original: all of them).
 
+- **Pool's elven runes** (Tom, 2026-11-06): the parchment on Sokal Keep's
+  elf (ECL op 0x3C, PROTECTION: a word in runes - font glyphs, each
+  cell's byte + 1, in white in the cleared left box from row 5, as the
+  original draws them) shows under each rune word its letters - the
+  original leaves them to the code wheel. The letters are the word of the
+  script's own that fits the runes (the words it SAVEs to compare a typed
+  answer with, read from the player's files; the same rune the same
+  letter across the words: `ecl::rune_word`); nothing from
+  the wheel or the game in the repo. Other games' PROTECTION: skipped.
+- **Thrown weapons and Strength** (Tom, 2026-11-06; Game Fixes): the
+  originals add Strength's to-hit and damage only to melee weapons
+  (ITEMS flags 4) - darts and javelins (flags 0x10 alone) get none. With
+  Game Fixes every thrown weapon takes it (AD&D's hurled weapons,
+  `rules::recalc`). Darts throw 3 a round in every game (the ITEMS
+  file's 6 half attacks - as the originals).
 - **Pool's camp has Fix** and **every game has the Cheats tab** (Tom,
   2026-11-01; switches `CYD_CAMP_FIX`, `CYD_CHEATS` - section 11; its
   Trainer and the Max Hit Points switch since 2026-11-06, `CYD_MAX_HP`).

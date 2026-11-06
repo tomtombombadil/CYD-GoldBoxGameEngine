@@ -12885,6 +12885,30 @@ void begin_wait(pic::Canvas& c)
             handle(vm->resume());
             return;
         }
+        // Pool's parchment runes (PROTECTION, ovr4 +0x2E7D): the font's
+        // glyphs in white at the text cursor - from the text window they go
+        // to the cleared left box, row 5 column 2 (as its CLEAR BOX left
+        // it: cells 1-15) - and the cursor a row down, its column kept; then
+        // (ours, Tom 2026-11-06 - the original wants the code wheel) the
+        // word they spell on that next row, under them (SPEC 12)
+        const uint8_t* rune = nullptr;
+        if (const int nr = vm->runes(&rune)) {
+            if (w.row > 13) {
+                c.fill(8, 8, 120, 120, 0);
+                pic_shown = false;
+                w.row = 5;
+                w.col = 2;
+            }
+            for (int k = 0; k < nr && w.col + k < font::kCols; ++k)
+                font::draw_glyph(c, d->font, rune[k], (w.col + k) * 8, w.row * 8, 15, 0);
+            ++w.row;
+            if (vm->runes_word()[0] && w.row < font::kRows)
+                font::draw_text(c, d->font, vm->runes_word(), w.col, w.row, script_text_colour(), 0);
+            dirty_rows(1, 15);
+            waiting = false;
+            handle(vm->resume());
+            return;
+        }
         // (Pool: a DAMAGE's lines in white, and the position line taken away
         // until the exploring menu draws it again - START ovr8 +0x20CC prints
         // in colour 15 and redraws the party list (0xBA:0x767) without it;
@@ -17001,6 +17025,15 @@ bool nav_list(int step, pic::Canvas& c)
         }
         return false;
     }
+    if (screen == Screen::PartyMenu && (pm_pick_for || pm_picking) && !hl() && pt->count) {
+        // (a member being picked - Gateway's who pays, Darkness's Drop: the
+        // party's highlight, as a tap on the next line)
+        pt->selected = (pt->selected + step + pt->count) % pt->count;
+        draw_party_menu(c);
+        show_menu_line(c);
+        keep_menu_choice(keep, c);
+        return true;
+    }
     if (screen == Screen::PartyMenu) {
         if (!pm_lines) return false;
         pm_sel = (pm_sel + step + pm_lines) % pm_lines;
@@ -17010,6 +17043,13 @@ bool nav_list(int step, pic::Canvas& c)
     if (screen == Screen::TradeWho && pt->count) {
         pt->selected = (pt->selected + step + pt->count) % pt->count;
         draw_party(c, trade_col());
+        return true;
+    }
+    // View's "Trade to?" / "Heal whom?" / "Cure whom?" over the party list
+    // (Tom, 2026-11-06: the keys didn't move it)
+    if (screen == Screen::ViewWho && pt->count) {
+        pt->selected = (pt->selected + step + pt->count) % pt->count;
+        draw_party(c, 1);
         return true;
     }
     if (screen == Screen::Modify && modder) {
@@ -17139,7 +17179,7 @@ bool nav(Nav n, pic::Canvas& c)
     if ((n == Nav::Left || n == Nav::Right) && mk && screen == Screen::QForm) mk->q_cur = -1;
     if ((n == Nav::Up || n == Nav::Down) && (nav_list(step, c) || party_nav(step, c))) return true;
     // The party menu has no menu line: left / right pick the character
-    if (screen == Screen::PartyMenu && (n == Nav::Left || n == Nav::Right)) {
+    if (screen == Screen::PartyMenu && (n == Nav::Left || n == Nav::Right) && !((pm_pick_for || pm_picking) && !hl())) {
         if (pt->count < 2) return false;
         pt->selected = (pt->selected + step + pt->count) % pt->count;
         draw_party_menu(c);
@@ -17248,6 +17288,8 @@ bool nav_point(int* x, int* y)
         return menu_on && menu.count ? at_word() : false;
     }
     if (screen == Screen::QForm && mk && mk->q_cur >= 0) return q_form_point(x, y);
+    // (a member being picked on the party menu: Select is the menu line's word)
+    if (screen == Screen::PartyMenu && (pm_pick_for || pm_picking) && !hl() && menu_on && menu.count) return at_word();
     if (screen == Screen::PartyMenu) {
         if (!pm_lines) return false;
         if (hl()) {

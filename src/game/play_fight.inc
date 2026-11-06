@@ -813,6 +813,10 @@ struct Fight {
     bool     pick_size = false;         // ... costs by size (Faerie Fire), else by Hit Dice
     bool     page_dropped = false;      // the last add_page found no room (its pictures / sound aren't set)
     int8_t   yielding = -1;             // the one whose "Surrenders" is on the pages (leaves the field after them)
+    // A sweep under way (melee): its blows one at a time, each one's pages
+    // (the hit, the fall, the skull, the icon gone) before the next blow
+    int8_t   sweep_by = -1, sweep_t[8] = {};
+    uint8_t  sweep_n = 0, sweep_at = 0;
     bool     arena = false;             // an arena fight (CALL 0x8000 / 0x8001): the selected member alone
     // Thrown weapons used up (a dagger, a spear, darts): onto the treasure after the fight
     uint8_t  thrown[6][items::kRecordSize];
@@ -1827,7 +1831,9 @@ bool fx_step(pic::Canvas& c)
         const combat::Fighter& f = fg->b.f[e.who];
         const uint8_t* p = k & 1 ? fg->cursor : fg->skull;
         int sx[4], sy[4];
-        const int n = combat::squares(f.size ? f.size : 1, sx, sy);
+        // (every square it stood on - a big monster's fallen keeps its size
+        // in down_size: Tom, 2026-11-06, the skull on one square of four)
+        const int n = combat::squares(f.size ? f.size : f.down_size ? f.down_size : 1, sx, sy);
         for (int q = 0; q < n && p; ++q) {
             const int x = sq_x(f.x + sx[q]), y = sq_y(f.y + sy[q]);
             blit4(c, p, kSq, kSq, x, y, false, true, kViewX, kViewY, kViewX + kViewW, kViewY + kViewW);
@@ -2563,9 +2569,17 @@ void attack_pages(int a, int t, const combat::Attack& at, bool behind, bool shot
 {
     char line[48];
     bool first = true;
+    // With the rolls shown (CYD_COMBAT_ROLLS) and more than one blow (darts'
+    // three, a fighter's two ...): every blow its own page in turn - a miss
+    // too ("Misses", its roll), each shot flying - so the player sees each
+    // one (Tom, 2026-11-06: "only 1 dart thrown"). The originals page the
+    // hits only, a miss just when nothing hit; play is the same either way.
+    bool each = fg->rolls && at.n > 1 && !at.slain;
+    for (int k = 0; each && k < at.n; ++k)
+        if (at.image[k]) each = false;          // (Secret's images: the original's pages)
     // The sounds: a shot's flight, then a blow each hit, a swish for no hit at all
     auto hit_page = [&]() {
-        if (first && shot) {
+        if ((first || each) && shot) {
             page_fx_set(0, fly);
             Fx blow;
             blow.sound = sound::kHit;
@@ -2595,7 +2609,16 @@ void attack_pages(int a, int t, const combat::Attack& at, bool behind, bool shot
             first = false;
             continue;
         }
-        if (!at.hits[k].hit) continue;
+        if (!at.hits[k].hit) {
+            if (each) {
+                add_page(a, fw(at.backstab ? profile::kBackstabs : profile::kAttacksW), fw(profile::kMisses), t);
+                page_roll(take_roll(combat::RollKind::Hit, t, k));
+                if (shot) page_fx_set(0, fly);
+                else page_sound(sound::kMiss);
+                first = false;
+            }
+            continue;
+        }
         const int dmg = at.hits[k].damage;
         snprintf(line, sizeof line, "%s%s%d%s%s", behind ? fw(profile::kFromBehind) : "", fw(profile::kHittingFor), dmg,
                  dmg == 1 ? fw(profile::kPointW) : fw(profile::kPointsW), fw(profile::kOfDamage));
@@ -2698,6 +2721,7 @@ void guard_attacks(pic::Canvas& c, int i)
 
 // A blow in melee: a fighter's sweep of the weak ones next to them ("sweeps":
 // one attack on each, and the turn is over), else the attack
+bool sweep_next(pic::Canvas& c);
 void melee(pic::Canvas& c, int a, int t)
 {
     combat::Battle& b = fg->b;
@@ -2711,13 +2735,39 @@ void melee(pic::Canvas& c, int a, int t)
     f.swept = true;
     plat::log("[play] fighter %d sweeps %d\n", a, n);
     add_page(a, fw(profile::kSweeps));
-    for (int k = 0; k < n && f.up(); ++k) {
-        if (!b.f[sw[k]].up()) continue;
+    // (one blow now; the others each after the pages before it - the
+    // original's order: hit, fall, skull, the icon gone, then the next -
+    // Tom, 2026-11-06)
+    fg->sweep_by = static_cast<int8_t>(a);
+    fg->sweep_n = static_cast<uint8_t>(n);
+    fg->sweep_at = 0;
+    for (int k = 0; k < n; ++k) fg->sweep_t[k] = static_cast<int8_t>(sw[k]);
+    sweep_next(c);
+}
+
+// A sweep's next blow, at the next one still standing; false: the sweep
+// is over (the sweeper's attacks gone)
+bool sweep_next(pic::Canvas& c)
+{
+    combat::Battle& b = fg->b;
+    if (fg->sweep_by < 0) return false;
+    combat::Fighter& f = b.f[fg->sweep_by];
+    bool did = false;
+    while (fg->sweep_at < fg->sweep_n && f.up() && f.size) {
+        const int t = fg->sweep_t[fg->sweep_at++];
+        if (!b.f[t].up()) continue;
         f.attacks[0] = 1;
         f.attacks[1] = 0;
-        do_attack(c, a, sw[k], false);
+        do_attack(c, fg->sweep_by, t, false);
+        did = true;
+        break;
     }
     f.attacks[0] = f.attacks[1] = 0;
+    if (!did || fg->sweep_at >= fg->sweep_n) {
+        fg->sweep_by = -1;
+        fg->sweep_n = fg->sweep_at = 0;
+    }
+    return did;
 }
 
 void forget_spell(combat::Fighter& f, int sp);
@@ -4942,6 +4992,11 @@ void fight_tick(uint32_t now, pic::Canvas& c)
             y.size = 0;
             combat::occupancy(fg->b);
             draw_field(c);
+        }
+        // A sweep's next blow and its pages, then on as before
+        if (fg->sweep_by >= 0 && sweep_next(c)) {
+            say(c, fg->after);
+            break;
         }
         switch (fg->after) {
         case FSt::Next:

@@ -188,7 +188,7 @@ SVals s_expect(const party::Character& c)
         const SType t = s_type(weapon[0x2E]);
         if (t.flags & 2) v.hit += s_dex(dex, 2);
         v.dmg = t.b;
-        if (t.flags & 4) {
+        if ((t.flags & 4) || ((t.flags & 0x10) && rules::fixes())) {   // (thrown: AD&D's Strength with the Game Fixes)
             v.hit += r[0x125] ? s_str(g, 1) : 0;
             v.dmg += r[0x125] ? s_str(g, 2) : 0;
         }

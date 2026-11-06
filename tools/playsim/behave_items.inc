@@ -224,7 +224,7 @@ static BVals b_expect(const party::Character& c)
         const items::TypeInfo& t = names->type(weapon[0x2E]);
         if (t.flags & 0x02) v.hit += ov("dex_missile", dex);
         v.dmg = t.bonus;
-        if (t.flags & 0x04) {
+        if ((t.flags & 0x04) || ((t.flags & 0x10) && rules::fixes())) {   // (thrown: AD&D's Strength with the Game Fixes)
             v.hit += shit;
             v.dmg += sdmg;
         }

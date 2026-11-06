@@ -188,6 +188,58 @@ void unpack_string(const uint8_t* p, size_t n, char* out, size_t cap)
     if (cap) out[o] = 0;
 }
 
+bool rune_word(const uint8_t* code, uint32_t len, const OpSet& set, const uint8_t* cells, int n, char map[128],
+               char* out, size_t cap)
+{
+    if (n <= 0 || !cap) return false;
+    char best[16] = {};
+    char best_map[128];
+    int found = 0;
+    for (uint32_t at = 0; at + 3 < len;) {
+        Insn in;
+        if (!decode(code, len, at, set, in)) {
+            ++at;
+            continue;
+        }
+        at = in.next;
+        if (in.op != 0x09 || in.count < 1 || in.ops[0].code != 0x80) continue;
+        char w[48];
+        unpack_string(code + in.at + 3, in.ops[0].low, w, sizeof w);
+        const int wl = static_cast<int>(strlen(w));
+        bool letters = wl >= 2 && wl < static_cast<int>(sizeof best) && n % wl == 0 && n / wl <= 3;
+        for (int i = 0; letters && i < wl; ++i) letters = w[i] >= 'A' && w[i] <= 'Z';
+        if (!letters) continue;
+        // The same rune always the same letter, two runes never one letter
+        char m[128];
+        memcpy(m, map, sizeof m);
+        const int k = n / wl;
+        bool fits = true;
+        for (int i = 0; fits && i < wl; ++i) {
+            const int g = cells[i * k] - 0x40;
+            if (g < 0 || g >= 128) {
+                fits = false;
+                break;
+            }
+            if (m[g]) {
+                fits = m[g] == w[i];
+                continue;
+            }
+            for (int j = 0; j < 128 && fits; ++j)
+                if (m[j] == w[i]) fits = false;
+            m[g] = w[i];
+        }
+        if (!fits) continue;
+        if (found && strcmp(best, w) == 0) continue;
+        if (++found > 1) return false;          // (two words fit: none said)
+        memcpy(best, w, static_cast<size_t>(wl) + 1);
+        memcpy(best_map, m, sizeof best_map);
+    }
+    if (found != 1) return false;
+    memcpy(map, best_map, sizeof best_map);
+    snprintf(out, cap, "%s", best);
+    return true;
+}
+
 // ---- the game state with room for a bigger script ----------------------------
 
 GameState* new_game_state(uint32_t cap)
@@ -717,6 +769,8 @@ bool Vm::init_script(bool reload)
     for (bool& f : flags_) f = false;
     cleared_name_ = cleared_status_ = false;
     sel_mon_ = -1;
+    n_runes_ = 0;
+    memset(rune_map_, 0, sizeof rune_map_);
     reset_encounter();
     enc_phase_ = EncPhase::None;
     enc_.in_menu = false;
@@ -926,6 +980,7 @@ Stop Vm::resume()
         sel_mon_ = -1;
     }
     wait_ = Wait::None;
+    n_runes_ = 0;
     budget_ = kBudget;                                  // (each stretch between waits has its own)
     if (enc_.pic_due) {
         // The monster's picture, after its sprite was seen for a moment
@@ -2300,7 +2355,30 @@ Stop Vm::step()
         set(o[2].word(), static_cast<uint16_t>(who));
         return Stop::Running;
     }
-    case 0x3C: return stub(1, "PROTECTION");    // copy protection: skipped (Tom)
+    case 0x3C:                                  // PROTECTION
+        // Pool: a word in elven runes at the operand's address (Sokal Keep's
+        // parchment - ovr4 +0x2E7D: each byte + 1 a font glyph at the text
+        // cursor, colour 15, to a 0 byte), meant for the code wheel. Shown
+        // as the original draws it, then its letters: the word of the
+        // script's that fits (rune_word; Tom, 2026-11-06 - SPEC 12). Other
+        // games' copy protection: skipped (Tom)
+        if (set_.pool_map) {
+            if (!need(1)) return Stop::Error;
+            if (o[0].code != 1) return Stop::Running;
+            n_runes_ = 0;
+            for (uint16_t a = o[0].word(); n_runes_ < sizeof runes_; a = static_cast<uint16_t>(a + 1)) {
+                const int b = get(a) & 0xFF;
+                if (!b) break;
+                runes_[n_runes_++] = static_cast<uint8_t>(b + 1);
+            }
+            rune_text_[0] = 0;
+            if (n_runes_) rune_word(code_of(s_), s_.code_len, set_, runes_, n_runes_, rune_map_, rune_text_, sizeof rune_text_);
+            text_ = "";
+            clear_ = false;
+            if (!n_runes_) return Stop::Running;
+            return wait_for(Wait::Print);
+        }
+        return stub(1, "PROTECTION");
     case 0x3D:                                  // CLEAR BOX
         ++pc_;
         h_.clear_box();
