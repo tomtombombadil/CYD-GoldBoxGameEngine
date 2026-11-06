@@ -17545,7 +17545,8 @@ bool tap_target(int x, int y, int* row, int* c0, int* c1)
     if ((screen == Screen::Items || screen == Screen::ShopBuy || screen == Screen::AddList ||
          screen == Screen::CreatePick || screen == Screen::Heal || screen == Screen::Take || screen == Screen::Loot ||
          screen == Screen::QInv) &&
-        r >= plist.row0 && r <= plist.row1 && plist.top + r - plist.row0 < plist.n) {
+        r >= plist.row0 && r <= plist.row1 && plist.top + r - plist.row0 < plist.n &&
+        !(screen == Screen::CreatePick && plist.top + r - plist.row0 < 1)) {    // (creation's heading line: not a pick)
         *row = r;
         *c0 = plist.col0;
         *c1 = 38;
