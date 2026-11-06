@@ -150,7 +150,7 @@ Values expected(const uint8_t* r, const uint8_t (*it)[items::kRecordSize], int n
         const items::TypeInfo& ti = names->type(weapon[0x2E]);
         if (ti.flags & 0x02) v.hit += ov("dex_react", dex);
         v.b1 = ti.bonus;
-        if (ti.flags & 0x04) {
+        if ((ti.flags & 0x04) || ((ti.flags & 0x10) && rules::fixes())) {   // (thrown: AD&D's Strength with the Game Fixes)
             v.hit += sh;
             v.b1 += sd;
         }
