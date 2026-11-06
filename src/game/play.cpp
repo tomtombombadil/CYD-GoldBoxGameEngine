@@ -8964,7 +8964,9 @@ void draw_spells(pic::Canvas& c)
         snprintf(t, sizeof t, "%s%s", a, b);
     put(c, t, static_cast<int>(strlen(nm)) + 4, 1, ink);
     const int rows = list_rows();
-    if ((darkness_files() || gateway()) && (sl.sel < sl.top || sl.sel >= sl.top + rows)) dk_page_sel();   // (a turned page)
+    // (a turned page: its first spell lit - the engine's rule in every game,
+    // SPEC 12; Curse, Secret, Krynn's lit none - navcheck N2)
+    if ((darkness_files() || gateway() || sl.sel >= 0) && (sl.sel < sl.top || sl.sel >= sl.top + rows)) dk_page_sel();
     for (int r = 0; r < rows && sl.top + r < sl.n; ++r) {
         const int i = sl.top + r;
         const int row = 5 + r;
