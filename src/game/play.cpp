@@ -17858,6 +17858,13 @@ bool back(pic::Canvas& c)
             draw_take(c);
             return true;
         }
+        if (screen == Screen::Take && take_mode) {
+            // (View's Trade / Drop of coins: back to View, as its Exit -
+            // the camp fuzzer: Esc here opened the last shop in camp, its
+            // counter's coins there to take)
+            view_coins_done(c);
+            return true;
+        }
         screen = Screen::Shop;
         draw_shop(c);
         return true;
@@ -17978,7 +17985,11 @@ void input_key(char k, pic::Canvas& c)
         clear_menu_line(c);
         if (engine_ask == EngineAsk::Coins) {
             engine_ask = EngineAsk::Name;
-            take_coins(atoi(input_buf), c);
+            // (only on the coin list it was asked on: a tap that left the
+            // list - its Exit - while the number was being typed left the
+            // question open, and a Trade / Drop's number then took the last
+            // counter's coins in camp - the camp fuzzer)
+            if (screen == Screen::Take) take_coins(atoi(input_buf), c);
             return;
         }
         if (engine_ask == EngineAsk::BlastDelay) {
