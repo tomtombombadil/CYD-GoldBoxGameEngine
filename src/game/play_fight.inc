@@ -2053,7 +2053,13 @@ void say(pic::Canvas& c, FSt next)
     fg->st = FSt::Pages;
     fg->at = 0;
     if (menu_on) clear_menu_line(c);
-    if (fg->pages && fg->attack_pause) fg->until = plat::now_ms() + 100;     // (the first page after it: fight_tick)
+    // (the attack's frame: the originals' Delay(100) whatever the speed;
+    // ours 10 ms + 10 ms a speed step, 100 at 9 - Tom, 2026-11-06, SPEC 12)
+    if (fg->pages && fg->attack_pause) {
+        int speed = vm ? vm->get(0x4BFC) & 0xFF : 0;
+        if (speed > 9) speed = 9;
+        fg->until = plat::now_ms() + 10 + 10 * speed;          // (the first page after it: fight_tick)
+    }
     else if (fg->pages) show_page(c);
     else fg->until = 1;
     fg->attack_pause = false;
