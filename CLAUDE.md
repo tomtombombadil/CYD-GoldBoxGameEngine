@@ -598,6 +598,17 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   routine (addresses in the .inc), and `sweep <folder> campfuzz <seed>
   <n>` (camp_fuzz.inc: CF1 no money made in camp, CF2 no items
   multiplied, CF3 weight up to date; CFRING=1 traces) plays the camp.
+  Blind-spot checks (2026-11-06; every game, the run.sh env per game):
+  `sweep <folder> navcheck <seed> <n>` (nav_check.inc, no hooks needed;
+  NCHEAT=4 MCAMP=4 NFIGHT=15, NAVSHOT=dir canvases to scratch) - the
+  monkey with each settled menu / list driven by play::nav / nav_point /
+  tap_highlight: N1 menu word boxed, N2 one list line boxed, N3 Left /
+  Right, N4 Up / Down, N5 Select = the tap's target, N6 place kept after
+  a pick; `fightfuzz` with FXCHECK=1 FUZZTICK=1 FXSPEED=0 / 4 / 9
+  (fx_check.inc, play_fight.inc CYD_TEST_FX): W1-W5 waits, F1-F3 skull /
+  field / sweep order (FUZZSWEEP=1 makes sweeps), K8 Show Rolls, K9 the
+  Battle view; `behave features` (-DBEHAVE_FEATURES: K1-K7 cheats, Camp
+  Fix, Keep Memorizing, Party view) and `behave levels` ONLY=maxhp.
 - **DOSBox here** (2026-10-12): the ORIGINAL games run on Claude's side -
   `apt-get install dosbox xdotool x11-apps imagemagick`, a virtual display
   (`Xvfb :5`), `DISPLAY=:5 SDL_AUDIODRIVER=dummy dosbox -conf <conf>`
