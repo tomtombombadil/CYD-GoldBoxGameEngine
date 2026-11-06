@@ -3839,6 +3839,10 @@ void drop_item(int i, pic::Canvas& c)
 // over a list of the party alone
 int trade_col() { return pool_files() ? 17 : 1; }
 void draw_camp_screen(pic::Canvas& c);
+// The party as a list to pick from (Trade's "with whom", View's "Trade to?" /
+// "Heal whom?" / "Cure whom?"): the chosen one in the highlight's box, as
+// the party menu's (CYD_MENU_HIGHLIGHT - navcheck N2: white letters only)
+void draw_pick_party(pic::Canvas& c, int col) { draw_party(c, col, true, CYD_MENU_HIGHLIGHT); }
 
 void draw_trade(pic::Canvas& c)
 {
@@ -3851,10 +3855,11 @@ void draw_trade(pic::Canvas& c)
             draw_panel(c);
         }
         text::clear(c, text::kTextArea);
+        if (pt->count) draw_pick_party(c, trade_col());
     } else {
         c.clear(0);
         layout::outer(c, d->tables, d->frame_tiles);
-        draw_party(c, 1);
+        draw_pick_party(c, 1);
     }
     char keys[24];
     snprintf(keys, sizeof keys, "%s%s", iw(profile::kSelect), d->w_exit);
@@ -3902,7 +3907,7 @@ void trade_tap(int x, int y, pic::Canvas& c)
     if (y < text::kMenuTapTop) {
         if (row >= 4 && row < 4 + pt->count && col >= trade_col()) {
             pt->selected = row - 4;
-            draw_party(c, trade_col());
+            draw_pick_party(c, trade_col());
         }
         return;
     }
@@ -7808,7 +7813,7 @@ void draw_view_who(pic::Canvas& c)
 {
     c.clear(0);
     layout::outer(c, d->tables, d->frame_tiles);
-    draw_party(c, 1);
+    draw_pick_party(c, 1);
     char keys[24], prompt[28];
     snprintf(keys, sizeof keys, "%s%s", iw(profile::kSelect), d->w_exit);
     snprintf(prompt, sizeof prompt, "%s",
@@ -7856,7 +7861,7 @@ void view_who_tap(int x, int y, pic::Canvas& c)
     if (y < text::kMenuTapTop) {
         if (row >= 4 && row < 4 + pt->count && col >= 1) {
             pt->selected = row - 4;
-            draw_party(c, 1);
+            draw_pick_party(c, 1);
         }
         return;
     }
@@ -17148,14 +17153,14 @@ bool nav_list(int step, pic::Canvas& c)
     }
     if (screen == Screen::TradeWho && pt->count) {
         pt->selected = (pt->selected + step + pt->count) % pt->count;
-        draw_party(c, trade_col());
+        draw_pick_party(c, trade_col());
         return true;
     }
     // View's "Trade to?" / "Heal whom?" / "Cure whom?" over the party list
     // (Tom, 2026-11-06: the keys didn't move it)
     if (screen == Screen::ViewWho && pt->count) {
         pt->selected = (pt->selected + step + pt->count) % pt->count;
-        draw_party(c, 1);
+        draw_pick_party(c, 1);
         return true;
     }
     if (screen == Screen::Modify && modder) {
@@ -17503,8 +17508,9 @@ bool tap_target(int x, int y, int* row, int* c0, int* c1)
         *c1 = 38;
         return true;
     }
-    // The party menu's characters, Trade's party (a tap picks one)
-    if ((screen == Screen::PartyMenu || screen == Screen::TradeWho) && col >= 1 && r >= 4 && r < 4 + pt->count) {
+    // The party menu's characters, Trade's party, View's Trade to / Heal whom (a tap picks one)
+    if ((screen == Screen::PartyMenu || screen == Screen::TradeWho || screen == Screen::ViewWho) && col >= 1 && r >= 4 &&
+        r < 4 + pt->count) {
         if (screen == Screen::TradeWho && col < trade_col()) return false;
         *row = r;
         *c0 = screen == Screen::TradeWho ? trade_col() : 1;
