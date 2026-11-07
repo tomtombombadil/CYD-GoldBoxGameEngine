@@ -1018,6 +1018,15 @@ the Project as claude/TODO.md.
       move the word and Select picks it; on an item Left / Right still
       change the value. Checked in the playsim (MODOPS) on Curse, Secret,
       Darkness: Exit reached and picked by the keys.
+- [x] navcheck covers Modify (2026-11-07; rules M1-M5, NMODIFY - the
+      monkey goes in from the Trainer's / a hall's party menu): all nine
+      games, 0 failures after the fixes - Modify's word kept by the View
+      under it came back on every redraw (Left / Right on the menu line
+      did nothing once a word had been picked; `modify_menu_line`), the
+      Dark Queen's party menu kept View's / Modify's words in hand (a tap
+      on a button lit them), Pool's creation lists' Select a column left of
+      the box, the Trainer's Keep forgets spells memorized past slots that
+      a lower Wisdom / Intelligence took away (party check P5).
 - [x] Rule-check gaps, round 4 (2026-11-07; `behave rules4`, facts:
       claude/rules_round4_facts.md): the turn table against each program's
       own bytes (found by content), each game's turn routine (Curse / Pool

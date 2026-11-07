@@ -2275,6 +2275,10 @@ void draw_party_menu(pic::Canvas& c)
     if (hl()) {
         q_pm_up = false;
         q_draw_frame(c, false);
+        // (no menu line under its buttons - as pm_prompt's clear does in the
+        // other games: Modify's / View's words stayed in hand and a tap or
+        // Select on a button lit them - navcheck N5)
+        menu_on = false;
     } else {
         c.clear(0);
         krynn_moons();
@@ -11201,6 +11205,18 @@ bool mod_name_seen = false;
 // menu line; there Left / Right move the word and Select picks it
 bool mod_menu = false;
 
+// "Modify: Keep Exit" on mod_word - Modify keeps its own place (the View
+// drawn under it showed its own menu line, so the kept place of the
+// Modify words came back on every redraw and Left / Right stayed put:
+// navcheck M2)
+void modify_menu_line(pic::Canvas& c)
+{
+    text::build(menu, rw(Data::kModify), rw(Data::kKeepExit));
+    menu.selected = mod_word < menu.count ? mod_word : 0;
+    hl_moved();
+    show_menu_line(c);
+}
+
 void draw_modify(pic::Canvas& c)
 {
     party::Character* ch = pt->sel();
@@ -11257,9 +11273,7 @@ void draw_modify(pic::Canvas& c)
             ch->name(t, sizeof t);
             put(c, t, 1, 1, 15);
         }
-        text::build(menu, rw(Data::kModify), rw(Data::kKeepExit));
-        menu.selected = mod_word;
-        show_menu_line(c);
+        modify_menu_line(c);
         return;
     }
     if (secret_files() || darkness_files() || krynn()) {
@@ -11289,9 +11303,7 @@ void draw_modify(pic::Canvas& c)
             ch->name(t, sizeof t);
             put(c, t, 1, 1, 10);
         }
-        text::build(menu, rw(Data::kModify), rw(Data::kKeepExit));
-        menu.selected = mod_word < menu.count ? mod_word : 0;
-        show_menu_line(c);
+        modify_menu_line(c);
         return;
     }
     if (gateway()) {
@@ -11317,9 +11329,7 @@ void draw_modify(pic::Canvas& c)
             ch->name(t, sizeof t);
             put(c, t, 1, 1, 13);
         }
-        text::build(menu, rw(Data::kModify), rw(Data::kKeepExit));
-        menu.selected = mod_word < menu.count ? mod_word : 0;
-        show_menu_line(c);
+        modify_menu_line(c);
         return;
     }
     if (mod_item < 6) {
@@ -11341,9 +11351,7 @@ void draw_modify(pic::Canvas& c)
         ch->name(t, sizeof t);
         put(c, t, 1, 1, 13);
     }
-    text::build(menu, rw(Data::kModify), rw(Data::kKeepExit));
-    menu.selected = mod_word < menu.count ? mod_word : 0;
-    show_menu_line(c);
+    modify_menu_line(c);
 }
 
 void end_modify(pic::Canvas& c, bool keep)
@@ -11353,6 +11361,25 @@ void end_modify(pic::Canvas& c, bool keep)
         if (keep) create::modify_done(*ch, modder->tables, modder->facts);
         else *ch = modder->ch;
         rules::recalc(*ch, *names, d->facts);
+        if (keep && cheat == Cheat::Trainer) {
+            // (the Trainer's Modify of a trained caster: Wisdom / Intelligence
+            // taken down leaves fewer slots - the spells memorized past them
+            // are forgotten, the last first; the originals modify only new
+            // characters - navcheck's party check P5)
+            const classes::Tables& t = modder->tables;
+            for (int kind = 0; kind < 3; ++kind)
+                for (int l = 0; l < 5; ++l) {
+                    const int was = modder->ch.rec[0x12D + kind * 5 + l], now = ch->rec[0x12D + kind * 5 + l];
+                    int drop = std::min(was - now, magic::held(*ch, t, kind, l + 1) - now);
+                    for (int i = magic::kListSize - 1; i >= 0 && drop > 0; --i) {
+                        const int s = ch->rec[magic::kListAt + i] & 0x7F;
+                        if (s && t.spell_class(s) == kind && t.spell_level(s) == l + 1) {
+                            ch->rec[magic::kListAt + i] = 0;
+                            --drop;
+                        }
+                    }
+                }
+        }
     }
     delete modder;
     modder = nullptr;
@@ -17507,7 +17534,9 @@ bool nav_point(int* x, int* y)
     if ((screen == Screen::Take || (screen == Screen::CreatePick && mk && mk->stage != 4)) && pool_files() &&
         input_mode == Input::None && plist.n) {
         // (Pool's coin lists and creation's pick lists: Select = Return, the line lit)
-        *x = (plist.col0 + 1) * 8 + 2;
+        // (creation's choices are indented two columns - pick_line - and the
+        // box starts at their text: navcheck N5, Select was a column short)
+        *x = (plist.col0 + (screen == Screen::CreatePick ? 3 : 1)) * 8 + 2;
         *y = (plist.row0 + plist.index - plist.top) * 8 + 2;
         return true;
     }

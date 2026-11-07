@@ -20,12 +20,15 @@
 // Reached: the monkey's screens (NCHEAT=n: n in 100 exploring turns open a
 // Cheats tab screen; MCAMP biases to the camp), the party menu at boot.
 // A failure is printed once per screen signature and rule.
+// Modify Character has its own rules (M1-M5, probe_modify below); the
+// monkey goes into it from a hall's party menu with NMODIFY=n (n in 100).
 // Not covered: the Dark Queen's buttons (hl(): no pixel rules N1 / N2,
 // the rest yes), the icon editor / gallery, the on-screen keyboard.
 
 namespace nvc {
 
 int probes = 0, fails = 0;
+int entered = 0, opened = 0;                // Modify: tries from a hall's party menu, opened
 bool no_select = false;                     // (the boot's probe: no Select)
 std::map<std::string, int> failed;          // signature + rule: times
 std::map<int, int> screens;                 // screen: probes
@@ -219,6 +222,353 @@ int lit_line(const std::vector<Run>& rows)
     return -1;
 }
 
+// ---- Modify Character (Tom, 2026-11-06: its menu line's highlight never
+// moved - fixed in v0.173.2, mod_menu). M1 Up / Down reach the menu line
+// within 9 presses from any item and come back; M2 there Left / Right move
+// the boxed word (N1 / N3); M3 Select there = a tap on the lit word (Keep /
+// Exit leave, Add / Subtract / Next / Prev act as their taps); M4 on an
+// item Left / Right change its value exactly as modify_step (the games'
+// arrows) does, and the item being changed is drawn in the mark colour
+// (13; the Dark Queen's 15) - no other item; M5 Select on the name opens
+// the name keyboard (Select on another item keeps it).
+
+bool newer_modify() { return play::secret_files() || play::darkness_files() || play::gateway() || play::krynn() || play::hl(); }
+
+// The cells of item i's value (independent of the engine's tap / Select maps)
+void mod_cells(int i, int* row, int* c0, int* c1)
+{
+    const bool nw = newer_modify();
+    if (i < 6) {
+        *row = (nw ? 9 : 7) + i;
+        *c0 = 1;
+        *c1 = 11;                           // (Darkness's / the Dark Queen's "*" at 12 left out)
+    } else if (i == 6) {
+        *row = nw ? 3 : 18;
+        *c0 = nw ? 20 : 1;
+        *c1 = nw ? 38 : 6;
+    } else {
+        *row = 1;
+        *c0 = 1;
+        *c1 = 16;
+    }
+}
+bool mod_marked(int i)
+{
+    const uint8_t mark = play::hl() ? 15 : 13;
+    int row, c0, c1;
+    mod_cells(i, &row, &c0, &c1);
+    for (int y = row * 8; y < row * 8 + 8; ++y)
+        for (int x = c0 * 8; x < c1 * 8 + 8; ++x)
+            if (C.get(x, y) == mark) return true;
+    return false;
+}
+void mod_mark_check(const char* when)
+{
+    char t[120];
+    if (!mod_marked(play::mod_item)) {
+        snprintf(t, sizeof t, "%s: item %d not drawn in the mark colour", when, play::mod_item);
+        fail("M4", t);
+    }
+    for (int j = 0; j < 8; ++j)
+        if (j != play::mod_item && mod_marked(j)) {
+            snprintf(t, sizeof t, "%s: item %d marked besides item %d", when, j, play::mod_item);
+            fail("M4", t);
+            break;
+        }
+}
+bool same_char(const party::Character& a, const party::Character& b)
+{
+    return !memcmp(a.rec, b.rec, sizeof a.rec) && !memcmp(a.ext, b.ext, sizeof a.ext);
+}
+bool in_modify() { return play::d && play::screen == play::Screen::Modify && play::modder && play::input_mode == play::Input::None; }
+
+// M4: the item's Left / Right against modify_step from the same start
+void mod_arrows()
+{
+    using namespace play;
+    static party::Character a0, by_key;
+    char t[160];
+    for (int dir = 1; dir >= -1; dir -= 2) {
+        party::Character* ch = pt->sel();
+        if (!ch || !in_modify() || mod_menu) return;
+        a0 = *ch;
+        const int item = mod_item;
+        if (!nav(dir > 0 ? Nav::Right : Nav::Left, C) || !in_modify()) {
+            fail("M4", dir > 0 ? "Right on an item did nothing / left Modify" : "Left on an item did nothing / left Modify");
+            return;
+        }
+        if (mod_item != item || mod_menu) {
+            snprintf(t, sizeof t, "%s moved off item %d (now %d, menu %d)", dir > 0 ? "Right" : "Left", item, mod_item, (int)mod_menu);
+            fail("M4", t);
+            return;
+        }
+        mod_mark_check(dir > 0 ? "after Right" : "after Left");
+        by_key = *pt->sel();
+        *pt->sel() = a0;
+        modify_step(dir, C);
+        if (!same_char(by_key, *pt->sel())) {
+            snprintf(t, sizeof t, "%s on item %d: not the arrows' value (stat %d / hp %d by key, %d / %d by the arrow)",
+                     dir > 0 ? "Right" : "Left", item, item < 6 ? by_key.stat(item) : 0, by_key.hp(),
+                     item < 6 ? pt->sel()->stat(item) : 0, pt->sel()->hp());
+            fail("M4", t);
+        }
+    }
+}
+
+// The menu line's checks (N1 / N3 as for every menu; M3's Select point)
+void mod_menu_checks(bool pixels)
+{
+    using namespace play;
+    char t[160];
+    if (menu.count < 2) return;
+    const int sel = menu.selected;
+    if (sel < 0 || sel >= menu.count) {
+        fail("M2", "no word highlighted on the menu line");
+        return;
+    }
+    bool whole = false;
+    if (pixels && (!menu_word_lit(sel, &whole) || !whole)) {
+        snprintf(t, sizeof t, "word %d '%.*s' not a whole white box", sel, menu.end[sel] - menu.start[sel] + 1, menu.s + menu.start[sel]);
+        fail("M2", t);
+    }
+    for (int k = 0; pixels && k < menu.count; ++k) {
+        bool w;
+        if (k != sel && menu_word_lit(k, &w)) {
+            snprintf(t, sizeof t, "word %d lit besides %d", k, sel);
+            fail("M2", t);
+            break;
+        }
+    }
+    static party::Character a0;
+    a0 = *pt->sel();
+    nav(Nav::Right, C);
+    if (!in_modify() || !mod_menu) {
+        fail("M2", "Right on the menu line left it");
+        return;
+    }
+    if (menu.selected == sel) {
+        snprintf(t, sizeof t, "Right left the highlight on word %d of %d (mod_word %d)", sel, menu.count, mod_word);
+        fail("M2", t);
+    }
+    else if (pixels && (!menu_word_lit(menu.selected, &whole) || !whole)) fail("M2", "the word moved to isn't lit");
+    if (!same_char(a0, *pt->sel())) fail("M2", "Right on the menu line changed a value");
+    nav(Nav::Left, C);
+    if (!in_modify() || menu.selected != sel) {
+        snprintf(t, sizeof t, "Left didn't come back (%d -> %d)", sel, in_modify() ? menu.selected : -1);
+        fail("M2", t);
+        return;
+    }
+    if (pixels && (!menu_word_lit(sel, &whole) || !whole)) fail("M2", "back on the first word, it isn't lit");
+    int x = -1, y = -1;
+    if (!nav_point(&x, &y)) {
+        fail("M3", "no Select point on the menu line");
+        return;
+    }
+    int row = -1, c0 = 0, c1 = 0;
+    int wc = 0, wr = 0;
+    text::item_cell(menu, sel, &wc, &wr);
+    if (!tap_target(x, y, &row, &c0, &c1) || row != wr || c0 != wc) {
+        snprintf(t, sizeof t, "Select at %d,%d lights row %d cells %d-%d, the word is at %d of row %d", x, y, row, c0, c1, wc, wr);
+        fail("M3", t);
+    }
+    if (pixels && !lit_cell(x / 8, y / 8)) {
+        snprintf(t, sizeof t, "Select at %d,%d is not on the lit word", x, y);
+        fail("M3", t);
+    }
+}
+
+// M3: Select on the lit word does what its tap does
+void mod_select_word()
+{
+    using namespace play;
+    static party::Character a0, by_key;
+    char t[160];
+    int x, y;
+    if (!in_modify() || !mod_menu || !nav_point(&x, &y)) return;
+    const int sel = menu.selected;
+    const char key = text::key(menu, sel);
+    const int item = mod_item;
+    a0 = *pt->sel();
+    select_at(x, y);
+    if (!d) return;
+    switch (key) {
+    case 'K':
+    case 'E':
+        if (screen != Screen::PartyMenu || modder) {
+            snprintf(t, sizeof t, "Select on '%c' didn't leave Modify (screen %d)", key, (int)screen);
+            fail("M3", t);
+        }
+        return;
+    case 'A':
+    case 'S':
+        if (!in_modify()) {
+            snprintf(t, sizeof t, "Select on '%c' left Modify", key);
+            fail("M3", t);
+            return;
+        }
+        by_key = *pt->sel();
+        *pt->sel() = a0;
+        modify_step(key == 'A' ? 1 : -1, C);
+        if (!same_char(by_key, *pt->sel())) {
+            snprintf(t, sizeof t, "Select on '%c' (item %d): not the arrows' value", key, item);
+            fail("M3", t);
+        }
+        break;
+    case 'N':
+    case 'P':
+        if (!in_modify() || mod_item != (item + (key == 'N' ? 1 : 7)) % 8) {
+            snprintf(t, sizeof t, "Select on '%c': item %d -> %d", key, item, in_modify() ? mod_item : -1);
+            fail("M3", t);
+            return;
+        }
+        break;
+    default:
+        snprintf(t, sizeof t, "a word '%c' Modify doesn't know", key);
+        fail("M3", t);
+        return;
+    }
+    if (in_modify() && menu.selected != sel) {
+        snprintf(t, sizeof t, "after Select on word %d the highlight is on %d", sel, menu.selected);
+        fail("M3", t);
+    }
+}
+
+// M5: Select on an item; on the name, the keyboard (left again by Esc)
+void mod_select_item()
+{
+    using namespace play;
+    char t[120];
+    int x, y;
+    if (!in_modify() || mod_menu || !nav_point(&x, &y)) return;
+    const int item = mod_item;
+    select_at(x, y);
+    if (!d) return;
+    if (item == 7) {
+        if (screen != Screen::Modify || input_mode != Input::Text || engine_ask != EngineAsk::ModName) {
+            snprintf(t, sizeof t, "Select on the name: no name keyboard (screen %d input %d)", (int)screen, (int)input_mode);
+            fail("M5", t);
+            return;
+        }
+        back(C);
+        if (!in_modify() || mod_item != 7) fail("M5", "Esc from the name keyboard didn't come back to Modify on the name");
+        return;
+    }
+    if (!in_modify() || mod_item != item || mod_menu) {
+        snprintf(t, sizeof t, "Select on item %d: now item %d menu %d screen %d", item, mod_item, (int)mod_menu, (int)screen);
+        fail("M5", t);
+    }
+}
+
+void probe_modify()
+{
+    using namespace play;
+    if (!in_modify() || !pt->sel()) return;
+    const bool pixels = !hl();
+    ++probes;
+    ++screens[(int)screen];
+    sigs.insert(sig());
+    char t[160];
+    if (!mod_menu) {
+        mod_mark_check("shown");
+        mod_arrows();
+        if (!in_modify()) return;
+        // M1: Down to the menu line, Up back to the item
+        const int k = mod_item;
+        int n = 0;
+        while (n < 9 && in_modify() && !mod_menu) {
+            nav(Nav::Down, C);
+            ++n;
+            if (in_modify() && !mod_menu) mod_mark_check("after Down");
+        }
+        if (!in_modify()) return;
+        if (!mod_menu) {
+            snprintf(t, sizeof t, "Down 9 times from item %d: not on the menu line (item %d)", k, mod_item);
+            fail("M1", t);
+            return;
+        }
+        for (int i = 0; i < n && in_modify(); ++i) nav(Nav::Up, C);
+        if (!in_modify() || mod_menu || mod_item != k) {
+            snprintf(t, sizeof t, "Up %d times from the menu line: item %d menu %d, not item %d", n, mod_item, (int)mod_menu, k);
+            fail("M1", t);
+            return;
+        }
+        // (the other way: Up to the menu line)
+        n = 0;
+        while (n < 9 && in_modify() && !mod_menu) {
+            nav(Nav::Up, C);
+            ++n;
+        }
+        if (!in_modify()) return;
+        if (!mod_menu) {
+            snprintf(t, sizeof t, "Up 9 times from item %d: not on the menu line", k);
+            fail("M1", t);
+            return;
+        }
+    }
+    mod_menu_checks(pixels);
+    if (!in_modify()) return;
+    if (no_select) return;
+    if (pick(2) == 0) {
+        // the name: Up from the menu line, Select (its keyboard), Esc, Down
+        nav(Nav::Up, C);
+        if (!in_modify() || mod_menu || mod_item != 7) {
+            snprintf(t, sizeof t, "Up from the menu line: item %d menu %d, not the name", mod_item, (int)mod_menu);
+            fail("M1", t);
+            return;
+        }
+        mod_mark_check("on the name");
+        mod_select_item();
+        if (!in_modify()) return;
+        nav(Nav::Down, C);
+        if (!in_modify() || !mod_menu) {
+            fail("M1", "Down from the name: not the menu line");
+            return;
+        }
+    } else if (pick(3) == 0) {
+        // Select on a stat / the hit points
+        nav(Nav::Down, C);
+        for (int i = pick(7); i > 0 && in_modify(); --i) nav(Nav::Down, C);
+        mod_select_item();
+        return;
+    }
+    if (pick(3) == 0) {
+        // (any word now and then: Keep / Exit leave)
+        const int w = pick(menu.count);
+        for (int i = 0; i < w && in_modify(); ++i) nav(Nav::Right, C);
+        mod_select_word();
+    }
+}
+
+// The monkey's way in (NMODIFY): the party menu's Modify line lit by the
+// cursor keys, then Select - for a random member
+bool enter_modify()
+{
+    using namespace play;
+    if (screen != Screen::PartyMenu || !pt || !pt->count || input_mode != Input::None) return false;
+    bool has = false;
+    for (int l = 0; l < pm_lines; ++l) has |= pm_key(pm_item[l]) == 'M';
+    if (!has) return false;
+    pt->selected = pick(pt->count);
+    draw_party_menu(C);
+    for (int k = 0; k < 2 * pm_lines + 2 && pm_key(pm_item[pm_sel]) != 'M'; ++k) nav(Nav::Down, C);
+    int x, y;
+    if (pm_key(pm_item[pm_sel]) != 'M' || !nav_point(&x, &y)) return false;
+    ++entered;
+    select_at(x, y);
+    if (!d) return false;
+    settle();
+    // (Champions / Gateway: "Pick Character Select Exit" first - Select on its first word)
+    if (screen == Screen::PartyMenu && menu_on && menu.count >= 1 && !is_exit_word(0) && pm_pick_for == 'M') {
+        menu.selected = 0;
+        if (nav_point(&x, &y)) select_at(x, y);
+        if (!d) return false;
+        settle();
+    }
+    if (screen == Screen::Modify) ++opened;
+    else if (getenv("NMODTRACE")) printf("  [modify not opened: screen %d, prompt '%s']\n", (int)screen, menu.prompt);
+    return screen == Screen::Modify;
+}
+
 void probe()
 {
     using namespace play;
@@ -226,7 +576,10 @@ void probe()
     settle();
     if (!settled()) return;
     const bool pixels = !hl();
-    if (screen == Screen::Modify) return;   // (a value editor: Left / Right change the value - not covered)
+    if (screen == Screen::Modify) {         // (its own rules: M1-M5)
+        probe_modify();
+        return;
+    }
     const bool has_menu = menu_on && menu.count >= 2 &&
                           !(screen == Screen::Game && waiting && vm->wait() == ecl::Wait::Menu && vm->items() == 1);
     std::vector<Run> rows = tap_rows();
@@ -410,6 +763,8 @@ void probe()
 void report()
 {
     printf("== navcheck: %d probes, %zu screen signatures, %d failures\n", probes, sigs.size(), fails);
+    printf("  Modify: %d tries from a hall's party menu, %d opened, %d probes\n", entered, opened,
+           screens.count((int)play::Screen::Modify) ? screens[(int)play::Screen::Modify] : 0);
     printf("  screens probed:");
     for (auto& s : screens) printf(" %d(%d)", s.first, s.second);
     printf("\n");

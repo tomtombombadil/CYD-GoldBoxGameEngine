@@ -611,7 +611,12 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   monkey with each settled menu / list driven by play::nav / nav_point /
   tap_highlight: N1 menu word boxed, N2 one list line boxed, N3 Left /
   Right, N4 Up / Down, N5 Select = the tap's target, N6 place kept after
-  a pick; `fightfuzz` with FXCHECK=1 FUZZTICK=1 FXSPEED=0 / 4 / 9
+  a pick; Modify (NMODIFY=40: every boot and n/2 % of exploring turns
+  open the Trainer, n % of its party menu's actions go into Modify): M1
+  Up / Down to the menu line within 9 and back, M2 its word boxed and
+  moved, M3 Select = the word's tap, M4 an item's Left / Right =
+  modify_step and only that item marked, M5 Select on the name = the
+  keyboard; `fightfuzz` with FXCHECK=1 FUZZTICK=1 FXSPEED=0 / 4 / 9
   (fx_check.inc, play_fight.inc CYD_TEST_FX): W1-W5 waits, F1-F3 skull /
   field / sweep order (FUZZSWEEP=1 makes sweeps), K8 Show Rolls, K9 the
   Battle view; `behave features` (-DBEHAVE_FEATURES: K1-K7 cheats, Camp

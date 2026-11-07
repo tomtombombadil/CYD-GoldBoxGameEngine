@@ -1318,10 +1318,14 @@ static void sweep_saveload()
 // A boot, then (MAREA / MBLOCK set) into that script block as a NEWECL would
 static int fights_seen = 0;
 static void (*monkey_probe)() = nullptr;    // (navcheck: after every action)
+static bool (*monkey_modify)() = nullptr;   // (navcheck: into Modify from a hall's party menu)
 static bool monkey_boot()
 {
     using namespace play;
     if (!boot()) return false;
+    // (navcheck NMODIFY: every boot starts in the Trainer - a game whose save
+    // walks into a fight at once never explores long enough to open it)
+    if (monkey_modify && getenv("NMODIFY") && !getenv("MAREA") && play::cheats_ready()) play::cheat_open(3, C);
     if (!getenv("MAREA")) return true;
     const int area = atoi(getenv("MAREA"));
     int block = getenv("MBLOCK") ? atoi(getenv("MBLOCK")) : 1;
@@ -1332,6 +1336,7 @@ static bool monkey_boot()
     if (!host->load_script(d->gs.script, d->gs.code, &d->gs.code_len) || !vm->init_script()) return false;
     run_entry(4, Then::NewFirst);
     pump(20000);
+    if (d && monkey_modify && getenv("NMODIFY") && play::cheats_ready()) play::cheat_open(3, C);
     return d && pt && pt->count;
 }
 
@@ -1384,6 +1389,20 @@ static void sweep_monkey(int rounds)
             play::cheat_open(pick(4), C);
             if (monkey_probe) monkey_probe();
             continue;
+        }
+        // NMODIFY=n: on a training hall's party menu (a hall's script, the
+        // Trainer) n in 100 actions go into Modify Character the board's way
+        // (and n / 2 in 100 exploring turns open the Cheats tab's Trainer)
+        if (monkey_modify && getenv("NMODIFY")) {
+            const int n = atoi(getenv("NMODIFY"));
+            if (play::walking() && play::cheats_ready() && pick(200) < n) {
+                play::cheat_open(3, C);
+                continue;
+            }
+            if (screen == Screen::PartyMenu && (in_game_menu || cheat == Cheat::Trainer) && pick(100) < n) {
+                if (monkey_modify() && monkey_probe) monkey_probe();
+                continue;
+            }
         }
         if (play::walking() && pick(100) < 60) {
             static const play::Act acts[] = {play::Act::Forward, play::Act::Forward, play::Act::Forward, play::Act::TurnLeft,
@@ -1747,6 +1766,7 @@ int main(int argc, char** argv)
         rnd.seed(static_cast<unsigned>(arg ? arg : 1));
         boot_probe = [] { nvc::no_select = true; nvc::probe(); nvc::no_select = false; };
         monkey_probe = nvc::probe;
+        monkey_modify = nvc::enter_modify;
         sweep_monkey(argc > 4 ? atoi(argv[4]) : 5000);
         nvc::report();
     }
