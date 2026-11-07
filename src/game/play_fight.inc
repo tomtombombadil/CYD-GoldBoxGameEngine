@@ -2293,7 +2293,7 @@ void special_cast(int i, int sp, int at)
     if (!load_magic()) return;
     const combat::FightSpell* fs = fight_spell(sp);
     if (!fs) return;
-    const int pw = combat::power_of(b.f[i].rec, mrules->tables, sp, false);
+    const int pw = combat::power_of(b.f[i], mrules->tables, sp, false);
     int tg[combat::kMaxFighters], nt = 0;
     if (at >= 0 && at < b.n) {
         tg[nt++] = at;
@@ -3341,9 +3341,7 @@ void fight_menu_dk(char* words, size_t cap, const combat::Fighter& f, bool spell
     on[3] = spells && f.can_cast;
     // (Darkness, R13: a cleric or a paladin over 2nd level, as many times
     // as undead were loaded for the fight)
-    on[4] = fg->t.turn_known && (fg->t.turn_cols == 11 ? (f.rec[0x109] > 0 || f.rec[0x10C] > 2) &&
-                                                              f.undead_turns < fg->b.undead_loaded
-                                                        : f.rec[0x109] > 0 && !f.turned_undead);
+    on[4] = combat::can_turn(fg->b, fg->t, f);
     on[5] = can_guard(f);
     on[6] = on[7] = on[9] = on[10] = on[11] = true;
     on[8] = combat::anyone_dying(fg->b);
@@ -3413,7 +3411,7 @@ void fight_menu(pic::Canvas& c)
     for (int k = 0; k < magic::kListSize; ++k)
         if (f.rec[magic::kListAt + k] && !(f.rec[magic::kListAt + k] & 0x80)) spells = true;
     if (spells && f.can_cast) strcat(words, fw(profile::kFCast));
-    if (f.rec[0x109] > 0 && !f.turned_undead && fg->t.turn_known) strcat(words, fw(profile::kFTurn));
+    if (combat::can_turn(fg->b, fg->t, f)) strcat(words, fw(profile::kFTurn));
     // (Champions, GAME.OVR ovl 0x58 +0xA45: Yell for a kender while no one
     // taunts the enemy yet)
     if (kr_can_yell(f)) strcat(words, d->w_yell);
@@ -3582,7 +3580,7 @@ bool can_target(int t, int* dist)
         int sq = 0;
         const bool seen = t == i || combat::range(b, fg->t, i, t, false, &sq);
         if (dist) *dist = sq;
-        const int pw = fg->use_item >= 0 ? combat::power_of(f.rec, mrules->tables, fg->spell, true) : spell_power(f);
+        const int pw = fg->use_item >= 0 ? combat::power_of(f, mrules->tables, fg->spell, true) : spell_power(f);
         return seen && sq <= spells::reach(mrules->tables, fg->spell, pw);
     }
     if (t == i || !b.f[t].up() || !b.f[t].size) return false;
@@ -4059,6 +4057,24 @@ void ai_step(pic::Canvas& c)
                 return;
             }
         }
+        // Turn Undead when an enemy undead is in sight and the fighter may
+        // turn (combat::can_turn) - Curse's before its spells (coab's facts
+        // 5.1: a pending spell, Turn Undead, then a spell - the cleric or
+        // the former one passed), Pool's after them (below)
+        auto ai_turns = [&]() {
+            if (!combat::can_turn(b, fg->t, f)) return false;
+            for (int e = 0; e < b.n; ++e) {
+                const combat::Fighter& o = b.f[e];
+                if (o.up() && o.size && !(o.fleeing && !o.panic) && (o.team() ? 1 : 0) != (f.team() ? 1 : 0) && o.rec[0xE9] &&
+                    combat::range(b, fg->t, i, e, false, nullptr)) {
+                    fg->cur = i;
+                    fight_turn_undead(c);
+                    return true;
+                }
+            }
+            return false;
+        };
+        if (d->prof->game == games::Game::CurseOfTheAzureBonds && ai_turns()) return;
         if ((f.team() || f.rec[0xF7] >= 0x80) && f.can_cast && load_magic()) {
             int tg[combat::kMaxFighters], nt = 0;
             const int sp = combat::choose_spell(b, fg->t, mrules->tables, i, d->prof->fight.spells,
@@ -4087,19 +4103,7 @@ void ai_step(pic::Canvas& c)
         // levels - that hasn't turned yet turns undead when an enemy undead
         // is in sight, before fighting: ovr10 +0x203; DOSBox, Sokal Keep -
         // Brother Sean's first act)
-        if (pool_files() && f.rec[0x109] > 0 && !f.turned_undead && fg->t.turn_known) {
-            bool undead = false;
-            for (int e = 0; e < b.n && !undead; ++e) {
-                const combat::Fighter& o = b.f[e];
-                undead = o.up() && o.size && !(o.fleeing && !o.panic) && (o.team() ? 1 : 0) != (f.team() ? 1 : 0) && o.rec[0xE9] &&
-                         combat::range(b, fg->t, i, e, false, nullptr);
-            }
-            if (undead) {
-                fg->cur = i;
-                fight_turn_undead(c);
-                return;
-            }
-        }
+        if (pool_files() && ai_turns()) return;
         // The best weapon for now (the panel shows it)
         if (ai_ready_weapon(i)) draw_panel_for(c, i);
         // Its special actions (breath, spit, gazes, rays, thrown lightning)
@@ -4350,7 +4354,10 @@ void fight_start(pic::Canvas& c)
         f.max_aff = party::kMaxAffects;
         f.flags2 = ch.ext[party::kExtFlags2];
         f.magic_res = ch.ext[party::kExtMagicRes];
-        f.robe = krynn() && ch.level(classes::MagicUser) > 0 ? ch.ext[party::kExtRobe] : 0;
+        // (Death Knights' saves and caster levels too - GAME.OVR 0x30E0B /
+        // 0x34E8C; a Champions cleric's god for Turn Undead)
+        f.robe = krynn_rules() && ch.level(classes::MagicUser) > 0 ? ch.ext[party::kExtRobe] : 0;
+        f.god = krynn() ? ch.ext[party::kExtGod] : 0;
     }
     b.party_size = pt->count;
     // The original recalculates every combatant's values at the battle's
@@ -4417,6 +4424,10 @@ void fight_start(pic::Canvas& c)
         }
         b.turn_minus = vm->get(0x0F) & 0xFF;
     }
+    // (Champions, GAME.OVR 0xEC2: each undead its LOAD MONSTERs loaded)
+    if (fg->t.turn_rule == 2)
+        for (int k = 0; k < ml->n; ++k)
+            if (combat::Rec(&ml->m[k])[0xE9]) ++b.undead_loaded;
     b.names = names;
     b.arrow = d->facts.arrow;
     b.quarrel = d->facts.quarrel;
@@ -5101,10 +5112,10 @@ void fight_tick(uint32_t now, pic::Canvas& c)
 int spell_power(const combat::Fighter& f)
 {
     // An item's spell: the item's level (6 - the monsters' own, 12)
-    if (fg->use_item >= 0 && fg->spell && mrules) return combat::power_of(f.rec, mrules->tables, fg->spell, true);
+    if (fg->use_item >= 0 && fg->spell && mrules) return combat::power_of(f, mrules->tables, fg->spell, true);
     // (the caster's own: the same level the spell is cast at - Secret's
     // paladin rule, a class-changed human's skill levels)
-    if (fg->spell && mrules) return combat::power_of(f.rec, mrules->tables, fg->spell);
+    if (fg->spell && mrules) return combat::power_of(f, mrules->tables, fg->spell);
     const combat::Rec r = f.rec;
     const int cl = r[0x109], pa = r[0x10C], ra = r[0x10D], mu = r[0x10E];
     if (cl == 0 && mu == 0 && pa < 9 && ra < 8) return 6;
@@ -5225,7 +5236,7 @@ void begin_targeting(pic::Canvas& c, int sp)
         // size; else 2d4, by Hit Dice - never shown, as in the original)
         const combat::FightSpell* afs = fight_spell(sp);
         fg->pick_size = afs && afs->does == combat::SpellDoes::Faerie;
-        fg->pick_budget = fg->pick_size ? combat::power_of(fg->b.f[fg->cur].rec, mrules->tables, sp) : rng.roll(4, 2);
+        fg->pick_budget = fg->pick_size ? combat::power_of(fg->b.f[fg->cur], mrules->tables, sp) : rng.roll(4, 2);
         fg->sp_need = combat::kMaxFighters;
     } else if (aim == 15) {
         fg->sp_need = 1;
@@ -5507,7 +5518,7 @@ void blast_delay(int n, pic::Canvas& c)
     bl.y = static_cast<uint8_t>(fg->aim_y);
     bl.area = static_cast<uint8_t>(fg->sp_area > 0 ? fg->sp_area : 0);
     bl.rounds = static_cast<uint8_t>(rounds);
-    bl.pw = static_cast<uint8_t>(combat::power_of(f.rec, mrules->tables, sp, false));
+    bl.pw = static_cast<uint8_t>(combat::power_of(f, mrules->tables, sp, false));
     fg->aim_x = fg->aim_y = -1;
     f.attacks[0] = f.attacks[1] = 0;
     say(c, FSt::Next);
@@ -5657,7 +5668,7 @@ void cast_now(pic::Canvas& c, bool forgotten)
     draw_fight(c);
     const int first_page = fg->pages;
     if (from_item) {
-        pw = combat::power_of(f.rec, mrules->tables, sp, true);
+        pw = combat::power_of(f, mrules->tables, sp, true);
     } else {
         // The spell leaves their memory; "Casts a Spell", "Spell: NAME"
         if (!forgotten) forget_spell(f, sp);
@@ -5681,7 +5692,7 @@ void cast_now(pic::Canvas& c, bool forgotten)
         fg->sp_n = combat::cone(b, fg->t, i, ax, ay, 3, 1, fg->sp_t, combat::kMaxFighters);   // 3 squares, 1 ray
     if ((fs->does == combat::SpellDoes::Cone || fs->does == combat::SpellDoes::Fear) && ax >= 0) {
         // A cone from the caster through the square aimed at: Fear 3 rays of 6 squares, Cone of Cold 2 of (level + 1) / 2
-        const int lv = from_item ? pw : combat::power_of(f.rec, mrules->tables, sp, false);
+        const int lv = from_item ? pw : combat::power_of(f, mrules->tables, sp, false);
         const bool fear = fs->does == combat::SpellDoes::Fear;
         const int reach = fear ? 6 : ((lv + 1) / 2 > 1 ? (lv + 1) / 2 : 1);
         fg->sp_n = combat::cone(b, fg->t, i, ax, ay, reach, fear ? 3 : 2, fg->sp_t, combat::kMaxFighters);
@@ -5690,7 +5701,7 @@ void cast_now(pic::Canvas& c, bool forgotten)
         // A cloud on the field (Stinking Cloud 2 x 2 from the square aimed at, Cloudkill 3 x 3 round it) for
         // the caster's level in rounds; those in it breathe it
         const bool poison = fs->does == combat::SpellDoes::Poison;
-        const int rounds = from_item ? pw : combat::power_of(f.rec, mrules->tables, sp, false);
+        const int rounds = from_item ? pw : combat::power_of(f, mrules->tables, sp, false);
         if (combat::lay_cloud(b, fg->t, ax, ay, rounds, poison)) {
             add_page(i, fw(poison ? profile::kPoisonCloud : profile::kNoxiousCloud));
             Fx e;
@@ -5702,7 +5713,7 @@ void cast_now(pic::Canvas& c, bool forgotten)
     if (fs->does == combat::SpellDoes::Blade && ax >= 0) {
         // Darkness's Blade Barrier (R2): Stinking Cloud's 2 x 2 squares of
         // knives for 3 rounds a level; those in it get cut (a save at the cast)
-        const int lv = from_item ? pw : combat::power_of(f.rec, mrules->tables, sp, false);
+        const int lv = from_item ? pw : combat::power_of(f, mrules->tables, sp, false);
         if (combat::lay_cloud(b, fg->t, ax, ay, 3 * lv, false, true)) {
             Fx e;
             e.kind = Fx::Redraw;
@@ -5720,7 +5731,7 @@ void cast_now(pic::Canvas& c, bool forgotten)
     }
     if (fs->does == combat::SpellDoes::Teleport) {
         // Dimension Door: to the square aimed at, within 3 squares a level, when it can stand there
-        const int lv = from_item ? pw : combat::power_of(f.rec, mrules->tables, sp, false);
+        const int lv = from_item ? pw : combat::power_of(f, mrules->tables, sp, false);
         int len = 0;
         combat::path(b, fg->t, i, ax, ay, true, &len);
         if (ax >= 0 && len / 2 <= 3 * lv && combat::teleport(b, fg->t, i, ax, ay)) {

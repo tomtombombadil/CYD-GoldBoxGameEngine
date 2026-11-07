@@ -1,4 +1,5 @@
 #include "spells.h"
+#include "combat.h"
 
 #include <cstring>
 
@@ -97,7 +98,9 @@ int power(const party::Character& c, const classes::Tables& t, int s)
     case 4:     // (the Dark Queen's god-given spells: a cleric's)
         return most(skill_level(c, classes::Cleric), skill_level(c, classes::Paladin) - (pal_rule ? 8 : 0));
     case 1: return most(skill_level(c, classes::Ranger) - 7, 0);
-    case 2: return most(skill_level(c, classes::MagicUser), skill_level(c, classes::Ranger) - 8);
+    case 2:     // (Champions' / Death Knights' robe moons: combat::moon_level)
+        return most(skill_level(c, classes::MagicUser) + combat::moon_level(t, c.ext[party::kExtRobe], c.level(classes::MagicUser)),
+                    skill_level(c, classes::Ranger) - 8);
     case 3: return 12;
     default: return 0;
     }

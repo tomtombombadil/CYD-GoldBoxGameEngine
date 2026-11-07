@@ -1012,9 +1012,28 @@ the Project as claude/TODO.md.
 - [ ] Blind-spot checks: the cursor-key / tap layer on every list and menu
       of every game; waits against the originals' delay rules; the frames
       within an attack; the cheats and comforts against Tom's specs.
-- [ ] Rule-check gaps: items used outside fights, poison / disease over a
-      rest, level drain / Restoration, ageing, turn undead tables, spells
-      learned at training, Krynn moon bonuses, dual-class / class change.
+- [x] Rule-check gaps, round 4 (2026-11-07; `behave rules4`, facts:
+      claude/rules_round4_facts.md): the turn table against each program's
+      own bytes (found by content), each game's turn routine (Curse / Pool
+      listing, Gateway / Champions GAME.OVR, Darkness R13) and who may turn;
+      Restoration / training's lost levels (coab); Haste's ageing (coab);
+      poison / disease over a rest (spell_facts / coab handlers); the Krynn
+      moons' caster level and saves (Champions / Death Knights programs).
+      Fixed: Champions' turning (13-column table at DS 0x444, its own rules,
+      Majere + 2, turns by undead loaded), Gateway's paladins turning,
+      Curse's former clerics turning (+ AI turn before spells; column 0 the
+      original's, Game Fixes the level's), the moons' caster level
+      (Champions, Death Knights) and Death Knights' moon saves.
+- [ ] Rule-check gaps left from round 4: items used outside fights for
+      Pool / Darkness / Gateway / Treasures / Krynn (Curse and Secret have
+      checks); spells offered at training (Curse's list stops at 5th level -
+      later games' own code not read); dual-class beyond Curse's checks;
+      the Dark Queen's moons (its C program not read); Death Knights' mage
+      caster level takes the ranger's level unchanged (max, unsigned - not
+      done); Haste's ageing and the rest's poison / disease in the later
+      games checked against Curse's rules only (their code not read);
+      Gateway's / Champions' AI turning (only Curse's / Pool's known); the
+      turn routines of Death Knights / the Dark Queen assumed Darkness's.
 - [ ] Pool's story beyond the nomads' camp: targeted differ runs only
       (scripted places), fights judged by the rule checks.
 - [ ] Tom (2026-11-06): the 480x320 Game / Look keys are too large - that

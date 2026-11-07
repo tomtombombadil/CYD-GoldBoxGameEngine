@@ -3226,6 +3226,12 @@ the game's Settings (As Original: all of them).
   every game (Treasures' original marks none; the others white letters -
   the exploring panel keeps those), and Treasures' menu line in the box
   from the start (its original: white letters).
+- **Curse's former clerics turning undead** (Game Fixes; rules_round4_facts.md
+  T1): a human who was a cleric and whose new class has passed it turns
+  undead (as the original); the original takes the table's column for
+  levels 1-8 from the present cleric level - 0 for them, column 0 (the
+  row before's last entry) - with Game Fixes on the column is their
+  cleric level's.
 - **The Dark Queen** (queen_facts_4.md): its multi-class clerics' Wisdom
   13 rule never fires in the original (a test that can't be true); with
   Game Fixes on the engine applies it. Its fights' Move

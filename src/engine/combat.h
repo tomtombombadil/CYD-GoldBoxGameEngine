@@ -58,12 +58,19 @@ struct Tables {
     uint8_t start_x[8], start_y[8];     // a rank's centre in the 11 x 6 grid
     uint8_t shapes[5][6][2];            // allowed columns (min, max) a row; [4] = the fallback shape
     uint8_t terrain[33];                // outdoors: terrain flags a place (city)
-    uint8_t turn[14 * 11];              // turn undead: [undead type * turn_cols + column]
+    uint8_t turn[14 * 13 + 16];         // turn undead: [undead type * turn_cols + column]
     bool    turn_known;                 // the turn table was found (Secret's not yet: no Turn)
     // 10: Curse's rows and rules; 11: Pools of Darkness's (the fights' rules
     // facts R13 - column 0 for level 0, the cleric or the paladin - 2, the
     // highest type first and a weaker one after a roll too low, 1d6 + 6 for D*)
     uint8_t turn_cols;
+    // Whose rules for the 10- and 13-column tables (rules_round4_facts.md T):
+    // 0 Curse's / Pool's (the cleric's skill level; 1-8 the cleric's own
+    // level's column - with the Game Fixes the skill level's), 1 Gateway's
+    // (the paladin - 2 too, the skill level's column), 2 Champions' (13
+    // columns: the skill level itself, Majere's + 2; the highest type first,
+    // a weaker one after a roll too low; as many as the undead loaded)
+    uint8_t turn_rule;
     // Darkness's Monster Summoning reserve (R10): MON block / CPIC by the
     // frame style 0-4 (none: 0)
     uint8_t reserve_mon[5], reserve_pic[5];
@@ -88,6 +95,7 @@ struct TableAt {
     uint16_t race_names;                // Pool's foe names (0: none - the class bits)
     uint8_t  turn_cols = 10;            // the turn table's columns (Darkness 11, its rows 0-13)
     uint16_t reserve = 0;               // Darkness: the summoning reserve's MON blocks (5) and CPIC (5) by frame style
+    uint8_t  turn_rule = 0;             // Tables::turn_rule
 };
 // Reads them: read(ctx, ds offset, out, n) gives the data segment's bytes
 using ReadDs = bool (*)(void* ctx, uint16_t ds, uint8_t* out, size_t n);
@@ -580,8 +588,9 @@ struct Fighter {
     // 2 (0x15E: 8 = unharmed by Slay Living and the Death Spell) and magic
     // resistance (0x1A5, % - by the caster's level as Curse's effects)
     uint8_t flags2 = 0, magic_res = 0;
-    // Champions: a mage's robe (1 White, 2 Red, 3 Black - its moon), 0 none
-    uint8_t robe = 0;
+    // Champions / Death Knights: a mage's robe (1 White, 2 Red, 3 Black - its
+    // moon), 0 none; Champions: a cleric's god (Majere 2 turns undead better)
+    uint8_t robe = 0, god = 0;
     uint8_t spell_t[24] = {};
     int     team() const { return rec[0x197]; }
     bool    up() const { return rec[0x196] != 0; }          // able to fight
@@ -1199,11 +1208,20 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
          int n, create::Dice& d, SpellLine* out, int cap, int pw = 0);
 // The caster's level for a spell: by its kind; from an item 6 (the
 // monsters' spells - the items' own - as the caster's)
-int power_of(const Rec& rec, const classes::Tables& st, int spell, bool item = false);
+// robe: Champions' / Death Knights' mage robe - its moon new: the mage's
+// level - 1, full: + 1 past 5th (GAME.OVR 0x3911F / 0x34E8C)
+int power_of(const Rec& rec, const classes::Tables& st, int spell, bool item = false, int robe = 0);
 inline int power_of(const uint8_t* rec, const classes::Tables& st, int spell, bool item = false)
 {
     return power_of(Rec(const_cast<uint8_t*>(rec)), st, spell, item);
 }
+inline int power_of(const Fighter& f, const classes::Tables& st, int spell, bool item = false)
+{
+    return power_of(f.rec, st, spell, item, f.robe);
+}
+// The moons' change to a mage's caster level (robe 1-3, its current mage
+// level): new -1, full +1 past 5th; 0 otherwise (and outside Krynn)
+int moon_level(const classes::Tables& st, int robe, int mage_level);
 
 // A cone (Fear, Cone of Cold; coab's facts): the line from the caster
 // through (tx, ty) carried on (its steps repeated) to `reach` squares
@@ -1279,6 +1297,12 @@ Morale morale(Battle& b, const Tables& t, int i);
 // flees) or destroys (0 or below; a few more may go). Out: the fighters
 // turned (+1000 when destroyed); how many.
 int turn_undead(Battle& b, const Tables& t, int cleric, create::Dice& d, int* out, int cap);
+// Turn is offered to fighter f (the game's rule: Tables::turn_rule / 11
+// columns - Darkness's)
+bool can_turn(const Battle& b, const Tables& t, const Fighter& f);
+// A class's skill level (the level, and a human's former level in it once
+// the new class has passed that)
+int skill_level(const Rec& r, int cls);
 
 // ---- The end
 struct Outcome {

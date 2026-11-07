@@ -616,6 +616,13 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   field / sweep order (FUZZSWEEP=1 makes sweeps), K8 Show Rolls, K9 the
   Battle view; `behave features` (-DBEHAVE_FEATURES: K1-K7 cheats, Camp
   Fix, Keep Memorizing, Party view) and `behave levels` ONLY=maxhp.
+  Round 4 (2026-11-07): `behave rules4` (-DBEHAVE_MATRIX -DBEHAVE_ROUND4,
+  any game, the levels env; ONLY= table, turn, former, haste, moons,
+  restore, rest) - the turn table found in the program by its contents,
+  each game's turn routine (Curse / Pool / Gateway / Champions /
+  Darkness-type), who may turn, Restoration and training's lost levels,
+  Haste's ageing, poison / disease over a rest, the Krynn moons; facts in
+  the Project's claude/rules_round4_facts.md.
 - **DOSBox here** (2026-10-12): the ORIGINAL games run on Claude's side -
   `apt-get install dosbox xdotool x11-apps imagemagick`, a virtual display
   (`Xvfb :5`), `DISPLAY=:5 SDL_AUDIODRIVER=dummy dosbox -conf <conf>`

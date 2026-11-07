@@ -240,6 +240,7 @@ bool read_tables(Tables& t, const TableAt& at, ReadDs read, void* ctx)
 {
     t.by_name = false;                  // (Curse: the class bits - was left unset, read as whatever was there)
     t.turn_cols = at.turn_cols;
+    t.turn_rule = at.turn_rule;
     for (int k = 0; k < 5; ++k) t.reserve_mon[k] = t.reserve_pic[k] = 0;
     if (at.reserve && !(read(ctx, at.reserve, t.reserve_mon, 5) && read(ctx, static_cast<uint16_t>(at.reserve + 5), t.reserve_pic, 5)))
         return false;
@@ -251,7 +252,7 @@ bool read_tables(Tables& t, const TableAt& at, ReadDs read, void* ctx)
            read(ctx, at.shapes, &t.shapes[0][0][0], sizeof t.shapes) &&
            (!at.terrain || read(ctx, at.terrain, t.terrain, sizeof t.terrain)) &&     // (Pool: none)
            ((t.turn_known = at.turn != 0)
-                ? read(ctx, at.turn, t.turn, at.turn_cols == 11 ? sizeof t.turn : 13 * 10 + 11)
+                ? read(ctx, at.turn, t.turn, at.turn_cols == 11 ? 14 * 11 : at.turn_cols == 13 ? sizeof t.turn : 13 * 10 + 11)
                 : true) &&
            (!at.race_names || (t.by_name = read(ctx, at.race_names, &t.foe_names[0][0], sizeof t.foe_names)));
 }
@@ -3697,7 +3698,25 @@ bool saving_throw(const Fighter& f, int type, int bonus, create::Dice& d)
 }
 
 // The caster's level for the spell's kind (as spells::power, from the record)
-int power_of(const Rec& r, const classes::Tables& st, int s, bool item)
+int moon_level(const classes::Tables& st, int robe, int mage_level)
+{
+    // (Champions GAME.OVR 0x3911F, Death Knights 0x34E8C: a mage - its
+    // current level - with a robe; the robe's moon new -1, full +1 past 5th.
+    // The Dark Queen's not looked at: none there)
+    if (!st.lay.krynn || st.lay.queen || robe < 1 || robe > 3 || mage_level <= 0) return 0;
+    const int ph = magic::moon(robe - 1);
+    return ph == 0 ? -1 : ph == 2 && mage_level > 5 ? 1 : 0;
+}
+
+int skill_level(const Rec& r, int cls)
+{
+    int k = 0;
+    while (k < 7 && r[0x109 + k] == 0) ++k;
+    const bool past = r[0x74] == 7 && r[0x109 + k] > r[0xE6];
+    return r[0x109 + cls] + (past ? r[0x111 + cls] : 0);
+}
+
+int power_of(const Rec& r, const classes::Tables& st, int s, bool item, int robe)
 {
     if (item && st.spell_class(s) != 3) return 6;
     const int cl = r[0x109], pa = r[0x10C], ra = r[0x10D], mu = r[0x10E];
@@ -3717,7 +3736,7 @@ int power_of(const Rec& r, const classes::Tables& st, int s, bool item)
     case 4:     // (the Dark Queen's god-given spells: a cleric's - as spells::power)
         return most(skill(0), skill(3) - (pal_rule ? 8 : 0));
     case 1: return most(skill(4) - 7, 0);
-    case 2: return most(skill(5), skill(4) - 8);
+    case 2: return most(skill(5) + moon_level(st, robe, mu), skill(4) - 8);
     case 3: return 12;
     default: return 0;
     }
@@ -3819,7 +3838,7 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
     };
     Fighter& me = b.f[caster];
     const spells::Entry e = spells::entry(st, spell);
-    if (pw <= 0) pw = power_of(me.rec, st, spell);
+    if (pw <= 0) pw = power_of(me, st, spell);
     int minutes = e.lasts + e.lasts_level * pw;
     const bool rolled = fs.does != SpellDoes::Heal && fs.does != SpellDoes::Damage && fs.does != SpellDoes::Bolt &&
                         fs.n && fs.sides;
@@ -5281,7 +5300,7 @@ int choose_spell(Battle& b, const Tables& t, const classes::Tables& st, int i, c
             if (!fs || fs->does == SpellDoes::NotYet) continue;
             const spells::Entry e = spells::entry(st, sp);
             if (e.when == 0 || e.priority < level) continue;
-            if (spell_targets(b, t, st, i, *fs, sp, power_of(f.rec, st, sp), d, targets, n_targets)) return sp;
+            if (spell_targets(b, t, st, i, *fs, sp, power_of(f, st, sp), d, targets, n_targets)) return sp;
         }
     *n_targets = 0;
     return 0;
@@ -5310,7 +5329,7 @@ int choose_item(Battle& b, const Tables& t, const classes::Tables& st, int i, co
             const int judge = sp > 0x38 ? sp - 0x17 : sp;
             const spells::Entry e = spells::entry(st, judge);
             if (spells::entry(st, sp).when == 0 || e.priority < level) continue;
-            if (spell_targets(b, t, st, i, *fs, sp, power_of(f.rec, st, sp, true), d, targets, n_targets, judge)) return k;
+            if (spell_targets(b, t, st, i, *fs, sp, power_of(f, st, sp, true), d, targets, n_targets, judge)) return k;
         }
     *n_targets = 0;
     return -1;
@@ -5425,6 +5444,75 @@ static int turn_undead_dk(Battle& b, const Tables& t, int cleric, create::Dice& 
     return n;
 }
 
+// Champions of Krynn's (rules_round4_facts.md T3; GAME.OVR 0x16021): a
+// turn more this fight; d12 undead at most, one d20; the column the cleric's
+// skill level itself (Majere's clerics + 2), 13 a row (DS 0x444); the
+// highest undead type up to a limit (13 first, then the type taken): the
+// roll at least |value| turns (> 0) or destroys (D*'s extras as Curse's),
+// too low: types below it next
+static int turn_undead_ck(Battle& b, const Tables& t, int cleric, create::Dice& d, int* out, int cap)
+{
+    Fighter& me = b.f[cleric];
+    ++me.undead_turns;
+    int count = d.roll(12, 1);
+    const int roll = d.roll(20, 1);
+    const int col = skill_level(me.rec, 0) + (me.god == 2 ? 2 : 0);
+    int extra = 6, limit = 13, n = 0;
+    const int my = me.team() ? 1 : 0;
+    while (n < cap && count > 0) {
+        int best = -1, type = 0;
+        for (int i = 0; i < b.n; ++i) {
+            const Fighter& f = b.f[i];
+            const int ut = f.rec[0xE9];
+            if (!f.up() || !f.size || (f.fleeing && !f.panic) || (f.team() ? 1 : 0) == my || ut <= type || ut > limit) continue;
+            if (!range(b, t, cleric, i, false, nullptr)) continue;
+            best = i;
+            type = ut;
+        }
+        if (best < 0) break;
+        const int at = type * 13 + col;
+        const int v = at >= 0 && at < static_cast<int>(sizeof t.turn) ? static_cast<int8_t>(t.turn[at]) : 99;
+        if (roll < (v < 0 ? -v : v)) {
+            limit = type - 1;
+            continue;
+        }
+        limit = type;
+        Fighter& f = b.f[best];
+        if (v > 0) {
+            f.fleeing = true;
+            f.panic = false;
+            out[n++] = best;
+        } else {
+            f.rec[kHealth] = party::Gone;
+            f.rec[kInCombat] = 0;
+            f.size = 0;
+            occupancy(b);
+            out[n++] = best + 1000;
+        }
+        if (extra > 0) --extra;
+        if (--count == 0 && extra > 0 && v < 0) ++count;
+    }
+    return n;
+}
+
+bool can_turn(const Battle& b, const Tables& t, const Fighter& f)
+{
+    if (!t.turn_known) return false;
+    if (t.turn_cols == 11) return (f.rec[0x109] > 0 || f.rec[0x10C] > 2) && f.undead_turns < b.undead_loaded;
+    switch (t.turn_rule) {
+    case 2: {
+        // (Champions, GAME.OVR 0xB73A: a cleric, or a former one whose new
+        // class has passed it; fewer turns than the undead loaded)
+        int k = 0;
+        while (k < 7 && f.rec[0x109 + k] == 0) ++k;
+        const bool past = f.rec[0x74] == 7 && f.rec[0x109 + k] > f.rec[0xE6];
+        return (f.rec[0x109] > 0 || (f.rec[0x111] > 0 && past)) && f.undead_turns < b.undead_loaded;
+    }
+    case 1: return (skill_level(f.rec, 0) > 0 || skill_level(f.rec, 3) > 2) && !f.turned_undead;  // (Gateway GAME.OVR 0xC3A9)
+    default: return skill_level(f.rec, 0) > 0 && !f.turned_undead;    // (Curse: coab's menu, SkillLevel(Cleric))
+    }
+}
+
 int turn_undead(Battle& b, const Tables& t, int cleric, create::Dice& d, int* out, int cap)
 {
     CYD_TEST_ACT(b, cleric, TurnUndead, -1, 0);
@@ -5432,8 +5520,16 @@ int turn_undead(Battle& b, const Tables& t, int cleric, create::Dice& d, int* ou
     me.turned_undead = true;
     if (!t.turn_known) return 0;
     if (t.turn_cols == 11) return turn_undead_dk(b, t, cleric, d, out, cap);
-    const int lv = me.rec[0x109];
-    const int col = lv >= 1 && lv <= 8 ? lv : lv <= 13 ? 9 : 10;
+    if (t.turn_rule == 2) return turn_undead_ck(b, t, cleric, d, out, cap);
+    // The level (Curse's listing ovr014:1293 - the cleric's skill level, a
+    // former cleric's level counting once passed; Gateway's GAME.OVR
+    // 0x174C1 - the paladin's - 2 when more): 1-8 its column (Curse's and
+    // Pool's: the cleric's own level's - a former cleric's column 0, the
+    // original's; Game Fixes: the skill level's), 9-13 the ninth, else the
+    // tenth (Gateway: none at 0)
+    int lv = skill_level(me.rec, 0);
+    if (t.turn_rule == 1 && skill_level(me.rec, 3) - 2 > lv) lv = skill_level(me.rec, 3) - 2;
+    const int col = lv >= 1 && lv <= 8 ? (t.turn_rule == 1 || rules::fixes() ? lv : me.rec[0x109]) : lv >= 9 && lv <= 13 ? 9 : 10;
     int count = d.roll(12, 1);
     const int roll = d.roll(20, 1);
     int extra = 6, n = 0;
@@ -5449,7 +5545,7 @@ int turn_undead(Battle& b, const Tables& t, int cleric, create::Dice& d, int* ou
             best = i;
             type = ut;
         }
-        if (best < 0) break;
+        if (best < 0 || (t.turn_rule == 1 && lv == 0)) break;
         const int v = static_cast<int8_t>(t.turn[type * (t.turn_cols ? t.turn_cols : 10) + col]);   // (0: unset - Curse's 10)
         if (roll < (v < 0 ? -v : v)) break;
         Fighter& f = b.f[best];
