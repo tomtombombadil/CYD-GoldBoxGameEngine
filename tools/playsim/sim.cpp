@@ -120,6 +120,9 @@ static void state_log(const char* name)
     if (!getenv("STATELOG") || !play::pt || !play::d) return;
     printf("  STATE %s pos %d %d %d sel %d n %d screen %d anim %d\n", name, play::pos_x(), play::pos_y(), play::dir(),
            play::pt->selected, play::pt->count, (int)play::screen, play::anim_block);
+    if (play::ground && play::ground->any_money())     // (the treasure's coins: Pool's DS 0x67F4 in the original)
+        printf("  GROUND %d %d %d %d %d %d %d\n", play::ground->money[0], play::ground->money[1], play::ground->money[2],
+               play::ground->money[3], play::ground->money[4], play::ground->money[5], play::ground->money[6]);
     for (int i = 0; i < play::pt->count; ++i) {
         uint8_t r[party::kPoolRecordSize];
         party::to_pool(play::pt->m[i], r);
@@ -330,6 +333,8 @@ static void settle(int choice = 0, int max_ms = 60000)
         if (getenv("MANUAL") && (page_prompt || play::input() != play::Input::None || wt == ecl::Wait::Menu ||
                                  wt == ecl::Wait::Who || wt == ecl::Wait::Key || (wt == ecl::Wait::ListMenu && list_wait))) {
             if (wt == ecl::Wait::Menu) { printf("  MENU prompt=%s:", vm->prompt()); for (int i = 0; i < vm->items(); ++i) printf(" [%s]", vm->item(i)); printf("\n"); }
+            if (wt == ecl::Wait::ListMenu && list_wait) { printf("  LIST prompt=%s:", vm->prompt()); for (int i = 0; i < vm->items(); ++i) printf(" [%s]", vm->item(i)); printf("\n"); }
+            if (play::input() != play::Input::None) printf("  INPUT WAIT %s\n", play::input() == play::Input::Number ? "number" : "text");
             return;
         }
         if (play::input() != play::Input::None) {
@@ -620,6 +625,9 @@ static void run_fight()
                     if (n < 6) { char t[16]; snprintf(t, 16, "fmenu%d", n++); shot(t); }
                     ++turns;
                     if (!tap_word('Q') && tap_word('D')) tap_word('A');     // (Champions: Done's Auto)
+                } else if (play::fg->st == play::FSt::NpcShare) {
+                    shot("npc_share");
+                    play::tap(2, 2, C);
                 } else if (play::fg->st == play::FSt::Results || play::fg->st == play::FSt::Destroyed) {
                     static bool told = false;
                     if (!told) { told = true; printf("  the 3D view's walls at the results: %s\n", world_hash() == w0 ? "as before" : "CHANGED"); }
@@ -759,6 +767,8 @@ int main(int argc, char** argv)
     if (getenv("NOFIXES")) { play::Options o = play::opts; o.item_fixes = false; play::set_options(o); }
     // NOROLLS=1: fights without the rolls shown (the CYD_COMBAT_ROLLS comfort off)
     if (getenv("NOROLLS")) { play::Options o = play::opts; o.rolls = false; play::set_options(o); }
+    // NOCAMPFIX=1: Pool's camp without Fix (the CYD_CAMP_FIX comfort off - the original's camp menu)
+    if (getenv("NOCAMPFIX")) { play::Options o = play::opts; o.camp_fix = false; play::set_options(o); }
     // SOUNDTEST=a-b: the game's own effects a to b, one after another, then out
     if (const char* st = getenv("SOUNDTEST")) {
         int a = 2, z = 14;

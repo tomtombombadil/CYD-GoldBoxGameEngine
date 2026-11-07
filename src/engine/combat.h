@@ -760,7 +760,8 @@ void battle_start(Battle& b, create::Dice* d = nullptr);
 int squares(int size, int* sx, int* sy);
 
 // Builds the field
-void build_indoors(Battle& b, const Tables& t, const geo::Map& m, int px, int py, create::Dice& d);
+// rooms: tables and chairs in rooms (Curse; Pool's ovr11 has none - no d10s)
+void build_indoors(Battle& b, const Tables& t, const geo::Map& m, int px, int py, create::Dice& d, bool rooms = true);
 void build_outdoors(Battle& b, const Tables& t, int city, create::Dice& d);
 // Pools of Darkness's own (GAME.OVR 0xC51A; facts L9): the field plain
 // (0x45), a river (when the area's script place 0x33 says so) with its
@@ -773,6 +774,11 @@ void build_outdoors_dk(Battle& b, const Tables& t, bool river, create::Dice& d);
 // generator lays out the stream (and a crossing, always), trees and the
 // rest
 int pool_terrain(int place, bool special);
+// Pool, after either field is built (GAME.OVR ovr11 +0x0): every square
+// whose ground shows picture 0x16 rolls d100 - 98 ground 0x1A, 99 0x1B,
+// 100 (not in block 10, the graveyard) another d100 of 1 then d10: 1-6
+// 0x1C, else 0x1D; x outer, y inner
+void pool_debris(Battle& b, const Tables& t, int block, create::Dice& d);
 void build_outdoors_pool(Battle& b, int flags, create::Dice& d);
 // The square's ground entry (0 when off the field)
 const uint8_t* tile(const Battle& b, const Tables& t, int x, int y);

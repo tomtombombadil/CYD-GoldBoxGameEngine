@@ -224,6 +224,8 @@ enum FightWord {
     // (Curse: its "You have lost the fight."), "You have won the duel.",
     // "The duelist receives "
     kDuelLost, kDuelWon, kDuelistReceives,
+    // Pool: an NPC's " takes and hides his share." (duel_word too; ovr6 +0x12E8)
+    kNpcShare,
     kFightWords
 };
 

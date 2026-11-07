@@ -287,6 +287,7 @@ static bool pump(int max_iter = 400000)
             case FSt::AllyAsk:
             case FSt::FleeAsk: tap_word('N'); break;
             case FSt::DoneMenu: tap_word('E'); break;
+            case FSt::NpcShare:
             case FSt::Results:
             case FSt::Destroyed: play::tap(2, 2, C); break;
             default: break;

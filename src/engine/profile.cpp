@@ -2633,6 +2633,9 @@ const Profile kProfiles[] = {
                  .view_floor = 6, .title_flash = 1, .unfinished = false, .program_words = true, .pool_files = true,
                  .pool_rest_keys = true, .overland_map = 0x3648, .overland_area = 25, .final_end = true,
                  .pics_portraits = true,
+                 // (no BIGPIC: PIC blocks 0x78 and up are 88 x 88 pictures as the
+                 // rest - PIC8's 0x79 the kobold caves' wyvern; DOSBox)
+                 .bigpic_from = 0xFF,
                  .treasure_pic = 1,            // (the treasure: PIC<area> block 1, the chest - DOSBox)
                  .camp_pic = 29,               // (the camp: PIC<area> block 29, in every one - DOSBox)
                  // (a one-choice menu's "PRESS <RETURN> OR BUTTON TO CONTINUE"
@@ -4229,6 +4232,8 @@ const char* program_name(games::Game g)
 
 uint32_t duel_word(const Profile& p, int word)
 {
+    // (Pool's NPC share: ovr6 +0x12A9, the string its +0x1468 adds to the name)
+    if (word == kNpcShare) return p.game == games::Game::PoolOfRadiance ? 0x6827 : 0;
     if (word < kDuelLost || word > kDuelistReceives) return 0;
     // (GAME.OVR ovr6's strings, before "Each character receives ")
     static constexpr uint32_t kCurse[3] = {0x6673, 0x668C, 0x66D4};    // ("You have lost the fight.")

@@ -126,6 +126,7 @@ constexpr int kLevels = 0x109, kExp = 0x127, kHpRolled = 0x12C, kDrained = 0xE7,
 struct Sides {
     const geo::Map* m;
     int px, py;
+    bool rooms = true;                  // tables and chairs in rooms (Curse's; Pool's builder has none)
     // 0 open, 1 wall, 3 door (one square's own side)
     int code(int x, int y, int dir) const
     {
@@ -208,7 +209,7 @@ void draw_block(Battle& b, const Sides& s, int mx, int my, int ddx, int ddy, cre
     else t = E != 0 ? 14 : Q == 0 ? 23 : 10;
     p.set(6, 1, t);
     // 5. Tables and chairs in rooms
-    if (mx >= 0 && my >= 0 && mx < geo::kSize && my < geo::kSize && (geo::flags(*s.m, mx, my) & 0x40)) {
+    if (s.rooms && mx >= 0 && my >= 0 && mx < geo::kSize && my < geo::kSize && (geo::flags(*s.m, mx, my) & 0x40)) {
         const int walls = (N == 1) + (E == 1) + (S == 1) + (W == 1);
         bool room = true;
         if (walls == 0) room = false;
@@ -277,12 +278,30 @@ int squares(int size, int* sx, int* sy)
     }
 }
 
-void build_indoors(Battle& b, const Tables& t, const geo::Map& m, int px, int py, create::Dice& d)
+void pool_debris(Battle& b, const Tables& t, int block, create::Dice& d)
+{
+    for (int x = 0; x < kW; ++x)
+        for (int y = 0; y < kH; ++y) {
+            const int g = b.ground[y][x];
+            if (g >= kGroundValues || t.ground[g][3] != 0x16) continue;
+            const int r = d.roll(100, 1);
+            if (r <= 97) continue;
+            if (r == 98) {
+                b.ground[y][x] = 0x1A;
+            } else if (r == 99) {
+                b.ground[y][x] = 0x1B;
+            } else if (block != 10 && d.roll(100, 1) == 1) {
+                b.ground[y][x] = d.roll(10, 1) <= 6 ? 0x1C : 0x1D;
+            }
+        }
+}
+
+void build_indoors(Battle& b, const Tables& t, const geo::Map& m, int px, int py, create::Dice& d, bool rooms)
 {
     (void)t;
     memset(b.ground, 0, sizeof b.ground);
     b.indoors = true;
-    const Sides s{&m, px, py};
+    const Sides s{&m, px, py, rooms};
     for (int ddy = -2; ddy <= 2; ++ddy)
         for (int ddx = -6; ddx <= 6; ++ddx) draw_block(b, s, px + ddx, py + ddy, ddx, ddy, d);
 }

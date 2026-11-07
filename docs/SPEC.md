@@ -2837,6 +2837,12 @@ the game's Settings (As Original: all of them).
   sets (left over from the GOSUB before it), and the clock stays put -
   the nomads' escort to their hut (ECL7 block 17, the op's only use) takes
   no time. With Game Fixes on, the minutes the script asks for pass.
+- **Pool's hired NPCs' share of the coins** (Game Fixes, 2026-11-07;
+  GAME.OVR ovr6 +0x12E8): before a treasure's results page each okay NPC
+  takes its share ("<name> takes and hides his share.") - coins / shares
+  of each coin, the quotient kept in a byte, so above 255 a share it
+  takes only the low byte's worth. With Game Fixes on, the whole
+  quotient.
 - **A computer's Cure Light Wounds on a body** (Game Fixes; Curse and
   Pool - coab's find_healing_target, Pool GAME.OVR ovr14 +0x1BF8): with
   no one of its side under 8 hit points next to it, the original's

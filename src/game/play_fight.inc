@@ -694,7 +694,8 @@ void blit4(pic::Canvas& c, const uint8_t* p, int w, int h, int x, int y, bool mi
 // ---- The fight's state (on the heap while fighting)
 enum class FSt : uint8_t {
     Begin, Turn, Menu, Move, Aim, DoneMenu, Speed, Ai, Pages, RoundEnd, Results, Destroyed, AllyAsk, FleeAsk,
-    ContinueAsk, Next, UseAim, AbortAsk, RoundRest, Clouds, Resume, FlameAsk, FlameAbort, OldAge
+    ContinueAsk, Next, UseAim, AbortAsk, RoundRest, Clouds, Resume, FlameAsk, FlameAbort, OldAge,
+    NpcShare                            // Pool: the NPCs' share page, the results page next
 };
 
 // A page's pictures: a missile or spell flying, a burst / sparkles on a
@@ -857,6 +858,7 @@ struct Fight {
     combat::Outcome out;
     int      share = 0;
     bool     treasure_only = false;
+    uint8_t  res_word = 0;              // the results page's first word (profile::FightWord)
     // The page's pictures playing (fx_at: the one; 2 = done, the page waits)
     int      fx_at = 2;
     bool     fx_on = false, fx_redraw = false;  // one is running; a skull to clear at the page's end
@@ -1348,7 +1350,10 @@ void build_icon(const uint8_t* rec, Pic4& ic, bool ready_only = false)
         return;
     }
     const int head = rec[0x141], body = rec[0x142];
-    const bool small = rec[0x144] == 1;
+    // (Pool: size 0 - an NPC added from a monster file, as the graveyard's
+    // Dirten - draws the small pictures too; ovr18 +0x482 names the file by
+    // a table of the size, DS 0x8C5; DOSBox: Valjevo's fights)
+    const bool small = rec[0x144] == 1 || (pool_files() && rec[0x144] == 0);
     for (int fr = 0; fr < (ready_only ? 1 : 2); ++fr) {
         int bw = 0, bh = 0, hw = 0, hh = 0;
         uint8_t* b = load_pic4("CBODY.DAX", body + (small ? 0 : 0x40) + fr * 0x80, 0, &bw, &bh);
@@ -3338,7 +3343,7 @@ void fight_menu_dk(char* words, size_t cap, const combat::Fighter& f, bool spell
     on[0] = f.moves > 1;
     on[1] = true;
     on[2] = f.n_items && f.can_use;
-    on[3] = spells && f.can_cast;
+    on[3] = spells && f.can_cast && !no_magic_area();
     // (Darkness, R13: a cleric or a paladin over 2nd level, as many times
     // as undead were loaded for the fight)
     on[4] = combat::can_turn(fg->b, fg->t, f);
@@ -3410,7 +3415,7 @@ void fight_menu(pic::Canvas& c)
     bool spells = false;
     for (int k = 0; k < magic::kListSize; ++k)
         if (f.rec[magic::kListAt + k] && !(f.rec[magic::kListAt + k] & 0x80)) spells = true;
-    if (spells && f.can_cast) strcat(words, fw(profile::kFCast));
+    if (spells && f.can_cast && !no_magic_area()) strcat(words, fw(profile::kFCast));
     if (combat::can_turn(fg->b, fg->t, f)) strcat(words, fw(profile::kFTurn));
     // (Champions, GAME.OVR ovl 0x58 +0xA45: Yell for a kender while no one
     // taunts the enemy yet)
@@ -4075,7 +4080,7 @@ void ai_step(pic::Canvas& c)
             return false;
         };
         if (d->prof->game == games::Game::CurseOfTheAzureBonds && ai_turns()) return;
-        if ((f.team() || f.rec[0xF7] >= 0x80) && f.can_cast && load_magic()) {
+        if ((f.team() || f.rec[0xF7] >= 0x80) && f.can_cast && !no_magic_area() && load_magic()) {
             int tg[combat::kMaxFighters], nt = 0;
             const int sp = combat::choose_spell(b, fg->t, mrules->tables, i, d->prof->fight.spells,
                                                 d->prof->fight.n_spells, rng, tg, &nt);
@@ -4328,13 +4333,16 @@ void fight_start(pic::Canvas& c)
     // Pool: only its wilderness areas are fought outdoors (the rest from the 3D map)
     const int over = d->prof->variant.overland_area;
     if (d->prof->variant.overland_map && (d->gs.script < over || d->gs.script > over + 2)) b.indoors = true;
-    if (b.indoors) combat::build_indoors(b, fg->t, d->map, d->gs.x, d->gs.y, rng);
+    if (b.indoors) combat::build_indoors(b, fg->t, d->map, d->gs.x, d->gs.y, rng, !pool_files());
     else if (d->prof->variant.overland_map) combat::build_outdoors_pool(b, pool_place_flags(), rng);
     else if (darkness_files() || hl()) {
         combat::build_outdoors_dk(b, fg->t, vm->get(0x33) != 0, rng);   // (its own: facts L9)
         plat::log("[fight] outdoors: river %d, region %d\n", vm->get(0x33), vm->get(0x3A));
     }
     else combat::build_outdoors(b, fg->t, vm->get(0x4CA1) & 0xFF, rng);
+    // (Pool: the field's scattered pieces - ovr11 +0x0 at both builders'
+    // ends; DOSBox: Valjevo's fights)
+    if (pool_files()) combat::pool_debris(b, fg->t, d->gs.script, rng);
     load_tiles(b.indoors);
     // The fighters: the party, then the monsters
     for (int i = 0; i < pt->count; ++i) {
@@ -4559,6 +4567,9 @@ void fight_cleanup_party(combat::Result r)
 }
 
 void open_treasure(pic::Canvas& c);
+void results_page(pic::Canvas& c);
+void treasure_page(pic::Canvas& c);
+bool npc_share_page(pic::Canvas& c);
 
 // The experience a platinum piece is worth
 int fight_plat_xp()
@@ -4897,18 +4908,83 @@ void end_fight(pic::Canvas& c)
         put(c, fw(profile::kPressAnyKey), 0, text::kMenuRow, 15);
         fg->st = FSt::Destroyed;
     } else {
-        put(c, fw(r == combat::Fled ? profile::kHasFled : none_beaten ? profile::kFoundTreasure : profile::kHasWon), 1, 3, 10);
-        char t[48];
-        if (!no_exp_lines()) {
-            snprintf(t, sizeof t, "%s%d", fw(profile::kEachReceives), fg->share);
-            put(c, t, 1, 5, 10);
-            put(c, fw(profile::kExpPoints), 1, 7, 10);
-        }
-        press_enter_line(c);
-        fg->st = FSt::Results;
+        fg->res_word = static_cast<uint8_t>(r == combat::Fled ? profile::kHasFled
+                                            : none_beaten ? profile::kFoundTreasure : profile::kHasWon);
+        if (!npc_share_page(c)) results_page(c);
     }
     fg->until = 0;
     dirty(0, pic::kScreenH);
+}
+
+// A fight's "The party has won!" ... "experience points." page
+void results_page(pic::Canvas& c)
+{
+    c.clear(0);
+    layout::outer(c, d->tables, d->frame_tiles);
+    put(c, fw(fg->res_word), 1, 3, 10);
+    char t[48];
+    if (!no_exp_lines()) {
+        snprintf(t, sizeof t, "%s%d", fw(profile::kEachReceives), fg->share);
+        put(c, t, 1, 5, 10);
+        put(c, fw(profile::kExpPoints), 1, 7, 10);
+    }
+    press_enter_line(c);
+    fg->st = FSt::Results;
+    dirty(0, pic::kScreenH);
+}
+
+// Pool: the hired NPCs take their share of the coins before the results
+// page, a fight's or the treasure's alone (GAME.OVR ovr6 +0x12E8, called by
+// the treasure step +0x1559 after the experience is shared; DOSBox: Valjevo's
+// offering box with the arena's warrior along). Shares: an NPC (0xF7 >= 0x80)
+// who is okay counts its share byte 0xF8 & 7, everyone else 1; of each coin
+// (copper ... jewellery) above 0 the NPCs take coins / shares, the quotient
+// cut to its low byte (the original keeps it in a byte - Game Fixes: all
+// of it; SPEC 12), times their shares. A page names each NPC who took
+// ("<name> takes and hides his share.") when any coin was there.
+bool npc_share_page(pic::Canvas& c)
+{
+    if (!pool_files() || !ground || !fw(profile::kNpcShare)[0]) return false;
+    int npc = 0, total = 0;
+    for (int i = 0; i < pt->count; ++i) {
+        const uint8_t* r = pt->m[i].rec;
+        if (r[0xF7] > 0x7F && pt->m[i].health() == party::Okay) {
+            npc += r[0xF8] & 7;
+            total += r[0xF8] & 7;
+        } else {
+            ++total;
+        }
+    }
+    if (npc <= 0 || total <= 0) return false;
+    bool any = false;
+    for (int k = 0; k < 7; ++k) {
+        if (ground->money[k] <= 0) continue;
+        int each = ground->money[k] / total;
+        if (!rules::fixes()) each &= 0xFF;
+        ground->money[k] -= each * npc;
+        any = true;
+    }
+    if (!any) return false;
+    c.clear(0);
+    layout::outer(c, d->tables, d->frame_tiles);
+    int row = 0;
+    for (int i = 0; i < pt->count; ++i) {
+        const uint8_t* r = pt->m[i].rec;
+        if (r[0xF7] <= 0x7F || pt->m[i].health() != party::Okay || !r[0xF8]) continue;
+        char t[64];
+        pt->m[i].name(t, 20);
+        snprintf(t + strlen(t), sizeof t - strlen(t), "%s", fw(profile::kNpcShare));
+        text::Writer tw;
+        text::begin(tw, c, t, text::Region{5, static_cast<int8_t>(5 + row), 34, 22}, 10, true);
+        text::step(tw, c, d->font, -1);
+        row += 2;
+    }
+    plat::log("[fight] the NPCs take their share: coins %d %d %d %d %d %d %d\n", ground->money[0], ground->money[1],
+              ground->money[2], ground->money[3], ground->money[4], ground->money[5], ground->money[6]);
+    press_enter_line(c);
+    fg->st = FSt::NpcShare;
+    dirty(0, pic::kScreenH);
+    return true;
 }
 
 // After the results: the treasure, or straight back to the script
@@ -4997,6 +5073,13 @@ void fight_treasure_only(pic::Canvas& c)
     fg->share = combat::award(b, total, !no_exp_lines());
     fg->treasure_only = true;
     screen = Screen::Fight;
+    plat::log("[fight] treasure: experience %d, each %d\n", total, fg->share);
+    if (!npc_share_page(c)) treasure_page(c);
+}
+
+// The treasure's "The party has found Treasure!" page (no fight)
+void treasure_page(pic::Canvas& c)
+{
     c.clear(0);
     layout::outer(c, d->tables, d->frame_tiles);
     char t[48];
@@ -5007,7 +5090,6 @@ void fight_treasure_only(pic::Canvas& c)
     } else {
         put(c, fw(profile::kFoundTreasure), 1, 3, 10);
     }
-    plat::log("[fight] treasure: experience %d, each %d\n", total, fg->share);
     if (!no_exp_lines()) {
         snprintf(t, sizeof t, "%s%d", fw(profile::kEachReceives), fg->share);
         put(c, t, 1, 5, 10);
@@ -5936,6 +6018,10 @@ void fight_tap(int x, int y, pic::Canvas& c)
         return;
     case FSt::OldAge:
         old_age_next(c);
+        return;
+    case FSt::NpcShare:
+        if (fg->treasure_only) treasure_page(c);
+        else results_page(c);
         return;
     case FSt::Results:
     case FSt::Destroyed:

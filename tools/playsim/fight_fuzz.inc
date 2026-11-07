@@ -238,6 +238,7 @@ bool fight(int k)
             break;
         case FSt::FleeAsk: tap_word(fpick(2) ? 'Y' : 'N'); break;
         case FSt::UseAim: play::back(C); break;
+        case FSt::NpcShare:
         case FSt::Results:
         case FSt::Destroyed: play::tap(2, 2, C); break;
         default: break;

@@ -354,6 +354,7 @@ bool     items_after_note = false;   // Pool: the items screen again once the sh
 bool     status_after_note = false;  // Pool: a character's timed words cleared once they have had their time
 int last_pic_id = -1, last_pic_head = 0xFF;   // the script's picture (shops come back to it)
 bool camping = false;              // the camp is open (the position line says so)
+bool runes_box = false;            // Pool: a CLEAR BOX since the script began (its runes may go to the box)
 int  pm_item[Data::kItems];   // the menu item on each list line
 int  pm_lines = 0;
 bool pm_picking = false;          // Darkness's Drop: "Pick Character Select" on the party menu
@@ -3669,6 +3670,10 @@ bool in_shop_items() { return view_from == Screen::Shop && !vault_on(); }
 // Use is offered to one who's up and about where the area allows it
 // (item_use_facts.md 2: record 0x196, the area word 0x4BE5)
 bool can_use_items(const party::Character& ch) { return ch.in_combat() && (vm->get(0x4BE5) & 0xFF) == 0; }
+// The area forbids magic (the same word): no Cast in camp or in its fights
+// (Pool ovr9 +0x74E the fight menu, ovr10 +0x436 the computer's casting,
+// ovr16 +0x377 the camp; coab's area_ptr.can_cast_spells)
+bool no_magic_area() { return vm && (vm->get(0x4BE5) & 0xFF) != 0; }
 
 void items_keys(char* out, size_t cap)
 {
@@ -10052,6 +10057,22 @@ void show_memory(pic::Canvas& c)
 void open_cast(pic::Canvas& c, bool exploring)
 {
     party::Character& ch = *pt->sel();
+    if (no_magic_area()) {
+        // (the area forbids magic - its word 0x4BE5: "cannot cast spells in
+        // this area" first, before the member's condition; Pool GAME.OVR
+        // ovr16 +0x377, coab's sub_443A0; DOSBox: the lizard men's keep)
+        static const struct { games::Game g; uint32_t at; } kAt[] = {
+            {games::Game::CurseOfTheAzureBonds, 0x192A4}, {games::Game::PoolOfRadiance, 0x17B33},
+            {games::Game::SecretOfTheSilverBlades, 0x1A897}};
+        char t[48];
+        t[0] = 0;
+        OvrWords src;
+        for (const auto& k : kAt)
+            if (k.g == d->prof->game && src.open()) text::read_pascal(src, k.at, t, sizeof t);
+        if (strncmp(t, "cannot cast", 11) != 0) cw(profile::kCantCastHere, t, sizeof t);   // (another release)
+        say_status(c, t);
+        return;
+    }
     if (!spells::can_cast(ch)) {
         char a[28], b[20], t[48];
         mw(profile::kNoCondition, a, sizeof a);
@@ -12921,6 +12942,7 @@ struct Host : ecl::Host {
         // window cleared; an event picture stays
         pic::Canvas& c = *cv;
         cursor_hide();
+        runes_box = true;           // (Pool's CLEARBOX sets DS 0x84DE: PROTECTION's runes may go to the box)
         if (pool_overland() && bigpic < 0 && anim_block < 0 && !(pic_shown && head_shown >= 0)) {
             // (Pool's CLEARBOX, ovr4 +0x2B14: cells 1-15 of the left box
             // cleared, nothing redrawn - in the wilderness the map stays
@@ -13172,7 +13194,10 @@ void begin_wait(pic::Canvas& c)
         // word they spell on that next row, under them (SPEC 12)
         const uint8_t* rune = nullptr;
         if (const int nr = vm->runes(&rune)) {
-            if (w.row > 13) {
+            // (only after a CLEAR BOX in this script run - ovr4 +0x2EB9 tests
+            // DS 0x84DE; else at the text cursor in the text window: DOSBox,
+            // Valjevo's slip of paper "You look at the writing...")
+            if (runes_box && w.row > 13) {
                 c.fill(8, 8, 120, 120, 0);
                 pic_shown = false;
                 w.row = 5;
@@ -13638,6 +13663,7 @@ void handle(ecl::Stop r)
     waiting = false;
     w.col = w.r.x0;                      // EXIT puts the text cursor back
     w.row = w.r.y0;
+    runes_box = false;                   // (Pool: and forgets the CLEAR BOX - ovr4 +0xEB, DS 0x84DE)
     if (party_dead && in_demo) {
         party_dead = false;
         end_demo(c);
@@ -13663,7 +13689,16 @@ void handle(ecl::Stop r)
     }
     if (d->gs.moved) {
         d->gs.moved = false;
-        after_move_redraw();
+        if (pool_files() && (then == Then::Arrive || then == Then::Idle) && vm->get(0x4BE6) && !pool_overland()) {
+            // (Pool: a move by the script after the step - back a square,
+            // turned round - leaves the old view, or the event's picture,
+            // up until the next key; DOSBox: Valjevo's laundry and kitchen.
+            // The position line shows the new square - SPEC 12)
+            d->gs.roof = geo::flags(d->map, d->gs.x, d->gs.y);
+            draw_position(c);
+        } else {
+            after_move_redraw();
+        }
     }
     switch (then) {
     case Then::Move:
@@ -13751,7 +13786,11 @@ void step(int dir_of_step)
 {
     if (waiting || then != Then::Idle) return;
     step_dir = dir_of_step;
-    clear_menu_line(*cv);
+    // (Pool: a step leaves the exploring menu line drawn until something
+    // else draws there - DOSBox: Valjevo Castle's gate, its VERTICAL MENU
+    // "What is the password?" with "Area Cast View ..." still under it)
+    if (pool_files()) menu_on = false;
+    else clear_menu_line(*cv);
     text::clear(*cv, text::kTextArea);
     dirty_rows(17, 22);
     // A step through a side that isn't solid, off the map's edge: 0x7ED5 = 1

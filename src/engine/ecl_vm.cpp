@@ -451,6 +451,7 @@ void Vm::dkk_write(uint16_t a, uint16_t v, int size)
     case 0xC04B: s_.x = b & 15; s_.moved = true; break;
     case 0xC04C: s_.y = b & 15; s_.moved = true; break;
     case 0xC04D: s_.dir = (b % 4) * 2; s_.moved = true; break;
+    case 0xC04F: if (set_.pool_map) s_.roof = b; break;      // (Pool: its DS 0x6AB1, a plain variable)
     default: break;
     }
 }
@@ -626,6 +627,7 @@ void Vm::set(uint16_t a, uint16_t v)
     case 0xC04B: s_.x = static_cast<int8_t>(v) & 15; s_.moved = true; break;
     case 0xC04C: s_.y = static_cast<int8_t>(v) & 15; s_.moved = true; break;
     case 0xC04D: s_.dir = (v % 4) * 2; s_.moved = true; break;
+    case 0xC04F: if (set_.pool_map) s_.roof = static_cast<uint8_t>(v); break;   // (Pool: its DS 0x6AB1, a plain variable)
     case 0xC059: view_bytes_[0] = static_cast<uint8_t>(v); break;     // (seen at the next redraw)
     case 0xC05F: view_bytes_[1] = static_cast<uint8_t>(v); break;
     default: break;
@@ -2039,6 +2041,14 @@ Stop Vm::step()
         if (!need(1)) return Stop::Error;
         const uint16_t w = o[0].word();
         if (w == set_.redraw_call) {
+            // (Pool, START ovr4 +0x2CFE: first the square's flags - DS 0x6AB1,
+            // C04F - from the map where the party stands, always; DOSBox:
+            // Stojanow Gate's ettins, a Flee's move then the room's test)
+            if (set_.pool_map) {
+                const uint8_t wa = s_.wall_ahead;
+                h_.square();
+                s_.wall_ahead = wa;
+            }
             // (Pool, START ovr4 +0x2CFE: only after the block's LOAD FILES /
             // LOAD PIECES - [0x4431]; a save loaded in the nomads' camp,
             // whose first run skips them, walks to the hut unseen - DOSBox)
@@ -2218,6 +2228,13 @@ Stop Vm::step()
         // the headman's picture over "HERE YOU MAY REST" the second night)
         if (set_.pool_map && !sprite_up_) return Stop::Running;
         sprite_up_ = false;
+        if (set_.pool_map) {
+            // (Pool: the view drawn again where the party stands now - after
+            // a script's move back the new square's; DOSBox: Valjevo's
+            // sleeping giants, "Sneak out quietly")
+            h_.redraw();
+            return Stop::Running;
+        }
         h_.picture(0xFF, 0xFF);
         return Stop::Running;
     case 0x32:                                  // FIND ITEM: anyone carries one of that type

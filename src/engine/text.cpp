@@ -176,7 +176,14 @@ State step(Writer& w, pic::Canvas& c, const font::Font& f, int n)
     while (n != 0) {
         if (w.pos >= w.len) {
             if (w.col > r.x1) {
-                w.col = r.x0;
+                // (Pool: a text's last character a space that hung past the
+                // edge after a punctuated word goes to the next line - its
+                // program skips spaces at a line's start only before the
+                // last character (START.EXE 0x77A4) - so the next text
+                // starts in the second column; DOSBox: Valjevo's "... FULL OF
+                // RECORDS. " then " DO YOU WISH ...")
+                const bool hung = g_punct_space && w.col == r.x1 + 2 && w.s[w.len - 1] == ' ';
+                w.col = hung ? r.x0 + 1 : r.x0;
                 ++w.row;
             }
             return w.state = State::Done;

@@ -1088,7 +1088,30 @@ the Project as claude/TODO.md.
       Gateway's / Champions' AI turning (only Curse's / Pool's known); the
       turn routines of Death Knights / the Dark Queen assumed Darkness's.
 - [ ] Pool's story beyond the nomads' camp: targeted differ runs only
-      (scripted places), fights judged by the rule checks.
+      (scripted places), fights judged by the rule checks. 2026-11-07
+      (part 17, claude/playtest_poolrad.md): every event square of
+      Valjevo (5:3-7), the Buccaneers' base (6:1), Zhentil outpost (6:28),
+      Sorcerer's island (7:22/23), the kobold caves (8:13), the lizard
+      men's keep (8:16), Stojanow Gate (2:9) run against the original
+      (saves made in the block, a scenario a square, the choices of its
+      first menu each). Fixed (Pool): the NPCs' share of treasure coins;
+      the step leaves the menu line drawn; size-0 NPC icons small; the
+      field's scattered pieces (ovr11 +0x0, d100 a square) and no
+      tables-in-rooms d10s; no Cast in a no-magic area (fight menu, the
+      computer, camp - Curse / Secret too); PROTECTION runes in the box
+      only after a CLEAR BOX; a text's hanging last space; PIC 0x78 and up
+      not big pictures; a script's move after the step keeps the old view
+      (SPRITE OFF redraws at the new square); C04F written by scripts and
+      CALL 2C90 taking the square's flags again (Stojanow's ettins' Flee).
+      Left: the silver dragon's
+      cave (6:19), the wildernesses 25 / 27, the graveyard's north, the
+      finale (Tyranthraxus); the computer's first fight turn (known, its
+      d8 / d4 / d7 rolls); the wyvern fight's first turn order (8:13,
+      after a surprise); Dirten's small icon 2-3 pixels at the head.
+- [ ] Claude: does Curse's / Secret's step also leave the exploring menu
+      line drawn under a VERTICAL MENU, keep the old view after a script's
+      move, and lack the field's d100 pieces (Pool's fixes, Pool only)?
+      Check in DOSBox.
 - [ ] Tom (2026-11-06): the 480x320 Game / Look keys are too large - that
       space under the Companion panel was meant for Companion features once
       the games run well; revisit then.
