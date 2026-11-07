@@ -1025,7 +1025,8 @@ the Project as claude/TODO.md.
       should it get the white box too ("lists' lines too")? Krynn's Modify
       marks the stat being changed in magenta. Tom, 2026-11-06: the party
       list keeps the white letters, no box (no change); the Cheats
-      Trainer's Modify marks no stat, the game's own Modify keeps its
-      marking (play.cpp draw_modify `mark`; next version).
+      Trainer's Modify was unmarked in v0.173.0 by a misunderstanding;
+      Tom: you can't tell what you're changing - the marking is back in
+      both (v0.173.1).
 - [x] Tom (2026-11-06): Right Hand / Left Hand setting for the Play
       Test's keys (Settings key; next version).

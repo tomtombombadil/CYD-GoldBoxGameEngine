@@ -2654,9 +2654,9 @@ a PC, PortMaster handhelds):
     level - the originals' formulas, made for new characters: a trained
     character's hit points can be above the upper bound, and touching the
     hit points or Constitution pulls them into it; Exit puts all back),
-    Keep recalculates as the game does; the item being changed is not
-    marked there (Tom, 2026-11-06 - the game's own Modify keeps its
-    colour). Begin Adventuring goes back to the
+    Keep recalculates as the game does; the item being changed is
+    marked in its colour as in the game's own Modify (Tom, 2026-11-06:
+    unmarked it was unusable - v0.173.1). Begin Adventuring goes back to the
     exploring menu as it was; a Load (the Dark Queen's menu has it) ends
     the cheat. Checked in the playsim (TRAINTEST=n, MODTEST, MAXHP;
     TRAINFORCE=1 opens it where the save's start stops): Pool, Curse,
