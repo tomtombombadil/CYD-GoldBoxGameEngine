@@ -6116,6 +6116,9 @@ struct MagicRules {
 bool load_rules(MagicRules*& m)
 {
     if (!d->prof->create.ds_image) return false;
+    delete m;                           // (never two copies: a block left over goes first)
+    m = nullptr;
+    make_room(8, "the rule tables");  // (its biggest block: up to 7.4 KB, the Dark Queen's tables)
     m = new (std::nothrow) MagicRules;
     if (!m) return false;
     plat::File f;
@@ -6154,11 +6157,18 @@ bool load_rules(Making*& m)
 {
     const auto& pc = d->prof->create;
     if (!pc.ds_image) return false;
+    delete m;                           // (never two copies: a block left over goes first)
+    m = nullptr;
+    make_room(8, "the rule tables");  // (its biggest block: up to 7.4 KB, the Dark Queen's tables)
     m = new (std::nothrow) Making;
     if (!m) return false;
     m->dice = create::Dice(static_cast<uint32_t>(plat::now_ms()) * 2654435761u + 1);
     plat::File f;
-    if (!open_file(d->prof->program, f)) return false;
+    if (!open_file(d->prof->program, f)) {
+        delete m;
+        m = nullptr;
+        return false;
+    }
     bool ok = false;
     {
         plat::FileSource src(f);
@@ -8686,7 +8696,12 @@ const char* magic_error();
 // A rule tables' load (load_making / load_rules) that failed: every game's
 // profile has its tables, so memory (or the program unreadable) - not a
 // missing feature (the six places said "Not in the engine yet.")
-const char* making_error() { return d->prof->create.ds_image ? "Not enough memory." : "Not in the engine yet."; }
+const char* making_error()
+{
+    if (!d->prof->create.ds_image) return "Not in the engine yet.";
+    no_memory("the rule tables");      // (the numbers to the serial log and the memory log)
+    return "Not enough memory.";
+}
 
 // Items that change class values as they're readied / put away
 // (curse_finish_facts.md 5): the Ring of Wizardry's spell slots, the
@@ -8707,7 +8722,9 @@ void item_class_values(party::Character& ch, int i)
 // (Secret, being built) or memory
 const char* magic_error()
 {
-    return d->prof->create.ds_image ? "Not enough memory." : "Spells and rules aren't in the engine for this game yet.";
+    if (!d->prof->create.ds_image) return "Spells and rules aren't in the engine for this game yet.";
+    no_memory("the magic tables");
+    return "Not enough memory.";
 }
 
 // The rule tables and spell names (from the program), for the camp
@@ -16532,7 +16549,7 @@ bool fighting() { return fg != nullptr; }
 // menu, no cast or item use under way: many screens and questions use them)
 bool magic_in_use()
 {
-    return fg || screen != Screen::Game || cr.stage != CastRun::None || cr.item >= 0;
+    return fg || (screen != Screen::Game && screen != Screen::PartyMenu) || cr.stage != CastRun::None || cr.item >= 0;
 }
 
 bool make_room(unsigned kb, const char* what)

@@ -837,6 +837,15 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   folder. Raise it only with a reason. Also since v0.87.1: the picture animation's DAX index
   (3 KB) only while a picture animates; the magic tables load alone
   (`MagicRules`, 4.7 KB) instead of in character making's 6.9 KB block.
+  Screens' peaks (2026-11-07, playsim `SCREENMEM=` + heapprof, save A,
+  all nine games): exploring 107-126 KB; training / Modify / creation /
+  Human / Knight Change +8-12 KB (biggest block 4-7.4 KB, the Dark
+  Queen's), camp magic +7-11, Merchant +13-16 (Treasures 141.7, block
+  13 KB), icon editor +15-19 (Treasures 144.5), the Dark Queen's
+  creation + Modify 134.1 (two Makings); the heap is back where it was
+  after each, and after a fight (QEMU 2.8", Curse exploring: free 78-86
+  KB, largest block 67 KB; mid-fight 66 / 55). A rule tables' load asks
+  `make_room(8)` first (the magic tables may go at the party menu too).
   (8) **careful cuts** (Tom, 2026-10-12): a reduction must not take away
   what a later game needs - the fighters are the fight's own plus
   `combat::kSpareFighters` (8) for any that join mid-fight (summons,

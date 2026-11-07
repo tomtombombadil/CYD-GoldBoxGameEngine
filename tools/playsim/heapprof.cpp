@@ -36,6 +36,7 @@ struct Block {
 bool inside = false;                    // (the tables' own allocations aren't tracked)
 std::unordered_map<void*, Block>* live = nullptr;
 size_t in_use = 0, peak = 0;
+size_t win_peak = 0, win_max = 0;       // (heapprof_window: since heapprof_window_begin)
 std::map<std::vector<void*>, std::pair<size_t, int>> peak_sites;
 uintptr_t base = 0;
 
@@ -58,6 +59,8 @@ void note(void* p, size_t n)
     Block b{n, {k > 2 ? bt[2] : nullptr, k > 3 ? bt[3] : nullptr, k > 4 ? bt[4] : nullptr}};
     (*live)[p] = b;
     in_use += n;
+    if (in_use > win_peak) win_peak = in_use;
+    if (n > win_max) win_max = n;
     if (in_use > peak + 1024 || (in_use > peak && peak_sites.empty())) {
         peak = in_use;
         peak_sites.clear();
@@ -118,6 +121,21 @@ struct AtExit {
 } at_exit;
 
 } // namespace
+
+// A screen's own highest point (SCREENMEM): the heap in use at its
+// highest since heapprof_window_begin, and the biggest single block asked for
+void heapprof_window_begin()
+{
+    win_peak = in_use;
+    win_max = 0;
+}
+
+void heapprof_window(size_t* now, size_t* high, size_t* biggest)
+{
+    *now = in_use;
+    *high = win_peak;
+    *biggest = win_max;
+}
 
 void heapprof_mark(const char* label)
 {

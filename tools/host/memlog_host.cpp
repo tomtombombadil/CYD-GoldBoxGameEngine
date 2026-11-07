@@ -2,12 +2,17 @@
 // sweep's memloop / HEAPLOG and the playsim's heapprof measure the PC side)
 #include "platform/memlog.h"
 
+#include <cstdio>
 #include <cstdlib>
 
 namespace memlog {
 
 void begin(const char*, const char*) {}
-void note(const char*) {}
+// (MEMLOG=1: the lines to stderr - make_room's drops, "NOT ENOUGH MEMORY")
+void note(const char* line)
+{
+    if (getenv("MEMLOG")) fprintf(stderr, "[memlog] %s\n", line);
+}
 void tick(bool) {}
 // (plenty: the game's make_room drops nothing here unless LOWMEM=kb
 // pretends the largest block is that small - to try the recovery)

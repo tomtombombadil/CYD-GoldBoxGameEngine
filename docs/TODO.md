@@ -102,6 +102,18 @@ the Project as claude/TODO.md.
 
 ## Claude
 
+- [x] Memory audit of the screens that load rule tables (Tom, 2026-11-07:
+      "Not enough memory sounds like a real problem"; not pushed yet):
+      every screen in all nine games measured from save A (playsim
+      SCREENMEM + heapprof) - none past 145 KB of the 150 KB budget, none
+      left memory behind; the loads now make room first (make_room 8 KB,
+      the magic tables may go at the party menu), log the numbers when
+      they still fail, never keep two copies (the fight's drain table
+      leaked the magic tables when they were loaded). Figures in
+      CLAUDE.md's memory rules.
+- [ ] Maybe later: the Dark Queen's creation Modify holds two Makings
+      (134 KB, +24.5 KB) - Modify could borrow creation's tables.
+
 - [ ] Side-steps (2026-11-06, Tom: Pool's city hall / Kuto's Well asked
       and held the party on a move away): a side-step's step script now
       sees the step's direction (SPEC 12). Pool checked by autodiff

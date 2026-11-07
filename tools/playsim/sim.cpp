@@ -24,6 +24,8 @@
 // HEAPPROF=1 with tools/playsim/heapprof.cpp linked in: the heap by call site
 void heapprof_mark(const char*) __attribute__((weak));
 static void heap_mark(const char* label) { if (heapprof_mark) heapprof_mark(label); }
+void heapprof_window_begin() __attribute__((weak));
+void heapprof_window(size_t*, size_t*, size_t*) __attribute__((weak));
 
 // The board's sound output, here: each sound rendered at once (SOUNDWAV=file
 // keeps them all in one WAV to listen to; SOUNDLOG prints them)
@@ -638,7 +640,7 @@ static int pm_line_of(char k) { for (int i = 0; i < play::pm_lines; ++i) if (pla
 // Select for the member selected)
 static void pm_tap_line(char k)
 {
-    { int px_, py_; play::pm_line_point(pm_line_of(k), &px_, &py_); play::tap(px_, py_, C); }
+    { int px_, py_; play::pm_line_point(pm_line_of(k), &px_, &py_); if (getenv("TAPLOG")) printf("  [taplog] %d %d party menu %c\n", px_, py_, k); play::tap(px_, py_, C); }
     if (strncmp(play::menu.prompt, "Pick Character", 14) == 0)
         for (int i = 0; i < play::menu.count; ++i)
             if (text::key(play::menu, i) == 'S') {
@@ -718,6 +720,7 @@ int main(int argc, char** argv)
 #endif
     if (getenv("SEED")) play::rng = create::Dice(static_cast<uint32_t>(strtoul(getenv("SEED"), nullptr, 10)));   // SEED=n: the game's dice
     // SIZES: the fight's blocks' sizes
+    if (getenv("SIZES")) printf("Making %zu MagicRules %zu Character %zu\n", sizeof(play::Making), sizeof(play::MagicRules), sizeof(party::Character));
     if (getenv("SIZES")) { printf("Fight %zu Battle %zu Page %zu Monster %zu Data %zu World %zu GameState %zu Party %zu Names %zu Ground %zu\n", sizeof(play::Fight), sizeof(combat::Battle), sizeof(play::Page), sizeof(combat::Monster), sizeof(play::Data), sizeof(view3d::World), sizeof(ecl::GameState), sizeof(party::Party), sizeof(items::Names), sizeof(*play::ground));
         printf("Fight: words %zu pages %zu icons %zu thrown %zu; Data: roster %zu guys %zu item words %zu; Battle fighters %zu (%zu each); Character %zu Vm %zu Making %zu\n",
                sizeof(((play::Fight*)0)->wbuf), sizeof(((play::Fight*)0)->page), sizeof(((play::Fight*)0)->icon), sizeof(((play::Fight*)0)->thrown),
@@ -795,11 +798,13 @@ int main(int argc, char** argv)
             }
             for (int k = 0; k < play::menu.count; ++k)
                 if (text::key(play::menu, k) == 'P') { x = text::word_col(play::menu, k) * 8 + 2; y = text::kMenuRow * 8 + 2; }
+            if (getenv("TAPLOG")) printf("  [taplog] %d %d title Play\n", x, y);
             play::tap(x, y, C);
             continue;
         }
         printf("title step %d (%d credit lines)\n", play::title_run ? play::title_run->step : -1, play::title_run ? play::title_run->n_credits : -1);
         if (getenv("TITLESHOTS")) { char t[24]; snprintf(t, sizeof t, "title_%d", play::title_run->step); shot(t); }
+        if (getenv("TAPLOG")) printf("  [taplog] 2 2 title step\n");
         play::tap(2, 2, C);
     }
     // The party menu: tap its lines by their first letter
@@ -961,6 +966,7 @@ int main(int argc, char** argv)
             return 1;
         }
         const int k = (int)(strchr(play::pm_saves, save[0]) - play::pm_saves);
+        if (getenv("TAPLOG")) printf("  [taplog] %d %d save %c\n", text::word_col(play::menu, k) * 8 + 2, text::kMenuRow * 8 + 2, save[0]);
         play::tap(text::word_col(play::menu, k) * 8 + 2, text::kMenuRow * 8 + 2, C);
         for (int i = 0; i < play::pt->count; ++i) { char n[20]; play::pt->m[i].name(n, 20); printf("  %d: %-15s AC %d HP %d/%d race %d/%d class %d saves %d %d %d %d %d levels %d %d %d %d %d %d %d\n", i, n, play::pt->m[i].ac(), play::pt->m[i].hp(), play::pt->m[i].hp_max(), play::pt->m[i].race(), play::pt->m[i].ext[party::kExtRace], play::pt->m[i].cls(), play::pt->m[i].rec[0xDF], play::pt->m[i].rec[0xE0], play::pt->m[i].rec[0xE1], play::pt->m[i].rec[0xE2], play::pt->m[i].rec[0xE3], play::pt->m[i].rec[0x109], play::pt->m[i].rec[0x10A], play::pt->m[i].rec[0x10B], play::pt->m[i].rec[0x10C], play::pt->m[i].rec[0x10D], play::pt->m[i].rec[0x10E], play::pt->m[i].rec[0x10F]); }
         if (getenv("SAVECHECK")) {      // SAVECHECK: each member's saves as the class tables make them
@@ -1798,6 +1804,81 @@ int main(int argc, char** argv)
     }
     // AFTERSHOP: SHOPRUN's steps once the moves are done (a shop or temple walked into)
     if (getenv("AFTERSHOP")) shop_run(getenv("AFTERSHOP"));
+    // SCREENMEM=a,b,...: each screen opened where the run stands (heapprof
+    // linked): the heap at its highest while it opens and the biggest block
+    // it asked for, then the heap once it's left (Back until the game's
+    // screen). trainer, train (WHO given the next level's experience),
+    // modify, change, knight (each from the Trainer's party menu), create,
+    // magic, rest, alter, icon, merchant, healer
+    if (getenv("SCREENMEM") && heapprof_window) {
+        char list[256];
+        snprintf(list, sizeof list, "%s", getenv("SCREENMEM"));
+        const int who = getenv("WHO") ? atoi(getenv("WHO")) : 0;
+        for (char* nm = strtok(list, ","); nm; nm = strtok(nullptr, ",")) {
+            size_t now0, hi, big;
+            heapprof_window(&now0, &hi, &big);
+            heapprof_window_begin();
+            const std::string n = nm;
+            const bool via_trainer = n == "trainer" || n == "train" || n == "modify" || n == "change" || n == "knight";
+            bool ok = true;
+            // (SMFORCE=1: where the start stopped - a script's wait or a town's
+            // menu - taken as the exploring screen, as TRAINFORCE)
+            auto force = [&]() {
+                if (!getenv("SMFORCE") || play::cheats_ready()) return;
+                play::waiting = false;
+                play::then = play::Then::Idle;
+                play::screen = play::Screen::Game;
+                play::camping = false;
+            };
+            if (via_trainer || n == "merchant" || n == "healer" || n == "create" || n == "qmodify") force();
+            if (via_trainer) ok = play::cheat_open(3, C);
+            if (ok && play::pt && play::pt->count) play::pt->selected = who < play::pt->count ? who : 0;
+            if (!ok) ;
+            else if (n == "train") {
+                party::Character& ch = play::pt->m[play::pt->selected];
+                if (!play::trainer) play::load_rules(play::trainer);
+                uint32_t need = 0;
+                for (int k = 0; play::trainer && k < classes::kClasses; ++k)
+                    if (ch.level(k) > 0) {
+                        const uint32_t e = (uint32_t)play::trainer->tables.exp_needed(k, ch.level(k), &ch);
+                        if (e > need && e < 0x7FFFFFF) need = e;
+                    }
+                if (ch.exp() < need) for (int b = 0; b < 4; ++b) ch.rec[0x127 + b] = (uint8_t)(need >> (8 * b));
+                play::train_character(C);
+            } else if (n == "modify") play::start_modify(C);
+            else if (n == "change") play::start_change(C);
+            else if (n == "knight") play::start_knight(C);
+            else if (n == "create" || n == "qmodify") {
+                // (qmodify: the Dark Queen's creation, then its Modify - two rule blocks at once)
+                if (play::screen != play::Screen::PartyMenu) ok = play::cheat_open(3, C);
+                if (ok) play::start_create(C);
+                if (ok && n == "qmodify") play::start_modify_new(C);
+            }
+            else if (n == "magic" || n == "rest" || n == "alter" || n == "icon") {
+                play::open_camp(C);
+                if (n == "magic") play::open_magic(C);
+                else if (n == "rest") play::open_rest(C, false);
+                else if (n == "alter") play::open_alter(C);
+                else play::start_icon(C, play::Screen::Alter);
+            } else if (n == "loadmagic") ok = play::load_magic();     // (the magic tables kept, as after a cast)
+            else if (n == "merchant") ok = play::cheat_open(1, C);
+            else if (n == "healer") ok = play::cheat_open(0, C);
+            for (int t = 0; t < 40; ++t) { g_now += 50; play::tick(g_now, C); }
+            size_t now1, hi1, big1;
+            heapprof_window(&now1, &hi1, &big1);
+            printf("  screenmem %-8s %s: before %6.1f KB, highest %6.1f KB, biggest block %5.1f KB, open %6.1f KB; screen %d [%s%s]%s\n",
+                   nm, ok ? "open" : "NOT READY", now0 / 1024.0, hi1 / 1024.0, big1 / 1024.0, now1 / 1024.0,
+                   (int)play::screen, play::menu.prompt, play::menu.s, play::note_until ? " (a note)" : "");
+            for (int k = 0; k < 8 && play::screen != play::Screen::Game; ++k) {
+                if (play::screen == play::Screen::PartyMenu && play::cheat != play::Cheat::None) play::cheat_end(C);
+                else play::back(C);
+                for (int t = 0; t < 20; ++t) { g_now += 50; play::tick(g_now, C); }
+            }
+            size_t now2;
+            heapprof_window(&now2, &hi, &big);
+            printf("  screenmem %-8s left: %6.1f KB, screen %d\n", nm, now2 / 1024.0, (int)play::screen);
+        }
+    }
     if (getenv("SAVESLOT")) {
         // Encamp, Save to that slot
         auto tap_word = [](char k) { for (int i = 0; i < play::menu.count; ++i) if (text::key(play::menu, i) == k) { int cx, cy; text::item_cell(play::menu, i, &cx, &cy); play::tap(cx * 8 + 2, cy * 8 + 2, C); return true; } return false; };
