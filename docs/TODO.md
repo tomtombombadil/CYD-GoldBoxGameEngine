@@ -1130,10 +1130,25 @@ the Project as claude/TODO.md.
       "TWO-HANDED SWORD" (16 letters) to a second line (SWORD at column
       23 of row 8), the engine fits it on row 7 (panel_text's 16
       columns). Find the original's margin (and Curse's / Secret's).
-- [ ] Claude: does Curse's / Secret's step also leave the exploring menu
+- [x] Claude: does Curse's / Secret's step also leave the exploring menu
       line drawn under a VERTICAL MENU, keep the old view after a script's
       move, and lack the field's d100 pieces (Pool's fixes, Pool only)?
-      Check in DOSBox.
+      (2026-11-07, the originals' code; facts in the Project's
+      claude/crossgame_pool_fixes_facts.md.) Field: the d100 scatter is
+      Pool's alone (no such routine in Curse / Secret / Darkness /
+      Gateway / Krynn); tables and chairs in rooms (d10s) are in Curse's
+      (coab sub_370D3, GAME.OVR 0xD936), Secret's (0xEC85), Gateway's,
+      Champions' and Death Knights' builders, NOT in Darkness's (0xBD45)
+      or Treasures' (0xCC56) - no dice there: the engine rolled them for
+      both, fixed (rooms off for the VGA games). Menu line / old view:
+      Curse's main loop (coab ovr003 / ovr015) is Pool's - no clear on a
+      step, the view drawn before the square's script - but every move
+      in Curse's, Secret's and Darkness's scripts is followed by its
+      redraw (CALL 2E10 / 2DCB / CALL 1 or END) and every vertical menu
+      by a wait that writes the menu line (PRESS BUTTON / PRESS KEY), so
+      neither difference can show there: no change. Not run in DOSBox
+      (no reachable case); Curse's DOSBox starts with "start STING
+      STING" (no title, no code wheel).
 - [ ] Tom (2026-11-06): the 480x320 Game / Look keys are too large - that
       space under the Companion panel was meant for Companion features once
       the games run well; revisit then.

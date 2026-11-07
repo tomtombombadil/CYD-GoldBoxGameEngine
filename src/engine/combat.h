@@ -760,7 +760,8 @@ void battle_start(Battle& b, create::Dice* d = nullptr);
 int squares(int size, int* sx, int* sy);
 
 // Builds the field
-// rooms: tables and chairs in rooms (Curse; Pool's ovr11 has none - no d10s)
+// rooms: tables and chairs in rooms (Curse, Secret, Gateway, Krynn; Pool's ovr11 and
+// Darkness's / Treasures' indoor builders have none - no d10s)
 void build_indoors(Battle& b, const Tables& t, const geo::Map& m, int px, int py, create::Dice& d, bool rooms = true);
 void build_outdoors(Battle& b, const Tables& t, int city, create::Dice& d);
 // Pools of Darkness's own (GAME.OVR 0xC51A; facts L9): the field plain
