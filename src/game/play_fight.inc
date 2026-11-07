@@ -515,6 +515,11 @@ void release_fighters(combat::Fighter* f);
 struct Pic4 {
     uint8_t w = 0, h = 0;
     uint8_t* px[2] = {};                // ready, attack: rows of rowb(w) bytes
+    // A 16-colour game's character icon with a colour recoloured to 0: its
+    // see-through plane after the rows (pic4_mask) - the originals make the
+    // plane from the pictures as loaded and recolour after it, so a part
+    // made colour 0 stays drawn (Pool's Dirten: all his colours 0)
+    bool own_mask = false;
 };
 
 inline bool px8() { return vga != nullptr; }
@@ -554,6 +559,12 @@ bool fight_masks() { return d->prof->variant.vga || d->prof->variant.hlib; }    
 constexpr int kMaskColour = 8;
 uint32_t mask_bytes(int w, int h) { return (static_cast<uint32_t>(w) * h + 7) / 8; }
 const uint8_t* mask_of(const uint8_t* p, int w, int h) { return fight_masks() && p ? p + rowb(w) * h : nullptr; }
+// A picture's see-through plane: Darkness's / the Dark Queen's, or an icon's own (Pic4::own_mask)
+const uint8_t* pic4_mask(const Pic4& ic, const uint8_t* p)
+{
+    if (fight_masks()) return mask_of(p, ic.w, ic.h);
+    return ic.own_mask && p ? p + rowb(ic.w) * ic.h : nullptr;
+}
 inline bool masked(const uint8_t* m, int w, int x, int y)
 {
     const int k = y * w + x;
@@ -673,10 +684,11 @@ uint8_t* load_pic4(const char* file, int block, int frame, int* w, int* h)
 bool blit_swap = false;             // Gateway's fight: its pictures' 0 and 8 swapped as they're drawn
 
 void blit4(pic::Canvas& c, const uint8_t* p, int w, int h, int x, int y, bool mirror, bool see_through, int cx0,
-           int cy0, int cx1, int cy1)
+           int cy0, int cx1, int cy1, const uint8_t* own_mk = nullptr)
 {
     if (!p) return;
-    const uint8_t* mk = see_through ? mask_of(p, w, h) : nullptr;    // (Darkness: its see-through plane)
+    // (Darkness: its see-through plane; own_mk: an icon's own, Pic4::own_mask)
+    const uint8_t* mk = !see_through ? nullptr : own_mk ? own_mk : mask_of(p, w, h);
     for (int j = 0; j < h; ++j) {
         const int yy = y + j;
         if (yy < cy0 || yy >= cy1) continue;
@@ -1035,7 +1047,7 @@ uint8_t* arena_adopt(uint8_t* p, size_t n)
 size_t pic_bytes(int w, int h) { return static_cast<size_t>(rowb(w)) * h + (fight_masks() ? mask_bytes(w, h) : 0); }
 void arena_adopt(Pic4& ic)
 {
-    for (uint8_t*& p : ic.px) p = arena_adopt(p, pic_bytes(ic.w, ic.h));
+    for (uint8_t*& p : ic.px) p = arena_adopt(p, pic_bytes(ic.w, ic.h) + (ic.own_mask ? mask_bytes(ic.w, ic.h) : 0));
 }
 // A COMSPR picture for the whole fight (the arena when there's room)
 uint8_t* fight_pic(int block)
@@ -1353,7 +1365,21 @@ void build_icon(const uint8_t* rec, Pic4& ic, bool ready_only = false)
     // (Pool: size 0 - an NPC added from a monster file, as the graveyard's
     // Dirten - draws the small pictures too; ovr18 +0x482 names the file by
     // a table of the size, DS 0x8C5; DOSBox: Valjevo's fights)
+    // (the size names the file's last letter, DS 0x8C5: 'T' = the large
+    // pictures, anything else - size 0's byte too - the small ones; Pool's
+    // DAX loader, ovr33 +0x1C8)
     const bool small = rec[0x144] == 1 || (pool_files() && rec[0x144] == 0);
+    // A 16-colour game with a colour recoloured to 0: the icon keeps its
+    // own see-through plane, made before the recolouring (the originals'
+    // loader makes it from the picture's colour 0, the head's and body's
+    // ANDed, ovr18 +0x32F; the recolouring, START 0x649C, leaves it) - a
+    // part made colour 0 is drawn, not see-through. Pool's Dirten (all his
+    // colours 0): his outline drawn in colour 0 over the wall behind him.
+    bool own = false;
+    if (!fight_masks() && !px8())
+        for (int k = 0; k < 6; ++k)
+            if (!(rec[0x145 + k] & 15) || !(rec[0x145 + k] >> 4)) own = true;
+    const size_t pb = static_cast<size_t>(rowb(kSq)) * kSq, mb = mask_bytes(kSq, kSq);
     for (int fr = 0; fr < (ready_only ? 1 : 2); ++fr) {
         int bw = 0, bh = 0, hw = 0, hh = 0;
         uint8_t* b = load_pic4("CBODY.DAX", body + (small ? 0 : 0x40) + fr * 0x80, 0, &bw, &bh);
@@ -1364,11 +1390,33 @@ void build_icon(const uint8_t* rec, Pic4& ic, bool ready_only = false)
             free(h);
             continue;
         }
-        icon_compose(b, h && hw == kSq ? h : nullptr, hh, rec + 0x145);
+        if (h && hw != kSq) {
+            free(h);
+            h = nullptr;
+        }
+        if (own) {
+            uint8_t* b2 = static_cast<uint8_t*>(realloc(b, pb + mb));
+            if (!b2) {
+                free(b);
+                free(h);
+                continue;
+            }
+            b = b2;
+            uint8_t* m = b + pb;
+            memset(m, 0, mb);
+            for (int y = 0; y < kSq; ++y)
+                for (int x = 0; x < kSq; ++x)
+                    if (!nib(b, kSq, x, y) && !(h && y < hh && nib(h, kSq, x, y))) {
+                        const int k = y * kSq + x;
+                        m[k >> 3] = static_cast<uint8_t>(m[k >> 3] | 1 << (k & 7));
+                    }
+        }
+        icon_compose(b, h, hh, rec + 0x145);
         free(h);
         ic.px[fr] = b;
         ic.w = ic.h = kSq;
     }
+    if (own && (ic.px[0] || ic.px[1])) ic.own_mask = true;
 }
 
 // A party member's icon: the head over the body's top rows, recoloured
@@ -1509,7 +1557,8 @@ void draw_icon(pic::Canvas& c, int i, bool attack = false, bool bare = false)
         }
     }
     const int x = kViewX + (f.x - fg->b.vx) * kSq, y = kViewY + (f.y - fg->b.vy) * kSq;
-    blit4(c, p, ic.w, ic.h, x, y, f.facing >= 4, true, kViewX, kViewY, kViewX + 7 * kSq, kViewY + 7 * kSq);
+    blit4(c, p, ic.w, ic.h, x, y, f.facing >= 4, true, kViewX, kViewY, kViewX + 7 * kSq, kViewY + 7 * kSq,
+          ic.own_mask ? pic4_mask(ic, p) : nullptr);
 }
 
 void draw_square(pic::Canvas& c, int x, int y)

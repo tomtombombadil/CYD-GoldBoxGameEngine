@@ -4956,8 +4956,10 @@ void draw_big_icon()
     LGFX& g = ui::gfx();
     g.startWrite();
     g.fillRect(a.x, a.y, a.w, a.h, ui::large() ? style::kBackground : frame::colour(0));
+    g.fillRect(bx, by, 24 * s, 24 * s, frame::colour(0));       // (behind the see-through pixels, as before)
     for (int y = 0; y < 24; ++y)
-        for (int x = 0; x < 24; ++x) g.fillRect(bx + x * s, by + y * s, s, s, frame::colour(px[y * 24 + x]));
+        for (int x = 0; x < 24; ++x)
+            if (px[y * 24 + x] != 0xFF) g.fillRect(bx + x * s, by + y * s, s, s, frame::colour(px[y * 24 + x]));
     g.endWrite();
     ui::text_center({a.x, by + 24 * s + 2, a.w, lh}, big_action ? "Action" : "Ready", style::kText, ui::Font::Small);
 }

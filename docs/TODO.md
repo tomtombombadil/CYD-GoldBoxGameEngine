@@ -1107,7 +1107,29 @@ the Project as claude/TODO.md.
       cave (6:19), the wildernesses 25 / 27, the graveyard's north, the
       finale (Tyranthraxus); the computer's first fight turn (known, its
       d8 / d4 / d7 rolls); the wyvern fight's first turn order (8:13,
-      after a surprise); Dirten's small icon 2-3 pixels at the head.
+      after a surprise); Dirten's small icon 2-3 pixels at the head
+      (fixed v0.176.x, below).
+- [x] Tom: Dirten's graphics (PoolRad). The original builds a character
+      icon by loading head / body with a see-through plane made from
+      their colour 0 (ANDed, ovr18 +0x32F), then recolours (START
+      0x649C) - a part recoloured to 0 stays drawn. The engine took
+      colour 0 as see-through after recolouring: Dirten's record (size 0,
+      every colour 0 - made by the part 13 tools' saves; a real ADD NPC
+      gives size 2 and d6 colours, checked in DOSBox at the bishop's
+      study) lost his outline over the wall behind him. Now an icon with
+      a colour nibble 0 keeps its own see-through plane (Pic4::own_mask,
+      every 16-colour game - Curse's loader is the same, alter_icon_facts
+      1.6; also the icon editor's black parts): battlefield, View's Icon
+      Portrait, the Companion's Party view, the editor's pair and big
+      preview. View's Icon Portrait drew Pool's NPCs from CPIC (not
+      Pool's rule) - now their own icon. Differ: Valjevo 12,15 (/C, the
+      first fight screen) 0 px at Dirten (DOS memory: slot 6's pixels and
+      plane = the model; WARRIOR, Bakshi, Phineas too); the bishop's
+      join: the record identical with the d6s told.
+- [ ] Claude: the fight panel's weapon line - PoolRad's original wraps
+      "TWO-HANDED SWORD" (16 letters) to a second line (SWORD at column
+      23 of row 8), the engine fits it on row 7 (panel_text's 16
+      columns). Find the original's margin (and Curse's / Secret's).
 - [ ] Claude: does Curse's / Secret's step also leave the exploring menu
       line drawn under a VERTICAL MENU, keep the old view after a script's
       move, and lack the field's d100 pieces (Pool's fixes, Pool only)?

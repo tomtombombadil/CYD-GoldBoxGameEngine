@@ -14143,7 +14143,8 @@ void view_box(pic::Canvas& c, const party::Character& ch)
     // The combat icon, 3 x 3 a pixel (72 x 72) in the middle; an NPC from
     // the monsters' files: its own picture (as in fights)
     Pic4 ic;
-    if (ch.rec[0xF7] >= 0x80 && ch.rec[0x126] && !ch.rec[0x141] && !ch.rec[0x142]) {
+    if (!pool_files() && ch.rec[0xF7] >= 0x80 && ch.rec[0x126] && !ch.rec[0x141] && !ch.rec[0x142]) {
+        // (not Pool: its NPCs are drawn as characters - compose_icon)
         char file[16];
         area_fmt(file, sizeof file, "CPIC%d.DAX");
         for (int fr = 0; fr < 2; ++fr) {
@@ -14157,10 +14158,11 @@ void view_box(pic::Canvas& c, const party::Character& ch)
     if (p && ic.w && ic.h) {
         const int sc = ic.w > 24 || ic.h > 24 ? 1 : 3;     // (a 48-pixel monster: as it is)
         const int ox = x0 + (88 - ic.w * sc) / 2, oy = y0 + (88 - ic.h * sc) / 2;
+        const uint8_t* mk = ic.own_mask ? pic4_mask(ic, p) : nullptr;
         for (int j = 0; j < ic.h; ++j)
             for (int i = 0; i < ic.w; ++i) {
                 const int v = nib(p, ic.w, i, j);
-                if (v) c.fill(ox + i * sc, oy + j * sc, sc, sc, static_cast<uint8_t>(v));
+                if (mk ? !masked(mk, ic.w, i, j) : v != 0) c.fill(ox + i * sc, oy + j * sc, sc, sc, static_cast<uint8_t>(v));
             }
     }
     free_pic(ic);
@@ -14238,8 +14240,10 @@ void icon_pair(pic::Canvas& c, const Pic4& ic, int y)
     c.fill(32, y, 96, kSq, 0);
     blit4(c, ie->base[0].px[0], ie->base[0].w, ie->base[0].h, 32, y, false, true, 0, 0, pic::kScreenW, pic::kScreenH);
     blit4(c, ie->base[1].px[0], ie->base[1].w, ie->base[1].h, 104, y, false, true, 0, 0, pic::kScreenW, pic::kScreenH);
-    blit4(c, ic.px[0], ic.w, ic.h, 32, y, false, true, 0, 0, pic::kScreenW, pic::kScreenH);
-    blit4(c, ic.px[1], ic.w, ic.h, 104, y, false, true, 0, 0, pic::kScreenW, pic::kScreenH);
+    blit4(c, ic.px[0], ic.w, ic.h, 32, y, false, true, 0, 0, pic::kScreenW, pic::kScreenH,
+          ic.own_mask ? pic4_mask(ic, ic.px[0]) : nullptr);
+    blit4(c, ic.px[1], ic.w, ic.h, 104, y, false, true, 0, 0, pic::kScreenW, pic::kScreenH,
+          ic.own_mask ? pic4_mask(ic, ic.px[1]) : nullptr);
     dirty(y, y + kSq);
 }
 
@@ -16376,7 +16380,7 @@ bool panel_icon(int i, uint8_t* px, uint8_t* see, int* w, int* h)
     bool ok = false;
     if (ic && ic->px[0] && ic->w && ic->h) {
         const uint8_t* p = ic->px[0];
-        const uint8_t* mk = mask_of(p, ic->w, ic->h);
+        const uint8_t* mk = pic4_mask(*ic, p);
         const int st = ic->w > 24 || ic->h > 24 ? 2 : 1;
         const int ow = ic->w / st > 24 ? 24 : ic->w / st, oh = ic->h / st > 24 ? 24 : ic->h / st;
         memset(see, 0, (24 * 24 + 7) / 8);
@@ -16502,8 +16506,12 @@ bool icon_preview(bool action, uint8_t* out)
     const Pic4& ic = ie->new_ic;
     const uint8_t* p = ic.px[action ? 1 : 0];
     if (!p || ic.w != kSq || ic.h != kSq) return false;
+    const uint8_t* mk = ic.own_mask ? pic4_mask(ic, p) : nullptr;
     for (int y = 0; y < kSq; ++y)
-        for (int x = 0; x < kSq; ++x) out[y * kSq + x] = static_cast<uint8_t>(nib(p, kSq, x, y));
+        for (int x = 0; x < kSq; ++x) {
+            const int v = nib(p, kSq, x, y);
+            out[y * kSq + x] = static_cast<uint8_t>(mk ? (masked(mk, kSq, x, y) ? 0xFF : v) : v ? v : 0xFF);
+        }
     return true;
 }
 
