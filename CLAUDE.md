@@ -72,6 +72,8 @@ HAL, CI, flasher and UI rules come from there; copy from it freely.
 ## Decisions (Tom, 2026-10-06)
 - Game names: PoolRad, Curse, Secret, Darkness. Target = the GOG releases
   (their DOS files and their journal PDFs).
+  In anything said to Tom use these names - never "Pool" / "Pool's" (Tom,
+  2026-11-06: vague between Pool of Radiance and Pools of Darkness).
 - Controls: tap what the game shows (menu words, list lines, combat squares);
   keys only for what isn't on screen - one row of 8 under the game on
   320x240, a 3x3 pad + keys under it on 480x320 (SPEC section 4). Exploring
