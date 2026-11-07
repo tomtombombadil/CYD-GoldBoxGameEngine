@@ -1080,6 +1080,26 @@ int main(int argc, char** argv)
                 printf("  %c: screen %d pm_sel %d plist %d sel char %d menu [%s%s] sel %d\n", *q, (int)play::screen, play::pm_sel, play::plist.index, play::pt->selected, play::menu.prompt, play::menu.s, play::menu.selected);
             }
         }
+        if (getenv("MODOPS")) {
+            // MODOPS: Modify Character (a training hall's party menu, 0x7EA8
+            // set) for character WHO, then u d l r s # as NAVOPS
+            play::vm->set(0x7EA8, 0xFF);
+            play::pt->selected = getenv("WHO") ? atoi(getenv("WHO")) : 0;
+            play::start_modify(C);
+            printf("  modify: screen %d menu [%s%s] sel %d\n", (int)play::screen, play::menu.prompt, play::menu.s, play::menu.selected);
+            for (const char* q = getenv("MODOPS"); *q; ++q) {
+                int x = 0, y = 0;
+                switch (*q) {
+                case 'u': play::nav(play::Nav::Up, C); break;
+                case 'd': play::nav(play::Nav::Down, C); break;
+                case 'l': play::nav(play::Nav::Left, C); break;
+                case 'r': play::nav(play::Nav::Right, C); break;
+                case 's': if (play::nav_point(&x, &y)) { printf("  select at %d,%d\n", x, y); play::tap(x, y, C); } break;
+                case '#': shot("modify"); continue;
+                }
+                printf("  %c: screen %d item %d on menu %d menu [%s%s] sel %d\n", *q, (int)play::screen, play::mod_item, (int)play::mod_menu, play::menu.prompt, play::menu.s, play::menu.selected);
+            }
+        }
         if (getenv("ICONKEYS")) {
             // ICONKEYS: the icon editor (Alter -> Icon) for character WHO, then
             // these keys as the menu's letters (# a snapshot, x Esc)
