@@ -1039,6 +1039,12 @@ the Project as claude/TODO.md.
       Curse's former clerics turning (+ AI turn before spells; column 0 the
       original's, Game Fixes the level's), the moons' caster level
       (Champions, Death Knights) and Death Knights' moon saves.
+- [ ] Dark Queen: the Cheats Trainer's party menu logs repeated "Not in
+      the engine yet." (navcheck NMODIFY run, 2026-11-06) - find which
+      menu line and fill it in.
+- [ ] Death Knights: a monkey fight once reported "fighter 1's turn
+      without Move (moves 0, rec move 6)" (navcheck NMODIFY=60 seed 2,
+      before the boot-into-Trainer change) - replay and explain.
 - [ ] Rule-check gaps left from round 4: items used outside fights for
       Pool / Darkness / Gateway / Treasures / Krynn (Curse and Secret have
       checks); spells offered at training (Curse's list stops at 5th level -
