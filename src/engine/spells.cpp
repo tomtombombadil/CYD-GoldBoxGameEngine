@@ -218,6 +218,33 @@ int cast(party::Party& p, int caster, int target, const CampSpell& cs, const cla
         if (flame != 2 && cs.word) o.say(caster, Said::Word);
         break;
     }
+    case Does::Animate: {
+        // Pool's Animate Dead in camp - the handler its fights run too
+        // (GAME.OVR ovr 23 +0x206F; combat.cpp's SpellDoes::Animate): up to
+        // the caster's power, each dead member never animated (0x11A 0) gets
+        // up on the caster's side, run by the computer - undead, attack
+        // level 0, 6 moves, no spells, control 0xB2 / 0xB3, 0x11A 4 - with
+        // the effect (data: its own side x 16 + power) and "is animated";
+        // the fight's end lays them down again (play_fight.inc)
+        int left = pw;
+        for (int k = 0; k < n && left > 0; ++k) {
+            party::Character& c = p.m[who[k]];
+            if (c.health() != party::Dead || c.rec[0x11A] != 0) continue;
+            --left;
+            const int side = c.rec[kSide] ? 1 : 0;
+            c.rec[kSide] = me.rec[kSide];
+            c.rec[0xE9] = 2;
+            c.rec[0xDD] = 0;
+            c.rec[0x1A5] = 6;
+            for (int s = 0; s < 84; ++s) c.rec[0x1E + s] = 0;
+            c.rec[0xF7] = c.rec[0xF7] > 0x7F ? 0xB2 : 0xB3;
+            c.rec[0x11A] = 4;
+            if (cures.animate_dead) give(c, cures.animate_dead, 0, side << 4 | (pw & 0x0F), true);
+            if (cs.word) o.say(who[k], Said::Word);
+            c.rec[kHealth] = party::Animated;
+        }
+        break;
+    }
     case Does::Affect: affect_all(pw, false); break;
     case Does::Prayer: affect_all(me.rec[kSide] * 16 + pw, false); break;
     case Does::Mirror: affect_all(t.lay.pool ? d.roll(4, 1) : (d.roll(4, 1) << 4) + pw, false); break;   // (Pool: the images alone)

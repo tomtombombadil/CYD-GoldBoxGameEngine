@@ -327,6 +327,10 @@ struct Profile {
         // text::kCString) in the engine's list order, instead of `items`
         const uint32_t* words = nullptr;
         uint8_t n_words = 0;
+        // Dark Queen: the camp's Load - "Game not saved. Load anyway? "
+        // unless saved in this camp, then the party menu's Load with the
+        // party gone (0: no Load in the camp)
+        uint32_t camp_load_anyway = 0;
     } party;
 
     // View Character: name tables in the program and the screen's words

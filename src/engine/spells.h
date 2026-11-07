@@ -83,6 +83,8 @@ enum class Does : uint8_t {
     DkRestore,      // Restoration: a lost level back as its program does (create::dk_restore; nothing said)
     ProtFire,       // Protection from Fire: a ranger gets the spell's effect for the caster's level, others
                     // Resist Fire's (Facts::resist_fire) for the spell's time (word either way)
+    Animate,        // Pool's Animate Dead (its one handler for camp and fights): up to `power` dead members
+                    // animated, the computer's to run, until a fight ends (CureFacts::animate_dead; word)
 };
 struct CampSpell {
     uint8_t  spell;

@@ -233,6 +233,7 @@ void cheat_free_goods();
 void cheat_end(pic::Canvas& c);
 bool cheat_draw_shop(pic::Canvas& c);
 const char* rw(int i) { return d->roster[i]; }
+const char* making_error();
 ecl::Vm* vm = nullptr;
 Host* host = nullptr;
 alignas(ecl::Vm) uint8_t vm_mem[sizeof(ecl::Vm)];
@@ -3634,7 +3635,7 @@ void draw_list(pic::Canvas& c, const char* prompt, const char* what)
 
 enum class Ask : uint8_t { None, Overwrite, Drop, DropSure, Reroll, SaveNew, OverwriteNew, DropItem, SellDeal, IdDeal,
                           LeaveCoins, CureAnyway, PayCure, Train, MemorizeThese, StopRest, LoseIt, AlterDrop, QuitDos,
-                          ScribeThese, ScribeThese2, UseIt, PaladinCure, AlterSure, Knight };
+                          ScribeThese, ScribeThese2, UseIt, PaladinCure, AlterSure, Knight, CampLoad };
 void ask_yes_no(pic::Canvas& c, Ask what, const char* prompt);
 void ask_create(pic::Canvas& c, Ask what, const char* prompt);
 bool view_yes_no(Ask what, char k, pic::Canvas& c);
@@ -4565,6 +4566,7 @@ void back_from_save(pic::Canvas& c)
 
 void aw(int i, char* out, size_t cap);
 bool quit_from_camp = false;         // (Pool: the camp's save asked "Quit TO DOS")
+bool camp_saved = false;             // (saved since this camp began: the Dark Queen's camp Load)
 void save_tap(int x, int y, pic::Canvas& c)
 {
     if (y < text::kMenuTapTop) return;
@@ -4588,13 +4590,16 @@ void save_tap(int x, int y, pic::Canvas& c)
         memlog::note(m);
     }
     back_from_save(c);
+    if (ok && screen == Screen::Camp) camp_saved = true;     // (the Dark Queen's camp Load asks no more)
     if (!ok) {
         char t[48];
         snprintf(t, sizeof t, "Couldn't save game %c on the card.", slot);
         error(c, t);
-    } else if (screen == Screen::Camp && d->prof->game == games::Game::PoolOfRadiance) {
+    } else if (screen == Screen::Camp && (d->prof->game == games::Game::PoolOfRadiance ||
+                                          d->prof->alter.words[profile::kCampQuitToDos])) {
         // (Pool: the camp's save asks "Quit TO DOS " - its own words, no
-        // colon: ovr16 +0x1F56; DOSBox)
+        // colon: ovr16 +0x1F56; DOSBox; the Dark Queen's "Exit to DOS? " -
+        // DOSBox)
         aw(d->prof->alter.words[profile::kCampQuitToDos] ? profile::kCampQuitToDos : profile::kQuitToDos, t, sizeof t);
         quit_from_camp = true;
         ask_yes_no(c, Ask::QuitDos, t);
@@ -4738,6 +4743,7 @@ void tr_crown_used(pic::Canvas& c);
 void open_camp(pic::Canvas& c)
 {
     camp_heal_steps = 0;
+    camp_saved = false;
     dk_own[kDkCamp] = 0;
     screen = Screen::Camp;
     if (d->prof->variant.tr) {
@@ -4787,6 +4793,54 @@ void leave_camp(pic::Canvas& c)
     idle_menu(c);
 }
 
+// The Dark Queen's camp Load (DOSBox): "Game not saved. Load anyway? Yes
+// No" unless the party saved in this camp (a camp left and made again asks
+// again); No - the camp's menu; Yes (or saved) - the party is gone and the
+// party menu's Load asks "Load from where?" (its Exit: the party menu,
+// empty; a game loaded: the party menu with its party)
+uint8_t start_speed();
+void leave_party(int i);
+void pm_choose_key(char key, pic::Canvas& c);
+void camp_load_go(pic::Canvas& c)
+{
+    if (cheat != Cheat::None) cheat_end(c);         // (the Cheats tab's Sanctuary)
+    end_magic();
+    camping = false;
+    camp_from_script = false;
+    waiting = false;
+    then = Then::Idle;
+    while (pt->count) leave_party(pt->count - 1);
+    anim_stop();
+    pic_shown = false;
+    vm->set(0x4BFC, start_speed());                 // (the programs' per-run reset, as a lost party's)
+    screen = Screen::PartyMenu;
+    draw_party_menu(c);
+    pm_choose_key('L', c);
+}
+
+void camp_load(pic::Canvas& c)
+{
+    if (camp_saved) {
+        camp_load_go(c);
+        return;
+    }
+    char t[40];
+    ow(d->prof->party.camp_load_anyway, t, sizeof t);
+    ask_yes_no(c, Ask::CampLoad, t);
+}
+
+bool camp_load_yes_no(Ask what, char k, pic::Canvas& c)
+{
+    if (what != Ask::CampLoad) return false;
+    if (k == 'Y') {
+        camp_load_go(c);
+        return true;
+    }
+    screen = Screen::Camp;
+    draw_camp(c);
+    return true;
+}
+
 void camp_tap(int x, int y, pic::Canvas& c)
 {
     const int row = y / 8, col = x / 8;
@@ -4804,6 +4858,9 @@ void camp_tap(int x, int y, pic::Canvas& c)
         case 'F': fix_party(c); break;
         case 'C':
             if (tr_crown()) tr_crown_used(c);
+            break;
+        case 'L':
+            if (d->prof->party.camp_load_anyway) camp_load(c);
             break;
         case 'E': leave_camp(c); break;
         case 0: break;
@@ -5416,6 +5473,7 @@ void yes_no_key(char k, pic::Canvas& c)
     if (knight_yes_no(what, k, c)) return;
     if (magic_yes_no(what, k, c)) return;
     if (alter_yes_no(what, k, c)) return;
+    if (camp_load_yes_no(what, k, c)) return;
     party::Character* ch = pt->sel();
     char nm[20] = {}, t[64];
     if (ch) ch->name(nm, sizeof nm);
@@ -6324,7 +6382,7 @@ void start_change(pic::Canvas& c)
     if (!load_making()) {
         delete mk;
         mk = nullptr;
-        pm_prompt(c, "Not in the engine yet.");
+        pm_prompt(c, making_error());
         return;
     }
     mk->stage = 4;
@@ -6412,7 +6470,7 @@ void start_create(pic::Canvas& c)
     if (!load_making()) {
         delete mk;
         mk = nullptr;
-        pm_prompt(c, "Not in the engine yet.");
+        pm_prompt(c, making_error());
         return;
     }
     pick_stage(0, c);
@@ -8625,6 +8683,10 @@ void end_magic()
 
 bool load_magic();
 const char* magic_error();
+// A rule tables' load (load_making / load_rules) that failed: every game's
+// profile has its tables, so memory (or the program unreadable) - not a
+// missing feature (the six places said "Not in the engine yet.")
+const char* making_error() { return d->prof->create.ds_image ? "Not enough memory." : "Not in the engine yet."; }
 
 // Items that change class values as they're readied / put away
 // (curse_finish_facts.md 5): the Ring of Wizardry's spell slots, the
@@ -11012,7 +11074,7 @@ void train_character(pic::Canvas& c)
     }
     if (!trainer && !load_rules(trainer)) {
         end_training();
-        error(c, "Not in the engine yet.");
+        error(c, making_error());
         return;
     }
     const classes::Tables& t = trainer->tables;
@@ -11128,7 +11190,7 @@ void start_knight(pic::Canvas& c)
     if (!ch || (!krynn_rules() && !hl())) return;
     if (!trainer && !load_rules(trainer)) {
         end_training();
-        error(c, "Not in the engine yet.");
+        error(c, making_error());
         return;
     }
     const int order = ch->ext[party::kExtKnight];
@@ -11195,6 +11257,12 @@ bool knight_yes_no(Ask what, char k, pic::Canvas& c)
 // puts everything back, Keep keeps it. Others: "NAME can't be modified."
 
 Making* modder = nullptr;               // the rule tables, and the character as it was (ch)
+// The Dark Queen's creation: "Reroll Stats Modify Done Exit"'s Modify is the
+// same screen on the character being made (DOSBox: Keep / Exit back to that
+// menu, the changes kept / put back) - mk->ch instead of the party's member
+bool mod_new = false;
+party::Character* mod_ch() { return mod_new && mk ? &mk->ch : pt->sel(); }
+void q_rolled_menu(pic::Canvas& c);
 int mod_item = 0;                       // 0-5 the stats, 6 the hit points, 7 the name
 // Darkness: the menu word last used stays lit (0 Add, 1 Subtract), and the
 // name, once Modify has drawn it, is green (GAME.OVR 0x16606; DOSBox)
@@ -11219,7 +11287,7 @@ void modify_menu_line(pic::Canvas& c)
 
 void draw_modify(pic::Canvas& c)
 {
-    party::Character* ch = pt->sel();
+    party::Character* ch = mod_ch();
     if (!ch) return;
     if (hl() && names) {
         // (the Dark Queen's Modify shows the character without the items
@@ -11356,7 +11424,7 @@ void draw_modify(pic::Canvas& c)
 
 void end_modify(pic::Canvas& c, bool keep)
 {
-    party::Character* ch = pt->sel();
+    party::Character* ch = mod_ch();
     if (ch && modder) {
         if (keep) create::modify_done(*ch, modder->tables, modder->facts);
         else *ch = modder->ch;
@@ -11386,8 +11454,39 @@ void end_modify(pic::Canvas& c, bool keep)
     input_mode = Input::None;
     input_engine = false;
     engine_ask = EngineAsk::Name;
+    if (mod_new) {
+        mod_new = false;
+        if (mk) {
+            screen = Screen::QRolled;
+            show_new_character(c);
+            q_rolled_menu(c);
+            return;
+        }
+    }
     screen = Screen::PartyMenu;
     draw_party_menu(c);
+}
+
+// The Dark Queen's new character (its Reroll menu's Modify): the bounds are
+// a new character's - no can_modify question
+void start_modify_new(pic::Canvas& c)
+{
+    if (!mk) return;
+    create::g_modify_keep_hp = 0;
+    if (!load_rules(modder)) {
+        delete modder;
+        modder = nullptr;
+        error(c, making_error());
+        return;
+    }
+    mod_new = true;
+    modder->ch = mk->ch;
+    mod_item = 0;
+    mod_word = 0;
+    mod_menu = false;
+    mod_name_seen = false;
+    screen = Screen::Modify;
+    draw_modify(c);
 }
 
 void start_modify(pic::Canvas& c)
@@ -11411,7 +11510,7 @@ void start_modify(pic::Canvas& c)
     if (!load_rules(modder)) {
         delete modder;
         modder = nullptr;
-        pm_prompt(c, "Not in the engine yet.");
+        pm_prompt(c, making_error());
         return;
     }
     modder->ch = *ch;
@@ -11426,7 +11525,7 @@ void start_modify(pic::Canvas& c)
 // A step down (dir < 0) or up of the item being changed
 void modify_step(int dir, pic::Canvas& c)
 {
-    party::Character* ch = pt->sel();
+    party::Character* ch = mod_ch();
     if (!ch || !modder || input_mode != Input::None) return;
     if (mod_item < 6) create::modify_stat(*ch, modder->tables, modder->facts, mod_item, dir);
     else if (mod_item == 6) create::modify_hp(*ch, modder->tables, modder->facts, dir);
@@ -18480,7 +18579,7 @@ void input_key(char k, pic::Canvas& c)
         }
         if (engine_ask == EngineAsk::ModName) {
             engine_ask = EngineAsk::Name;
-            if (pt->sel()) create::set_name(*pt->sel(), input_buf);
+            if (mod_ch()) create::set_name(*mod_ch(), input_buf);
             draw_modify(c);
             return;
         }

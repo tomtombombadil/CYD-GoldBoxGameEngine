@@ -289,7 +289,7 @@ void mod_arrows()
     static party::Character a0, by_key;
     char t[160];
     for (int dir = 1; dir >= -1; dir -= 2) {
-        party::Character* ch = pt->sel();
+        party::Character* ch = mod_ch();
         if (!ch || !in_modify() || mod_menu) return;
         a0 = *ch;
         const int item = mod_item;
@@ -303,13 +303,13 @@ void mod_arrows()
             return;
         }
         mod_mark_check(dir > 0 ? "after Right" : "after Left");
-        by_key = *pt->sel();
-        *pt->sel() = a0;
+        by_key = *mod_ch();
+        *mod_ch() = a0;
         modify_step(dir, C);
-        if (!same_char(by_key, *pt->sel())) {
+        if (!same_char(by_key, *mod_ch())) {
             snprintf(t, sizeof t, "%s on item %d: not the arrows' value (stat %d / hp %d by key, %d / %d by the arrow)",
                      dir > 0 ? "Right" : "Left", item, item < 6 ? by_key.stat(item) : 0, by_key.hp(),
-                     item < 6 ? pt->sel()->stat(item) : 0, pt->sel()->hp());
+                     item < 6 ? mod_ch()->stat(item) : 0, mod_ch()->hp());
             fail("M4", t);
         }
     }
@@ -340,7 +340,7 @@ void mod_menu_checks(bool pixels)
         }
     }
     static party::Character a0;
-    a0 = *pt->sel();
+    a0 = *mod_ch();
     nav(Nav::Right, C);
     if (!in_modify() || !mod_menu) {
         fail("M2", "Right on the menu line left it");
@@ -351,7 +351,7 @@ void mod_menu_checks(bool pixels)
         fail("M2", t);
     }
     else if (pixels && (!menu_word_lit(menu.selected, &whole) || !whole)) fail("M2", "the word moved to isn't lit");
-    if (!same_char(a0, *pt->sel())) fail("M2", "Right on the menu line changed a value");
+    if (!same_char(a0, *mod_ch())) fail("M2", "Right on the menu line changed a value");
     nav(Nav::Left, C);
     if (!in_modify() || menu.selected != sel) {
         snprintf(t, sizeof t, "Left didn't come back (%d -> %d)", sel, in_modify() ? menu.selected : -1);
@@ -388,7 +388,7 @@ void mod_select_word()
     const int sel = menu.selected;
     const char key = text::key(menu, sel);
     const int item = mod_item;
-    a0 = *pt->sel();
+    a0 = *mod_ch();
     select_at(x, y);
     if (!d) return;
     switch (key) {
@@ -406,10 +406,10 @@ void mod_select_word()
             fail("M3", t);
             return;
         }
-        by_key = *pt->sel();
-        *pt->sel() = a0;
+        by_key = *mod_ch();
+        *mod_ch() = a0;
         modify_step(key == 'A' ? 1 : -1, C);
-        if (!same_char(by_key, *pt->sel())) {
+        if (!same_char(by_key, *mod_ch())) {
             snprintf(t, sizeof t, "Select on '%c' (item %d): not the arrows' value", key, item);
             fail("M3", t);
         }

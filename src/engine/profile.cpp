@@ -1124,11 +1124,16 @@ constexpr spells::CampSpell kPoolCamp[] = {
     {0x1E, Does::Affect, 0, 0, 0, 0x28A21},
     {0x20, Does::Mirror, 0, 0, 0, 0x28A94},
     {0x23, Does::Strength, 0, 0, 0, 0},
+    // (Animate Dead and Blink: not combat-only - Pool's camp refuses only a
+    // spell whose byte 7 is 0, ovr23 +0xC4C - and their handlers are the
+    // fights' own: ovr23 +0x206F "is animated", +0x263D "is blinking")
+    {0x24, Does::Animate, 0, 0, 0, 0x2907B},
     {0x25, Does::CureBlind, 0, 0, 0, 0},
     {0x27, Does::CureDisease, 0, 0, 0, 0},
     {0x29, Does::Dispel, 0, 0, 0, 0x280F5},
     {0x2A, Does::Prayer, 0, 0, 0, 0x294E3},
     {0x2B, Does::RemoveCurse, 0, 0, 0, 0},
+    {0x2D, Does::Affect, 0, 0, 0, 0x29649},
     {0x2E, Does::Dispel, 0, 0, 0, 0x280F5},
     {0x30, Does::Haste, 0, 0, 0, 0x298A0},
     {0x32, Does::Affect, 0, 0, 0, 0x28A21},
@@ -2188,6 +2193,7 @@ constexpr combat::FightSpell kQueenFightSpells[] = {
     {0x87, SpellDoes::Affect, 0, 0, 0, 0, 0, 0},                      // Scroll of Protection (nothing said)
     {0x88, SpellDoes::Affect, 0, 0, 0, 0, 0, 0},                      // Potion of Invisibility
     {0x89, SpellDoes::Heal, 2, 4, 2, 0, 0, qw(0x88E0)},               // Potion of Extra Healing: "is Healed"
+    {0x5F, SpellDoes::Affect, 0, 0, 0, 0, 0, 0},                      // (Death Knights' scroll of protection: as theirs)
 };
 constexpr spells::CampSpell kQueenCamp[] = {
     {0x01, Does::Affect, 0, 0, 0, kJ | 0},   // Bless: "is Blessed"
@@ -2260,6 +2266,9 @@ constexpr spells::CampSpell kQueenCamp[] = {
     {0x87, Does::Affect, 0, 0, 0, 0},
     {0x88, Does::Affect, 0, 0, 0, 0},
     {0x89, Does::Heal, 2, 4, 2, qw(0x88E0)},
+    // (row 0x5F: Darkness's / Death Knights' scroll of protection, an item's
+    // spell - "when" 2 - on items brought from Death Knights: as theirs)
+    {0x5F, Does::Affect, 0, 0, 0, 0},
 };
 constexpr auto kQueenFight = [] {
     decltype(Profile::fight) f{};
@@ -2310,6 +2319,7 @@ constexpr spells::CampSpell kDeathKnightsCamp[] = {
     {0x29, Does::Dispel, 0, 0, 0, kP | 0xDA04},            // Dispel Magic: "is affected"
     {0x2A, Does::Prayer, 0, 0, 0, kP | 0xDDBF},            // Prayer: "is praying"
     {0x2B, Does::RemoveCurse, 0, 0, 0, 0},
+    {0x2D, Does::Affect, 0, 0, 0, kP | 0xDE1D},            // Blink (castable in camp - "when" 2): "is blinking"
     {0x2E, Does::Dispel, 0, 0, 0, kP | 0xDA04},
     {0x30, Does::Haste, 0, 0, 0, kP | 0xDE32},             // Haste: "is hasted"
     {0x32, Does::Affect, 0, 0, 0, kP | 0xDD41},            // Invisibility 10' Radius
@@ -3984,7 +3994,9 @@ const Profile kProfiles[] = {
                // (Modify: " can't be modified.", "Modify:", "Next Previous Add Sub Keep Exit")
                .cant_modify = qw(0x4871), .modify = qw(0x74D2), .keep_exit = qw(0x74DA),
                .load_from = qw(0x4E13), .load_sources = qw(0x500C),
-               .words = kQueenPartyMenu, .n_words = sizeof kQueenPartyMenu / sizeof kQueenPartyMenu[0]},
+               .words = kQueenPartyMenu, .n_words = sizeof kQueenPartyMenu / sizeof kQueenPartyMenu[0],
+               // (the camp's Load: "Game not saved. Load anyway? " - DOSBox)
+               .camp_load_anyway = qw(0x7D7A)},
      // View Character (queen_facts_3.md 5): its name tables are far pointers
      // to C strings (stride 4: a pointer each) - classes DS 0x3B3E (the long
      // names, Magic-User; its numbers, the knight 1), races 0x3B86 in its own
@@ -4104,7 +4116,9 @@ const Profile kProfiles[] = {
      // speed: ", "Novice Squire Veteran Adept Champion", "Pick Character "
      // "Select" (its icon editor is its own - not in the engine yet)
      .alter = {.menu = qw(0x5220), .select = 0, .place = 0,
-               .words = {0, qw(0x4E6B), qw(0x4A2A), qw(0x4A3C), 0, 0, 0, 0, qw(0x4E78)},
+               // (the camp save's "Exit to DOS? " - DOSBox; kCampQuitToDos)
+               .words = {0, qw(0x4E6B), qw(0x4A2A), qw(0x4A3C), 0, 0, 0, 0, qw(0x4E78), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                         qw(0x4776)},
                .icon_menu = {}, .icon_words = {}, .level_menu = qw(0x5241), .level_base = 1,
                .order_list = qw(0x5063), .speed_list = qw(0x5075), .pick = qw(0x4DD2), .pick_menu = qw(0x4EEA)},
      .fight = kQueenFight,

@@ -1461,6 +1461,34 @@ static void sweep_monkey(int rounds)
             int jn;
             play::journal_request(&jk, &jn);
         }
+        // A party member's turn begins: Move offered (unless held or slowed
+        // to nothing). Also looked at after navcheck's probe: a turn that
+        // began while the probe settled was otherwise first seen after the
+        // next action had spent its moves (Death Knights, NMODIFY=60 seed
+        // 2: "turn without Move" with the moves the fighter's own Move used)
+        auto turn_start_check = [&]() {
+            static int last_cur = -1, last_round = -1;
+            if (fg && fg->st == FSt::Menu && screen == Screen::Fight && fg->cur >= 0 && fg->cur < fg->b.party_size &&
+                (fg->cur != last_cur || fg->b.round != last_round)) {
+                last_cur = fg->cur;
+                last_round = fg->b.round;
+                const auto& f = fg->b.f[fg->cur];
+                bool mv = false;
+                for (int k = 0; k < menu.count; ++k) if (text::key(menu, k) == 'M') mv = true;
+                if (!mv && f.turns == 0 && f.delay != 1) {      // (back from Delay: its moves may be spent)
+                    char tx[128];
+                    snprintf(tx, sizeof tx, "fight: fighter %d's turn without Move (moves %d, rec move %d)", fg->cur, f.moves,
+                             (int)f.rec[0x1A5]);
+                    problem(tx);
+                    printf("    [round %d surprise %d delay %d attacks %d/%d helpless %d menu %s affects:", fg->b.round, fg->b.surprise, f.delay,
+                           f.attacks[0], f.attacks[1], (int)combat::helpless(fg->b, f), menu.s);
+                    for (int k = 0; f.n_aff && k < *f.n_aff; ++k) printf(" %02X", f.aff[k][0]);
+                    printf("]\n");
+                    for (int k = 0; k < 16; ++k) printf("    %s\n", ring[(ri + k) % 16]);
+                }
+            }
+            if (!fg) last_cur = -1;
+        };
         // Invariants
         // Fights: at the start every party fighter can walk to an enemy
         // (walls only); on a party member's menu that fighter is in view
@@ -1510,30 +1538,7 @@ static void sweep_monkey(int rounds)
                                fg->b.f[i].moves, (int)fg->b.f[i].up());
                 }
             }
-            {
-                // A party member's turn begins: Move offered (unless held or slowed to nothing)
-                static int last_cur = -1, last_round = -1;
-                if (fg && fg->st == FSt::Menu && screen == Screen::Fight && fg->cur >= 0 && fg->cur < fg->b.party_size &&
-                    (fg->cur != last_cur || fg->b.round != last_round)) {
-                    last_cur = fg->cur;
-                    last_round = fg->b.round;
-                    const auto& f = fg->b.f[fg->cur];
-                    bool mv = false;
-                    for (int k = 0; k < menu.count; ++k) if (text::key(menu, k) == 'M') mv = true;
-                    if (!mv && f.turns == 0 && f.delay != 1) {      // (back from Delay: its moves may be spent)
-                        char tx[128];
-                        snprintf(tx, sizeof tx, "fight: fighter %d's turn without Move (moves %d, rec move %d)", fg->cur, f.moves,
-                                 (int)f.rec[0x1A5]);
-                        problem(tx);
-                        printf("    [round %d surprise %d delay %d attacks %d/%d helpless %d menu %s affects:", fg->b.round, fg->b.surprise, f.delay,
-                               f.attacks[0], f.attacks[1], (int)combat::helpless(fg->b, f), menu.s);
-                        for (int k = 0; f.n_aff && k < *f.n_aff; ++k) printf(" %02X", f.aff[k][0]);
-                        printf("]\n");
-                        for (int k = 0; k < 16; ++k) printf("    %s\n", ring[(ri + k) % 16]);
-                    }
-                }
-                if (!fg) last_cur = -1;
-            }
+            turn_start_check();
             if (!fg) last_fg = nullptr;
             if (fg && fg->st == FSt::Menu && fg->cur >= 0 && fg->cur < fg->b.party_size) {
                 const auto& f = fg->b.f[fg->cur];
@@ -1548,7 +1553,10 @@ static void sweep_monkey(int rounds)
             }
         }
         pcheck::check();
-        if (monkey_probe && d && pt) monkey_probe();
+        if (monkey_probe && d && pt) {
+            monkey_probe();
+            if (d && pt) turn_start_check();
+        }
         if (!d || !pt) continue;
         if (pt->count < 0 || pt->count > party::kMaxParty) problem("party size out of range");
         if (pt->count && (pt->selected < 0 || pt->selected >= pt->count)) {

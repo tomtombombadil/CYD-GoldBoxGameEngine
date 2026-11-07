@@ -1039,12 +1039,32 @@ the Project as claude/TODO.md.
       Curse's former clerics turning (+ AI turn before spells; column 0 the
       original's, Game Fixes the level's), the moons' caster level
       (Champions, Death Knights) and Death Knights' moon saves.
-- [ ] Dark Queen: the Cheats Trainer's party menu logs repeated "Not in
-      the engine yet." (navcheck NMODIFY run, 2026-11-06) - find which
-      menu line and fill it in.
-- [ ] Death Knights: a monkey fight once reported "fighter 1's turn
-      without Move (moves 0, rec move 6)" (navcheck NMODIFY=60 seed 2,
-      before the boot-into-Trainer change) - replay and explain.
+- [x] Dark Queen: "Not in the engine yet." in the NMODIFY runs (2026-11-07,
+      unversioned): the camp's Load (not the Trainer). DOSBox: "Game not
+      saved. Load anyway? Yes No" unless saved in this camp, then the party
+      gone and the party menu's "Load from where?"; the camp save asks "Exit
+      to DOS?" - both done. Also its creation's Reroll menu Modify (the same
+      Modify screen on the new character, Keep / Exit back - DOSBox), and
+      every reachable "Not in the engine yet." in the nine games: PoolRad's
+      camp Animate Dead / Blink and Death Knights' camp Blink (their fight
+      handlers), the Dark Queen's 0x5F (Death Knights' scroll of
+      protection); the rule tables' load failures say "Not enough memory."
+- [ ] "Not in the engine yet." left (2026-11-07 gaps sweep, every game):
+      spells with no handler only where no player can cast them - Secret's
+      row 0x6C (no name, MU 9th), Curse's / Champions' / Gateway's Animate
+      Dead rows (monster class) - an item carrying one would still say it.
+      PoolRad's Animate Dead in camp skips the original's sight check
+      (ovr23 +0x20E9 call) and its effect-allowed check (+0x21B6) as the
+      fights' version does. Death Knights' camp Blink taken as Gateway's
+      (its camp code not read). Not compared in DOSBox: the Dark Queen's
+      party menu Exit asks "Exit to DOS?" (the engine leaves at once - all
+      games: check the others' originals).
+- [x] Death Knights: "fighter 1's turn without Move (moves 0, rec move 6)"
+      (2026-11-07): the check's blind spot, not the engine - the turn began
+      while navcheck's probe settled and the next monkey action (its own
+      Move) spent the 12 moves before the check looked (traced: round 3's
+      menu with 12 moves, then Move to under 2). sweep.cpp checks a turn's
+      start after the probe too; seed 2 replayed clean (same 2004 probes).
 - [ ] Rule-check gaps left from round 4: items used outside fights for
       Pool / Darkness / Gateway / Treasures / Krynn (Curse and Secret have
       checks); spells offered at training (Curse's list stops at 5th level -

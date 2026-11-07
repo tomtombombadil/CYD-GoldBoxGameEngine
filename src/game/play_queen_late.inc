@@ -620,7 +620,7 @@ void q_form_start(pic::Canvas& c)
     if (!load_making() || !q_create_words()) {
         delete mk;
         mk = nullptr;
-        pm_prompt(c, "Not in the engine yet.");
+        pm_prompt(c, making_error());
         return;
     }
     // (its start: human, fighter, lawful good, male - DOSBox)
@@ -805,7 +805,7 @@ void q_rolled_tap(int x, int y, pic::Canvas& c)
         show_new_character(c);
         q_rolled_menu(c);
         break;
-    case 'M': error(c, "Not in the engine yet."); break;
+    case 'M': start_modify_new(c); break;      // (the same Modify screen on the new character - DOSBox)
     case 'D': ask_name(c); break;
     case 'E': end_create(c); break;
     default: break;
