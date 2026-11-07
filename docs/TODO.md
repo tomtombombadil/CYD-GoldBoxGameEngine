@@ -1126,10 +1126,23 @@ the Project as claude/TODO.md.
       first fight screen) 0 px at Dirten (DOS memory: slot 6's pixels and
       plane = the model; WARRIOR, Bakshi, Phineas too); the bishop's
       join: the record identical with the d6s told.
-- [ ] Claude: the fight panel's weapon line - PoolRad's original wraps
+- [x] Claude: the fight panel's weapon line - PoolRad's original wraps
       "TWO-HANDED SWORD" (16 letters) to a second line (SWORD at column
       23 of row 8), the engine fits it on row 7 (panel_text's 16
       columns). Find the original's margin (and Curse's / Secret's).
+      (2026-11-07) The originals' boxed print (cols 23-38, rows 7-9, the
+      same box in all eight games) takes a word WITH its trailing space
+      and the names keep their last word's space (" " / "s " added):
+      PoolRad / Curse / Secret / Darkness / Champions / Knights (one
+      routine - PoolRad START 0x77F8) put a word on the line only if its
+      space fits too (and split after - ! , . : ; ?); Gateway / Treasures
+      (GAME.OVR 0x51EC5) drop a space just past the box and end the row
+      after a word on the last column (status a row lower). Now
+      `panel_box_text` (also Kalistes' weapon line). Differ: Dirten's
+      scenario unmasked 0 px (558 px before). Left: the Dark Queen's
+      print not read (kept the old fit); the fight messages (pages) keep
+      panel_text - whether the originals print them through the same box
+      not checked.
 - [x] Claude: does Curse's / Secret's step also leave the exploring menu
       line drawn under a VERTICAL MENU, keep the old view after a script's
       move, and lack the field's d100 pieces (Pool's fixes, Pool only)?

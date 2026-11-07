@@ -1606,6 +1606,96 @@ int panel_text(pic::Canvas& c, const char* s, int row, uint8_t colour, int last 
     return row;
 }
 
+// The originals' own boxed print (the weapon rows 23-38 x 7-9) - a word
+// printed only when it fits, its trailing space included; returns the row
+// after the one the print ended on, as the originals' text row + 1 (one
+// more when the last word filled the box's last column).
+// - PoolRad / Curse / Secret / Darkness / Champions / Knights (PoolRad
+//   START 0x77F8, Curse START 0x5320, Darkness GAME 0x4E3A): a word is
+//   its leading punctuation (! , - . : ; ?), letters up to a space or a
+//   punctuation mark (that mark the word's last), then its trailing space
+//   or more marks; it goes on the line if its last character, the space
+//   too, is within the box, else on the next row (the "space just past
+//   the edge" exception there is never reached).
+// - Gateway / Treasures (GAME.OVR 0x51EC5, Treasures GAME 0x6BC8): words
+//   split at spaces only; a word whose trailing space is the one past the
+//   box drops it; a word ending on the box's last column is printed and
+//   the row ends there.
+int panel_box_text(pic::Canvas& c, const char* s, int row, uint8_t colour, int last, bool sf)
+{
+    const int x0 = 23, x1 = 38;
+    const int len = static_cast<int>(strlen(s));
+    if (!len) return row + 1;
+    auto at = [&](int i) { return s[i - 1]; };       // (1-based, as the originals)
+    auto punct = [](char ch) { return ch && strchr("!,-.:;?", ch) != nullptr; };
+    int col = x0, start = 1;
+    auto print = [&](int a, int b) {
+        char line[40];
+        int n = 0;
+        for (int i = a; i <= b && n < 39; ++i) line[n++] = at(i);
+        line[n] = 0;
+        if (row <= last) put(c, line, col, row, colour);
+        col += n;
+    };
+    auto skip_spaces = [&]() {
+        while (start <= len && at(start) == ' ') ++start;
+    };
+    while (start <= len && row <= last) {
+        int end = start;
+        if (sf) {
+            while (end <= len && at(end) != ' ' && at(end) != '\n') ++end;
+            if (end <= len && at(end) == ' ') ++end;
+            --end;
+            if (end < start) {                       // (a line break)
+                ++start;
+                col = x0;
+                ++row;
+                continue;
+            }
+            int v = col + (end - start);
+            if (v < x1) {
+                print(start, end);
+                start = end + 1;
+                continue;
+            }
+            if (col <= x1 && v == x1 + 1 && at(end) == ' ') --end;
+            v = col + (end - start);
+            if (v == x1) {
+                print(start, end);
+                start = end + 1;
+                col = x0;
+                ++row;
+                skip_spaces();
+            } else {
+                col = x0;
+                ++row;
+                skip_spaces();
+                if (end - start + 1 > x1 - x0 + 1) end = start + (x1 - x0);   // (longer than the box)
+                print(start, end);
+                start = end + 1;
+            }
+            continue;
+        }
+        while (end < len && punct(at(end))) ++end;
+        while (end < len && !punct(at(end)) && at(end) != ' ') ++end;
+        if (at(end) != ' ')
+            while (end + 1 < len && punct(at(end + 1))) ++end;
+        if (col + (end - start) > x1) {
+            if (col == x0) end = start + (x1 - x0);   // (longer than the box)
+            else {
+                col = x0;
+                ++row;
+                skip_spaces();
+                continue;
+            }
+        }
+        print(start, end);
+        start = end + 1;
+    }
+    if (col > x1) ++row;
+    return row + 1;
+}
+
 void draw_panel_for(pic::Canvas& c, int i)
 {
     clear_panel(c);
@@ -1624,8 +1714,14 @@ void draw_panel_for(pic::Canvas& c, int i)
     int row = 7;
     const int wi = combat::weapon(f, *names);
     if (wi >= 0) {
-        names->name(items::Item{f.items[wi]}, t, sizeof t);
-        row = panel_text(c, t, 7, 10, 9) + 1;
+        names->name(items::Item{f.items[wi]}, t, sizeof t - 1);
+        if (hl()) row = panel_text(c, t, 7, 10, 9) + 1;   // (the Dark Queen's print: not read)
+        else {
+            // (the originals' names keep their last word's space - PoolRad
+            // START 0x12CC, Gateway GAME.OVR 0x3F384: " " / "s " added)
+            strcat(t, " ");
+            row = panel_box_text(c, t, 7, 10, 9, gateway() || d->prof->variant.tr) + 1;
+        }
     }
     if (!f.up()) put(c, name_of(d->health[0], 13, 9, f.status()), 23, row, 15);
 }
@@ -2080,7 +2176,7 @@ void show_page(pic::Canvas& c)
         ow(kw[6], b4, sizeof b4);
         snprintf(t, sizeof t, "%s%s", a, b4);
         clear_panel(c, 7, 9);
-        panel_text(c, t, 7, 10, 9);
+        panel_box_text(c, t, 7, 10, 9, false);
     }
     clear_panel(c, 10, 21);
     int row = 10;
