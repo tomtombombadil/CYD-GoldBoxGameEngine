@@ -4514,7 +4514,7 @@ void fight_start(pic::Canvas& c)
         // (Death Knights' saves and caster levels too - GAME.OVR 0x30E0B /
         // 0x34E8C; a Champions cleric's god for Turn Undead)
         f.robe = krynn_rules() && ch.level(classes::MagicUser) > 0 ? ch.ext[party::kExtRobe] : 0;
-        f.god = krynn() ? ch.ext[party::kExtGod] : 0;
+        f.god = krynn_rules() ? ch.ext[party::kExtGod] : 0;
     }
     b.party_size = pt->count;
     // The original recalculates every combatant's values at the battle's

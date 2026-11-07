@@ -139,8 +139,8 @@ struct Case {
     std::vector<int> types;
 };
 // The reference: Curse / Pool (rule 0), Gateway (1), Champions (2),
-// Darkness's (11 columns - its facts R13, assumed for Death Knights / the
-// Dark Queen as the engine does)
+// Darkness's (11 columns - its facts R13; Death Knights' the same with
+// Majere's + 2, read 2026-11-07; the Dark Queen's assumed Darkness's)
 std::vector<int> ref(const Case& c, int rule, bool fixes)
 {
     int lvl[8] = {}, old[8] = {};
@@ -155,7 +155,8 @@ std::vector<int> ref(const Case& c, int rule, bool fixes)
     const int roll = c.c20 ? c.c20 : 1;
     int count = c.c12 ? c.c12 : 1, extra = 6;
     if (tcols == 11) {
-        const int L = std::max(lvl[0], lvl[3] - 2);
+        // (Death Knights, rule 3 - GAME.OVR 0x1FEAA: Majere's clerics + 2)
+        const int L = std::max(lvl[0], lvl[3] - 2) + (rule == 3 && c.god == 2 ? 2 : 0);
         const int col = L <= 8 ? L : L < 14 ? 9 : 10;
         int limit = 13;
         count = -1;

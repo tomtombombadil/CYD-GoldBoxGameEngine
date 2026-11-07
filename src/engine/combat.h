@@ -69,7 +69,9 @@ struct Tables {
     // level's column - with the Game Fixes the skill level's), 1 Gateway's
     // (the paladin - 2 too, the skill level's column), 2 Champions' (13
     // columns: the skill level itself, Majere's + 2; the highest type first,
-    // a weaker one after a roll too low; as many as the undead loaded)
+    // a weaker one after a roll too low; as many as the undead loaded), 3
+    // Death Knights' (11 columns: Darkness's, Majere's clerics + 2 - its
+    // GAME.OVR 0x1FF25, record 0x23)
     uint8_t turn_rule;
     // Darkness's Monster Summoning reserve (R10): MON block / CPIC by the
     // frame style 0-4 (none: 0)

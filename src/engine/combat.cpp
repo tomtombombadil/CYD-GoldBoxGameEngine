@@ -5447,7 +5447,8 @@ static int turn_undead_dk(Battle& b, const Tables& t, int cleric, create::Dice& 
     Fighter& me = b.f[cleric];
     ++me.undead_turns;
     const int cl = me.rec[kLevels], pa = me.rec[kLevels + 3] - 2;
-    const int lv = cl > pa ? cl : pa;
+    int lv = cl > pa ? cl : pa;
+    if (t.turn_rule == 3 && me.god == 2) lv += 2;     // (Death Knights: Majere's)
     int col = lv <= 8 ? lv : lv < 14 ? 9 : 10;
     col = b.turn_minus > col ? 0 : col - b.turn_minus;
     const int roll = d.roll(20, 1);

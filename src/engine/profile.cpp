@@ -3227,11 +3227,12 @@ const Profile kProfiles[] = {
                .pick = kP | 0xECF8, .pick_menu = kP | 0xEEB6, .icon_box = 15, .icon_lists = true,
                .kept_highlight = true},
      // Fights (deathknights_facts.md 5): Champions' tables at its places
-     // (the turn table Darkness's shape: 11 columns, DS 0x05A5), its words
+     // (the turn table Darkness's shape: 11 columns, DS 0x05A5 - its turn
+     // routine GAME.OVR 0x1FEAA Darkness's with Majere's clerics + 2: rule 3), its words
      // in the program as Darkness's (the menus whole strings - its two-row
      // menu with Yell), its effect numbers mostly Champions' (its handler
      // table DS 0xBE7E + 4 x effect, set at GAME.OVR 0x1E50A)
-     .fight = {{0x4420, 0x0336, 0x0346, 0x0356, 0x035A, 0x0362, 0x036A, 0x03AE, 0x05A5, 0, 11, 0},
+     .fight = {{0x4420, 0x0336, 0x0346, 0x0356, 0x035A, 0x0362, 0x036A, 0x03AE, 0x05A5, 0, 11, 0, 3},
                {
                 kP | 0xE6E7, 0, 0, 0, 0, 0, 0, kP | 0xEE53, kP | 0xD3ED, 0, kP | 0xE216, kP | 0xD3CC, 0, 0, 0, kP | 0xEDE9, 0, 0, 0, 0,
                 kP | 0xE9A2, kP | 0xEDD4, 0x9FB0, 0, 0, kP | 0xF128, kP | 0xE9ED, kP | 0xEA02, kP | 0xEA17, kP | 0xEA22, 0x1EEFE, 0x1EF12, kP | 0xEA4C,
