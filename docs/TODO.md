@@ -1012,6 +1012,12 @@ the Project as claude/TODO.md.
 - [ ] Blind-spot checks: the cursor-key / tap layer on every list and menu
       of every game; waits against the originals' delay rules; the frames
       within an attack; the cheats and comforts against Tom's specs.
+- [x] Tom (2026-11-06): Modify's menu line - its highlight never moved,
+      Exit only by a tap. v0.173.2: Up / Down go round the items and the
+      menu line (between the last item and the first); there Left / Right
+      move the word and Select picks it; on an item Left / Right still
+      change the value. Checked in the playsim (MODOPS) on Curse, Secret,
+      Darkness: Exit reached and picked by the keys.
 - [ ] Rule-check gaps: items used outside fights, poison / disease over a
       rest, level drain / Restoration, ageing, turn undead tables, spells
       learned at training, Krynn moon bonuses, dual-class / class change.

@@ -11196,6 +11196,10 @@ int mod_item = 0;                       // 0-5 the stats, 6 the hit points, 7 th
 // name, once Modify has drawn it, is green (GAME.OVR 0x16606; DOSBox)
 int  mod_word = 0;
 bool mod_name_seen = false;
+// The cursor keys on the menu line (Tom, 2026-11-06: its highlight never
+// moved, Exit couldn't be reached): Up / Down go round the items and the
+// menu line; there Left / Right move the word and Select picks it
+bool mod_menu = false;
 
 void draw_modify(pic::Canvas& c)
 {
@@ -11286,7 +11290,7 @@ void draw_modify(pic::Canvas& c)
             put(c, t, 1, 1, 10);
         }
         text::build(menu, rw(Data::kModify), rw(Data::kKeepExit));
-        menu.selected = darkness_files() ? mod_word : 0;
+        menu.selected = mod_word < menu.count ? mod_word : 0;
         show_menu_line(c);
         return;
     }
@@ -11314,7 +11318,7 @@ void draw_modify(pic::Canvas& c)
             put(c, t, 1, 1, 13);
         }
         text::build(menu, rw(Data::kModify), rw(Data::kKeepExit));
-        menu.selected = 0;
+        menu.selected = mod_word < menu.count ? mod_word : 0;
         show_menu_line(c);
         return;
     }
@@ -11338,7 +11342,7 @@ void draw_modify(pic::Canvas& c)
         put(c, t, 1, 1, 13);
     }
     text::build(menu, rw(Data::kModify), rw(Data::kKeepExit));
-    menu.selected = 0;
+    menu.selected = mod_word < menu.count ? mod_word : 0;
     show_menu_line(c);
 }
 
@@ -11386,6 +11390,7 @@ void start_modify(pic::Canvas& c)
     modder->ch = *ch;
     mod_item = 0;
     mod_word = 0;
+    mod_menu = false;
     mod_name_seen = false;
     screen = Screen::Modify;
     draw_modify(c);
@@ -11448,6 +11453,7 @@ void modify_tap(int x, int y, pic::Canvas& c)
     }
     const int i = modify_item_at(row, col);
     if (i < 0) return;
+    mod_menu = false;
     if (i == 7 && mod_item == 7) {
         modify_name(c);
         return;
@@ -11464,8 +11470,8 @@ bool modify_act(Act a, pic::Canvas& c)
     case Act::TurnLeft:   modify_step(-1, c); return true;
     case Act::StepRight:
     case Act::TurnRight:  modify_step(1, c); return true;
-    case Act::Forward:    mod_item = (mod_item + 7) % 8; break;
-    case Act::TurnAround: mod_item = (mod_item + 1) % 8; break;
+    case Act::Forward:    mod_menu = false; mod_item = (mod_item + 7) % 8; break;
+    case Act::TurnAround: mod_menu = false; mod_item = (mod_item + 1) % 8; break;
     default: return false;
     }
     draw_modify(c);
@@ -17223,7 +17229,15 @@ bool nav_list(int step, pic::Canvas& c)
         return true;
     }
     if (screen == Screen::Modify && modder) {
-        mod_item = (mod_item + step + 8) % 8;
+        // (the items 0-7 and, between the last and the first, the menu line)
+        if (mod_menu) {
+            mod_menu = false;
+            mod_item = step > 0 ? 0 : 7;
+        } else if ((step > 0 && mod_item == 7) || (step < 0 && mod_item == 0)) {
+            mod_menu = true;
+        } else {
+            mod_item += step;
+        }
         draw_modify(c);
         return true;
     }
@@ -17340,7 +17354,12 @@ bool nav(Nav n, pic::Canvas& c)
     if (screen == Screen::Icon && hl() && ie) return q_icon_nav(n, c);
     // Modify Character: left / right change the value (the games' arrows)
     if (screen == Screen::Modify && (n == Nav::Left || n == Nav::Right)) {
-        modify_step(step, c);
+        if (mod_menu && menu.count > 1) {
+            mod_word = ((mod_word < menu.count ? mod_word : 0) + step + menu.count) % menu.count;
+            draw_modify(c);
+        } else {
+            modify_step(step, c);
+        }
         return true;
     }
     // (the Dark Queen's creation form and god list: up / down through them)
@@ -17475,6 +17494,14 @@ bool nav_point(int* x, int* y)
         }
         *x = ((d->prof->variant.party_menu_col ? d->prof->variant.party_menu_col : 2) + 1) * 8 + 2;
         *y = (pm_row0() + pm_sel) * 8 + 2;
+        return true;
+    }
+    if (screen == Screen::Modify && modder && !mod_menu) {
+        // (Select on an item: a tap on it - the name's keyboard on the name)
+        const bool newer = secret_files() || darkness_files() || gateway() || krynn() || hl();
+        const int r = mod_item < 6 ? (newer ? 9 : 7) + mod_item : mod_item == 6 ? (newer ? 3 : 18) : 1;
+        *x = ((newer && mod_item == 6) ? 20 : 1) * 8 + 2;
+        *y = r * 8 + 2;
         return true;
     }
     if ((screen == Screen::Take || (screen == Screen::CreatePick && mk && mk->stage != 4)) && pool_files() &&
