@@ -51,7 +51,7 @@ Entry entry(const classes::Tables& t, int s)
     Entry e;
     const uint16_t at = t.spell_row(s);
     auto b = [&](int i) { return t.u8(static_cast<uint16_t>(at + i)); };
-    e.cls = t.lay.secret || t.lay.dkk ? static_cast<uint8_t>(t.spell_class(s)) : b(0);
+    e.cls = t.lay.secret || t.lay.krynn ? static_cast<uint8_t>(t.spell_class(s)) : b(0);
     e.level = b(1);
     e.range = static_cast<int8_t>(b(2));
     e.range_level = b(3);
@@ -89,10 +89,41 @@ int power(const party::Character& c, const classes::Tables& t, int s)
     // Secret's (GAME.OVR 0x3AFD7) has no paladin in either test - a paladin
     // casts at 6th level; AD&D's (Curse's) paladin - 8 with rules::fixes()
     const bool pal_rule = !t.lay.secret || rules::fixes();
-    if (c.level(classes::Cleric) == 0 && c.level(classes::MagicUser) == 0 &&
-        (!pal_rule || c.level(classes::Paladin) < 9) && c.level(classes::Ranger) < 8)
-        return 6;
     auto most = [](int a, int b) { return a > b ? a : b; };
+    // Champions (GAME.OVR 0x38FA4) and Death Knights (0x34DCA) count their
+    // knights (class 7), not paladins: Champions a cleric's spells at
+    // max(cleric, knight - 8) skill levels; Death Knights max(cleric,
+    // knight) and a mage's max(mage + moon, ranger) - levels, not skill
+    // levels; the mage's compared unsigned
+    const bool kr = t.lay.krynn && !t.lay.queen;
+    const int cl = c.level(classes::Cleric), mu = c.level(classes::MagicUser), ra = c.level(classes::Ranger);
+    const int kn = c.level(classes::Monk);
+    if (kr) {
+        if (cl == 0 && mu == 0 && kn < 9 && ra < 8) return 6;
+        // (by the game's own code: 0 / 2 a cleric's, 1 a druid's, 3 a magic-user's, 4 the items')
+        const int code = t.spell_code(s);
+        const int moon = combat::moon_level(t, c.ext[party::kExtRobe], mu);
+        if (t.lay.dkk) {
+            switch (code) {
+            case 0: case 2: return most(cl, kn);
+            case 1: return ra > 7 ? ra - 7 : 0;
+            case 3: {
+                const int m = (mu + moon) & 0xFF;
+                return m > ra ? m : ra;
+            }
+            case 4: return 12;
+            default: return 0;
+            }
+        }
+        switch (code) {
+        case 0: case 2: return most(skill_level(c, classes::Cleric), skill_level(c, classes::Monk) - 8);
+        case 1: return most(skill_level(c, classes::Ranger) - 7, 0);
+        case 3: return most(skill_level(c, classes::MagicUser) + moon, skill_level(c, classes::Ranger) - 8);
+        case 4: return 12;
+        default: return 0;
+        }
+    }
+    if (cl == 0 && mu == 0 && (!pal_rule || c.level(classes::Paladin) < 9) && ra < 8) return 6;
     switch (t.spell_class(s)) {
     case 0:
     case 4:     // (the Dark Queen's god-given spells: a cleric's)

@@ -1,7 +1,7 @@
 // Behaviour checks, round 4 (sweep's `behave rules4`, -DBEHAVE_ROUND4 with
 // -DBEHAVE_MATRIX - its cleared field and plain fighters; any game: GAME,
 // BOOTSLOT, MAREA / MBLOCK, FIGHTAT as the fuzzer's; ONLY= table, turn,
-// former, restore, rest, haste, moons). Expectations from the originals'
+// former, restore, rest, haste, moons, caster). Expectations from the originals'
 // code (rules_round4_facts.md in the Project: the turn routines of Curse's
 // listing ovr014:1228, Gateway's GAME.OVR 0x17455, Champions' 0x16021, the
 // Krynn moons' 0x3911F / 0x34E8C / 0x30E0B) and coab's facts (cast_restore,
@@ -516,7 +516,7 @@ void moons()
     mx::put(0, 0, 10, 10, 50);
     int spell = 0;
     for (int s = 1; s < m->tables.lay.spell_count && !spell; ++s)
-        if (m->tables.spell_class(s) == 2) spell = s;
+        if (m->tables.spell_code(s) == 3 && m->tables.spell_level(s) >= 1) spell = s;   // (its own code: a magic-user's)
     int bad = 0, n = 0;
     for (int L : {3, 6, 9})
         for (int robe = 1; robe <= 3; ++robe)
@@ -546,6 +546,62 @@ void moons()
            "%d of %d wrong (spell %d)", bad, n, spell);
 }
 
+// ---- C: the Krynn games' caster levels by class (Champions GAME.OVR
+// 0x38FA4, Death Knights 0x34DCA): 6 for one with no cleric / mage levels,
+// knight under 9th and ranger under 8th; Champions a cleric's spells at
+// max(cleric, knight - 8), a mage's max(mage, ranger - 8) (skill levels);
+// Death Knights max(cleric, knight) and max(mage, ranger) (levels) - their
+// knights (class 7), never paladins; a ranger's druid spells ranger - 7
+void caster()
+{
+    if (!m->tables.lay.krynn || m->tables.lay.queen) return;
+    if (!fight()) return;
+    combat::Fighter& f = F(0);
+    const classes::Tables& t = m->tables;
+    // (the spells by the game's own codes: 0 cleric, 1 druid, 3 magic-user)
+    int sp[3] = {};
+    for (int s = 1; s < t.lay.spell_count; ++s) {
+        const int code = t.spell_code(s), k = code == 3 ? 2 : code;
+        if ((code == 0 || code == 1 || code == 3) && !sp[k] && t.spell_level(s) >= 1) sp[k] = s;
+    }
+    const bool dk = t.lay.dkk;
+    struct Case { int cl, pa, ra, mu, kn, cls, champ, knights; };
+    // (cleric 0, paladin 3, ranger 4, mage 5, knight 7)
+    const Case cases[] = {
+        {0, 10, 0, 0, 0, 0, 6, 6},      // a paladin: not counted
+        {0, 0, 0, 0, 10, 0, 2, 10},     // a 10th-level knight's cleric spells
+        {0, 0, 0, 0, 8, 0, 6, 6},       // under 9th: 6
+        {5, 0, 0, 0, 10, 0, 5, 10},
+        {7, 12, 0, 0, 0, 0, 7, 7},
+        {0, 0, 0, 3, 0, 2, 3, 3},
+        {0, 0, 9, 3, 0, 2, 3, 9},       // a ranger-mage
+        {0, 0, 9, 0, 0, 2, 1, 9},
+        {0, 0, 9, 0, 0, 1, 2, 2},       // a ranger's druid spells
+        {0, 0, 7, 0, 0, 1, 6, 6},
+    };
+    magic::set_moons(1, 1, 1);
+    f.robe = 0;
+    int bad = 0, n = 0;
+    char first[120] = "";
+    for (const Case& c : cases) {
+        levels(0, {{0, c.cl}, {3, c.pa}, {4, c.ra}, {5, c.mu}, {7, c.kn}});
+        const int want = dk ? c.knights : c.champ;
+        party::Character ch;
+        f.rec.read(ch.rec);
+        const int a = combat::power_of(f, t, sp[c.cls]), b = spells::power(ch, t, sp[c.cls]);
+        n += 2;
+        if (a != want || b != want) {
+            bad += (a != want) + (b != want);
+            if (!*first)
+                snprintf(first, sizeof first, "cl %d pa %d ra %d mu %d kn %d class %d: fight %d, camp %d, want %d", c.cl, c.pa,
+                         c.ra, c.mu, c.kn, c.cls, a, b, want);
+        }
+    }
+    magic::set_moons(0, 0, 0);
+    expect(P, "Krynn caster levels: knights (not paladins) count, Death Knights' mage takes the ranger's level",
+           bad == 0 && sp[0] && sp[1] && sp[2], "%d of %d wrong (%s; spells %d %d %d)", bad, n, first, sp[0], sp[1], sp[2]);
+}
+
 void run()
 {
     if (!monkey_boot() || !play::load_rules(m) || !m) {
@@ -564,6 +620,7 @@ void run()
     if (want("former")) former();
     if (want("haste")) haste();
     if (want("moons")) moons();
+    if (want("caster")) caster();
     if (want("restore")) restore();
     if (want("rest")) rest();
     rules::set_fixes(true);

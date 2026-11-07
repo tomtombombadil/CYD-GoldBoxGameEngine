@@ -288,10 +288,13 @@ public:
     {
         const int v = u8(spell_row(spell));
         if (lay.dk) return v;               // (Darkness's own codes are these)
-        if (lay.secret || lay.dkk || lay.queen) return v >= 3 ? v - 1 : v;
+        // (Champions' codes are Death Knights': 0 cleric, 1 druid, 2 the
+        // knights' specials, 3 magic-user, 4 items' - its GAME.OVR 0x38FE1)
+        if (lay.secret || lay.krynn) return v >= 3 ? v - 1 : v;
         return lay.pool && v > 0 ? v + 1 : v;
     }
     int  spell_level(int spell) const { return u8(static_cast<uint16_t>(spell_row(spell) + 1)); }
+    int  spell_code(int spell) const { return u8(spell_row(spell)); }     // (the game's own class code)
 
 private:
     uint8_t* data_ = nullptr;          // lay.hi - lay.lo bytes

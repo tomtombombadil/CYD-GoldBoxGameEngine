@@ -3738,11 +3738,27 @@ int skill_level(const Rec& r, int cls)
 int power_of(const Rec& r, const classes::Tables& st, int s, bool item, int robe)
 {
     if (item && st.spell_class(s) != 3) return 6;
-    const int cl = r[0x109], pa = r[0x10C], ra = r[0x10D], mu = r[0x10E];
+    const int cl = r[0x109], pa = r[0x10C], ra = r[0x10D], mu = r[0x10E], kn = r[0x110];
+    auto most = [](int a, int b) { return a > b ? a : b; };
+    // (Champions / Death Knights: their knights, not paladins, and the
+    // games' own spell codes - spells::power)
+    const bool kr = st.lay.krynn && !st.lay.queen;
+    if (kr && cl == 0 && mu == 0 && kn < 9 && ra < 8) return 6;
+    if (kr && st.lay.dkk) {
+        switch (st.spell_code(s)) {
+        case 0: case 2: return most(cl, kn);
+        case 1: return ra > 7 ? ra - 7 : 0;
+        case 3: {
+            const int m = (mu + moon_level(st, robe, mu)) & 0xFF;
+            return m > ra ? m : ra;
+        }
+        case 4: return 12;
+        default: return 0;
+        }
+    }
     // (Secret, GAME.OVR 0x3AFD7: no paladin in either test - spells::power)
     const bool pal_rule = !st.lay.secret || rules::fixes();
-    if (cl == 0 && mu == 0 && (!pal_rule || pa < 9) && ra < 8) return 6;
-    auto most = [](int a, int b) { return a > b ? a : b; };
+    if (!kr && cl == 0 && mu == 0 && (!pal_rule || pa < 9) && ra < 8) return 6;
     // The levels that count (classes::skill_level): a human who changed
     // class adds the old class's levels once the new class has passed them
     // (coab's facts: spellMaxTargetCount uses the skill levels)
@@ -3750,6 +3766,15 @@ int power_of(const Rec& r, const classes::Tables& st, int s, bool item, int robe
     while (k < 7 && r[0x109 + k] == 0) ++k;
     const bool past = r[0x74] == 7 && r[0x109 + k] > r[0xE6];
     auto skill = [&](int cls) { return r[0x109 + cls] + (past ? r[0x111 + cls] : 0); };
+    if (kr) {
+        switch (st.spell_code(s)) {
+        case 0: case 2: return most(skill(0), skill(7) - 8);
+        case 1: return most(skill(4) - 7, 0);
+        case 3: return most(skill(5) + moon_level(st, robe, mu), skill(4) - 8);
+        case 4: return 12;
+        default: return 0;
+        }
+    }
     switch (st.spell_class(s)) {
     case 0:
     case 4:     // (the Dark Queen's god-given spells: a cleric's - as spells::power)
