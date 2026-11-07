@@ -1087,6 +1087,29 @@ the Project as claude/TODO.md.
       games checked against Curse's rules only (their code not read);
       Gateway's / Champions' AI turning (only Curse's / Pool's known); the
       turn routines of Death Knights / the Dark Queen assumed Darkness's.
+      2026-11-07 (rules4 ONLY=caster, turn): DONE - the Krynn caster
+      levels read (Champions GAME.OVR 0x38FA4, Death Knights 0x34DCA):
+      both count the KNIGHT (class 7), not the paladin (6 for one with no
+      cleric / mage, knight < 9, ranger < 8); Champions a cleric's spells
+      max(cleric, knight - 8) skill levels; Death Knights max(cleric,
+      knight) and a mage's max(mage + moon, ranger) - levels, unsigned
+      (fixed; 20 cases). Found with it: Champions' spell codes are Death
+      Knights' (0 cleric, 1 druid, 2 knights' specials, 3 magic-user, 4
+      items - checked in START's table and its caster routine); the engine
+      read 3 as the items' code - its mages' spells cast at 12th level and
+      weren't usable (memorize / learn / slots); now mapped as Death
+      Knights'. Death Knights' turn routine (GAME.OVR 0x1FEAA) read: =
+      Darkness's with Majere's clerics (record 0x23 = 2) 2 levels higher
+      (fixed, turn_rule 3; 176 cases). Gateway's caster level = Curse's
+      (0x418C8, read). Left: Gateway's / Champions' / Darkness's AI turning
+      (their AI routines reach the turn routine through overlay stubs -
+      not traced; the engine's computer never turns there); Darkness's
+      turn takes the skill level (its call 0x102:0x48), the engine the
+      level (former clerics only); Death Knights' Turn menu condition and
+      spell 0x2F's 15th level / the [0xC447] 6th-level case of its caster
+      routine; the Dark Queen's turn and caster routines; Darkness's /
+      Treasures' caster levels; training spells, items outside fights,
+      dual-class, Haste / rest in the later games - not reached.
 - [ ] Pool's story beyond the nomads' camp: targeted differ runs only
       (scripted places), fights judged by the rule checks. 2026-11-07
       (part 17, claude/playtest_poolrad.md): every event square of
