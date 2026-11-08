@@ -10,10 +10,13 @@
 # half-elf, dwarf, gnome, halfling, 6 human). The PHB: Constitution's hit
 # points (non-fighters), the races' stat adjustments. Facts
 # (secret_facts_2.md 21, GAME.OVR 0x1DF40): the races' effects; a new
-# magic-user's book; a new cleric's spells 1-8; silent training's
-# magic-user lists by level 6-9 - these lists are the ones recorded in
-# profile.cpp (kSecretMuLevels), not re-derived from the program here.
-import gb
+# magic-user's book; a new cleric's spells 1-8. Silent training's
+# magic-user lists by level 6-9: read from its code (GAME.OVR 0x22921: a
+# switch on the magic-user level, record 0x116, each case setting the
+# record's known-spell bytes - spell n at 0x70 + n, the record's spell
+# list from 0x71).
+import re
+import gb, x86
 
 B = 0xDE20
 ds = gb.DS(gb.image('secret'), B)
@@ -56,8 +59,11 @@ for name, k in (('cleric', 0), ('paladin', 3), ('ranger', 4), ('mu', 5)):
         w.row('sit_slots_' + name, lv, list(ds.bytes(0x506C + k * 187 + 68 + (lv - 2) * 7, 7)))
 w.row('sit_conhp', [-2, -2, -2, -2, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2])
 w.row('sit_mufirst', 0x0B, 0x12, 0x13, 0x15)
-for lv, sp in ((6, [0x0C, 0x0F, 0x1E, 0x03, 0x22, 0x2F, 0x33, 0x36]), (7, [0x0E, 0x10, 0x1D, 0x23, 0x2D, 0x30, 0x51]),
-               (8, [0x0A, 0x09, 0x20, 0x37, 0x55]), (9, [0x32, 0x34, 0x52, 0x58, 0x5E])):
-    w.row('sit_musilent', lv, sp)
+st = x86.Code(gb.find('secret', 'GAME.OVR'), 0x22921, 0x100, base=0x22921)
+for vals, a, e in x86.cases(st, 0, 0x100):
+    sp = [int(re.search(r'\+0x([0-9a-f]+)\]', st.text(x)).group(1), 16) - 0x70
+          for x in st.find(r'^mov byte \[es:di\+0x[0-9a-f]+\],0x1$', a, e)]
+    for lv in vals:
+        w.row('sit_musilent', lv, sp)
 w.row('sit_clericfirst', 1, 2, 3, 4, 5, 6, 7, 8)
 w.done()
