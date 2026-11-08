@@ -4259,8 +4259,12 @@ void ai_step(pic::Canvas& c)
         // turn (combat::can_turn) - Curse's before its spells (coab's facts
         // 5.1: a pending spell, Turn Undead, then a spell - the cleric or
         // the former one passed), Pool's after them (below)
+        // Gateway's computer (GAME.OVR 0xD266, before its spells): not turned
+        // yet and a cleric's skill level - no paladins (its menu's Turn has
+        // them); Champions' (0xC772, before its spells): the menu's test
         auto ai_turns = [&]() {
-            if (!combat::can_turn(b, fg->t, f)) return false;
+            if (gateway() ? f.turned_undead || combat::skill_level(f.rec, 0) <= 0 : !combat::can_turn(b, fg->t, f))
+                return false;
             for (int e = 0; e < b.n; ++e) {
                 const combat::Fighter& o = b.f[e];
                 if (o.up() && o.size && !(o.fleeing && !o.panic) && (o.team() ? 1 : 0) != (f.team() ? 1 : 0) && o.rec[0xE9] &&
@@ -4272,7 +4276,9 @@ void ai_step(pic::Canvas& c)
             }
             return false;
         };
-        if (d->prof->game == games::Game::CurseOfTheAzureBonds && ai_turns()) return;
+        if ((d->prof->game == games::Game::CurseOfTheAzureBonds || gateway() ||
+             d->prof->game == games::Game::ChampionsOfKrynn) && ai_turns())
+            return;
         if ((f.team() || f.rec[0xF7] >= 0x80) && f.can_cast && !no_magic_area() && load_magic()) {
             int tg[combat::kMaxFighters], nt = 0;
             const int sp = combat::choose_spell(b, fg->t, mrules->tables, i, d->prof->fight.spells,

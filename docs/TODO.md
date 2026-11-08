@@ -1146,7 +1146,17 @@ the Project as claude/TODO.md.
       knights): fixed in magic::can_use, 800 set-ups a game. Death
       Knights' Turn menu condition read (0x94CC: cleric, or paladin past
       2nd, turns < the undead loaded) = Darkness's, the engine's: no
-      change. Still open: Gateway's / Champions' / Darkness's AI turning.
+      change. AI turning: Gateway's computer (GAME.OVR 0xD266, reached
+      from its AI at 0xD14A, before its spells: not turned yet, a cleric's
+      skill level - no paladins - and an undead check 0x97:0x52, then the
+      turn stub 0x97:0x4D the menu's Turn calls) and Champions' (0xC772,
+      from 0xC6D3, before its spells: the menu's test - turns < the undead
+      loaded, a cleric or a former one) now turn as Curse's computer does;
+      fightfuzz seed 1 x 40 fights each: no rule broken. Left: Darkness's
+      AI turning (its menu dispatch not found by the 'T' key - not
+      traced); Champions' AI compares the old cleric level with record
+      0xD7 (the engine: the menu's test); the undead check (0x97:0x52 /
+      0x88:0x52) taken as Curse's (an enemy undead in range).
 - [ ] Pool's story beyond the nomads' camp: targeted differ runs only
       (scripted places), fights judged by the rule checks. 2026-11-07
       (part 17, claude/playtest_poolrad.md): every event square of
