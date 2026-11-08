@@ -43,3 +43,19 @@ Baselines this round (v0.179.0 work):
           ITEMS_BIN are gone and the repo has no generator for them (pool_oracle.py etc. were scratch scripts).
           Curse's behave without them: 74 synthetic checks pass, 6 parts fail "no oracle".
   DOSBox differ: not rebuilt (its custom build is gone).
+
+Round 8 rebuild (2026-11-08) - the behave oracles, ITEMS_BIN and test saves:
+  oracles/<name>.py      one generator per oracle, reads the player's program (tools/unpack -> /tmp/claude-0/prog)
+                         at profile.cpp's addresses, writes /tmp/claude-0/bt/oracle_<name>.txt. gb.py: shared readers
+                         and the AD&D Strength / Dexterity tables. Rebuilt: items spells monsters classes (Curse), pool,
+                         secret secret_monsters secret_spells secret_items secret_situations, gateway (creation only).
+                         NOT rebuilt (facts only in the Project docs): events (Curse's triggers - an independent ECL
+                         reader), Secret's sp_word rows, Gateway's list_limit / menus, darkness(+_fights, _left),
+                         treasures(+_fights, _left), champions, deathknights, queen, lv_<game> (behave levels).
+  items_bin.sh [games]   ITEMS_BIN (sweep testchars ALLITEMS=1) -> /tmp/claude-0/sw/items_<short>.bin (+ items.bin)
+  make_saves.sh <g> [slot] [race,sex,class,align:NAME ...]   a test party made with the playsim (CREATE x6,
+                         ADDGUYS, SAVENOW) into the scratch game's SAVE and /tmp/claude-0/saves/<g>. Gateway A works;
+                         Death Knights' Add list comes back empty (its .PC files aren't listed) - B not made.
+  behave.sh [games]      the per-game behave runs (oracles, build b<game>, run) -> logs/behave_<game>.log + summary.
+  Baselines this round: Curse 6002/1 (the 1: no oracle_events.txt), PoolRad 430/0/0, Secret 5312/0/0,
+  Gateway rules4 11/0 (save A made).
