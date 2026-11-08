@@ -2699,8 +2699,12 @@ const Profile kProfiles[] = {
      // (classes::Layout secret: 7 classes, levels to 18, 119 spells, its
      // own race order), the rest of character making not known yet
      .create = {.ds_image = 0xDE20,
-                .tables = {0x449C, 0x5810, 0x449C, 119, 0x4C0C, 0x4C92, 0x4C99, 0x4CA9, 0x4CAD, 0x4D3D, 0x4D48,
-                           0x4D9D, 0x4DFF, 0x4E45, 0x4EFF, 0x4F45, 0x4FAB, 0x506C, 0x5592, false, 0, 0, 0, true},
+                .tables = {.lo = 0x449C, .hi = 0x58AE, .spells = 0x449C, .spell_count = 119, .thac0 = 0x4C0C,
+                           .class_flags = 0x4C92, .class_masks = 0x4C99, .max_hit_dice = 0x4CA9, .thief_base = 0x4CAD,
+                           .thief_race = 0x4D3D, .thief_dex = 0x4D48, .stat_limits = 0x4D9D, .race_classes = 0x4DFF,
+                           .race_ages = 0x4E45, .age_brackets = 0x4EFF, .class_min = 0x4F45, .class_alignments = 0x4FAB,
+                           .class_records = 0x506C, .saves = 0x5592, .pool = false, .money_dice = 0, .lo2 = 0, .hi2 = 0,
+                           .secret = true, .mu_lists = 0x5851},
                 // the hit dice: level 1's count, the sides (7 classes; its
                 // training's roll - the better of two - as Curse's)
                 .hp_count = 0x9B0, .hp_dice = 0x9B7,
@@ -2936,12 +2940,12 @@ const Profile kProfiles[] = {
      // (classes::Tables::xp_row), the thief race table as the original reads
      // it (ovl 0xF7 +0xCC5)
      .create = {.ds_image = 0xBC60,
-                .tables = {.lo = 0x31B3, .hi = 0x4262, .spells = 0x31B3, .spell_count = 108, .thac0 = 0x3882,
+                .tables = {.lo = 0x31B3, .hi = 0x42B3, .spells = 0x31B3, .spell_count = 108, .thac0 = 0x3882,
                            .class_flags = 0x38EA, .class_masks = 0x38F2, .max_hit_dice = 0x3903, .thief_base = 0x3908,
                            .thief_race = 0x3970, .thief_dex = 0x397B, .stat_limits = 0x39E0, .race_classes = 0x3A50,
                            .race_ages = 0x3AB9, .age_brackets = 0x3B99, .class_min = 0x3BDF,
                            .class_alignments = 0x3C45, .class_records = 0x3C6D, .saves = 0x4056, .pool = false,
-                           .money_dice = 0, .lo2 = 0x0A9A, .hi2 = 0x0AA0, .krynn = true, .cleric_lists = 0x4230},
+                           .money_dice = 0, .lo2 = 0x0A9A, .hi2 = 0x0AA0, .krynn = true, .cleric_lists = 0x4230, .mu_lists = 0x4208},
                 .hp_count = 0x0B6E, .hp_dice = 0x0B76, .icon_colours = 0x390B,
                 .con_save = 0x5E, .dwarf_orc = 0x1A, .giants = 0x2F, .gnome_giant = 0x12, .gnome_extra = 0x30,
                 .elf_sleep = 0x5F, .halfelf = 0x12, .prot_evil = 0x08, .ranger_giant = 0x69,
@@ -3144,7 +3148,8 @@ const Profile kProfiles[] = {
                            .race_ages = 0x748C, .age_brackets = 0x756C, .class_min = 0x75B2,
                            .class_alignments = 0x7618, .class_records = 0x7638, .saves = 0x7F0F, .pool = false,
                            .money_dice = 0, .lo2 = 0x0584, .hi2 = 0x058A, .krynn = true, .cleric_lists = 0x81D9,
-                           .dkk = true, .paladin_slots = 0x7E6B, .ranger_slots = 0x7B3B, .race_caps = 0x82D4},
+                           .dkk = true, .paladin_slots = 0x7E6B, .ranger_slots = 0x7B3B, .race_caps = 0x82D4,
+                           .mu_lists = 0x8189},
                 .hp_count = 0x0656, .hp_dice = 0x065E, .icon_colours = 0x72AE,
                 // its createPlayer (GAME.OVR ovl 0x61): the races' effects as
                 // Champions', a paladin's 0x2D, a ranger's 0x69; a magic-user's

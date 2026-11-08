@@ -122,6 +122,13 @@ struct Layout {
     // (its magic-users' spell lists by robe: White, then Red / Black - 9
     // levels x 10, 0 ends; queen_pack's copy of DS 0x1728)
     uint16_t q_mu_lists = 0;
+    // Training's new spell for a magic-user from lists in the program (the
+    // originals' spell-list mode 4): Secret (GAME.OVR 0x2D31A) - spell
+    // levels 1-7 with magic-user slots, the list at this + level x 11 + i
+    // (i 1-11, 0 ends); Champions (0x2E8C3) / Death Knights (0x2A837) - by
+    // robe (White: list 2, else 3), levels 1-4 / 1-8, at this + list x 40 /
+    // 80 + level x 10 + i (i 1-10, 0 ends); 0: by the spell table
+    uint16_t mu_lists = 0;
 };
 
 // Champions: a race in creation's lists (the Curse number can't tell its two

@@ -1,7 +1,7 @@
 // Behaviour checks, round 4 (sweep's `behave rules4`, -DBEHAVE_ROUND4 with
 // -DBEHAVE_MATRIX - its cleared field and plain fighters; any game: GAME,
 // BOOTSLOT, MAREA / MBLOCK, FIGHTAT as the fuzzer's; ONLY= table, turn,
-// former, restore, rest, haste, moons, caster). Expectations from the originals'
+// former, restore, rest, haste, moons, caster, learn). Expectations from the originals'
 // code (rules_round4_facts.md in the Project: the turn routines of Curse's
 // listing ovr014:1228, Gateway's GAME.OVR 0x17455, Champions' 0x16021, the
 // Krynn moons' 0x3911F / 0x34E8C / 0x30E0B) and coab's facts (cast_restore,
@@ -603,6 +603,124 @@ void caster()
            bad == 0 && sp[0] && sp[1] && sp[2], "%d of %d wrong (%s; spells %d %d %d)", bad, n, first, sp[0], sp[1], sp[2]);
 }
 
+// ---- Training's new spell (the spell-list mode 4 of each original): the
+// engine's offered list against each game's own rule, the lists and the
+// spell table's bytes read from the program image at the originals' own
+// addresses - PoolRad GAME.OVR 0x276CA (1-56, a class and level with
+// slots, not known), Curse (0x2EBA4) / Gateway (0x356F2): 1-100, slots,
+// one it can learn, not known; Secret (0x2D31A): levels 1-7 with magic-user
+// slots, the list DS 0x5851 + level x 11 + i; Darkness (0x2A8BE) /
+// Treasures (0x337FC): 1-126, class code 2, magic-user slots of its level,
+// not known; Champions (0x2E8C3) / Death Knights (0x2A837): the robe's
+// list (rec 0x5E / 0x24 == 1: list 2, else 3), DS 0x4208 / 0x8189 + list x
+// 40 / 80 + level x 10 + i, levels 1-4 / 1-8 with magic-user slots
+// (the slots' places, as classes.cpp keeps them: levels 1-5 in the record, 6-9 in Ext)
+uint8_t& slot(party::Character& c, int cls, int lvl)
+{
+    if (lvl < 5) return c.rec[0x12D + cls * 5 + lvl];
+    static const uint8_t kAt[3] = {party::kExtCleric67, party::kExtDruidMore, party::kExtMage67};
+    static const uint8_t kAt89[3] = {party::kExtCleric89, party::kExtDruid89, party::kExtMage89};
+    return lvl < 7 ? c.ext[kAt[cls] + (lvl - 5)] : c.ext[kAt89[cls] + (lvl - 7)];
+}
+void unlearn(party::Character& c, int s)
+{
+    if (s >= 1 && s <= 100) c.rec[0x79 + s - 1] = 0;
+    else if (s > 100 && s <= 117) c.ext[party::kExtBook + s - 101] = 0;
+    else if (s > 117 && s <= 126) c.ext[party::kExtBook2 + s - 118] = 0;
+}
+void learning()
+{
+    const classes::Tables& t = m->tables;
+    if (t.lay.queen) return;                // (its own lists, queen_facts_4.md 8 - read before)
+    if (prog.empty()) find_table();
+    const uint32_t ds = d->prof->create.ds_image;
+    auto pb = [&](uint32_t a) { return a < prog.size() ? prog[a] : 0; };
+    const int g = game();
+    // the spell table's class / level bytes where each original reads them
+    uint32_t cls_at = 0, top = 100;
+    int kind = 0;                           // 0 by the table (codes 0-2 Curse's), 1 Pool's, 2 class 2 only, 3 lists
+    uint32_t lists = 0;
+    switch (g) {
+    case 1: cls_at = 0x31FA; top = 56; kind = 1; break;
+    case 2: cls_at = 0x37DC; break;
+    case 8: cls_at = 0x435E; break;
+    case 3: kind = 3; lists = 0x5851; break;
+    case 4: cls_at = 0x651A; top = 126; kind = 2; break;
+    case 9: cls_at = 0x578A; top = 126; kind = 2; break;
+    case 5: kind = 3; lists = 0x4208; break;
+    case 6: kind = 3; lists = 0x8189; break;
+    default: return;
+    }
+    party::Character base = pt->m[0];
+    uint32_t seed = 12345;
+    auto rnd = [&](int n) { seed = seed * 1103515245u + 12345u; return static_cast<int>((seed >> 16) % n); };
+    int bad = 0, n = 0, offered = 0;
+    char first[200] = "";
+    for (int k = 0; k < 600; ++k) {
+        party::Character ch = base;
+        for (int c = 0; c < 8; ++c) ch.rec[0x109 + c] = 0;
+        ch.rec[0x109 + 5] = static_cast<uint8_t>(rnd(4) ? 1 + rnd(14) : 0);       // magic-user
+        ch.rec[0x109 + 0] = static_cast<uint8_t>(rnd(3) ? 0 : 1 + rnd(12));       // cleric
+        ch.rec[0x109 + 4] = static_cast<uint8_t>(rnd(4) ? 0 : 1 + rnd(14));       // ranger
+        ch.rec[0x13] = static_cast<uint8_t>(9 + rnd(10));
+        ch.rec[0x15] = static_cast<uint8_t>(9 + rnd(10));
+        ch.ext[party::kExtRobe] = static_cast<uint8_t>(rnd(3));
+        for (int c = 0; c < 3; ++c)
+            for (int lv = 1; lv <= 9; ++lv) slot(ch, c, lv - 1) = static_cast<uint8_t>(rnd(3) ? 0 : 1 + rnd(3));
+        for (int s = 1; s < 127; ++s) {
+            unlearn(ch, s);
+            if (s < t.lay.spell_count && rnd(3) == 0) classes::to_book(ch, s);
+        }
+        std::vector<int> want;
+        if (kind == 3) {
+            const bool kr = g != 3;
+            const int levels = g == 3 ? 7 : g == 6 ? 8 : 4, per = kr ? 10 : 11;
+            const uint32_t b = ds + lists + (kr ? (ch.ext[party::kExtRobe] == 1 ? 2 : 3) * (g == 6 ? 80 : 40) : 0);
+            for (int lv = 1; lv <= levels; ++lv) {
+                if (classes::slots(ch, 2, lv) <= 0) continue;
+                for (int i = 1; i <= per; ++i) {
+                    const int s = pb(b + lv * per + i);
+                    if (!s) break;
+                    if (!classes::in_book(ch, s)) want.push_back(s);
+                }
+            }
+        } else {
+            for (int lv = 1; lv <= 9; ++lv)
+                for (uint32_t s = 1; s <= top && s < t.lay.spell_count; ++s) {
+                    const int code = pb(ds + cls_at + s * 16), level = pb(ds + cls_at + s * 16 + 1);
+                    if (level != lv || classes::in_book(ch, static_cast<int>(s))) continue;
+                    // (PoolRad's spell 56 - cleric, 7th level - reads its record's 0xB8 as a
+                    // slot count (0xB1 + 3 x class + level): not modelled - its levels 1-3 only)
+                    if (kind == 1 && level > 3) continue;
+                    // (the engine's class numbers: Pool's 0 cleric 1 magic-user)
+                    const int c = kind == 1 ? (code == 0 ? 0 : code == 1 ? 2 : -1) : code;
+                    if (kind == 2 ? code == 2 && classes::slots(ch, 2, level) > 0
+                                  : c >= 0 && c < 3 && classes::slots(ch, c, level) > 0 &&
+                                        (kind == 1 || magic::can_use(ch, t, static_cast<int>(s))))
+                        want.push_back(static_cast<int>(s));
+                }
+        }
+        uint8_t ids[130];
+        const int got = magic::learnable(ch, t, ids, 130);
+        ++n;
+        offered += got;
+        bool same = got == static_cast<int>(want.size());
+        for (int i = 0; same && i < got; ++i) same = ids[i] == want[i];
+        if (!same) {
+            ++bad;
+            if (!*first) {
+                int o = snprintf(first, sizeof first, "mu %d cl %d ra %d robe %d: engine", ch.rec[0x10E], ch.rec[0x109],
+                                 ch.rec[0x10D], ch.ext[party::kExtRobe]);
+                for (int i = 0; i < got && o < 150; ++i) o += snprintf(first + o, sizeof first - o, " %d", ids[i]);
+                o += snprintf(first + o, sizeof first - o, " / original");
+                for (size_t i = 0; i < want.size() && o < 195; ++i) o += snprintf(first + o, sizeof first - o, " %d", want[i]);
+            }
+        }
+    }
+    expect(P, "training's new spell: the offered list is the original's (lists / classes / slots / known)", bad == 0 && offered > 0,
+           "%d of %d set-ups differ, %d spells offered in all (%s)", bad, n, offered, first);
+}
+
 void run()
 {
     if (!monkey_boot() || !play::load_rules(m) || !m) {
@@ -622,6 +740,7 @@ void run()
     if (want("haste")) haste();
     if (want("moons")) moons();
     if (want("caster")) caster();
+    if (want("learn")) learning();
     if (want("restore")) restore();
     if (want("rest")) rest();
     rules::set_fixes(true);

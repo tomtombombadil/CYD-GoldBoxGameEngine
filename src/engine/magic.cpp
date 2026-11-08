@@ -163,10 +163,32 @@ int learnable(const party::Character& c, const classes::Tables& t, uint8_t* ids,
         }
         return n;
     }
-    for (int s = 1; s < t.lay.spell_count && n < cap; ++s)
-        if (usable(t, s) && cast_count(c, t, t.spell_class(s), t.spell_level(s)) > 0 && can_use(c, t, s) &&
-            !classes::in_book(c, s))
+    if (t.lay.mu_lists) {
+        // Secret / Champions / Death Knights: the magic-user's lists (classes::Layout)
+        const bool krynn = t.lay.krynn;
+        const int levels = krynn ? (t.lay.dkk ? 8 : 4) : 7, per = krynn ? 10 : 11;
+        const int base = t.lay.mu_lists + (krynn ? (c.ext[party::kExtRobe] == 1 ? 2 : 3) * (t.lay.dkk ? 80 : 40) : 0);
+        for (int lv = 1; lv <= levels && n < cap; ++lv) {
+            if (cast_count(c, t, MagicUser, lv) <= 0) continue;
+            for (int i = 1; i <= per && n < cap; ++i) {
+                const int s = t.u8(static_cast<uint16_t>(base + lv * per + i));
+                if (!s) break;
+                if (!classes::in_book(c, s)) ids[n++] = static_cast<uint8_t>(s);
+            }
+        }
+        return n;
+    }
+    // PoolRad (GAME.OVR 0x276CA): spells 1-56 of a class and level with
+    // slots, not known; Curse / Gateway (0x356F2): 1-100, also one the
+    // character can learn; Darkness / Treasures (0x2A8BE, 0x337FC): 1-126,
+    // magic-user spells only, of a level with magic-user slots, not known
+    const int top = t.lay.dk ? 126 : t.lay.pool ? 56 : 100;
+    for (int s = 1; s < t.lay.spell_count && s <= top && n < cap; ++s) {
+        if (!usable(t, s) || classes::in_book(c, s)) continue;
+        if (t.lay.dk ? t.spell_class(s) == MagicUser && cast_count(c, t, MagicUser, t.spell_level(s)) > 0
+                     : cast_count(c, t, t.spell_class(s), t.spell_level(s)) > 0 && (t.lay.pool || can_use(c, t, s)))
             ids[n++] = static_cast<uint8_t>(s);
+    }
     sort_by_level(t, ids, n);
     return n;
 }

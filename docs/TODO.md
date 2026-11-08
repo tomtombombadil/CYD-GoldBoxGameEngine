@@ -1110,6 +1110,20 @@ the Project as claude/TODO.md.
       routine; the Dark Queen's turn and caster routines; Darkness's /
       Treasures' caster levels; training spells, items outside fights,
       dual-class, Haste / rest in the later games - not reached.
+      2026-11-08 (rules4 ONLY=learn, every game but the Dark Queen): the
+      training's new-spell list read in each original (its spell-list
+      mode 4): PoolRad 1-56 with slots, not known (no can-learn check);
+      Curse / Gateway 1-100, slots, can learn, not known (the engine's);
+      Secret the magic-user's lists (DS 0x5851, levels 1-7, 11 a level -
+      its 1st-level 11 / 18 / 21 never offered); Darkness / Treasures
+      1-126, magic-user spells only; Champions / Death Knights the robe's
+      lists (DS 0x4208 / 0x8189, White list 2 else 3, levels 1-4 / 1-8).
+      The engine offered cleric / druid spells (Secret, Darkness, Krynn)
+      and every robe's spells (Krynn): fixed (magic::learnable,
+      Layout::mu_lists); 600 random set-ups a game, 0 differ (the old
+      code: 121-573 differ). Left: PoolRad's spell 56 (cleric 7th level:
+      its record's 0xB8 read as the slot count) not modelled; when the
+      list is shown (the originals' training condition) not compared.
 - [ ] Pool's story beyond the nomads' camp: targeted differ runs only
       (scripted places), fights judged by the rule checks. 2026-11-07
       (part 17, claude/playtest_poolrad.md): every event square of
