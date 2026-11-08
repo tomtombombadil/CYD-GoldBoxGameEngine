@@ -952,7 +952,7 @@ void krynn_can()
             bool want;
             if (code == 0 || code == 5) want = c.rec[0x15] > 8 && (cl > 0 || kn > 5 || (g != 5 && pa > 8));
             else if (code == 1) want = c.rec[0x15] > 8 && ra > (g != 5 ? 7 : 6);
-            else want = c.rec[0x13] > 8 && (g != 7 || mu > 0 || ra > 8);
+            else want = c.rec[0x13] > 8 && (g == 5 || mu > 0 || ra > 8);     // (Death Knights 0x29D16 too)
             const bool got = magic::can_use(c, t, sp[code]);
             ++n;
             if (got != want) {

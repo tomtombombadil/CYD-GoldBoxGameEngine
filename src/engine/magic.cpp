@@ -89,7 +89,13 @@ bool can_use(const party::Character& c, const classes::Tables& t, int s)
             return c.rec[kWis] > 8 && (over(c, classes::Cleric, 0) || over(c, kKnight, 5));
         case Druid:
             return c.rec[kWis] > 8 && (t.lay.dkk ? c.level(classes::Ranger) > 7 : over(c, classes::Ranger, 6));
-        case MagicUser: return c.rec[kInt] > 8;
+        case MagicUser:
+            // (Death Knights' 0x29D16: also a magic-user or a ranger past 8th
+            // - a human magic-user in armour, ranger to 8th, not in fights:
+            // not here; Champions' asks Intelligence alone outside fights)
+            if (t.lay.dkk)
+                return c.rec[kInt] > 8 && (c.level(classes::MagicUser) > 0 || c.level(classes::Ranger) > 8);
+            return c.rec[kInt] > 8;
         default: return false;
         }
     }
