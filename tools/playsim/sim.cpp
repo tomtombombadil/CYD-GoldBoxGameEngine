@@ -1291,6 +1291,32 @@ int main(int argc, char** argv)
         play::d->loaded = false;
         printf("  new game: area %d script %d\n", play::d->gs.game_area, play::d->gs.script);
     }
+    if (getenv("ADDGUYS") && play::screen == play::Screen::PartyMenu) {
+        // ADDGUYS=NAME,NAME...: each made character (e.g. CREATE's) added from the
+        // game's own list, none removed (tools/devkit/make_saves.sh's test parties);
+        // with PARTYMENU=1 it then BEGINs
+        auto tap_word = [](char k) { for (int i = 0; i < play::menu.count; ++i) if (text::key(play::menu, i) == k) { int cx, cy; text::item_cell(play::menu, i, &cx, &cy); play::tap(cx * 8 + 2, cy * 8 + 2, C); return true; } return false; };
+        pm_tap_line('A');
+        if (play::screen != play::Screen::AddList) {
+            printf("  add from [%s%s]\n", play::menu.prompt, play::menu.s);
+            // (the game's own list: ADDFROM=key, else the menu's first word - its own game)
+            if (getenv("ADDFROM")) tap_word(getenv("ADDFROM")[0]);
+            else if (play::menu.count) tap_word(text::key(play::menu, 0));
+        }
+        printf("  add list: %d characters (screen %d)\n", play::d->guys, (int)play::screen);
+        for (const char* q = getenv("ADDGUYS"); *q;) {
+            std::string nm;
+            while (*q && *q != ',') nm += *q++;
+            if (*q) ++q;
+            for (int i = 0; i < play::d->guys; ++i) {
+                char t[48];
+                play::list_line(i, t, sizeof t);
+                if (strstr(t, nm.c_str())) { play::add_character(i, C); printf("  added [%s] party %d\n", t, play::pt->count); break; }
+            }
+        }
+        tap_word('E');
+        if (getenv("PARTYMENU") && play::pt->count) pm_tap_line('B');
+    }
     if (play::screen == play::Screen::PartyMenu && !getenv("PARTYMENU") && !getenv("NOBEGIN")) pm_tap_line('B');
     if (getenv("AREA")) {
         // Start somewhere else: as a script would (SAVE area; NEWECL block)
