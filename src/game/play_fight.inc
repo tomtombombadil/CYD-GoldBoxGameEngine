@@ -844,6 +844,7 @@ struct Fight {
     int      sp_n = 0, sp_need = 0, sp_area = -1;
     int      pick_budget = -1;          // spell aim 5: picked one by one against this (-1: not that kind)
     bool     pick_size = false;         // ... costs by size (Faerie Fire), else by Hit Dice
+    bool     jump = false;              // the aim is Treasures' jumping boots' (tr_jump), not a spell
     bool     page_dropped = false;      // the last add_page found no room (its pictures / sound aren't set)
     bool     cont_next = false;         // the next add_page goes on below the last page shown
     int8_t   page_end = 10;             // the row after the last page shown's print (the originals' text row + 1)
@@ -3236,10 +3237,12 @@ void fight_use(int k, int sp, bool scroll, pic::Canvas& c)
 }
 
 // Treasures' own items in a fight (play.cpp tr_own_item): 0x11 - the
-// effect on the user as outside fights, on a page; the turn ends. 0x10's
-// map and 0x0F's jump (GAME.OVR 0x2DBF3: a square aimed at, "cannot go
-// there", the held effect ended - "is free to move" -, "jumps") are not
-// in the engine yet
+// effect on the user as outside fights, on a page; the turn ends. 0x0F -
+// the jump (GAME.OVR 0x2DBF3, fights only): a square aimed at with spell
+// 0x7F's aim (Dimension Door's row: aim 8, range 4 - its call [0xA22A](
+// result, 0, 0x7F)), then tr_jump. (0x10's map: as outside fights, back to
+// the items screen, nothing used, the turn goes on - play.cpp tr_own_item)
+constexpr int kTrJumpAim = 0x7F;
 void tr_fight_item(int k, pic::Canvas& c)
 {
     items_direct = false;
@@ -3254,6 +3257,13 @@ void tr_fight_item(int k, pic::Canvas& c)
         return;
     }
     const uint8_t* it = f.items[k];
+    if (it[0x3E] == 0x0F) {
+        fg->use_item = k;
+        fg->use_scroll = false;
+        fg->jump = true;
+        begin_targeting(c, kTrJumpAim);
+        return;
+    }
     if (it[0x3E] != 0x11) {
         fight_menu(c);
         error(c, "Not in the engine yet.");
@@ -3275,6 +3285,50 @@ void tr_fight_item(int k, pic::Canvas& c)
     say(c, FSt::Next);
 }
 
+// The jump's square picked (GAME.OVR 0x2DBF3 after its aim): someone
+// standing there (0x150:0x48) - "NAME cannot go there"; else the user's
+// effect 0x9C (variant.tr_held) ended - "is free to move" -, the user moved
+// there (0x150:0x75 / 0x4D off its square, 0x84 onto the new one) - "jumps".
+// Either way the result is 1: a charge goes (0x2E0EF +0x2C5: the count's,
+// else 0x3C's) and the turn is over. The original looks at nobody but who
+// stands there - a wall or the field's dark squares too (Game Fixes: only a
+// square the jumper can stand on, Dimension Door's rule)
+void tr_jump(pic::Canvas& c)
+{
+    combat::Battle& b = fg->b;
+    const int i = fg->cur;
+    combat::Fighter& f = b.f[i];
+    const int x = fg->aim_x, y = fg->aim_y;
+    fg->jump = false;
+    fg->spell = 0;
+    const auto& v = d->prof->variant;
+    char w[32];
+    draw_fight(c);
+    const bool moved = x >= 0 && y >= 0 &&
+                       (rules::fixes() ? combat::teleport(b, fg->t, i, x, y) : combat::jump_to(b, i, x, y));
+    if (moved) {
+        // (moved first here, said after: the pages show it in its new square)
+        if (combat::lose_aff(f, v.tr_held)) {
+            ow(v.tr_item_words[2], w, sizeof w);
+            add_page(i, w);
+        }
+        ow(v.tr_item_words[3], w, sizeof w);
+        add_page(i, w);
+        Fx r;
+        r.kind = Fx::Redraw;
+        page_fx_set(1, r);
+        focus(i, 2);
+    } else {
+        ow(v.tr_item_words[1], w, sizeof w);
+        add_page(i, w);
+    }
+    plat::log("[play] jump to %d,%d: %s\n", x, y, moved ? "jumps" : "cannot go there");
+    spend_item(i, 0);
+    f.attacks[0] = f.attacks[1] = 0;
+    f.moves = 0;
+    say(c, FSt::Next);
+}
+
 void start_turn(pic::Canvas& c)
 {
     combat::Battle& b = fg->b;
@@ -3290,6 +3344,7 @@ void start_turn(pic::Canvas& c)
     fg->flee_told = false;
     fg->use_item = -1;
     fg->spell = 0;
+    fg->jump = false;
     if (!f.team() || on_screen(fg->cur)) focus(fg->cur, 2);
     draw_fight(c);
     // Coughing (a stinking cloud's): no items and no spells this round
@@ -4044,9 +4099,23 @@ void aim_tap(int x, int y, pic::Canvas& c)
 // (memorized or an item's) - "Abort Spell? Yes No" as the original (Yes:
 // the spell or the use is gone, the turn over; No: aim again); picking one
 // by one - cast with those picked (even none: the original)
+void tr_jump(pic::Canvas& c);
 void aim_exit(pic::Canvas& c)
 {
     status_line(c, "");
+    if (fg->jump) {
+        // (Treasures' jump: the aim left - 0x2DBF3 makes the result 1, so the
+        // charge goes and the turn is over, nothing asked or said)
+        fg->jump = false;
+        fg->spell = 0;
+        spend_item(fg->cur, 0);
+        combat::Fighter& f = fg->b.f[fg->cur];
+        f.attacks[0] = f.attacks[1] = 0;
+        f.moves = 0;
+        draw_fight(c);
+        end_turn(c);
+        return;
+    }
     if (fg->spell && (fg->sp_n > 0 || fg->pick_budget >= 0)) {
         cast_now(c);
         return;
@@ -6007,6 +6076,10 @@ void blast_off(Fight::Blast& bl)
 
 void cast_now(pic::Canvas& c, bool forgotten)
 {
+    if (fg->jump) {
+        tr_jump(c);
+        return;
+    }
     combat::Battle& b = fg->b;
     const int i = fg->cur;
     combat::Fighter& f = b.f[i];

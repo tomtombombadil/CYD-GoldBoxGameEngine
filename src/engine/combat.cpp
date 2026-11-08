@@ -3641,6 +3641,26 @@ bool teleport(Battle& b, const Tables& t, int i, int x, int y)
     return true;
 }
 
+bool jump_to(Battle& b, int i, int x, int y)
+{
+    // (0x150:0x48 reads who stands on the square - off the field: nobody;
+    // the field's edge can't be aimed past here, so off it stays put)
+    Fighter& f = b.f[i];
+    if (!on_field(x, y) || !f.size || (b.who[y][x] && b.who[y][x] != i + 1)) return false;
+    f.x = x;
+    f.y = y;
+    occupancy(b);
+    return true;
+}
+
+bool lose_aff(Fighter& f, uint8_t type)
+{
+    const int k = type ? find_aff(f, type) : -1;
+    if (k < 0) return false;
+    drop_aff(f, k);
+    return true;
+}
+
 bool saving_throw(const Fighter& f, int type, int bonus, create::Dice& d)
 {
     if (type < 0 || type > 4) type = 4;

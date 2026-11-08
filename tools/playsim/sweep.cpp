@@ -1751,6 +1751,7 @@ static void dice_faces(std::initializer_list<int> f) { dice_usual(); b_faces.ass
 int main(int argc, char** argv)
 {
     play::load_begins = false;          // (Pool: the loaded party at the party menu, to work on)
+    setvbuf(stdout, nullptr, _IOLBF, 0);    // (a crash's report keeps the lines before it)
     if (argc < 3) {
         printf("sweep <game folder> <mode> [arg]\n");
         return 1;

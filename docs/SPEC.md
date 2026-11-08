@@ -2400,8 +2400,15 @@ effect 0x3D on the user (already there: "is already affected", nothing
 used; the Potion of Spell Enhancing's 0x9F lasts 1d4 x 10 + 40, "Is
 empowered", its caster 3 levels higher - 0x40DEF); 0x10 shows GEO block
 0x3D's walls (columns 10-25, rows 2-17, the item's name on row 21;
-nothing used); 0x0F (the boots' jump) works in fights only - not in the
-engine yet.
+nothing used); 0x0F (the boots' jump) works in fights only. In fights
+(v0.179.0): the jump (0x2DBF3) aims as spell 0x7F's row (Dimension Door:
+an area of radius 0, range 4); a square someone stands on - "cannot go
+there"; else effect 0x9C goes ("is free to move" when it was on), the
+user moves there, "jumps"; aimed or not (the aim left: nothing said) a
+charge goes and the turn is over. The original looks only at who stands
+on the square - a wall too; with Game Fixes only a square the jumper can
+stand on (Dimension Door's). A map in a fight is shown as outside one,
+the items screen back after its key, nothing used, the turn not over.
 
 ## 10. Engine UI rules (carried over from CYD-Classic-Games)
 

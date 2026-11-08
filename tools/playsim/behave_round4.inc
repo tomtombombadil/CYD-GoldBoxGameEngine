@@ -859,6 +859,151 @@ void learning()
 // its handler run - 0x9F's (0x25815): 1d4 x 10 + 40 - and the use taken;
 // that effect's caster + 3 (0x40DEF); 0x10 (0x2DD75) shows GEO block 0x3D,
 // nothing used; 0x0F (0x2DBF3) does nothing outside fights
+// Treasures' own items in a fight (GAME.OVR 0x2E0EF, the Use routine, and
+// its 0x0F / 0x10 handlers): the jump 0x2DBF3 - aim (spell 0x7F's row),
+// left: the result 1 (a charge goes, the turn over, nothing said); a square
+// someone stands on (0x150:0x48 reads only who stands there): "cannot go
+// there", not moved, a charge goes; else the effect 0x9C off ("is free to
+// move" when it was on), moved there, "jumps", a charge goes - a wall square
+// too (the original looks at no ground; with the Game Fixes not); the map
+// 0x2DD75: shown, the result left 0 - nothing used, the turn not over.
+// Words: the routine's own Pascal strings (cs:0x1FAC / 0x1FBC / 0x1FCC of
+// overlay 0x2BC21), read from the player's GAME.OVR here.
+bool fight();
+void treasures_fight_items()
+{
+    std::vector<uint8_t> ovr;
+    if (!read_file(game_dir + "/GAME.OVR", ovr) || ovr.size() < 0x2DC00) {
+        expect(P, "Treasures' items in a fight: GAME.OVR read", false);
+        return;
+    }
+    auto pstr = [&](uint32_t at) { return std::string(reinterpret_cast<const char*>(&ovr[at + 1]), ovr[at]); };
+    const std::string w_cannot = pstr(0x2DBCD), w_free = pstr(0x2DBDD), w_jumps = pstr(0x2DBED);
+    int bad = 0, n = 0;
+    char first[200] = "";
+    auto fail = [&](const char* w) { ++bad; if (!*first) snprintf(first, sizeof first, "%s", w); };
+    auto pages_text = [&](int from) {
+        std::string s;
+        for (int p = from; p < fg->pages; ++p)
+            for (int l = 0; l < fg->page[p].lines; ++l) s += std::string("|") + (fg->ptext + fg->page[p].line_at[l]);
+        return s;
+    };
+    // case: 0 an empty floor square, 1 the same held (0x9C), 2 a square a
+    // monster stands on, 3 the aim left, 4 a wall square (fixes off), 5 the
+    // wall square with the Game Fixes
+    for (int cs = 0; cs < 6; ++cs) {
+        if (!fight()) {
+            fail("no fight");
+            break;
+        }
+        rules::set_fixes(cs == 5);
+        combat::Battle& b = fg->b;
+        int i = -1;
+        for (int k = 0; k < b.party_size; ++k)
+            if (b.f[k].member == 0) i = k;
+        if (i < 0) {
+            fail("member 0 not fighting");
+            break;
+        }
+        mx::put(i, 0, 10, 10, 40);
+        mx::put(B, 1, 12, 10, 40);
+        combat::occupancy(b);
+        party::Character& me = pt->m[0];
+        while (me.n_items > party::kMaxItems - 1) --me.n_items;
+        const int k = me.n_items;
+        memset(me.items[k], 0, sizeof me.items[k]);
+        me.items[k][0x2E] = 0x2F;
+        me.items[k][0x34] = 1;
+        me.items[k][0x3C] = 1;              // (one charge: the item goes with it)
+        me.items[k][0x3D] = 0xA0;
+        me.items[k][0x3E] = 0x0F;
+        ++me.n_items;
+        b.f[i].n_items = me.n_items;
+        if (cs == 1) spells::add_affect(me, 0x9C, 60, 0, false);
+        const int items0 = me.n_items;
+        fg->cur = i;
+        const int from = fg->pages;
+        tr_fight_item(k, C);
+        ++n;
+        if (fg->st != FSt::Aim || !fg->jump) {
+            char w2[96];
+            snprintf(w2, sizeof w2, "case %d: the boots didn't aim (state %d)", cs, static_cast<int>(fg->st));
+            fail(w2);
+            continue;
+        }
+        const int tx = cs == 2 ? 12 : 13, ty = 10;
+        if (cs >= 4) b.ground[ty][tx] = 0;         // (a wall: no ground)
+        if (cs == 3) {
+            aim_exit(C);
+        } else {
+            fg->manual = true;
+            fg->mx = tx;
+            fg->my = ty;
+            spell_target(C, b.who[ty][tx] ? b.who[ty][tx] - 1 : -1);
+        }
+        const bool moved = b.f[i].x == tx && b.f[i].y == ty;
+        const std::string said = pages_text(from);
+        const bool w_moved = cs == 0 || cs == 1 || cs == 4;
+        const std::string want = cs == 3 ? "" : cs == 1 ? "|" + w_free + "|" + w_jumps : w_moved ? "|" + w_jumps : "|" + w_cannot;
+        const bool held = spells::find_affect(me, 0x9C) >= 0;
+        // (the names are lines of their own: only the words compared)
+        std::string words;
+        for (size_t p = 0, q; p < said.size(); p = q) {
+            q = said.find('|', p + 1);
+            if (q == std::string::npos) q = said.size();
+            const std::string line = said.substr(p, q - p);
+            if (line == "|" + w_cannot || line == "|" + w_free || line == "|" + w_jumps) words += line;
+        }
+        if (moved != w_moved || words != want || me.n_items != items0 - 1 || held || b.f[i].moves || fg->jump) {
+            char w2[200];
+            snprintf(w2, sizeof w2, "case %d: moved %d (want %d), said '%s' (want '%s'), items %d -> %d, 0x9C %d, moves %d",
+                     cs, moved, w_moved, words.c_str(), want.c_str(), items0, me.n_items, held, b.f[i].moves);
+            fail(w2);
+        }
+    }
+    rules::set_fixes(true);
+    // The map in a fight: shown, nothing used, the turn not over
+    if (fight()) {
+        combat::Battle& b = fg->b;
+        int i = -1;
+        for (int k = 0; k < b.party_size; ++k)
+            if (b.f[k].member == 0) i = k;
+        party::Character& me = pt->m[0];
+        while (me.n_items > party::kMaxItems - 1) --me.n_items;
+        const int k = me.n_items;
+        memset(me.items[k], 0, sizeof me.items[k]);
+        me.items[k][0x2E] = 0x2F;
+        me.items[k][0x34] = 1;
+        me.items[k][0x3C] = 1;
+        me.items[k][0x3D] = 0x3A;
+        me.items[k][0x3E] = 0x10;
+        ++me.n_items;
+        if (i >= 0) {
+            b.f[i].n_items = me.n_items;
+            fg->cur = i;
+            pt->selected = 0;
+            view_from = Screen::Fight;
+            items_direct = true;
+            screen = Screen::Items;
+            const int pages0 = fg->pages, items0 = me.n_items;
+            use_item(k, C);
+            const bool map_up = lk.on && lk.then == LuckRun::Then::Paper;
+            lk.on = false;
+            ++n;
+            if (!map_up || me.n_items != items0 || me.items[k][0x3C] != 1 || fg->pages != pages0 || fg->st == FSt::Pages) {
+                char w2[160];
+                snprintf(w2, sizeof w2, "the map in a fight: shown %d, items %d -> %d, charges %d, pages %d -> %d", map_up, items0,
+                         me.n_items, me.items[k][0x3C], pages0, fg->pages);
+                fail(w2);
+            }
+            items_direct = false;
+            screen = Screen::Fight;
+        }
+    }
+    expect(P, "Treasures' items in a fight (the boots' jump 0x2DBF3, the map 0x2DD75) as GAME.OVR's routines", bad == 0,
+           "%d of %d wrong (%s)", bad, n, first);
+}
+
 void treasures_own_items()
 {
     party::Character& me = pt->m[0];
@@ -961,6 +1106,7 @@ void treasures_own_items()
     play::fg = keep_fg;
     expect(P, "Treasures' own items (0x3E 0x11 the effect, 0x10 the map, 0x0F nothing outside fights) as GAME.OVR 0x2E15B's routines",
            bad == 0, "%d of %d wrong (%s)", bad, n, first);
+    treasures_fight_items();
 }
 
 void using_items()

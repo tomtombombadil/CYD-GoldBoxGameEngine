@@ -1190,6 +1190,12 @@ int clouds_round(Battle& b);
 // Dimension Door: fighter i to the square (x, y) when it can stand there
 // (a hug or an engulfing holding it lets go); false: not moved
 bool teleport(Battle& b, const Tables& t, int i, int x, int y);
+// Treasures' jump (GAME.OVR 0x2DBF3): fighter i to (x, y) as the original
+// moves it - only another fighter standing there stops it (no ground
+// looked at); false: someone is there (or off the field)
+bool jump_to(Battle& b, int i, int x, int y);
+// An effect of that type off fighter f (the first found); false: none
+bool lose_aff(Fighter& f, uint8_t type);
 
 // The fighters in an area: within r squares of (x, y)
 int in_area(const Battle& b, const Tables& t, int x, int y, int r, int* out, int cap);

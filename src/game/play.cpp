@@ -10487,7 +10487,9 @@ void tr_own_item(int i, pic::Canvas& c)
 {
     party::Character& me = *pt->sel();
     const uint8_t* it = me.items[i];
-    if (in_fight()) {
+    // (a map in a fight as outside one: 0x2E0EF leaves the result 0 for it,
+    // so the items screen comes back, nothing used, the turn not over)
+    if (in_fight() && it[0x3E] != 0x10) {
         tr_fight_item(i, c);
         return;
     }
