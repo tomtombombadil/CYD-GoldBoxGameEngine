@@ -5,14 +5,43 @@
 # spell slots, thief skills - from the original program's own tables read
 # from the player's files, composed by the rules of the Project's
 # behaviour_facts.md (classes) - never the engine's.
-# Usage: lv_oracle.py [curse]   (only Curse's rules are in the facts this
-# kit has; the other games' compositions need their facts - see README)
+# Usage: lv_oracle.py [curse|darkness|treasures]
+#   curse: every value (behaviour_facts.md's class rules);
+#   darkness / treasures: the experience, the last level and the hit points
+#   only (darkness_create_facts.md 43.1 and the class records - its THAC0,
+#   saves, attacks, slots and thief skills' compositions are not in the facts
+#   this kit has: no rows, not checked)
 import sys
 import gb
 
 game = sys.argv[1] if len(sys.argv) > 1 else 'curse'
+if game in ('darkness', 'treasures'):
+    sys.argv[1:] = [game]
+    import darkness as dk                           # (its oracles are written too: the same tables)
+    w = gb.Writer('lv_' + game)
+    w.c('behave levels oracle (%s: experience, last level, hit points) - tools/devkit/oracles/lv_oracle.py' % game)
+    for k in (0, 2, 3, 4, 5, 6):
+        w.row('class', k, 0, 40)                    # (training's limit: level 40 - 40.8)
+        for L in range(1, 41):
+            w.row('xp', k, 0, L, dk.E(k, L + 1) if L < 40 else -1)
+            if L >= 2:
+                for con in (18, 16, 12, 5):
+                    lv = [0] * 7
+                    lv[k] = L
+                    g = []
+                    for high in (True, False):
+                        inc, cp = dk.hp_roll(lv, dk.masks[k], con, 1, high)
+                        g.append((inc + cp) & 0xFF if (inc + cp) & 0xFF < 128 else ((inc + cp) & 0xFF) - 256)
+                    w.row('hp', k, L, con, g)
+        w.row('hd', k, dk.hpcount[k], dk.hpsides[k], dk.lasthd[k])
+        w.row('past', k, 3 if k in (2, 3) else 2 if k in (0, 4, 6) else 1)
+        for con in (18, 16, 12, 5):
+            w.row('mfig', k, con, dk.fig(con, k))
+    w.row('hpfam', 1)
+    w.done()
+    sys.exit(0)
 if game != 'curse':
-    sys.exit('lv_oracle.py: no facts for %s here (Curse only)' % game)
+    sys.exit('lv_oracle.py: no facts for %s here' % game)
 
 DSB = 0xABE0
 THAC0, MAXHD, TBASE, TRACE, TDEX = 0x3E3A, 0x3EBB, 0x3EC0, 0x3F20, 0x3F33
