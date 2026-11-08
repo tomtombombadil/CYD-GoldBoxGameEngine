@@ -1,7 +1,7 @@
 // Behaviour checks, round 4 (sweep's `behave rules4`, -DBEHAVE_ROUND4 with
 // -DBEHAVE_MATRIX - its cleared field and plain fighters; any game: GAME,
 // BOOTSLOT, MAREA / MBLOCK, FIGHTAT as the fuzzer's; ONLY= table, turn,
-// former, restore, rest, haste, moons, caster, learn, use). Expectations from the originals'
+// former, restore, rest, haste, moons, caster, learn, use, canuse). Expectations from the originals'
 // code (rules_round4_facts.md in the Project: the turn routines of Curse's
 // listing ovr014:1228, Gateway's GAME.OVR 0x17455, Champions' 0x16021, the
 // Krynn moons' 0x3911F / 0x34E8C / 0x30E0B) and coab's facts (cast_restore,
@@ -811,6 +811,55 @@ void using_items()
     if (g == 9) printf("NOTE rules4: Treasures' items with 0x3E 0x0F / 0x10 / 0x11 have routines of their own (GAME.OVR 0x2DBF3 / 0x2DD75 / 0x2DB44) - not in the engine\n");
 }
 
+// ---- Who may learn / memorize a spell in the Krynn games (their
+// can-learn routine: Champions GAME.OVR 0x2DC8E, Death Knights 0x29C84,
+// by the game's own class codes 0 / 2 cleric, 1 druid, 3 magic-user):
+// cleric spells - Wisdom over 8 and a cleric, a knight past 5th (Death
+// Knights also a paladin past 8th; Champions the levels before a human's
+// dual class too); druid spells - a ranger past 6th (Death Knights 7th);
+// magic-user spells - Intelligence over 8 (outside fights)
+void krynn_can()
+{
+    const classes::Tables& t = m->tables;
+    const int g = game();
+    if (g != 5 && g != 6) return;
+    int sp[4] = {};
+    for (int s = 1; s < t.lay.spell_count; ++s) {
+        const int code = t.spell_code(s);
+        if (code >= 0 && code < 4 && code != 2 && !sp[code] && t.spell_level(s) >= 1) sp[code] = s;
+    }
+    party::Character base = pt->m[0];
+    uint32_t seed = 99;
+    auto rnd = [&](int n) { seed = seed * 1103515245u + 12345u; return static_cast<int>((seed >> 16) % n); };
+    int bad = 0, n = 0;
+    char first[160] = "";
+    for (int k = 0; k < 800; ++k) {
+        party::Character c = base;
+        for (int j = 0; j < 8; ++j) c.rec[0x109 + j] = c.rec[0x111 + j] = 0;
+        for (int j : {0, 3, 4, 5, 7}) if (rnd(3) == 0) c.rec[0x109 + j] = static_cast<uint8_t>(1 + rnd(14));
+        c.rec[0x13] = static_cast<uint8_t>(3 + rnd(16));
+        c.rec[0x15] = static_cast<uint8_t>(3 + rnd(16));
+        const int cl = c.rec[0x109], pa = c.rec[0x10C], ra = c.rec[0x10D], kn = c.rec[0x110];
+        for (int code : {0, 1, 3}) {
+            if (!sp[code]) continue;
+            bool want;
+            if (code == 0) want = c.rec[0x15] > 8 && (cl > 0 || kn > 5 || (g == 6 && pa > 8));
+            else if (code == 1) want = c.rec[0x15] > 8 && ra > (g == 6 ? 7 : 6);
+            else want = c.rec[0x13] > 8;
+            const bool got = magic::can_use(c, t, sp[code]);
+            ++n;
+            if (got != want) {
+                ++bad;
+                if (!*first)
+                    snprintf(first, sizeof first, "code %d Wis %d Int %d cl %d pa %d ra %d kn %d: %d, want %d", code, c.rec[0x15],
+                             c.rec[0x13], cl, pa, ra, kn, got, want);
+            }
+        }
+    }
+    expect(P, "Krynn: who may learn / memorize a spell (clerics, knights past 5th, the druid's rangers)", bad == 0 && n > 0,
+           "%d of %d wrong (%s; spells %d %d %d)", bad, n, first, sp[0], sp[1], sp[3]);
+}
+
 void run()
 {
     if (!monkey_boot() || !play::load_rules(m) || !m) {
@@ -832,6 +881,7 @@ void run()
     if (want("caster")) caster();
     if (want("learn")) learning();
     if (want("use")) using_items();
+    if (want("canuse")) krynn_can();
     if (want("restore")) restore();
     if (want("rest")) rest();
     rules::set_fixes(true);

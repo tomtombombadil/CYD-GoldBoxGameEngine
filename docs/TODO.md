@@ -1138,6 +1138,15 @@ the Project as claude/TODO.md.
       0x0F ("jumps" - fights), 0x10 and 0x11 ("is already affected" - an
       effect on the user) have routines of their own (GAME.OVR 0x2DBF3 /
       0x2DD75 / 0x2DB44) - the engine casts their 0x3D as a spell.
+      2026-11-08 (rules4 ONLY=canuse): the Krynn games' can-learn read
+      (Champions GAME.OVR 0x2DC8E, Death Knights 0x29C84): cleric spells
+      for a cleric or a knight past 5th (Death Knights also a paladin past
+      8th, Champions none), druid spells for a ranger past 6th (Death
+      Knights 7th) - the engine had Curse's (paladins past 8th, no
+      knights): fixed in magic::can_use, 800 set-ups a game. Death
+      Knights' Turn menu condition read (0x94CC: cleric, or paladin past
+      2nd, turns < the undead loaded) = Darkness's, the engine's: no
+      change. Still open: Gateway's / Champions' / Darkness's AI turning.
 - [ ] Pool's story beyond the nomads' camp: targeted differ runs only
       (scripted places), fights judged by the rule checks. 2026-11-07
       (part 17, claude/playtest_poolrad.md): every event square of

@@ -44,9 +44,34 @@ int first_learning(const party::Character& c)
 
 } // namespace
 
+// A class's level over n, or (a dual-class human past the class before)
+// the level it had (Champions' 0xF7:0x48 test with the old levels)
+static bool over(const party::Character& c, int cls, int n)
+{
+    if (c.level(cls) > n) return true;
+    return classes::skill_level(c, cls) != c.level(cls) && c.old_level(cls) > n;
+}
+
 bool can_use(const party::Character& c, const classes::Tables& t, int s)
 {
     if (!usable(t, s)) return false;
+    if (t.lay.krynn && !t.lay.queen) {
+        // Champions (GAME.OVR 0x2DC8E) / Death Knights (0x29C84): clerics,
+        // knights past 5th level (Death Knights: paladins past 8th; not
+        // Champions'); druid spells rangers past 6th (Death Knights: 7th);
+        // magic-user spells as the others' outside fights
+        constexpr int kKnight = 7;
+        switch (t.spell_class(s)) {
+        case Cleric:
+            if (t.lay.dkk) return c.rec[kWis] > 8 && (c.level(classes::Cleric) > 0 || c.level(kKnight) > 5 ||
+                                                     c.level(classes::Paladin) > 8);
+            return c.rec[kWis] > 8 && (over(c, classes::Cleric, 0) || over(c, kKnight, 5));
+        case Druid:
+            return c.rec[kWis] > 8 && (t.lay.dkk ? c.level(classes::Ranger) > 7 : over(c, classes::Ranger, 6));
+        case MagicUser: return c.rec[kInt] > 8;
+        default: return false;
+        }
+    }
     switch (t.spell_class(s)) {
     case Cleric:
         return c.rec[kWis] > 8 &&
