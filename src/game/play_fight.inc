@@ -4706,7 +4706,9 @@ void fight_start(pic::Canvas& c)
         f.magic_res = ch.ext[party::kExtMagicRes];
         // (Death Knights' saves and caster levels too - GAME.OVR 0x30E0B /
         // 0x34E8C; a Champions cleric's god for Turn Undead)
-        f.robe = krynn_rules() && ch.level(classes::MagicUser) > 0 ? ch.ext[party::kExtRobe] : 0;
+        // (the Dark Queen's too: its saves DQK.EXE 0x85CC, caster levels 0xB616 -
+        // a mage, rec 0xAA, with a robe 0x19D: game block 0x1F9 + robe)
+        f.robe = (krynn_rules() || hl()) && ch.level(classes::MagicUser) > 0 ? ch.ext[party::kExtRobe] : 0;
         f.god = krynn_rules() ? ch.ext[party::kExtGod] : 0;
     }
     b.party_size = pt->count;

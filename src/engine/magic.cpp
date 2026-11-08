@@ -144,18 +144,21 @@ int g_empower = 0;
 void set_empower(int type) { g_empower = type; }
 int empower() { return g_empower; }
 
+int moon_levels(const classes::Tables& t) { return t.lay.queen ? 9 : 5; }
+
 int moon_bonus(const party::Character& c, const classes::Tables& t)
 {
     // (Champions' memorizing, GAME.OVR 0x1B31A: a mage's moon - the robe's
     // - one phase from full gives 1 more spell, full 2, among levels 1-5;
     // what is already over the slots there is taken from it, all of it
-    // when more)
+    // when more). The Dark Queen's (DQK.EXE 0x4501C memorize, 0x4F41D the
+    // rest's): the same, but over levels 1-9 and for a mage spell of any level
     if (!t.lay.krynn || c.level(classes::MagicUser) <= 0) return 0;
     const int robe = c.ext[party::kExtRobe];
     if (robe < 1 || robe > 3) return 0;
     const int ph = g_moons[robe - 1];
     int bonus = ph == 1 ? 1 : ph == 2 ? 2 : 0;
-    for (int lv = 1; lv <= 5 && bonus > 0; ++lv) {
+    for (int lv = 1; lv <= moon_levels(t) && bonus > 0; ++lv) {
         const int over = held(c, t, MagicUser, lv) - cast_count(c, t, MagicUser, lv);
         if (over <= 0) continue;
         bonus = over > bonus ? 0 : bonus - over;
@@ -167,7 +170,7 @@ int room(const party::Character& c, const classes::Tables& t, int cls, int level
 {
     int r = cast_count(c, t, cls, level) - held(c, t, cls, level);
     if (r < 0) r = 0;
-    if (cls == MagicUser && level <= 5 && cast_count(c, t, cls, level) > 0) r += moon_bonus(c, t);
+    if (cls == MagicUser && level <= moon_levels(t) && cast_count(c, t, cls, level) > 0) r += moon_bonus(c, t);
     return r;
 }
 

@@ -1577,6 +1577,7 @@ constexpr ecl::OpSet kQueenEcl = [] {
     s.no_prefix = true;
     s.krynn_race = true;
     s.camp_resumes = true;          // (PROGRAM 9: its inns' city menu again after the camp - DOSBox)
+    s.moons = true;                 // (its clock steps the moons a day at a time: DQK.EXE 0x60C8 -> 0x5E58)
     return s;
 }();
 

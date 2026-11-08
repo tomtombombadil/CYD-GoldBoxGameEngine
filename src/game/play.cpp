@@ -1619,7 +1619,7 @@ void krynn_moons(pic::Canvas* c)
 {
     // (the Dark Queen's moons - the same area words - for its mages' caster
     // levels and saves; drawn by its own frame, q_moons)
-    if (hl() && vm) magic::set_moons(vm->get(0x4CF9) & 3, vm->get(0x4CFA) & 3, vm->get(0x4CFB) & 3);
+    if (hl() && vm) magic::set_moons(vm->get(0x1FA) & 3, vm->get(0x1FB) & 3, vm->get(0x1FC) & 3);   // (its game block's)
     if (!krynn_rules() || !vm || !d->tables.top_row) return;
     static const uint8_t kCol[3] = {8, 19, 30}, kAdd[3] = {10, 6, 14}, kAddDk[3] = {0x15, 0x0D, 0x11};
     magic::set_moons(vm->get(0x4CF9) & 3, vm->get(0x4CFA) & 3, vm->get(0x4CFB) & 3);
@@ -17174,6 +17174,8 @@ const char* open(const char* data_dir, games::Game g, pic::Canvas& c, const char
         // has it: in 3D, difficulty 3; queen_facts_2.md 10)
         gs.area1[0x21] = 1;
         gs.area1[0x26] = 3;
+        // (the moons all at phase 2 - DQK.EXE 0x37F0B, the new game's block)
+        gs.area1[0x1F9] = gs.area1[0x1FA] = gs.area1[0x1FB] = 2;
     }
     if (d->prof->variant.tr) {
         // Treasures' game block as its start sets it (ovl 0x87 +0x54E): the

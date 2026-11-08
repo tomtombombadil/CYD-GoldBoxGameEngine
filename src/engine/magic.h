@@ -39,6 +39,9 @@ int moon(int i);                    // (0 white, 1 red, 2 black: its phase)
 void set_empower(int type);
 int empower();
 int moon_bonus(const party::Character& c, const classes::Tables& t);
+// The spell levels the moon's extra spells count over (Champions 1-5, the
+// Dark Queen 1-9)
+int moon_levels(const classes::Tables& t);
 bool any_room(const party::Character& c, const classes::Tables& t);
 
 // The spells in memory (learning = false) or being memorized (true), by

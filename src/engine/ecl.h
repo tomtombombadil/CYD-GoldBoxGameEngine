@@ -112,7 +112,9 @@ struct OpSet {
     // Champions (its clock routine, GAME.OVR 0x2ACB7 / 0x2A87C): a day
     // passing (the hours carrying) steps the moons - each its counter
     // (0x4CFC white, 0x4CFD red, 0x4CFE black) up, or, at 8 / 1 / 6, back
-    // to 0 with its phase (0x4CF9-0x4CFB) on, 3 back to 0
+    // to 0 with its phase (0x4CF9-0x4CFB) on, 3 back to 0. The Dark Queen
+    // the same (DQK.EXE 0x5D6E from its clock's carries, 0x60C8) on its game
+    // block's bytes: phases 0x1FA-0x1FC, counters 0x1FD-0x1FF
     bool moons = false;
     // Gateway (gateway_facts.md 10; its CALL handler, GAME.OVR 0xAB8 +
     // 0x3150): CALL 0x809 waits for a key ("Press Enter to continue."),

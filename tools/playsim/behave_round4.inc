@@ -523,9 +523,77 @@ void haste()
 
 // ---- M: the Krynn moons (Champions / Death Knights): a mage's caster
 // level (new -1, full +1 past 5th) and saves (new -1, full +1)
+// The Dark Queen's moon clock (DQK.EXE 0x5D6E, from its clock's carry
+// routine 0x60C8 once for each day - each hours carry): for the moons
+// white, red, black (limits 8, 1, 6) its counter (game byte 0x1FD + m) at
+// the limit or more: the phase (0x1FA + m) on (3 -> 0), the counter 0; else
+// the counter + 1. The phases are what its mages' caster levels and saves
+// read (0x1F9 + robe); a fight's mage has its robe (fight setup)
+void queen_moons()
+{
+    uint32_t seed = 99;
+    auto rnd = [&](int n) { seed = seed * 1103515245u + 12345u; return static_cast<int>((seed >> 16) % n); };
+    int bad = 0, n = 0;
+    char first[200] = "";
+    static const int kLimit[3] = {8, 1, 6};
+    for (int k = 0; k < 300; ++k) {
+        int ph[3], ctr[3];
+        for (int m2 = 0; m2 < 3; ++m2) {
+            ph[m2] = rnd(4);
+            ctr[m2] = rnd(kLimit[m2] + 2);
+            vm->set(static_cast<uint16_t>(0x1FA + m2), static_cast<uint16_t>(ph[m2]));
+            vm->set(static_cast<uint16_t>(0x1FD + m2), static_cast<uint16_t>(ctr[m2]));
+        }
+        // a time: hours now + hours added (whole days carried)
+        const int h0 = rnd(24), add = rnd(80);
+        vm->set(0x4BC9, static_cast<uint16_t>(h0));
+        const int days = (h0 + add) / 24;
+        vm->advance_clock(3, add);
+        for (int dd = 0; dd < days; ++dd)
+            for (int m2 = 0; m2 < 3; ++m2) {
+                if (ctr[m2] >= kLimit[m2]) {
+                    ph[m2] = ph[m2] >= 3 ? 0 : ph[m2] + 1;
+                    ctr[m2] = 0;
+                } else {
+                    ++ctr[m2];
+                }
+            }
+        int out[3];
+        q_moons(out);
+        for (int m2 = 0; m2 < 3; ++m2) {
+            ++n;
+            const int gp = vm->get(static_cast<uint16_t>(0x1FA + m2)), gc = vm->get(static_cast<uint16_t>(0x1FD + m2));
+            if (gp != ph[m2] || gc != ctr[m2] || out[m2] != (ph[m2] & 3) || magic::moon(m2) != (ph[m2] & 3)) {
+                ++bad;
+                if (!*first)
+                    snprintf(first, sizeof first, "moon %d, hour %d + %d: phase %d counter %d, want %d %d (read %d)", m2, h0, add,
+                             gp, gc, ph[m2], ctr[m2], out[m2]);
+            }
+        }
+    }
+    // a fight's mages carry their robes (their saves' and caster levels' moon)
+    if (fight()) {
+        combat::Battle& b = fg->b;
+        for (int i = 0; i < b.party_size; ++i) {
+            const combat::Fighter& f = b.f[i];
+            if (f.member < 0) continue;
+            const party::Character& ch = pt->m[f.member];
+            const int want = ch.level(classes::MagicUser) > 0 ? ch.ext[party::kExtRobe] : 0;
+            ++n;
+            if (f.robe != want) {
+                ++bad;
+                if (!*first) snprintf(first, sizeof first, "member %d: robe %d in the fight, want %d", f.member, f.robe, want);
+            }
+        }
+    }
+    expect(P, "the Dark Queen's moons: a day steps them (DQK.EXE 0x5D6E: limits 8 1 6), read from its game block, a fight's mages' robes",
+           bad == 0, "%d of %d wrong (%s)", bad, n, first);
+}
+
 void moons()
 {
-    if (!m->tables.lay.krynn || m->tables.lay.queen) return;
+    if (!m->tables.lay.krynn) return;
+    if (m->tables.lay.queen) queen_moons();
     if (!fight()) return;
     combat::Fighter& f = F(0);
     mx::put(0, 0, 10, 10, 50);
@@ -543,17 +611,28 @@ void moons()
                 magic::set_moons(p[0], p[1], p[2]);
                 const int want = L + (ph == 0 ? -1 : ph == 2 && L > 5 ? 1 : 0);
                 ++n;
-                if (combat::power_of(f, m->tables, spell) != want) ++bad;
-                // saves: the lowest d20 that saves against 15
-                int lo = 0;
-                for (int r = 1; r <= 20 && !lo; ++r) {
-                    dice(0, r);
-                    if (combat::saving_throw(f, 4, 0, play::rng)) lo = r;
-                    dice_off();
-                }
-                const int wlo = ph == 0 ? 16 : ph == 2 ? 14 : 15;
+                if (combat::power_of(f, m->tables, spell) != want && !bad++)
+                    printf("  (moons: level %d robe %d phase %d: power %d, want %d)\n", L, robe, ph, combat::power_of(f, m->tables, spell), want);
+                // saves: the lowest d20 that saves - against the same fighter
+                // without a robe (15 in Champions; the Dark Queen's record
+                // gives its own base: only the moon's change is compared)
+                auto lowest = [&] {
+                    int lo2 = 0;
+                    for (int r = 1; r <= 20 && !lo2; ++r) {
+                        dice(0, r);
+                        if (combat::saving_throw(f, 4, 0, play::rng)) lo2 = r;
+                        dice_off();
+                    }
+                    return lo2;
+                };
+                f.robe = 0;
+                const int base = lowest();
+                f.robe = static_cast<uint8_t>(robe);
+                const int lo = lowest();
+                const int wlo = base + (ph == 0 ? 1 : ph == 2 ? -1 : 0);
                 ++n;
-                if (lo != wlo) ++bad;
+                if (getenv("MOONDBG")) printf("  [moondbg] L %d robe %d ph %d lo %d moon %d robe %d\n", L, robe, ph, lo, magic::moon(robe - 1), f.robe);
+                if (lo != wlo && !bad++) printf("  (moons: level %d robe %d phase %d: saves from %d, want %d)\n", L, robe, ph, lo, wlo);
             }
     magic::set_moons(0, 0, 0);
     f.robe = 0;

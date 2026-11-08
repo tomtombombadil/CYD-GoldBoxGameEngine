@@ -159,7 +159,11 @@ void Vm::advance_clock(int slot, int amount)
             for (int day = 0; day < carry && day < 64; ++day) {
                 static const uint8_t kAt[3] = {8, 1, 6};
                 for (int m = 0; m < 3; ++m) {
-                    const uint16_t ctr = static_cast<uint16_t>(0x4CFC + m), ph = static_cast<uint16_t>(0x4CF9 + m);
+                    // (the Dark Queen - byte_map: its game block's bytes 0x1FA-0x1FC
+                    // the phases, 0x1FD-0x1FF the counters - DQK.EXE 0x5D6E, called
+                    // by its clock's carry routine 0x60C8 once for each day)
+                    const uint16_t ctr = static_cast<uint16_t>((set_.byte_map ? 0x1FD : 0x4CFC) + m),
+                                   ph = static_cast<uint16_t>((set_.byte_map ? 0x1FA : 0x4CF9) + m);
                     if (get(ctr) >= kAt[m]) {
                         set(ph, static_cast<uint16_t>(get(ph) >= 3 ? 0 : get(ph) + 1));
                         set(ctr, 0);

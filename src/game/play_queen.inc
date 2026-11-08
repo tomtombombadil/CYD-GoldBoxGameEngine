@@ -94,10 +94,12 @@ void q_strip_restore(pic::Canvas& c)
     for (int j = 0; j < kStripH; ++j) c.put_row(0, kStripY + j, pic::kScreenW, q_strip + j * pic::kScreenW);
 }
 
-// The moons' phases (0-3) as the scripts keep them (Champions' words)
+// The moons' phases (0-3): its game block's bytes 0x1FA-0x1FC (DQK.EXE
+// 0x5D6E steps them; the byte-mapped script addresses - Champions' words
+// 0x4CF9-0x4CFB name nothing here)
 void q_moons(int out[3])
 {
-    for (int i = 0; i < 3; ++i) out[i] = vm ? vm->get(static_cast<uint16_t>(0x4CF9 + i)) & 3 : 0;
+    for (int i = 0; i < 3; ++i) out[i] = vm ? vm->get(static_cast<uint16_t>(0x1FA + i)) & 3 : 0;
     magic::set_moons(out[0], out[1], out[2]);       // (its mages' caster levels: DQK.EXE res 0xB5E6)
 }
 
