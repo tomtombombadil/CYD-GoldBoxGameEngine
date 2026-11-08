@@ -138,6 +138,12 @@ void set_moons(int white, int red, int black)
 
 int moon(int i) { return i >= 0 && i < 3 ? g_moons[i] : 0; }
 
+namespace {
+int g_empower = 0;
+}
+void set_empower(int type) { g_empower = type; }
+int empower() { return g_empower; }
+
 int moon_bonus(const party::Character& c, const classes::Tables& t)
 {
     // (Champions' memorizing, GAME.OVR 0x1B31A: a mage's moon - the robe's

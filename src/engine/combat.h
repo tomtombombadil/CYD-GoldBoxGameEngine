@@ -1224,9 +1224,10 @@ inline int power_of(const uint8_t* rec, const classes::Tables& st, int spell, bo
 {
     return power_of(Rec(const_cast<uint8_t*>(rec)), st, spell, item);
 }
+int empowered(const Fighter& f);       // Treasures' effect 0x9F: + 3 (magic::set_empower)
 inline int power_of(const Fighter& f, const classes::Tables& st, int spell, bool item = false)
 {
-    return power_of(f.rec, st, spell, item, f.robe);
+    return power_of(f.rec, st, spell, item, f.robe) + empowered(f);
 }
 // The moons' change to a mage's caster level (robe 1-3, its current mage
 // level): new -1, full +1 past 5th; 0 otherwise (and outside Krynn)

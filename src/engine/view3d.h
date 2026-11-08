@@ -180,5 +180,8 @@ Bands pool_bands(uint8_t sky, uint8_t floor_byte, uint8_t line_byte);
 // The AREA map: 11 x 11 squares round the party (kept inside the map), the
 // party as an arrow.
 void draw_area_map(pic::Canvas& c, const World& w, const geo::Map& m, int x, int y, int dir);
+// A whole 16 x 16 map's walls (the area map's tiles, no arrow) from text
+// cell (col0, row0) - Treasures' map items (GAME.OVR 0x2DD75)
+void draw_whole_map(pic::Canvas& c, const World& w, const geo::Map& m, int col0, int row0);
 
 } // namespace view3d

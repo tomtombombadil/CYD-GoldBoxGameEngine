@@ -833,6 +833,116 @@ void learning()
 // or cleric, the levels, else a thief over 9th and the d100. Treasures'
 // own items (0x3E 0x0E the lucky paper - the engine's, 0x0F / 0x10 /
 // 0x11: routines of their own, 0x2DBF3 / 0x2DD75 / 0x2DB44) are noted.
+// Treasures' own items, outside fights (GAME.OVR 0x2E15B before the spell
+// path): 0x3E 0x11 (0x2DB44) - the user already has effect 0x3D: nothing
+// used ("is already affected"); else it is added (0x23B09: data 0xFF) and
+// its handler run - 0x9F's (0x25815): 1d4 x 10 + 40 - and the use taken;
+// that effect's caster + 3 (0x40DEF); 0x10 (0x2DD75) shows GEO block 0x3D,
+// nothing used; 0x0F (0x2DBF3) does nothing outside fights
+void treasures_own_items()
+{
+    party::Character& me = pt->m[0];
+    const party::Character keep = me;
+    auto* const keep_fg = play::fg;         // (outside fights: the run's fight set aside)
+    play::fg = nullptr;
+    auto give = [&](uint8_t spell, uint8_t kind) {
+        const int k = me.n_items;
+        if (k >= party::kMaxItems) return -1;
+        memset(me.items[k], 0, sizeof me.items[k]);
+        uint8_t* it = me.items[k];
+        it[0x2E] = 0x2F;
+        it[0x34] = 1;                       // (readied)
+        it[0x3C] = 1;
+        it[0x3D] = spell;
+        it[0x3E] = kind;
+        ++me.n_items;
+        return k;
+    };
+    auto drop = [&](int type) {
+        int i;
+        while ((i = spells::find_affect(me, type)) >= 0) {
+            for (int j = i; j + 1 < me.n_affects; ++j) memcpy(me.affects[j], me.affects[j + 1], party::kAffectSize);
+            --me.n_affects;
+        }
+    };
+    auto use = [&](int k) {
+        pt->selected = 0;
+        view_from = Screen::Game;
+        screen = Screen::Items;
+        use_item(k, C);
+        lk.on = false;
+        note_until = 0;
+        screen = Screen::Game;
+    };
+    while (me.n_items > party::kMaxItems - 3) --me.n_items;
+    int bad = 0, n = 0;
+    char first[160] = "";
+    auto fail = [&](const char* w) { ++bad; if (!*first) snprintf(first, sizeof first, "%s", w); };
+    bool seen[4] = {};
+    for (int r = 0; r < 40; ++r) {
+        drop(0x9F);
+        const int items0 = me.n_items, k = give(0x9F, 0x11);
+        use(k);
+        const int a = spells::find_affect(me, 0x9F);
+        const int mins = a >= 0 ? me.affects[a][1] | me.affects[a][2] << 8 : -1;
+        ++n;
+        if (a < 0 || me.n_items != items0 || mins < 50 || mins > 80 || mins % 10 || me.affects[a][3] != 0xFF) {
+            char w2[96];
+            snprintf(w2, sizeof w2, "the potion: effect %d minutes %d data %d, items %d -> %d", a >= 0, mins,
+                     a >= 0 ? me.affects[a][3] : -1, items0, me.n_items);
+            fail(w2);
+        } else seen[(mins - 50) / 10] = true;
+        // a second one: already affected - nothing used, nothing added
+        const int n_aff = me.n_affects, k2 = give(0x9F, 0x11);
+        use(k2);
+        ++n;
+        if (me.n_affects != n_aff || me.n_items != items0 + 1 || me.items[k2][0x3C] != 1) fail("a second potion while affected was used");
+        --me.n_items;
+    }
+    if (!(seen[0] && seen[1] && seen[2] && seen[3])) fail("the potion's 1d4 x 10 + 40 never gave each of 50 60 70 80");
+    // + 3 caster levels with the effect (any spell of the party's)
+    {
+        const classes::Tables& t = m->tables;
+        int s = 1;
+        while (s < t.lay.spell_count && !(t.spell_class(s) == 2 && t.spell_level(s) == 1)) ++s;
+        drop(0x9F);
+        const int p0 = spells::power(me, t, s);
+        spells::add_affect(me, 0x9F, 60, 0xFF, true);
+        const int p1 = spells::power(me, t, s), i1 = spells::item_power(me, t, s);
+        drop(0x9F);
+        const int i0 = spells::item_power(me, t, s);
+        n += 2;
+        if (p1 != p0 + 3 || i1 != i0 + 3) {
+            char w2[96];
+            snprintf(w2, sizeof w2, "caster level with 0x9F: %d -> %d, an item's %d -> %d", p0, p1, i0, i1);
+            fail(w2);
+        }
+    }
+    // the maps and the boots: nothing used, nothing added
+    for (uint8_t kind : {0x10, 0x0F}) {
+        const int items0 = me.n_items, n_aff = me.n_affects, k = give(kind == 0x10 ? 0x3A : 0xA0, kind);
+        pt->selected = 0;
+        view_from = Screen::Game;
+        screen = Screen::Items;
+        use_item(k, C);
+        const bool map_up = lk.on && lk.then == LuckRun::Then::Paper;
+        lk.on = false;
+        screen = Screen::Game;
+        ++n;
+        if (me.n_items != items0 + 1 || me.items[k][0x3C] != 1 || me.n_affects != n_aff || map_up != (kind == 0x10)) {
+            char w2[96];
+            snprintf(w2, sizeof w2, "item 0x3E %02X: items %d -> %d, charges %d, effects %d -> %d, map shown %d", kind, items0,
+                     me.n_items, me.items[k][0x3C], n_aff, me.n_affects, map_up);
+            fail(w2);
+        }
+        --me.n_items;
+    }
+    me = keep;
+    play::fg = keep_fg;
+    expect(P, "Treasures' own items (0x3E 0x11 the effect, 0x10 the map, 0x0F nothing outside fights) as GAME.OVR 0x2E15B's routines",
+           bad == 0, "%d of %d wrong (%s)", bad, n, first);
+}
+
 void using_items()
 {
     const classes::Tables& t = m->tables;
@@ -908,7 +1018,7 @@ void using_items()
     }
     expect(P, "items used outside fights: which are used, the use taken, who reads a scroll", bad == 0, "%d of %d wrong (%s)", bad,
            n, first);
-    if (g == 9) printf("NOTE rules4: Treasures' items with 0x3E 0x0F / 0x10 / 0x11 have routines of their own (GAME.OVR 0x2DBF3 / 0x2DD75 / 0x2DB44) - not in the engine\n");
+    if (g == 9) treasures_own_items();
 }
 
 // ---- Who may learn / memorize a spell in the Krynn games (their

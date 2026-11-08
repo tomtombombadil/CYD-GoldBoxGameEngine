@@ -3967,6 +3967,7 @@ const Profile kProfiles[] = {
                  .tr_crown_menu = 0xF776, .tr_acquired = 0x145D8,
                  .tr_crystal = {0x145F6, 0x14602, 0x14610}, .tr_accept = 0x1545E, .tr_his = 0x14D01,
                  .tr_her = 0x14D05, .tr_paper = {0x2DEA8, 0x2DEBC},
+                 .tr_item_words = {0x2DB30, 0x2DBCD, 0x2DBDD, 0x2DBED, 0x25808}, .tr_empower = 0x9F, .tr_held = 0x9C,
                  .tr_weather = {0xE2A5, 0xE2CA}, .tr_max_age = 0x08EE,
                  .tr_age_words = {0x9156, 0x916A, 0x919E, 0x91A2, 0x91A5, 0x91A9, 0x91F2, 0x9230, 0x9262, 0x92A7}},
      // (its font: 8X8D0 block 201 with BORD block 8's text glyphs - the front end)

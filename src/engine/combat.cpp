@@ -3728,6 +3728,15 @@ int moon_level(const classes::Tables& st, int robe, int mage_level)
     return ph == 0 ? -1 : ph == 2 && mage_level > 5 ? 1 : 0;
 }
 
+int empowered(const Fighter& f)
+{
+    // (Treasures' caster routine, GAME.OVR 0x40DEF: the caster with its
+    // effect 0x9F - the Potion of Spell Enhancing - 3 levels more, an
+    // item's 6 too)
+    const int e = magic::empower();
+    return e && f.has(static_cast<uint8_t>(e)) ? 3 : 0;
+}
+
 int queen_power(int cl, int ra, int mu, int kn, int code, int moon)
 {
     // The Dark Queen (DQK.EXE res 0xB4E0; levels, no former ones; its

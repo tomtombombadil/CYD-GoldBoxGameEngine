@@ -10418,6 +10418,95 @@ bool use_it_answer(char k, pic::Canvas& c)
     return true;
 }
 
+// Treasures' own items (GAME.OVR 0x2E15B, before the spell path; their
+// byte 0x3D is no spell): 0x11 - an effect on the user (0x2DB44: the
+// Potion of Spell Enhancing's 0x9F), 0x10 - a map (0x2DD75: GEO block
+// 0x3D), 0x0F - a jump (0x2DBF3: fights only; outside them nothing)
+void tr_fight_item(int k, pic::Canvas& c);
+bool tr_effect_item(party::Character& me, const uint8_t* it, char* t, size_t cap)
+{
+    // (0x2DB44: the user has it - "NAME is already affected", nothing used;
+    // else added - 0x23B09: time 0, data 0xFF, its handler called - the
+    // empowering one's (0x25815): "NAME Is empowered", 1d4 x 10 + 40)
+    const auto& v = d->prof->variant;
+    char nm[20], w[32];
+    me.name(nm, sizeof nm);
+    const int type = it[0x3D];
+    if (spells::find_affect(me, type) >= 0) {
+        ow(v.tr_item_words[0], w, sizeof w);
+        snprintf(t, cap, "%s %s", nm, w);
+        return false;
+    }
+    t[0] = 0;
+    if (type == 0x17) return true;          // (0x23B50: not added; still used)
+    int minutes = 0;
+    if (type == v.tr_empower) {
+        minutes = rng.roll(4, 1) * 10 + 40;
+        ow(v.tr_item_words[4], w, sizeof w);
+        snprintf(t, cap, "%s %s", nm, w);
+    }
+    spells::add_affect(me, type, minutes, 0xFF, true);
+    plat::log("[play] %s: effect 0x%02X for %d (item 0x3E 0x11)\n", nm, type, minutes);
+    return true;
+}
+
+void tr_map_item(const uint8_t* it, pic::Canvas& c)
+{
+    // (0x2DD75: the screen cleared, GEO block 0x3D's 16 x 16 walls from
+    // column 10, row 2, the item's name centred on row 21 in colour 10; a
+    // key; the current map loaded again - here never dropped. Nothing used)
+    geo::Map* m = new (std::nothrow) geo::Map;
+    if (!m) return;
+    char name[24];
+    plat::File f;
+    if (open_area_dax("GEO", it[0x3D], f, name, sizeof name)) {
+        plat::FileSource src(f);
+        geo::load(src, d->idx, it[0x3D], *m);
+        f.close();
+    }
+    plat::log("[play] map item: GEO block %d %s\n", it[0x3D], m->loaded ? "shown" : "missing");
+    if (!m->loaded) {
+        delete m;
+        return;
+    }
+    c.clear(0);
+    view3d::draw_whole_map(c, d->world, *m, 10, 2);
+    geo::release(*m);
+    delete m;
+    char nm[40];
+    names->name(items::Item{it}, nm, sizeof nm);
+    put(c, nm, 19 - static_cast<int>(strlen(nm)) / 2, 21, 10);
+    dirty(0, pic::kScreenH);
+    lk.on = true;
+    lk.prompt = true;
+    lk.len = 1;
+    lk.then = LuckRun::Then::Paper;
+}
+
+void tr_own_item(int i, pic::Canvas& c)
+{
+    party::Character& me = *pt->sel();
+    const uint8_t* it = me.items[i];
+    if (in_fight()) {
+        tr_fight_item(i, c);
+        return;
+    }
+    switch (it[0x3E]) {
+    case 0x11: {
+        char t[64];
+        if (tr_effect_item(me, it, t, sizeof t)) {
+            magic::used(me, i);
+            rules::recalc(me, *names, d->facts);
+            draw_items(c);
+        }
+        if (t[0]) say_item(c, t, 10);
+        break;
+    }
+    case 0x10: tr_map_item(it, c); break;
+    default: break;                         // (0x0F: fights only)
+    }
+}
+
 void use_item(int i, pic::Canvas& c)
 {
     party::Character& ch = *pt->sel();
@@ -10434,6 +10523,10 @@ void use_item(int i, pic::Canvas& c)
     }
     const magic::Scrolls sc = scroll_facts();
     const bool scroll = magic::is_scroll(sc, it);
+    if (d->prof->variant.tr && !scroll && it[0x3D] && it[0x3E] >= 0x0F && it[0x3E] <= 0x11) {
+        tr_own_item(i, c);
+        return;
+    }
     if (!scroll && !magic::usable(sc, it)) return;
     if (!load_magic()) {
         end_magic();
@@ -12109,6 +12202,7 @@ __attribute__((noinline)) void load_party_text(dax::ByteSource& exe, const exepa
         items::set_flame_fix(&pi.flame, CYD_ITEM_FIXES && opts.item_fixes);
         rules::set_fixes(CYD_ITEM_FIXES && opts.item_fixes);
         rules::set_worn_facts(pi.effect_data, pi.stat_fx[1]);
+        magic::set_empower(d->prof->variant.tr_empower);
         {
             const auto& pc = d->prof->create;
             if (pc.ds_image && pc.tables.max_hit_dice &&

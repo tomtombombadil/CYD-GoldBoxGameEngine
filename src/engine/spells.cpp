@@ -1,5 +1,6 @@
 #include "spells.h"
 #include "combat.h"
+#include "magic.h"
 
 #include <cstring>
 
@@ -82,7 +83,24 @@ int reach(const classes::Tables& t, int s, int pw)
     return r;
 }
 
+namespace {
+// Treasures' effect 0x9F (the Potion of Spell Enhancing): + 3 (its caster
+// routine, GAME.OVR 0x40DEF - an item's 6 too)
+int empowered(const party::Character& c)
+{
+    const int e = magic::empower();
+    return e && find_affect(c, e) >= 0 ? 3 : 0;
+}
+int base_power(const party::Character& c, const classes::Tables& t, int s);
+} // namespace
+
 int power(const party::Character& c, const classes::Tables& t, int s)
+{
+    return s <= 0 ? 0 : base_power(c, t, s) + empowered(c);
+}
+
+namespace {
+int base_power(const party::Character& c, const classes::Tables& t, int s)
 {
     if (s <= 0) return 0;
     using classes::skill_level;
@@ -138,10 +156,11 @@ int power(const party::Character& c, const classes::Tables& t, int s)
     default: return 0;
     }
 }
+} // namespace
 
 int item_power(const party::Character& c, const classes::Tables& t, int s)
 {
-    return t.spell_class(s) == 3 ? power(c, t, s) : 6;
+    return t.spell_class(s) == 3 ? power(c, t, s) : 6 + empowered(c);
 }
 
 int enlarge_data(int level, bool secret)

@@ -749,6 +749,12 @@ struct Profile {
         uint32_t tr_crown_menu = 0, tr_acquired = 0, tr_crystal[3] = {}, tr_accept = 0, tr_his = 0, tr_her = 0;
         // "The lucky paper of " / " reads:" (GAME.OVR)
         uint32_t tr_paper[2] = {};
+        // Treasures' own items (GAME.OVR 0x2E15B: byte 0x3E 0x0F / 0x10 / 0x11):
+        // "is already affected", "cannot go there", "is free to move",
+        // "jumps", the effect 0x9F's "Is empowered"; that effect (+3 caster
+        // levels - its caster routine 0x40DEF) and the held one a jump ends
+        uint32_t tr_item_words[5] = {};
+        uint8_t  tr_empower = 0, tr_held = 0;
         // "Battle in snow! Movement restricted." / "... rain! ..." (GAME.OVR)
         uint32_t tr_weather[2] = {};
         // Old age after a fight (Treasures ovl 0x62 +0x3F0, Darkness too): the races' greatest ages

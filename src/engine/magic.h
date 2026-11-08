@@ -34,6 +34,10 @@ int room(const party::Character& c, const classes::Tables& t, int cls, int level
 // 0x4CF9-0x4CFB) and a mage's extra spells by its moon (0: none)
 void set_moons(int white, int red, int black);
 int moon(int i);                    // (0 white, 1 red, 2 black: its phase)
+// Treasures: the effect that gives a caster 3 levels more (0x9F; 0: none -
+// set from the game's profile when Play starts)
+void set_empower(int type);
+int empower();
 int moon_bonus(const party::Character& c, const classes::Tables& t);
 bool any_room(const party::Character& c, const classes::Tables& t);
 

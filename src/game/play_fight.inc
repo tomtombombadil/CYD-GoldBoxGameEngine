@@ -3219,6 +3219,46 @@ void fight_use(int k, int sp, bool scroll, pic::Canvas& c)
     say(c, FSt::UseAim);
 }
 
+// Treasures' own items in a fight (play.cpp tr_own_item): 0x11 - the
+// effect on the user as outside fights, on a page; the turn ends. 0x10's
+// map and 0x0F's jump (GAME.OVR 0x2DBF3: a square aimed at, "cannot go
+// there", the held effect ended - "is free to move" -, "jumps") are not
+// in the engine yet
+void tr_fight_item(int k, pic::Canvas& c)
+{
+    items_direct = false;
+    screen = Screen::Fight;
+    palette_fight(true);
+    const int i = fg->cur;
+    combat::Fighter& f = fg->b.f[i];
+    if (f.member >= 0) f.n_items = pt->m[f.member].n_items;
+    draw_fight(c);
+    if (!f.can_use || f.member < 0 || k < 0 || k >= f.n_items) {
+        fight_menu(c);
+        return;
+    }
+    const uint8_t* it = f.items[k];
+    if (it[0x3E] != 0x11) {
+        fight_menu(c);
+        error(c, "Not in the engine yet.");
+        return;
+    }
+    char t[64];
+    party::Character& me = pt->m[f.member];
+    const bool used = tr_effect_item(me, it, t, sizeof t);
+    // (the page's name is the user's: the words after it)
+    char nm[20];
+    me.name(nm, sizeof nm);
+    const size_t n = strlen(nm);
+    if (t[0]) add_page(i, strncmp(t, nm, n) == 0 && t[n] == ' ' ? t + n + 1 : t);
+    if (used) {
+        fg->use_item = k;
+        fg->use_scroll = false;
+        spend_item(i, 0);
+    }
+    say(c, FSt::Next);
+}
+
 void start_turn(pic::Canvas& c)
 {
     combat::Battle& b = fg->b;

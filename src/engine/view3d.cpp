@@ -693,4 +693,19 @@ void draw_area_map(pic::Canvas& c, const World& w, const geo::Map& m, int x, int
                    (kCell0 + x - ox) * 8, (kCell0 + y - oy) * 8, 8, kMask);
 }
 
+void draw_whole_map(pic::Canvas& c, const World& w, const geo::Map& m, int col0, int row0)
+{
+    if (!w.frame) return;
+    for (int y = 0; y < geo::kSize; ++y)
+        for (int x = 0; x < geo::kSize; ++x) {
+            int bits = 0;
+            if (geo::wall(m, x, y, 0)) bits |= 1;
+            if (geo::wall(m, x, y, 2)) bits |= 2;
+            if (geo::wall(m, x, y, 4)) bits |= 4;
+            if (geo::wall(m, x, y, 6)) bits |= 8;
+            put_frame_tile(c, *w.frame, (w.map_base ? w.map_base : w.dk ? 0 : 4) + bits, (col0 + x) * 8, (row0 + y) * 8,
+                           kMask, kMask);
+        }
+}
+
 } // namespace view3d
