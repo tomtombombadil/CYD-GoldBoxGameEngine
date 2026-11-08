@@ -864,6 +864,14 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   broke every board build while the host tests passed). Before a push:
   `g++ -std=gnu++2b -fsyntax-only -Isrc` on src/engine/*.cpp and
   src/game/{play,look,walk}.cpp - and check CI's result after it.
+- **Nothing worth keeping lives only in scratch** (Tom, 2026-11-08: the
+  cloud machine was replaced and the scratch tools - oracle generators,
+  the DOSBox differ, run scripts, test saves - were lost): every check
+  script and tool goes in the repo (`tools/devkit/`, no game bytes) the
+  day it works, and is committed and pushed then; what can't be in the
+  repo (a GPL DOSBox patch, test saves made from the games) goes to the
+  Project. Only game files, unpacked programs, oracle OUTPUTS and
+  screenshots stay in scratch - each must be remade by a committed script.
 - Claude's local builds: PlatformIO in a venv; the proxy CA must be appended to
   the certifi bundles under the venv and `~/.platformio/penv` or downloads fail.
 
