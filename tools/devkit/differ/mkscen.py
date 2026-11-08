@@ -104,7 +104,8 @@ for (x, y, d, s) in cands:
             if st is None:
                 break
             scr, prompt, words, wait, o = st
-            if scr == 24 or (scr == 0 and wait == 0 and words == EXPLORE):
+            # (a fight; back exploring; the party menu - left the map: its lines are '|X', not menu words)
+            if scr in (1, 24) or (scr == 0 and wait == 0 and words == EXPLORE):
                 break
             if wait == 1:
                 toks += '.'
