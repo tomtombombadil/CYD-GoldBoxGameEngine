@@ -1097,6 +1097,88 @@ void krynn_can()
            "%d of %d wrong (%s; spells %d %d %d %d)", bad, n, first, sp[0], sp[1], sp[3], sp[5]);
 }
 
+// The Dark Queen's fight words (DQK.EXE res 0xCD31, from 0xB14E: columns
+// 23-38, rows to 21): its loop modelled on the original's own code - a
+// word is leading "-.,?!:;" marks, letters to a space or a mark, then the
+// space, or the marks after (to the last index but one); it goes on the
+// row when its last character (the space too) is within the box, a word
+// whose space is the one just past the box goes without it and the row
+// ends; else the next row, the spaces skipped - compared letter by letter
+// (both drawn) with the engine's panel_box_text
+void queen_wrap()
+{
+    if (game() != 7) return;
+    static std::vector<uint8_t> px2(px.size());
+    pic::Canvas& C2 = C;                    // (drawn on the run's own canvas, then kept aside)
+    static const char* kWords[] = {"Sir",  "Dryden", "hits", "the",    "Red",    "Dragon", "for",  "18",  "points",
+                                   "of",   "damage", "goes", "down",   "and",    "is",     "Dying", "a",   "Wyvern",
+                                   "Kapak", "Draconian!", "...", "-", "misses", "Lenduira's", "spell:", "?!", "magic,"};
+    uint32_t seed = 31337;
+    auto rnd = [&](int n) { seed = seed * 1103515245u + 12345u; return static_cast<int>((seed >> 16) % n); };
+    auto punct = [](char ch) { return strchr("-.,?!:;", ch) != nullptr; };     // (its strchr: 0 too)
+    int bad = 0, n = 0, edge = 0;
+    char first[160] = "";
+    for (int k = 0; k < 3000; ++k) {
+        char s[96] = "";
+        const int words = 1 + rnd(7);
+        for (int w2 = 0; w2 < words; ++w2) {
+            if (w2) strcat(s, rnd(8) ? " " : "  ");
+            strcat(s, kWords[rnd(sizeof kWords / sizeof kWords[0])]);
+        }
+        if (rnd(4) == 0) strcat(s, " ");
+        const int row0 = 11 + rnd(4);
+        // the original's loop (0-based; L = the last index)
+        C2.clear(0);
+        const int L = static_cast<int>(strlen(s)) - 1, x0 = 23, x1 = 38, y1 = 21;
+        int col = x0, row = row0, di = 0;
+        bool full = false;
+        while (L >= 0 && di <= L) {
+            int si = di;
+            while (si < L && punct(s[si])) ++si;
+            while (si < L && !punct(s[si]) && s[si] != ' ') ++si;
+            if (s[si] != ' ')
+                while (si + 1 < L && punct(s[si + 1])) ++si;
+            bool newline = false;
+            if (col + (si - di) > x1) {
+                if (col + (si - di) == x1 + 1 && s[si] == ' ') {
+                    ++edge;
+                    --si;
+                    for (; di <= si; ++di, ++col) {
+                        const char one[2] = {s[di], 0};
+                        play::put(C2, one, col, row, 10);
+                    }
+                }
+                newline = true;
+            }
+            if (newline) {
+                col = x0;
+                ++row;
+                while (di <= L && s[di] == ' ') ++di;
+                if (row > y1 && di < L) {
+                    full = true;
+                    break;
+                }
+                continue;
+            }
+            for (; di <= si; ++di, ++col) {
+                const char one[2] = {s[di], 0};
+                play::put(C2, one, col, row, 10);
+            }
+        }
+        px2 = px;
+        if (full) continue;
+        C.clear(0);
+        play::panel_box_text(C, s, row0, 10, 21, false, true);
+        ++n;
+        if (memcmp(px.data(), px2.data(), px2.size()) != 0) {
+            ++bad;
+            if (!*first) snprintf(first, sizeof first, "\"%s\" from row %d", s, row0);
+        }
+    }
+    snprintf(w, sizeof w, "the Dark Queen's fight words wrap as its res 0xCD31 (letter by letter; %d words' space just past the box)", edge);
+    expect(P, w, bad == 0 && n > 0 && edge > 0, "%d of %d differ (%s)", bad, n, first);
+}
+
 void run()
 {
     if (!monkey_boot() || !play::load_rules(m) || !m) {

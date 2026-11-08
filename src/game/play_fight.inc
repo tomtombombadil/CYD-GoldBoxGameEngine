@@ -1625,7 +1625,12 @@ int panel_text(pic::Canvas& c, const char* s, int row, uint8_t colour, int last 
 //   split at spaces only; a word whose trailing space is the one past the
 //   box drops it; a word ending on the box's last column is printed and
 //   the row ends there.
-int panel_box_text(pic::Canvas& c, const char* s, int row, uint8_t colour, int last, bool sf)
+// - The Dark Queen (DQK.EXE res 0xCD31, its fight messages through res
+//   0xB14E: the name at the row, the words from the next one, columns
+//   23-38, rows to 21): the first rule's words, but a word whose trailing
+//   space is the one just past the box is printed without it and the row
+//   ends there (queen)
+int panel_box_text(pic::Canvas& c, const char* s, int row, uint8_t colour, int last, bool sf, bool queen = false)
 {
     const int x0 = 23, x1 = 38;
     const int len = static_cast<int>(strlen(s));
@@ -1684,6 +1689,14 @@ int panel_box_text(pic::Canvas& c, const char* s, int row, uint8_t colour, int l
         while (end < len && !punct(at(end)) && at(end) != ' ') ++end;
         if (at(end) != ' ')
             while (end + 1 < len && punct(at(end + 1))) ++end;
+        if (queen && col + (end - start) == x1 + 1 && at(end) == ' ') {
+            print(start, end - 1);
+            start = end + 1;
+            col = x0;
+            ++row;
+            skip_spaces();
+            continue;
+        }
         if (col + (end - start) > x1) {
             if (col == x0) end = start + (x1 - x0);   // (longer than the box)
             else {
@@ -2193,19 +2206,20 @@ void show_page(pic::Canvas& c)
     // next row - the next print starts at its last row + 1 (+ 1 more when it
     // ended on the box's last column); a fall after a hit goes on below the
     // hit's words, the rows above kept (the box cleared from there down).
-    // (The Dark Queen's print: not read - the old wrap.)
+    // (The Dark Queen's: res 0xB14E - the name at the row, the words through
+    // its boxed print 0xCD31 from the next; its pages' continuation rows
+    // not read: each page from row 10)
     int row = 10;
     if (p.cont && !hl() && fg->page_end > 10 && fg->page_end <= 21) row = fg->page_end;
     clear_panel(c, row, 21);
     const bool sf = gateway() || d->prof->variant.tr;
     for (int k = 0; k < p.lines; ++k) {
         const char* s = page_line(p, k);
-        if (hl()) row = panel_text(c, s, row, p.colour[k]);
-        else if (p.names & (1u << k)) {
+        if (p.names & (1u << k)) {
             if (row <= 21) put(c, s, 23, row, p.colour[k]);
             ++row;
         } else {
-            row = panel_box_text(c, s, row, p.colour[k], 21, sf);
+            row = panel_box_text(c, s, row, p.colour[k], 21, sf, hl());
         }
     }
     fg->page_end = static_cast<int8_t>(row < 10 ? 10 : row > 22 ? 22 : row);
