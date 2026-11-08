@@ -3,7 +3,7 @@
 # Usage: build.sh <name> "<extra flags>" <main .cpp> [extra link]
 #   build.sh sim  ""  tools/playsim/sim.cpp tools/playsim/heapprof.cpp  (budget: needs wrap flags, see below)
 set -e
-R=${REPO:-/home/claude/cyd-goldboxgameengine/.claude/worktrees/agent-a28264d39c510117f}
+R=${REPO:-$(cd "$(dirname "$0")/../.." && pwd)}
 B=/tmp/claude-0/ag7/bin
 name=$1; flags=$2; main=$3; shift 3
 O=/tmp/claude-0/ag7/obj/$name
