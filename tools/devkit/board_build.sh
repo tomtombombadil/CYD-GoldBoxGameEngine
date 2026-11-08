@@ -1,6 +1,6 @@
 #!/bin/bash
 # One board build (CLAUDE.md), then .pio/build removed
-cd ${REPO:-/home/claude/cyd-goldboxgameengine/.claude/worktrees/agent-a28264d39c510117f}
+cd "${REPO:-$(cd "$(dirname "$0")/../.." && pwd)}"
 bash /tmp/claude-0/ag7/pio_setup.sh >/dev/null 2>&1 || true
 /tmp/claude-0/ag7/pio-venv/bin/pio run -e cyd28_ili9341_res > /tmp/claude-0/ag7/logs/board.log 2>&1
 rc=$?

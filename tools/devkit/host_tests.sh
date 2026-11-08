@@ -1,7 +1,7 @@
 #!/bin/bash
 # CI's tests job, locally (outputs in /tmp/claude-0/ag7/ht)
 set -e
-R=${REPO:-/home/claude/cyd-goldboxgameengine/.claude/worktrees/agent-a28264d39c510117f}
+R=${REPO:-$(cd "$(dirname "$0")/../.." && pwd)}
 O=/tmp/claude-0/ag7/ht; mkdir -p $O; cd "$R"
 for t in test_dax test_hlib test_decoders; do
   g++ -std=c++17 -O1 -Wall -Werror -fsanitize=address,undefined -Isrc -o $O/$t tools/host_tests/$t.cpp src/engine/*.cpp
