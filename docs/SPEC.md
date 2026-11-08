@@ -2384,6 +2384,24 @@ picture in a sunk box with the marker (ALWAYS.TLB part 29), steps with
 0x23 = the direction and the program's own move when the script leaves
 0x03 under 255; the icon picker (CBODY's 49 icons); Modify without the
 items' figures.
+Rules read 2026-11-08 (v0.178.0): who may learn / memorize a spell (ovl
+0xA 0x5A311, by levels: cleric spells and the gods' specials - Wisdom over
+8 and a cleric, a knight past 5th or a paladin past 8th; druid spells a
+ranger past 7th; magic-user spells Intelligence over 8 and a magic-user
+or a ranger past 8th); caster levels (res 0xB4E0: none of cleric,
+magic-user, ranger past 7th, knight past 8th - 6; else max(cleric,
+knight), ranger - 7, max(magic-user + the robe's moon, ranger - 8), the
+items' 12; its moons are the area words 0x4CF9-0x4CFB); training's new
+spell from the robe's list (mode 5, 0x5AFD9); its fight words through
+its boxed print (res 0xCD31: a word whose space is just past column 38
+goes without it and the row ends).
+Treasures' own items (GAME.OVR 0x2E15B, 2026-11-08): byte 0x3E 0x11 puts
+effect 0x3D on the user (already there: "is already affected", nothing
+used; the Potion of Spell Enhancing's 0x9F lasts 1d4 x 10 + 40, "Is
+empowered", its caster 3 levels higher - 0x40DEF); 0x10 shows GEO block
+0x3D's walls (columns 10-25, rows 2-17, the item's name on row 21;
+nothing used); 0x0F (the boots' jump) works in fights only - not in the
+engine yet.
 
 ## 10. Engine UI rules (carried over from CYD-Classic-Games)
 
@@ -2837,6 +2855,12 @@ the game's Settings (As Original: all of them).
   sets (left over from the GOSUB before it), and the clock stays put -
   the nomads' escort to their hut (ECL7 block 17, the op's only use) takes
   no time. With Game Fixes on, the minutes the script asks for pass.
+- **Pool's spell 56 at training** (Game Fixes, 2026-11-08; GAME.OVR
+  0x276CA): its new-spell list takes a spell's slot count from record
+  0xB1 + 3 x class + level for any level - Pool's one 7th-level spell (56,
+  a cleric's) reads 0xB8, the low byte of the character's experience value
+  as a monster, and is offered when that isn't 0. With Game Fixes on, no
+  7th-level spell is offered (AD&D's Pool clerics never reach one).
 - **Pool's hired NPCs' share of the coins** (Game Fixes, 2026-11-07;
   GAME.OVR ovr6 +0x12E8): before a treasure's results page each okay NPC
   takes its share ("<name> takes and hides his share.") - coins / shares

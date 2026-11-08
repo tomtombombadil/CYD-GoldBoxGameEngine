@@ -1157,6 +1157,47 @@ the Project as claude/TODO.md.
       traced); Champions' AI compares the old cleric level with record
       0xD7 (the engine: the menu's test); the undead check (0x97:0x52 /
       0x88:0x52) taken as Curse's (an enemy undead in range).
+      Round 6, v0.178.0 (facts: scratch /tmp/claude-0/ag/round6_facts.md):
+      [x] the Dark Queen's can-learn (DQK ovl 0xA 0x5A311: cleric spells
+      and the gods' specials - Wisdom, a cleric, a knight past 5th or a
+      paladin past 8th; druid spells a ranger past 7th; magic-user
+      spells a magic-user or a ranger past 8th) and caster levels (res
+      0xB4E0: max(cleric, knight), ranger - 7, max(magic-user + the
+      robe's moon, ranger - 8), items' 12) - rules4 canuse 3200 / caster
+      15000 cases; its training list (mode 5, 0x5AFD9) checked = the
+      engine's (learn, 600 set-ups); its moons now reach magic::moon
+      (q_moons / krynn_moons). [x] Death Knights' can-learn: magic-user
+      spells need a magic-user or a ranger past 8th (0x29D16). [x] the
+      Dark Queen's fight words: its boxed print 0xCD31 (from 0xB14E: the
+      name, the words a row below, 23-38 x to 21; a word whose space is
+      just past the box goes without it) - rules4 wrap, 3000 strings
+      letter by letter. [x] Treasures' own items (0x2E15B): 0x11 an
+      effect on the user (Potion of Spell Enhancing: 0x9F, 1d4 x 10 + 40,
+      "Is empowered", + 3 caster levels - 0x40DEF; already affected:
+      nothing used), 0x10 the maps (GEO block 0x3D shown, nothing used),
+      0x0F nothing outside fights - rules4 use (84 checks). [x] turning:
+      Darkness / Treasures by skill levels (0x392EE), their computer
+      turns (0x9D14 / 0xAB2C, not while fleeing) and Death Knights'
+      (0xA46C); Champions' computer by its own test (0xC772: old cleric
+      over 0xD7); Gateway's finder types 1-12 (0x17679). [x] PoolRad's
+      spell 56 at training (0xB8, kept; none with the Game Fixes).
+- [ ] Round 6 left: Treasures' boots (0x3E 0x0F, 0x2DBF3: a square
+      aimed at in a fight, "cannot go there" / the held effect 0x9C ended
+      "is free to move" / "jumps") and the maps (0x10) in fights - the
+      engine says "Not in the engine yet." there; its effect 0x3B's
+      handler (none of its items has it). The Dark Queen: its weapon line
+      (still the old 16-column wrap), its fight pages' rows after a hit
+      (each page from row 10), the box's page-full wait (0xCEEA: a key,
+      cleared, on from the top - rows past 21 dropped here), a human
+      magic-user in armour casting in fights (0x5A402), its moons never
+      advance (kQueenEcl has no moons; Champions' clock does), turning
+      (menu and computer: taken as Darkness's - not read), its 0xFF-class
+      spells' caster level (uninitialised in res 0xB4E0: 12 here). Death
+      Knights' / Darkness's / Treasures' computer: items vs Turn order
+      (the originals: a pending spell, Turn, spells - items not placed);
+      Champions' finder's type limit is uninitialised (0xC772 passes
+      [bp-6] unset: any type here). When each original shows the training
+      spell list at all - not compared.
 - [ ] Pool's story beyond the nomads' camp: targeted differ runs only
       (scripted places), fights judged by the rule checks. 2026-11-07
       (part 17, claude/playtest_poolrad.md): every event square of
