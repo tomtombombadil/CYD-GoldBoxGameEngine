@@ -25,6 +25,11 @@ enum SpellClass { Cleric = 0, Druid = 1, MagicUser = 2 };
 // clerics Wis 9+, druid spells for rangers past 6th level, magic-users'
 // Int 9+)
 bool can_use(const party::Character& c, const classes::Tables& t, int spell);
+// Whether a fight runs and the item types (for the armour readied; nullptr:
+// never asked): Secret's, Darkness's, Treasures', Death Knights' and the
+// Dark Queen's can-learn keeps an armoured human's magic-user spells out of
+// a fight
+void set_fight_check(const items::Names* names, bool (*fighting)());
 
 // Spells in the list: kind and level counted (learnt and being learnt)
 int held(const party::Character& c, const classes::Tables& t, int cls, int level);

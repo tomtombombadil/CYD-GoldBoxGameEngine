@@ -52,8 +52,37 @@ static bool over(const party::Character& c, int cls, int n)
     return classes::skill_level(c, cls) != c.level(cls) && c.old_level(cls) > n;
 }
 
+namespace {
+const items::Names* g_fight_names = nullptr;
+bool (*g_fighting)() = nullptr;
+}
+void set_fight_check(const items::Names* names, bool (*fighting)())
+{
+    g_fight_names = names;
+    g_fighting = fighting;
+}
+
+// The fight clause of the can-learn routines of Secret (GAME.OVR 0x2C76B),
+// Darkness (0x29DED), Treasures (0x32CCE), Death Knights (0x29D23) and the
+// Dark Queen (DQK.EXE 0x5A402): in a fight a human (their own race numbers
+// 6 / 5 / 5 / 6 / 6) with armour readied can't use magic-user spells -
+// unless a ranger past 8th (Secret / Darkness / Treasures: skill levels)
+static bool armoured_in_fight(const party::Character& c, const classes::Tables& t)
+{
+    if (!g_fight_names || !g_fighting || !(t.lay.secret || t.lay.dkk || t.lay.queen) || c.race() != 7 || !g_fighting())
+        return false;
+    const int ranger = t.lay.dkk || t.lay.queen ? c.level(classes::Ranger) : classes::skill_level(c, classes::Ranger);
+    if (ranger > 8) return false;
+    for (int k = 0; k < c.n_items; ++k)
+        if (c.items[k][0x34] && g_fight_names->type(c.items[k][0x2E]).slot == items::kSlotArmour) return true;
+    return false;
+}
+
 bool can_use(const party::Character& c, const classes::Tables& t, int s)
 {
+    if (s >= 1 && s < t.lay.spell_count && armoured_in_fight(c, t) &&
+        (t.lay.queen ? t.spell_code(s) == 3 : t.spell_class(s) == MagicUser))
+        return false;
     if (t.lay.queen && s >= 1 && s < t.lay.spell_count) {
         // The Dark Queen (DQK.EXE ovl 0xA file 0x5A311, by its spell row's
         // class word; levels, no former ones): cleric spells and the gods'
@@ -61,7 +90,7 @@ bool can_use(const party::Character& c, const classes::Tables& t, int s)
         // paladin past 8th; druid spells - Wisdom over 8 and a ranger past
         // 7th; magic-user spells - Intelligence over 8 and a magic-user or a
         // ranger past 8th (a human magic-user in armour, ranger to 8th, not
-        // in fights - not here); the items' none
+        // in fights - armoured_in_fight); the items' none
         constexpr int kKnight = 7;
         switch (t.spell_code(s)) {
         case 0:
@@ -92,7 +121,7 @@ bool can_use(const party::Character& c, const classes::Tables& t, int s)
         case MagicUser:
             // (Death Knights' 0x29D16: also a magic-user or a ranger past 8th
             // - a human magic-user in armour, ranger to 8th, not in fights:
-            // not here; Champions' asks Intelligence alone outside fights)
+            // armoured_in_fight; Champions' asks Intelligence alone outside fights)
             if (t.lay.dkk)
                 return c.rec[kInt] > 8 && (c.level(classes::MagicUser) > 0 || c.level(classes::Ranger) > 8);
             return c.rec[kInt] > 8;
@@ -106,7 +135,7 @@ bool can_use(const party::Character& c, const classes::Tables& t, int s)
     case Druid: return c.rec[kWis] > 8 && classes::skill_level(c, classes::Ranger) > 6;
     case MagicUser:
         // Secret (GAME.OVR 0x2C71E): a magic-user, or a ranger over 8th level
-        // (its human magic-users in armour can't in fights - not here)
+        // (its human magic-users in armour can't in fights: armoured_in_fight)
         if (t.lay.secret)
             return c.rec[kInt] > 8 && (classes::skill_level(c, classes::MagicUser) > 0 ||
                                        classes::skill_level(c, classes::Ranger) > 8);

@@ -1333,6 +1333,64 @@ void using_items()
 // Knights also a paladin past 8th; Champions the levels before a human's
 // dual class too); druid spells - a ranger past 6th (Death Knights 7th);
 // magic-user spells - Intelligence over 8 (outside fights)
+// The can-learn routines' fight clause (Secret GAME.OVR 0x2C76B, Darkness
+// 0x29DED, Treasures 0x32CCE, Death Knights 0x29D23, the Dark Queen DQK.EXE
+// 0x5A402 - their own race numbers 6 / 5 / 5 / 6 / 6, human): in a fight
+// (the fight state byte 5) a human magic-user with armour readied (the
+// record's armour pointer) can't use magic-user spells, unless a ranger
+// past 8th; outside fights, without armour, another race: can. Curse,
+// PoolRad, Gateway and Champions have no such clause
+void armour_can()
+{
+    const classes::Tables& t = m->tables;
+    const int g = game();
+    const bool clause = g == 3 || g == 4 || g == 9 || g == 6 || g == 7;
+    int armour_type = -1;
+    for (int ty = 0; ty < 256 && armour_type < 0; ++ty)
+        if (names->type(static_cast<uint8_t>(ty)).slot == items::kSlotArmour) armour_type = ty;
+    int spell = 0;
+    for (int s = 1; s < t.lay.spell_count && !spell; ++s)
+        if ((t.lay.queen ? t.spell_code(s) == 3 : t.spell_class(s) == magic::MagicUser) && t.spell_level(s) == 1) spell = s;
+    if (armour_type < 0 || !spell || !fight()) {
+        expect(P, "the armoured magic-user in a fight: set up", false, "armour type %d spell %d", armour_type, spell);
+        return;
+    }
+    int bad = 0, n = 0;
+    char first[160] = "";
+    struct Case { int race, ranger; bool armour, fighting; };
+    const Case cases[] = {{7, 0, true, true}, {7, 8, true, true}, {7, 9, true, true}, {7, 0, false, true},
+                          {7, 0, true, false}, {1, 0, true, true}, {2, 0, true, true}};
+    auto* const keep_fg = play::fg;
+    for (const Case& cs : cases) {
+        party::Character c = pt->m[0];
+        for (int j = 0; j < 8; ++j) c.rec[0x109 + j] = c.rec[0x111 + j] = 0;
+        c.rec[0x109 + 5] = 5;
+        c.rec[0x109 + 4] = static_cast<uint8_t>(cs.ranger);
+        c.rec[0x13] = c.rec[0x12] = 15;             // (Intelligence, its own and in use)
+        c.rec[0x74] = static_cast<uint8_t>(cs.race);
+        c.n_items = 0;
+        if (cs.armour) {
+            memset(c.items[0], 0, sizeof c.items[0]);
+            c.items[0][0x2E] = static_cast<uint8_t>(armour_type);
+            c.items[0][0x34] = 1;
+            c.n_items = 1;
+        }
+        play::fg = cs.fighting ? keep_fg : nullptr;
+        const bool got = magic::can_use(c, t, spell);
+        play::fg = keep_fg;
+        const bool want = !(clause && cs.race == 7 && cs.ranger <= 8 && cs.armour && cs.fighting);
+        ++n;
+        if (got != want) {
+            ++bad;
+            if (!*first)
+                snprintf(first, sizeof first, "race %d ranger %d armour %d fight %d: can %d, want %d", cs.race, cs.ranger,
+                         cs.armour, cs.fighting, got, want);
+        }
+    }
+    expect(P, "the armoured human magic-user in a fight (the can-learn's fight clause)", bad == 0, "%d of %d wrong (%s)", bad, n,
+           first);
+}
+
 void krynn_can()
 {
     const classes::Tables& t = m->tables;
@@ -1354,6 +1412,8 @@ void krynn_can()
     auto rnd = [&](int n) { seed = seed * 1103515245u + 12345u; return static_cast<int>((seed >> 16) % n); };
     int bad = 0, n = 0;
     char first[160] = "";
+    auto* const keep_fg = play::fg;             // (outside fights: the fight clause is armour_can's)
+    play::fg = nullptr;
     for (int k = 0; k < 800; ++k) {
         party::Character c = base;
         for (int j = 0; j < 8; ++j) c.rec[0x109 + j] = c.rec[0x111 + j] = 0;
@@ -1378,6 +1438,7 @@ void krynn_can()
             }
         }
     }
+    play::fg = keep_fg;
     expect(P, "Krynn: who may learn / memorize a spell (clerics, knights past 5th, the druid's rangers)", bad == 0 && n > 0,
            "%d of %d wrong (%s; spells %d %d %d %d)", bad, n, first, sp[0], sp[1], sp[3], sp[5]);
 }
@@ -1492,7 +1553,10 @@ void run()
         }
     }
     if (want("use")) using_items();
-    if (want("canuse")) krynn_can();
+    if (want("canuse")) {
+        krynn_can();
+        armour_can();
+    }
     if (want("wrap")) queen_wrap();
     if (want("restore")) restore();
     if (want("rest")) rest();

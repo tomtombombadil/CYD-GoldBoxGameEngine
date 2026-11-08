@@ -12205,6 +12205,7 @@ __attribute__((noinline)) void load_party_text(dax::ByteSource& exe, const exepa
         rules::set_fixes(CYD_ITEM_FIXES && opts.item_fixes);
         rules::set_worn_facts(pi.effect_data, pi.stat_fx[1]);
         magic::set_empower(d->prof->variant.tr_empower);
+        magic::set_fight_check(names, in_fight);
         {
             const auto& pc = d->prof->create;
             if (pc.ds_image && pc.tables.max_hit_dice &&
@@ -17265,6 +17266,7 @@ void close()
     host = nullptr;
     delete pt;
     pt = nullptr;
+    magic::set_fight_check(nullptr, nullptr);
     delete names;
     names = nullptr;
     delete ground;
