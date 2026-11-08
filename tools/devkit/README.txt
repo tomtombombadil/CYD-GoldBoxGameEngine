@@ -59,3 +59,21 @@ Round 8 rebuild (2026-11-08) - the behave oracles, ITEMS_BIN and test saves:
   behave.sh [games]      the per-game behave runs (oracles, build b<game>, run) -> logs/behave_<game>.log + summary.
   Baselines this round: Curse 6002/1 (the 1: no oracle_events.txt), PoolRad 430/0/0, Secret 5312/0/0,
   Gateway rules4 11/0 (save A made).
+
+Round 9 (2026-11-08) - more oracles rebuilt from the programs' code (no Project docs were readable this round):
+  oracles/x86.py         ndisasm-based readers of the originals' code: Code (a stretch disassembled, find / imm),
+                         run (a tiny interpreter for cmp / jcc chains and byte inc / dec / add / sub / mov to
+                         named places - used to run a routine for every input), cases (a cmp / jz / jnz switch).
+  oracles/krynn.py       the Krynn creation roll's rows (statlim agebr classmin ageeff raceadj adjtested wis13).
+  oracles/champions.py   Champions: tables from START.EXE, createPlayer / Modify / petition / acid constants from
+                         GAME.OVR's code.                                                  behave champions 8/0/0
+  oracles/deathknights.py  Death Knights: tables, createPlayer's experience / steel / spells, petitions.  4/0/0
+  oracles/queen.py       the Dark Queen: DQK.EXE's tables and createPlayer / Knight New Order constants,
+                         MONCHA.GLB's experience and flags (spell 0 left out: no such spell).   5/0/0
+  oracles/gateway.py     + list_limit (its race-limit routine run for every case) and the shop / temple /
+                         treasure menus' words with their guards (Detect left out).            3/0/0
+  oracles/secret_situations.py  silent training's lists now read from GAME.OVR 0x22921.  secret 5312/0/0
+  Still NOT rebuilt: darkness / treasures (+ _fights, _left), events (Curse's triggers - an independent ECL
+  reader), lv_<game> (behave levels), Secret's sp_word rows; the DOSBox differ. Death Knights' test save B:
+  make_saves.sh can't make it - an engine bug: the Add Character list reads a Death Knights .PC with
+  Darkness's NPC byte (0x147) from a 216-byte record, so no .PC is ever listed (play.cpp, the add list).
