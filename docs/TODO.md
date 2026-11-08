@@ -1171,7 +1171,8 @@ the Project as claude/TODO.md.
       Dark Queen's fight words: its boxed print 0xCD31 (from 0xB14E: the
       name, the words a row below, 23-38 x to 21; a word whose space is
       just past the box goes without it) - rules4 wrap, 3000 strings
-      letter by letter. [x] Treasures' own items (0x2E15B): 0x11 an
+      letter by letter; its weapon line the same way (res 0xA50B, rows
+      7-9). [x] Treasures' own items (0x2E15B): 0x11 an
       effect on the user (Potion of Spell Enhancing: 0x9F, 1d4 x 10 + 40,
       "Is empowered", + 3 caster levels - 0x40DEF; already affected:
       nothing used), 0x10 the maps (GEO block 0x3D shown, nothing used),
@@ -1185,8 +1186,8 @@ the Project as claude/TODO.md.
       aimed at in a fight, "cannot go there" / the held effect 0x9C ended
       "is free to move" / "jumps") and the maps (0x10) in fights - the
       engine says "Not in the engine yet." there; its effect 0x3B's
-      handler (none of its items has it). The Dark Queen: its weapon line
-      (still the old 16-column wrap), its fight pages' rows after a hit
+      handler (none of its items has it). The Dark Queen: its weapon
+      name's trailing space (0x9FDC not read), its fight pages' rows after a hit
       (each page from row 10), the box's page-full wait (0xCEEA: a key,
       cleared, on from the top - rows past 21 dropped here), a human
       magic-user in armour casting in fights (0x5A402), its moons never
