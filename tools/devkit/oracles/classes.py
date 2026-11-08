@@ -104,4 +104,6 @@ for d in range(3, 19):
     w.row('dex', d, gb.DEX_AC[d], gb.DEX_MISSILE[d])
 for over, move in ((0x200, 12), (0x201, 9), (0x300, 9), (0x301, 6), (0x400, 6), (0x401, 3)):
     w.row('move', over, move)
+# The original's saved game: SAVGAMA.DAT is 13,149 bytes (coab's loadSaveGame layout)
+w.row('save_sizes', 13149)
 w.done()
