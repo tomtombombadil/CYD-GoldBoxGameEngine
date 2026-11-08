@@ -758,6 +758,7 @@ void learning()
         ch.rec[0x13] = static_cast<uint8_t>(9 + rnd(10));
         ch.rec[0x15] = static_cast<uint8_t>(9 + rnd(10));
         ch.ext[party::kExtRobe] = static_cast<uint8_t>(rnd(3));
+        if (g == 1) ch.rec[0x13C] = static_cast<uint8_t>(rnd(3) ? 0 : 1 + rnd(3));   // (Pool's 0xB8: spell 56's count)
         for (int c = 0; c < 3; ++c)
             for (int lv = 1; lv <= 9; ++lv) slot(ch, c, lv - 1) = static_cast<uint8_t>(rnd(3) ? 0 : 1 + rnd(3));
         for (int s = 1; s < 127; ++s) {
@@ -803,11 +804,16 @@ void learning()
                 for (uint32_t s = 1; s <= top && s < t.lay.spell_count; ++s) {
                     const int code = pb(ds + cls_at + s * 16), level = pb(ds + cls_at + s * 16 + 1);
                     if (level != lv || classes::in_book(ch, static_cast<int>(s))) continue;
-                    // (PoolRad's spell 56 - cleric, 7th level - reads its record's 0xB8 as a
-                    // slot count (0xB1 + 3 x class + level): not modelled - its levels 1-3 only)
-                    if (kind == 1 && level > 3) continue;
                     // (the engine's class numbers: Pool's 0 cleric 1 magic-user)
                     const int c = kind == 1 ? (code == 0 ? 0 : code == 1 ? 2 : -1) : code;
+                    // (PoolRad's spell 56 - cleric, 7th level - reads its record's 0xB8 as a
+                    // slot count (0xB1 + 3 x class + level): Pool's 0xB8 is the engine's 0x13C)
+                    if (kind == 1 && level > 3) {
+                        const int o = 0xB1 + 3 * code + level;
+                        if (!rules::fixes() && c >= 0 && o >= 0xB8 && o <= 0xBC && ch.rec[0x13C + o - 0xB8] > 0)
+                            want.push_back(static_cast<int>(s));     // (Game Fixes: none)
+                        continue;
+                    }
                     if (kind == 2 ? code == 2 && classes::slots(ch, 2, level) > 0
                                   : c >= 0 && c < 3 && classes::slots(ch, c, level) > 0 &&
                                         (kind == 1 || magic::can_use(ch, t, static_cast<int>(s))))
@@ -1110,9 +1116,17 @@ void run()
     if (want("haste")) haste();
     if (want("moons")) moons();
     if (want("caster")) caster();
-    if (want("learn")) learning();
+    if (want("learn")) {
+        learning();
+        if (game() == 1) {                  // (PoolRad's spell 56: the original's rule, without the Game Fixes)
+            rules::set_fixes(false);
+            learning();
+            rules::set_fixes(true);
+        }
+    }
     if (want("use")) using_items();
     if (want("canuse")) krynn_can();
+    if (want("wrap")) queen_wrap();
     if (want("restore")) restore();
     if (want("rest")) rest();
     rules::set_fixes(true);

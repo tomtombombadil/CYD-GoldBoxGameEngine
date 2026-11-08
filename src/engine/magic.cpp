@@ -243,6 +243,19 @@ int learnable(const party::Character& c, const classes::Tables& t, uint8_t* ids,
     // magic-user spells only, of a level with magic-user slots, not known
     const int top = t.lay.dk ? 126 : t.lay.pool ? 56 : 100;
     for (int s = 1; s < t.lay.spell_count && s <= top && n < cap; ++s) {
+        if (t.lay.pool && t.spell_level(s) > 3 && (t.spell_class(s) == Cleric || t.spell_class(s) == MagicUser) &&
+            !classes::in_book(c, s)) {
+            // (PoolRad's 0x276CA reads its record's 0xB1 + 3 x class + level
+            // as the slot count for any level - spell 56, a 7th-level
+            // cleric's, reads 0xB8: past the slots, Pool's 0xB8-0xBC kept at
+            // the engine's 0x13C-0x140 - party.cpp kPoolRuns - the low byte of
+            // its experience value as a monster: the original's mistake, kept;
+            // with the Game Fixes no 7th-level spell, as AD&D's Pool levels)
+            if (rules::fixes()) continue;
+            const int o = 0xB1 + 3 * (t.spell_class(s) == Cleric ? 0 : 1) + t.spell_level(s);
+            if (o >= 0xB8 && o <= 0xBC && c.rec[0x13C + (o - 0xB8)] > 0) ids[n++] = static_cast<uint8_t>(s);
+            continue;
+        }
         if (!usable(t, s) || classes::in_book(c, s)) continue;
         if (t.lay.dk ? t.spell_class(s) == MagicUser && cast_count(c, t, MagicUser, t.spell_level(s)) > 0
                      : cast_count(c, t, t.spell_class(s), t.spell_level(s)) > 0 && (t.lay.pool || can_use(c, t, s)))
