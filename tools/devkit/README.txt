@@ -77,3 +77,30 @@ Round 9 (2026-11-08) - more oracles rebuilt from the programs' code (no Project 
   reader), lv_<game> (behave levels), Secret's sp_word rows; the DOSBox differ. Death Knights' test save B:
   make_saves.sh can't make it - an engine bug: the Add Character list reads a Death Knights .PC with
   Darkness's NPC byte (0x147) from a 216-byte record, so no .PC is ever listed (play.cpp, the add list).
+
+Round 10 (2026-11-08) - the last oracles, behave levels' oracle, the DOSBox differ:
+  oracles/darkness.py    oracle_darkness / _fights / _left (darkness.py treasures, or treasures.py: Treasures'
+                         - its tables at its own places, treasures_port_facts.md). The program's tables, ITEM0.DAX
+                         block 1 (the kit), the spell handlers' words read from GAME.OVR (the handler table's
+                         filling run found by its shape, each handler to its first ret: the Pascal strings it
+                         loads and the "is " + name it joins), the facts' rules worked out (43.1-43.4 hit points
+                         and Modify's bounds, 43.2 the Constitution, L1 / L2 the drain, R11 Restoration).
+                                                                  behave darkness 154/0/0, treasures 155/0/0
+  oracles/secret_words.py  Secret's sp_word rows (secret_facts_2.md 14) appended to oracle_secret_spells.txt
+                         (behave.sh runs it after secret_spells.py).                      behave secret 5413/0/0
+  oracles/lv_oracle.py   oracle_lv_<game>.txt for behave levels' values / multi: curse (every value: Curse's
+                         tables + behaviour_facts.md's class rules), darkness / treasures (experience, the last
+                         level, hit points - 43.1; no THAC0 / save / attack / slot / thief rows: not in the facts).
+  levels.sh [games]      behave levels on curse darkness treasures (build blv).   11/0/0 each
+  differ/                the DOSBox differ (PoolRad):
+    fixseed.py           START.EXE un-EXEPACKed (relocations from EXEPACK's table) with Randomize seeded 0
+    autodiff.py          base / run / batch: the original in dosbox-auto (headless, a key script, shots) and the
+                         playsim (simh0: build.sh simh0 "-DCYD_TEST_HOOKS -DCYD_MENU_HIGHLIGHT=0") on the same
+                         tokens, each step's screens compared by EGA index (the engine's lit menu word forgiven)
+    mkscen.py            a block's scenarios from the engine alone: event entries from the map ('M'), a save at
+                         each (TELE0 + SAVENOW), tokens step by step from the engine's state ('?')
+    runall.sh            base + blocks -> /tmp/claude-0/differ/batch_report.txt
+  NOT in the repo (GPL, kept in the Project): build_dosbox.sh + autodos.inc (DOSBox 0.74-3 patched: the key
+  script, quiet / shot / poke, AUTODOS_MEM, AUTODOS_FRAMES) -> /tmp/claude-0/differ/bin/dosbox-auto.
+  Still NOT rebuilt: Curse's oracle_events.txt (needs the Project's ecl_stub_facts.md - Curse's opcodes and
+  operand counts - for an independent reader); lv rows past Curse's / Darkness's hit points.
