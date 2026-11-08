@@ -10355,7 +10355,8 @@ void use_spell(int i, int sp, bool scroll, pic::Canvas& c)
         screen = Screen::Items;
         draw_items(c);
     }
-    if (scroll && !magic::reads_scroll(ch, rng.roll(100, 1))) {
+    const magic::ScrollReader rd = scroll ? magic::scroll_reader(ch, mrules->tables) : magic::kReads;
+    if (rd == magic::kOops || (rd == magic::kD100 && rng.roll(100, 1) > 75)) {
         char w1[12];
         cw(profile::kOops, w1, sizeof w1);
         snprintf(t, sizeof t, "%s %s", nm, w1);

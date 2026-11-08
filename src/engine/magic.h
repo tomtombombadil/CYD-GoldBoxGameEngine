@@ -118,8 +118,13 @@ void used(party::Character& c, int item);
 // The spells they can read on one scroll (as scroll_spells), by level
 int scroll_list(party::Character& c, const classes::Tables& t, const Scrolls& sc, int item, uint8_t* ids, int cap);
 // Can they read a scroll's spell: clerics and magic-users (either kind of
-// scroll), thieves of 10th level and up 3 times in 4 (else "oops!")
-bool reads_scroll(const party::Character& c, int d100);
+// scroll), thieves of 10th level and up 3 times in 4 (else "oops!") - the
+// d100 rolled only for those thieves, as the originals do; Darkness /
+// Treasures by skill levels; PoolRad no test (its list holds only what the
+// class reads)
+enum ScrollReader { kOops = 0, kReads = 1, kD100 = 2 };   // (kD100: a d100 of 75 or less reads)
+ScrollReader scroll_reader(const party::Character& c, const classes::Tables& t);
+bool reads_scroll(const party::Character& c, int d100);    // (Curse's rule, a d100 given)
 // A spell read off a scroll: gone from it (the last line holding it); the
 // scroll is used up below "With 1 Spell"
 void scroll_used(party::Character& c, const Scrolls& sc, int item, int spell);

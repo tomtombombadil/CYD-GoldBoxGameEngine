@@ -3190,7 +3190,9 @@ void fight_use(int k, int sp, bool scroll, pic::Canvas& c)
     fg->spell = sp;
     fg->sp_n = 0;
     fg->sp_area = -1;
-    if (scroll && f.member >= 0 && !magic::reads_scroll(pt->m[f.member], rng.roll(100, 1))) {
+    const magic::ScrollReader rd =
+        scroll && f.member >= 0 ? magic::scroll_reader(pt->m[f.member], mrules->tables) : magic::kReads;
+    if (rd == magic::kOops || (rd == magic::kD100 && rng.roll(100, 1) > 75)) {
         char w1[12];
         cw(profile::kOops, w1, sizeof w1);
         add_page(i, w1);

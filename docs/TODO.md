@@ -1079,7 +1079,7 @@ the Project as claude/TODO.md.
       start after the probe too; seed 2 replayed clean (same 2004 probes).
 - [ ] Rule-check gaps left from round 4: items used outside fights for
       Pool / Darkness / Gateway / Treasures / Krynn (Curse and Secret have
-      checks); spells offered at training (Curse's list stops at 5th level -
+      checks - 2026-11-08: done, below); spells offered at training (Curse's list stops at 5th level -
       later games' own code not read); dual-class beyond Curse's checks;
       the Dark Queen's moons (its C program not read); Death Knights' mage
       caster level takes the ranger's level unchanged (max, unsigned - not
@@ -1124,6 +1124,20 @@ the Project as claude/TODO.md.
       code: 121-573 differ). Left: PoolRad's spell 56 (cleric 7th level:
       its record's 0xB8 read as the slot count) not modelled; when the
       list is shown (the originals' training condition) not compared.
+      2026-11-08 (rules4 ONLY=use, every game but the Dark Queen): items
+      used outside fights - each original's UseMagicItem read (PoolRad
+      GAME.OVR 0x22AC5, Gateway 0x2FC02, Darkness 0x2569C, Treasures
+      0x2E0EF, Champions 0x29242, Death Knights 0x25A77): the same "used"
+      test (not a scroll, 0x3D, 0x3E < 0x80), Must be Readied, the
+      combat-only question and the use taken (count, then charges) as
+      Curse's. The scroll's reader differs: PoolRad no test at all,
+      Darkness / Treasures by skill levels (a paladin / ranger past 8th
+      reads); the engine used Curse's rule everywhere and rolled the d100
+      for everyone (a die the originals roll only for a thief past 9th):
+      fixed (magic::scroll_reader). Left: Treasures' own items with 0x3E
+      0x0F ("jumps" - fights), 0x10 and 0x11 ("is already affected" - an
+      effect on the user) have routines of their own (GAME.OVR 0x2DBF3 /
+      0x2DD75 / 0x2DB44) - the engine casts their 0x3D as a spell.
 - [ ] Pool's story beyond the nomads' camp: targeted differ runs only
       (scripted places), fights judged by the rule checks. 2026-11-07
       (part 17, claude/playtest_poolrad.md): every event square of

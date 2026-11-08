@@ -365,6 +365,22 @@ int scroll_list(party::Character& c, const classes::Tables& t, const Scrolls& sc
     return n;
 }
 
+ScrollReader scroll_reader(const party::Character& c, const classes::Tables& t)
+{
+    // PoolRad (GAME.OVR 0x22B30): the scroll's spell cast with no test
+    if (t.lay.pool) return kReads;
+    // Darkness (0x257E5) / Treasures (0x2E2B6): skill levels - magic-user or
+    // cleric, else a thief's over 9th and the d100
+    if (t.lay.dk) {
+        if (classes::skill_level(c, classes::MagicUser) > 0 || classes::skill_level(c, classes::Cleric) > 0) return kReads;
+        return classes::skill_level(c, classes::Thief) > 9 ? kD100 : kOops;
+    }
+    // Curse (0x29613), Secret, Gateway, Champions, Death Knights: the class
+    // (or the class before) a magic-user or cleric, else a thief over 9th
+    if (reads_scroll(c, 100)) return kReads;
+    return c.level(classes::Thief) >= 10 ? kD100 : kOops;
+}
+
 bool reads_scroll(const party::Character& c, int d100)
 {
     if (c.level(classes::Cleric) > 0 || c.level(classes::MagicUser) > 0 || c.old_level(classes::Cleric) > 0 ||

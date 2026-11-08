@@ -1,7 +1,7 @@
 // Behaviour checks, round 4 (sweep's `behave rules4`, -DBEHAVE_ROUND4 with
 // -DBEHAVE_MATRIX - its cleared field and plain fighters; any game: GAME,
 // BOOTSLOT, MAREA / MBLOCK, FIGHTAT as the fuzzer's; ONLY= table, turn,
-// former, restore, rest, haste, moons, caster, learn). Expectations from the originals'
+// former, restore, rest, haste, moons, caster, learn, use). Expectations from the originals'
 // code (rules_round4_facts.md in the Project: the turn routines of Curse's
 // listing ovr014:1228, Gateway's GAME.OVR 0x17455, Champions' 0x16021, the
 // Krynn moons' 0x3911F / 0x34E8C / 0x30E0B) and coab's facts (cast_restore,
@@ -721,6 +721,96 @@ void learning()
            "%d of %d set-ups differ, %d spells offered in all (%s)", bad, n, offered, first);
 }
 
+// ---- Items used outside fights (each original's UseMagicItem): which
+// items are used (not a scroll, 0x3D a spell, 0x3E under 0x80 - every
+// game's test at its use: PoolRad GAME.OVR 0x22B10, Curse 0x29521, Gateway
+// 0x2FC56, Darkness 0x256E7, Treasures 0x2E144, Champions 0x2928E, Death
+// Knights' alike), the use taken (0x3C 0: never runs out; a pile's count
+// first; gone at 0 - the same code in all), and who reads a scroll:
+// PoolRad no test (0x22B30); Darkness (0x257E5) / Treasures (0x2E2B6)
+// skill levels - magic-user or cleric, else a thief's over 9 and d100 <=
+// 75; the rest (Curse 0x29613 ...) the class or class before a magic-user
+// or cleric, the levels, else a thief over 9th and the d100. Treasures'
+// own items (0x3E 0x0E the lucky paper - the engine's, 0x0F / 0x10 /
+// 0x11: routines of their own, 0x2DBF3 / 0x2DD75 / 0x2DB44) are noted.
+void using_items()
+{
+    const classes::Tables& t = m->tables;
+    const int g = game();
+    if (g == 7) return;                     // (the Dark Queen: not read)
+    const magic::Scrolls sc = play::scroll_facts();
+    uint32_t seed = 777;
+    auto rnd = [&](int n) { seed = seed * 1103515245u + 12345u; return static_cast<int>((seed >> 16) % n); };
+    int bad = 0, n = 0;
+    char first[160] = "";
+    auto fail = [&](const char* w) { ++bad; if (!*first) snprintf(first, sizeof first, "%s", w); };
+    // Which are used
+    for (int k = 0; k < 2000; ++k) {
+        uint8_t it[63] = {};
+        it[0x2E] = static_cast<uint8_t>(rnd(256));
+        it[0x3C] = static_cast<uint8_t>(rnd(4));
+        it[0x3D] = static_cast<uint8_t>(rnd(3) ? rnd(256) : 0);
+        it[0x3E] = static_cast<uint8_t>(rnd(256));
+        const bool scroll = magic::is_scroll(sc, it);
+        const bool want = !scroll && it[0x3D] != 0 && it[0x3E] < 0x80 &&
+                          !(g == 9 && it[0x3E] >= 0x0E && it[0x3E] <= 0x11);
+        bool got = magic::usable(sc, it);
+        if (g == 9 && it[0x3E] >= 0x0E && it[0x3E] <= 0x11) got = false;   // (Treasures' own: below)
+        ++n;
+        if (got != want) {
+            char w2[96];
+            snprintf(w2, sizeof w2, "type %d 0x3D %02X 0x3E %02X: used %d, want %d", it[0x2E], it[0x3D], it[0x3E], got, want);
+            fail(w2);
+        }
+    }
+    // The use taken
+    for (int count = 0; count < 4; ++count)
+        for (int ch = 0; ch < 4; ++ch) {
+            uint8_t it[63] = {};
+            it[0x39] = static_cast<uint8_t>(count);
+            it[0x3C] = static_cast<uint8_t>(ch);
+            const bool gone = magic::use_charge(it);
+            const bool w_gone = ch > 0 && count <= 1 && ch - 1 == 0;
+            const int w_count = ch > 0 && count > 1 ? count - 1 : count, w_ch = ch > 0 && count <= 1 ? ch - 1 : ch;
+            ++n;
+            if (gone != w_gone || it[0x39] != w_count || it[0x3C] != w_ch) {
+                char w2[96];
+                snprintf(w2, sizeof w2, "count %d charges %d: %d %d gone %d", count, ch, it[0x39], it[0x3C], gone);
+                fail(w2);
+            }
+        }
+    // Who reads a scroll
+    party::Character base = pt->m[0];
+    for (int k = 0; k < 600; ++k) {
+        party::Character c = base;
+        for (int j = 0; j < 8; ++j) c.rec[0x109 + j] = c.rec[0x111 + j] = 0;
+        const int cls[4] = {0, 3, 4, 5};
+        for (int j : cls) if (rnd(4) == 0) c.rec[0x109 + j] = static_cast<uint8_t>(1 + rnd(14));
+        if (rnd(3) == 0) c.rec[0x109 + 6] = static_cast<uint8_t>(1 + rnd(14));
+        if (rnd(6) == 0) c.rec[0x111 + (rnd(2) ? 0 : 5)] = static_cast<uint8_t>(1 + rnd(10));
+        const int th = c.rec[0x10F];
+        int want;
+        if (g == 1) want = magic::kReads;
+        else if (g == 4 || g == 9)
+            want = classes::skill_level(c, classes::MagicUser) > 0 || classes::skill_level(c, classes::Cleric) > 0 ? magic::kReads
+                   : classes::skill_level(c, classes::Thief) > 9                                                       ? magic::kD100
+                                                                                                                    : magic::kOops;
+        else
+            want = c.rec[0x109] || c.rec[0x10E] || c.rec[0x111] || c.rec[0x116] ? magic::kReads : th > 9 ? magic::kD100 : magic::kOops;
+        const int got = magic::scroll_reader(c, t);
+        ++n;
+        if (got != want) {
+            char w2[96];
+            snprintf(w2, sizeof w2, "levels cl %d pa %d ra %d mu %d th %d (old cl %d mu %d): %d, want %d", c.rec[0x109], c.rec[0x10C],
+                     c.rec[0x10D], c.rec[0x10E], th, c.rec[0x111], c.rec[0x116], got, want);
+            fail(w2);
+        }
+    }
+    expect(P, "items used outside fights: which are used, the use taken, who reads a scroll", bad == 0, "%d of %d wrong (%s)", bad,
+           n, first);
+    if (g == 9) printf("NOTE rules4: Treasures' items with 0x3E 0x0F / 0x10 / 0x11 have routines of their own (GAME.OVR 0x2DBF3 / 0x2DD75 / 0x2DB44) - not in the engine\n");
+}
+
 void run()
 {
     if (!monkey_boot() || !play::load_rules(m) || !m) {
@@ -741,6 +831,7 @@ void run()
     if (want("moons")) moons();
     if (want("caster")) caster();
     if (want("learn")) learning();
+    if (want("use")) using_items();
     if (want("restore")) restore();
     if (want("rest")) rest();
     rules::set_fixes(true);

@@ -1904,6 +1904,14 @@ static void b_use_items()
         expect("items", "a 9th level thief can't", !magic::reads_scroll(t, 1));
         t.rec[0x10F] = 10;
         expect("items", "a 10th level thief: d100 75 reads, 76 doesn't", magic::reads_scroll(t, 75) && !magic::reads_scroll(t, 76));
+        // (what the use itself asks: PoolRad's GAME.OVR 0x22B30 casts with no
+        // test; Curse's 0x29613 the d100 only for such a thief)
+        const classes::Tables& tb = play::mrules->tables;
+        const magic::ScrollReader r10 = magic::scroll_reader(t, tb);
+        t.rec[0x10F] = 9;
+        const magic::ScrollReader r9 = magic::scroll_reader(t, tb);
+        expect("items", b_pool ? "PoolRad: the scroll read with no test" : "a thief's reading: 9th oops, 10th a d100",
+               b_pool ? r9 == magic::kReads && r10 == magic::kReads : r9 == magic::kOops && r10 == magic::kD100, "%d %d", r9, r10);
     }
     // The spell read off a scroll: the last line holding it emptied, the
     // count word down one; under "With 1 Spell" the scroll is gone
