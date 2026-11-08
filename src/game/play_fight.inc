@@ -1732,7 +1732,9 @@ void draw_panel_for(pic::Canvas& c, int i)
     const int wi = combat::weapon(f, *names);
     if (wi >= 0) {
         names->name(items::Item{f.items[wi]}, t, sizeof t - 1);
-        if (hl()) row = panel_text(c, t, 7, 10, 9) + 1;   // (the Dark Queen's print: not read)
+        // (the Dark Queen's, res 0xA50B: the name through its boxed print
+        // 0xCD31, rows 7-9; the status two rows past where it ended - 0xA561)
+        if (hl()) row = panel_box_text(c, t, 7, 10, 9, false, true) + 1;
         else {
             // (the originals' names keep their last word's space - PoolRad
             // START 0x12CC, Gateway GAME.OVR 0x3F384: " " / "s " added)
