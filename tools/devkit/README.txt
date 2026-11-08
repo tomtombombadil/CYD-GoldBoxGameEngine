@@ -1,0 +1,45 @@
+Round 7 scratch (2026-11-08) - how each run is invoked. Scripts kept in the repo (tools/devkit) so a replaced machine loses nothing; game files, unpacked programs and outputs stay in scratch.
+
+Games: /tmp/claude-0/games/<short>/<GOG folder>  (unzip_games.sh from Tom's zips)
+  short     GAME  folder used                              env (run.sh sets it)
+  poolrad   1     Pool of Radiance/POOLRAD (DAX one down)
+  curse     2     Curse of the Azure Bonds
+  secret    3     Secret of the Silver Blades
+  darkness  4     Pools of Darkness
+  champions 5     Champions of Krynn                       MAREA=2 MBLOCK=34 FIGHTAT=8441
+  knights   6     Death Knights of Krynn                   BOOTSLOT=A MAREA=1 MBLOCK=36 FIGHTAT=815B
+                  (the old test save B is gone: save A starts a new game; MAREA/MBLOCK put the
+                   party in block 36, whose LOAD MONSTER is at 815B)
+  queen     7     The Dark Queen of Krynn                  FIGHTAT=8C11
+  gateway   8     Gateway to the Savage Frontier           (NO SAVES: its SAVE folder is empty - the
+                  earlier rounds' test saves are gone; rules4 / fights can't boot)
+  treasures 9     Treasures of the Savage Frontier         CACHE=/GOLDBOX/_CYD/<folder>
+
+Scripts:
+  build.sh <name> "<flags>" <main.cpp> [extra .cpp]   objects per flag set in obj/<name>, binary bin/<name>
+    rules4:  build.sh r4 "-fsanitize=address,undefined -DCYD_TEST_HOOKS -DBEHAVE_MATRIX -DBEHAVE_ROUND4" tools/playsim/sweep.cpp
+    budget:  LDEXTRA="-Wl,--wrap=malloc,--wrap=free,--wrap=calloc,--wrap=realloc" build.sh sim "-fno-omit-frame-pointer" tools/playsim/sim.cpp tools/playsim/heapprof.cpp
+    (header changes: REBUILD=1 to rebuild every object)
+  run.sh <short> <binary> <args...>     a fresh copy of the game folder in run/<short>[-TAG] with _CYD beside it,
+                                        the game's env, ORACLE_DIR=/tmp/claude-0/bt (empty now)
+  r4all.sh [games]                      behave rules4 on each game, logs/r4_<game>.log (2 at a time)
+  budget.sh                             fight budgets, logs/bud_<game>.log: SAVE=A RUNAT=... FIGHT=1 HEAPPROF=1 BUDGET=150
+                                        (Curse 8AC2, PoolRad 85F9, Darkness 85BB CHOICES=0, Champions AREA=2 BLOCK=34 8441,
+                                         Knights AREA=1 BLOCK=36 815B, Queen 8C11, Treasures 9C1D)
+  host_tests.sh                         CI's tests job (ht/)
+  syntax2b.sh                           CLAUDE.md's gnu++2b check
+  pio_setup.sh / board_build.sh         PlatformIO venv (pio-venv) + proxy CA, pio run -e cyd28_ili9341_res, .pio/build removed
+Tools (tools/): unpack (EXEPACK image), stub.py (overlay stub seg:off -> GAME.OVR offset), ovls.py (overlay list /
+  which overlay holds an offset), dis.sh (ndisasm from a file offset, overlay-relative addresses).
+  Unpacked images: tr_exe.bin (Treasures), dk_exe.bin (Darkness), dkk_exe.bin (Knights START.EXE), sec_exe.bin (Secret
+  START.EXE); GAME.OVR copies tr = ovr.bin, dk_ovr.bin, dkk_ovr.bin, sec_ovr.bin.
+
+Baselines this round (v0.179.0 work):
+  rules4: PoolRad 14/0, Curse 16/0, Secret 12/0, Darkness 12/0, Champions 19/0, Knights 15/0, Queen 14/0,
+          Treasures 14/0; Gateway not run (no save).
+  budgets (bytes, limit 153600): Curse 133545, PoolRad 135385, Darkness 149482, Champions 135815, Knights 135762,
+          Queen 143068, Treasures 151742.
+  behave (oracle-based per-game runs): NOT reproducible - the scratch oracles (/tmp/claude-0/bt/oracle_*.txt) and
+          ITEMS_BIN are gone and the repo has no generator for them (pool_oracle.py etc. were scratch scripts).
+          Curse's behave without them: 74 synthetic checks pass, 6 parts fail "no oracle".
+  DOSBox differ: not rebuilt (its custom build is gone).
