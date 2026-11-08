@@ -111,3 +111,28 @@ DEX_AC = {d: (-4 if d <= 3 else d - 7 if d <= 6 else d - 14 if 15 <= d <= 18 els
               5 if 21 <= d <= 23 else 6 if d >= 24 else 0) for d in range(26)}
 DEX_MISSILE = {d: (-4 if d <= 2 else d - 6 if d <= 5 else d - 15 if 16 <= d <= 18 else 3 if d in (19, 20) else
                    4 if 21 <= d <= 23 else 5 if d >= 24 else 0) for d in range(26)}
+
+
+def dax_block(path, ident):
+    """A DAX file's block, its RLE undone (index: u16 size, 9-byte entries
+    id / u32 offset / u16 raw size / u16 packed size; a control byte c >= 0
+    copies c + 1 bytes, c < 0 repeats the next byte -c times)."""
+    d = open(path, 'rb').read()
+    n = struct.unpack_from('<H', d, 0)[0]
+    start = 2 + n
+    for e in range(2, start, 9):
+        if d[e] != ident:
+            continue
+        off, size, comp = struct.unpack_from('<IHH', d, e + 1)
+        p, end, out = start + off, start + off + comp, bytearray()
+        while p < end and len(out) < size:
+            c = struct.unpack_from('<b', d, p)[0]
+            p += 1
+            if c >= 0:
+                out += d[p:p + c + 1]
+                p += c + 1
+            else:
+                out += bytes([d[p]]) * (-c)
+                p += 1
+        return bytes(out[:size])
+    raise KeyError('%s block %d' % (path, ident))

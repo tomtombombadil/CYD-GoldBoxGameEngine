@@ -23,7 +23,7 @@ declare -A FLAGS=(
   [queen]="$H -DBEHAVE_QUEEN")
 declare -A PART=([curse]="" [poolrad]=pool [secret]=secret [darkness]=darkness [treasures]=treasures
   [champions]=champions [knights]=deathknights [gateway]=gateway [queen]=queen)
-declare -A ORACLES=([champions]="champions" [knights]="deathknights" [queen]="queen" [curse]="items spells monsters classes" [poolrad]="pool" [gateway]="gateway" [secret]="secret secret_monsters secret_spells secret_items secret_situations")
+declare -A ORACLES=([darkness]="darkness" [treasures]="treasures" [champions]="champions" [knights]="deathknights" [queen]="queen" [curse]="items spells monsters classes" [poolrad]="pool" [gateway]="gateway" [secret]="secret secret_monsters secret_spells secret_items secret_situations")
 games=${@:-curse poolrad secret darkness treasures champions knights gateway queen}
 [ -f /tmp/claude-0/sw/items_curse.bin ] || bash "$D/items_bin.sh" curse
 for g in $games; do
