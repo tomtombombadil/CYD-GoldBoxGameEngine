@@ -4363,8 +4363,13 @@ void ai_step(pic::Canvas& c)
         // The computer's magic items (monsters, NPCs and Quick members), then
         // spells, then Turn Undead - one fleeing too: the original tries them
         // before it runs (Pool ovr10 +0x10F on, coab's PlayerQuickFight -
-        // nothing there asks about the flight)
-        if (f.n_items && f.can_use && combat::standing(b, f.team() ? 0 : 1) && load_magic()) {
+        // nothing there asks about the flight). Darkness's and Treasures'
+        // computer never uses an item: its item routine, called before the
+        // pending spell, Turn and spells (Darkness GAME.OVR 0x9D9A, Treasures
+        // 0xABB4), is an empty body that answers no. Death Knights' (0xA4D3,
+        // d7 rounds) comes first there too
+        const bool ai_items = !(darkness_files() && !dkk());
+        if (ai_items && f.n_items && f.can_use && combat::standing(b, f.team() ? 0 : 1) && load_magic()) {
             int tg[combat::kMaxFighters], nt = 0;
             const int k = combat::choose_item(b, fg->t, mrules->tables, i, *names, d->prof->fight.spells,
                                               d->prof->fight.n_spells, rng, tg, &nt);

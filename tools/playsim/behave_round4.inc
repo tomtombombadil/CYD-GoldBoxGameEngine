@@ -949,6 +949,65 @@ void learning()
 // Words: the routine's own Pascal strings (cs:0x1FAC / 0x1FBC / 0x1FCC of
 // overlay 0x2BC21), read from the player's GAME.OVR here.
 bool fight();
+// The computer's items: Darkness's and Treasures' never (their item routine,
+// GAME.OVR 0x9D9A / 0xABB4, called first in the computer's turn, is an
+// empty body answering no); the others' (Death Knights 0xA4D3, Curse's /
+// Pool's d7 rounds) use a readied wand whose spell the item chooser takes.
+// A monster with one wand (a fight spell of priority 7 against its enemy,
+// the dice highest), no spells: the chooser takes it (the control), and its
+// turn uses it - or, Darkness / Treasures, doesn't
+int die_high(int n) { return n - 1; }
+void ai_items()
+{
+    if (!fight()) return;
+    combat::Battle& b = fg->b;
+    const classes::Tables& t = m->tables;
+    const int g = game();
+    mx::put(0, 0, 10, 10, 60);
+    mx::put(B, 1, 13, 10, 60);
+    for (int k = B + 1; k < b.n; ++k) b.f[k].size = 0;
+    for (int k = 1; k < b.party_size; ++k) b.f[k].size = 0;
+    combat::occupancy(b);
+    static uint8_t wand[1][items::kRecordSize];
+    combat::Fighter& f = b.f[B];
+    f.items = wand;
+    f.n_items = 1;
+    f.can_use = true;
+    int found = 0;
+    for (int s = 1; s < 0x80 && !found; ++s) {
+        memset(wand[0], 0, sizeof wand[0]);
+        wand[0][0x2E] = 0x2F;
+        wand[0][0x34] = 1;
+        wand[0][0x3C] = 5;
+        wand[0][0x3D] = static_cast<uint8_t>(s);
+        create::g_die_hook = die_high;
+        int tg[combat::kMaxFighters], nt = 0;
+        const int k = combat::choose_item(b, fg->t, t, B, *names, d->prof->fight.spells, d->prof->fight.n_spells, rng, tg, &nt);
+        create::g_die_hook = nullptr;
+        if (k == 0 && nt > 0 && tg[0] == 0) found = s;
+    }
+    if (!found) {
+        printf("  (ai items: no wand spell the chooser takes here)\n");
+        return;
+    }
+    const bool want = !(d->prof->variant.darkness_files && !d->prof->variant.dkk);
+    fg->cur = B;
+    fg->ai_checked = false;
+    fg->flee_told = true;
+    fg->use_item = -1;
+    create::g_die_hook = die_high;
+    ai_step(C);
+    create::g_die_hook = nullptr;
+    // (a monster's use copies its list first - own_items: the copy's charges)
+    const bool used = f.n_items != 1 || f.items[0][0x3C] != 5;
+    if (f.items == wand) {
+        f.items = nullptr;
+        f.n_items = 0;
+    }
+    expect(P, "the computer's items: Darkness / Treasures never (an empty item routine), the others a wand", used == want,
+           "game %d, wand spell %d: used %d, want %d", g, found, used, want);
+}
+
 void treasures_fight_items()
 {
     std::vector<uint8_t> ovr;
@@ -1264,6 +1323,7 @@ void using_items()
     expect(P, "items used outside fights: which are used, the use taken, who reads a scroll", bad == 0, "%d of %d wrong (%s)", bad,
            n, first);
     if (g == 9) treasures_own_items();
+    ai_items();
 }
 
 // ---- Who may learn / memorize a spell in the Krynn games (their
