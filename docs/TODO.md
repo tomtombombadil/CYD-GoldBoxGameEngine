@@ -1182,23 +1182,45 @@ the Project as claude/TODO.md.
       (0xA46C); Champions' computer by its own test (0xC772: old cleric
       over 0xD7); Gateway's finder types 1-12 (0x17679). [x] PoolRad's
       spell 56 at training (0xB8, kept; none with the Game Fixes).
-- [ ] Round 6 left: Treasures' boots (0x3E 0x0F, 0x2DBF3: a square
-      aimed at in a fight, "cannot go there" / the held effect 0x9C ended
-      "is free to move" / "jumps") and the maps (0x10) in fights - the
-      engine says "Not in the engine yet." there; its effect 0x3B's
-      handler (none of its items has it). The Dark Queen: its weapon
-      name's trailing space (0x9FDC not read), its fight pages' rows after a hit
-      (each page from row 10), the box's page-full wait (0xCEEA: a key,
-      cleared, on from the top - rows past 21 dropped here), a human
-      magic-user in armour casting in fights (0x5A402), its moons never
-      advance (kQueenEcl has no moons; Champions' clock does), turning
-      (menu and computer: taken as Darkness's - not read), its 0xFF-class
-      spells' caster level (uninitialised in res 0xB4E0: 12 here). Death
-      Knights' / Darkness's / Treasures' computer: items vs Turn order
-      (the originals: a pending spell, Turn, spells - items not placed);
-      Champions' finder's type limit is uninitialised (0xC772 passes
-      [bp-6] unset: any type here). When each original shows the training
-      spell list at all - not compared.
+- [x] Round 7 (v0.179.0; facts: scratch round7_facts.md, to go to the
+      Project): Treasures' boots' jump in fights (0x2DBF3: spell 0x7F's aim,
+      "cannot go there" only when someone stands there - a wall too, kept;
+      Game Fixes: Dimension Door's squares; 0x9C off "is free to move",
+      "jumps"; a charge and the turn either way) and the maps in fights
+      (shown, nothing used, the turn goes on) - rules4 use, 7 cases. The
+      Dark Queen's moons: its clock steps them a day at a time (DQK.EXE
+      0x5D6E: counters 0x1FD-0x1FF, limits 8 1 6, phases 0x1FA-0x1FC - the
+      engine read game byte 0 for them: always new), a new game's at 2, a
+      fight's mages carry their robes (saves 0x8576, caster level 0xB5E6),
+      the moon's extra spells over levels 1-9 (0x4501C) - rules4 moons 906
+      + 72. The computer's items: Darkness's / Treasures' item routine is
+      an empty body (GAME.OVR 0x9D9A / 0xABB4) - never; Death Knights'
+      (0xA4D3) before the pending spell, Turn, spells - rules4 use, 8 games.
+      The armoured human magic-user in a fight (the can-learn's fight
+      clause: Secret 0x2C76B, Darkness 0x29DED, Treasures 0x32CCE, Death
+      Knights 0x29D23, the Dark Queen 0x5A402; a ranger past 8th may) -
+      rules4 canuse.
+- [ ] Round 7 left: Treasures' effect 0x3B's handler (none of its items
+      has it). The Dark Queen: its weapon name's trailing space (0x9FDC not
+      read); its fight pages' rows after a hit (each page from row 10 here:
+      its print routine 0xB14E takes the row from its 137 callers - the
+      damage text 0x8F04 not followed through) and the box's page-full wait
+      (0xCEEA: a key, cleared, on from the top - rows past 21 dropped
+      here); turning (menu and computer: taken as Darkness's - its routine
+      not found yet; its turn table at DS 0x5A6A, 11 a row, 99 first); its
+      0xFF-class spells' caster level (uninitialised in res 0xB4E0: 12
+      here); the moon's extra spells - whether a mage spell of a level it
+      has no slots for can take them (0x4551D tests no level; the engine
+      asks for slots at that level). Death Knights' computer tries its
+      items before a pending spell (the engine's pending spells go off at
+      the turn's start in every game). Champions' finder's type limit is
+      uninitialised (0xC772 passes [bp-6] unset: any type here); Champions'
+      can-learn in fights not read. When each original shows the training
+      spell list at all - not compared. Gateway's rules4 / behave runs need
+      its test saves (lost with the machine: the SAVE folder is empty).
+- [ ] Tom: Darkness's and Treasures' computer never uses an item (their
+      item routine is compiled out - kept as the originals; a Game Fix to
+      give monsters their wands back? not added: not an AD&D mistake).
 - [ ] Pool's story beyond the nomads' camp: targeted differ runs only
       (scripted places), fights judged by the rule checks. 2026-11-07
       (part 17, claude/playtest_poolrad.md): every event square of

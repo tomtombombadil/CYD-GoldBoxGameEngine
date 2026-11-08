@@ -2391,10 +2391,18 @@ ranger past 7th; magic-user spells Intelligence over 8 and a magic-user
 or a ranger past 8th); caster levels (res 0xB4E0: none of cleric,
 magic-user, ranger past 7th, knight past 8th - 6; else max(cleric,
 knight), ranger - 7, max(magic-user + the robe's moon, ranger - 8), the
-items' 12; its moons are the area words 0x4CF9-0x4CFB); training's new
-spell from the robe's list (mode 5, 0x5AFD9); its fight words through
-its boxed print (res 0xCD31: a word whose space is just past column 38
-goes without it and the row ends).
+items' 12); training's new spell from the robe's list (mode 5,
+0x5AFD9); its fight words through its boxed print (res 0xCD31: a word
+whose space is just past column 38 goes without it and the row ends).
+v0.179.0: its moons are its game block's bytes 0x1FA-0x1FC (phases),
+stepped once a day by the clock (0x5D6E: counters 0x1FD-0x1FF, at 8 / 1 /
+6 the phase on, 3 -> 0; a new game's all 2); a mage with a robe: the
+moon new -1 / full +1 to its saves (0x8576) and caster level (full past
+5th, 0xB5E6), 1 / 2 extra spells to memorize counted over levels 1-9
+(0x4501C). In a fight a human magic-user with armour readied (ranger to
+8th) can't use magic-user spells (0x5A402) - Secret's, Darkness's,
+Treasures' and Death Knights' can-learn the same. Darkness's and
+Treasures' computer uses no items (their item routine is empty).
 Treasures' own items (GAME.OVR 0x2E15B, 2026-11-08): byte 0x3E 0x11 puts
 effect 0x3D on the user (already there: "is already affected", nothing
 used; the Potion of Spell Enhancing's 0x9F lasts 1d4 x 10 + 40, "Is
