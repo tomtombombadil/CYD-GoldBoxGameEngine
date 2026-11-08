@@ -27,7 +27,7 @@
 #  The knights' saves: the original's row 7 level 0, with Game Fixes the
 #  knight's own level 1 row (behave_champions.inc).
 import re, sys
-import gb, x86
+import gb, krynn, x86
 
 B = 0xBC60
 ds = gb.DS(gb.image('champions'), B)
@@ -96,49 +96,9 @@ w.row('knightrow1', list(ds.bytes(0x4056 + 7 * 60 + 5, 5)))
 
 # the creation roll (b_krynn_stats): limits, brackets, minimums, age
 # effects, race adjustments, the race tested, the Wisdom-13 classes
-for race in range(7):
-    w.row('statlim', race, list(ds.bytes(0x39E0 + race * 16, 16)))
-    w.row('agebr', race, [ds.u16(0x3B99 + race * 10 + i * 2) for i in range(5)])
-for cls in range(17):
-    w.row('classmin', cls, list(ds.bytes(0x3BDF + cls * 6, 6)))
-# age effects: the stat blocks of the switch at +0x171E (cmp al,s / jz / jmp next)
-blocks = {}
-for a in c.find(r'^cmp al,0x[0-5]$', 0x171E, 0x2100):
-    j = c.after(a)
-    if j[2].startswith('jz') and c.after(a, 2)[2].startswith('jmp'):
-        blocks[c.imm(a)] = (x86.num(j[2].split()[-1]), x86.num(c.after(a, 2)[2].split()[-1]))
-blocks[0] = (0x1728, 0x19CB)
-for s in range(6):
-    st, en = blocks[s]
-    ef = [0, 0, 0, 0, 0]
-    for a in c.find(r'^mov ax,\[di\+0x3b9[9bdf]\]$', st, en):
-        b = (int(re.search(r'0x3b9([9bdf])', c.text(a)).group(1), 16) - 9) // 2
-        k = 1
-        while not c.after(a, k)[2].startswith('j'):
-            k += 1
-        j = c.after(a, k)[2].split()[0]
-        while not re.match(r'(inc|dec|add|sub) byte \[es:di\+0x11\]', c.after(a, k)[2]):
-            k += 1
-        t = c.after(a, k)[2]
-        d = 1 if t.startswith('inc') else -1 if t.startswith('dec') else (1 if t.startswith('add') else -1) * x86.num(t.split(',')[-1])
-        if j == 'jnc':
-            ef[b] += d
-        elif j == 'jc' and b == 0:
-            ef[4] += d
-        else:
-            sys.exit('age effect: unexpected %s at %X' % (j, a))
-    w.row('ageeff', s, ef)
-tested = c.imm(c.find(r'^cmp byte \[bp-0x17\],0x', 0x7C1, 0x820)[0])
-w.row('adjtested', tested)
-for race in range(7):
-    adj = []
-    for s in range(6):
-        m = x86.run(c, 0x1680, 0x16E6, {'al': 0}, {'[bp-0x17]': race, '[bp-0x1a]': s})
-        adj.append(m.get('[bp-0x15]', 0))
-    w.row('raceadj', race, adj)
-setat = A4 + 0x692
-bits = open(OVR, 'rb').read()[setat:setat + 32]
-w.row('wis13', [k for k in range(256) if bits[k // 8] >> (k % 8) & 1])
+krynn.stats_rows(w, ds, c, OVR, A4, statlim=0x39E0, agebr=0x3B99, classmin=0x3BDF, stat_switch=(0x171E, 0x2100),
+                 adj=(0x1680, 0x16E6, '[bp-0x17]', '[bp-0x1a]', '[bp-0x15]'), tested=(0x7C1, 0x820, 'bp-0x17'),
+                 wis_set=0x692)
 
 # the kapak's acid: its ground (0x12C1F + 0x300), effect / time dice pushed
 # before 0xDB:0x57 / 0xDB:0x4D, the damage dice (0x34F7F)
