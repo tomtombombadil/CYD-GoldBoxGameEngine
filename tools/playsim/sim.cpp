@@ -135,12 +135,14 @@ static void state_log(const char* name)
 // (in a fight) Battle views beside the canvas, and 320x240's battlefield
 // page (game/companion.*; the text in the engine's Clear font at 6 px)
 static void panel_shot(const char* name);
+static const char* g_shot_dir = nullptr;   // (PAGESHOTS: a fight page's snapshot to pages/, outside the step numbering)
 static void shot(const char* tag)
 {
     if (g_quiet) return;
     char name[64];
-    snprintf(name, sizeof name, "out/%02d_%s.ppm", shot_n++, tag);
-    state_log(name);
+    if (g_shot_dir) snprintf(name, sizeof name, "%s/%s.ppm", g_shot_dir, tag);
+    else snprintf(name, sizeof name, "out/%02d_%s.ppm", shot_n++, tag);
+    if (!g_shot_dir) state_log(name);
     FILE* f = fopen(name, "wb");
     if (!f) return;                     // no out/ folder: no snapshots
     fprintf(f, "P6 320 200 255\n");
@@ -319,6 +321,18 @@ static void settle(int choice = 0, int max_ms = 60000)
     for (int t = 0; t < max_ms; t += 20) {
         g_now += 20;
         play::tick(g_now, C);
+        static const bool pageshots = getenv("PAGESHOTS") != nullptr;   // PAGESHOTS=1: every fight page shown, to pages/ (the auto differ's frames)
+        if (pageshots && play::fg) {
+            static int last_at = -1, n = 0;
+            if (play::fg->st == play::FSt::Pages && play::fg->at != last_at) {
+                char t[24];
+                snprintf(t, sizeof t, "page%04d", n++);
+                g_shot_dir = "pages";
+                shot(t);
+                g_shot_dir = nullptr;
+            }
+            last_at = play::fg->st == play::FSt::Pages ? play::fg->at : -1;
+        }
         { char jk; int jn; if (play::journal_request(&jk, &jn)) printf("  JOURNAL %c %d\n", jk, jn); }
         using namespace play;
         if (play::lk.on) {                // (Treasures' LUCK texts: a tap at each page's end)

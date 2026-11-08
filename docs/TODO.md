@@ -1165,7 +1165,20 @@ the Project as claude/TODO.md.
       scenario unmasked 0 px (558 px before). Left: the Dark Queen's
       print not read (kept the old fit); the fight messages (pages) keep
       panel_text - whether the originals print them through the same box
-      not checked.
+      not checked. 2026-11-08: they do (PoolRad ovr14 +0x2FA; the same
+      routine in Curse / Secret / Darkness / Gateway / Treasures /
+      Champions): the name printed as it is, the words through the box
+      from the next row, the next print at the box's last row + 1 (+1
+      after the last column); the target's name in its colour before the
+      blow; a fall after a hit goes on below the hit's words ("goes down"
+      / "and is Dying", or "goes down" + the name + "is killed"), the
+      rows above kept. Now show_page / down_page(after_hit). Proved with
+      the differ's new frame capture (DOSBox AUTODOS_FRAMES, the
+      playsim's PAGESHOTS): every fight-page row layout (colour + width a
+      row) the engine showed in the kobolds / slums fights that the
+      original also showed matched (18 / 3 shared layouts, the rest other
+      names / dice); pixel-identical pages need the computer's dice (not
+      told yet). The Dark Queen's message print still not read.
 - [x] Claude: does Curse's / Secret's step also leave the exploring menu
       line drawn under a VERTICAL MENU, keep the old view after a script's
       move, and lack the field's d100 pieces (Pool's fixes, Pool only)?

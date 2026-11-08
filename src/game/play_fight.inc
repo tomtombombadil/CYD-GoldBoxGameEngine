@@ -750,6 +750,8 @@ struct Page {
     uint16_t line_at[5];                // where each line starts in Fight::ptext
     uint8_t colour[5];
     uint8_t weapon = 0;                 // Darkness's Kalistes: its blow's weapon + "+4" in the panel's rows 7-9
+    uint8_t names = 0;                  // the lines that are names (bit k: printed as they are, a row each)
+    bool    cont = false;               // goes on below the page before (its rows kept), as the originals' fall after a hit
     int     lines = 0;
     uint8_t sound = 0;                  // the game's sound effect as it shows (0: none)
     Fx      fx[2];                      // then these, one after the other; then the page's wait
@@ -843,6 +845,8 @@ struct Fight {
     int      pick_budget = -1;          // spell aim 5: picked one by one against this (-1: not that kind)
     bool     pick_size = false;         // ... costs by size (Faerie Fire), else by Hit Dice
     bool     page_dropped = false;      // the last add_page found no room (its pictures / sound aren't set)
+    bool     cont_next = false;         // the next add_page goes on below the last page shown
+    int8_t   page_end = 10;             // the row after the last page shown's print (the originals' text row + 1)
     int8_t   yielding = -1;             // the one whose "Surrenders" is on the pages (leaves the field after them)
     // A sweep under way (melee): its blows one at a time, each one's pages
     // (the hit, the fall, the skull, the icon gone) before the next blow
@@ -1809,6 +1813,9 @@ void add_page(int who, const char* a, const char* b2 = nullptr, int whom = -1, c
     p.lines = 0;
     p.sound = 0;
     p.weapon = 0;
+    p.names = 0;
+    p.cont = fg->cont_next;
+    fg->cont_next = false;
     p.fx[0] = p.fx[1] = Fx{};
     auto line = [&](const char* s, uint8_t col) {
         if (p.lines < 5 && s) {
@@ -1822,11 +1829,13 @@ void add_page(int who, const char* a, const char* b2 = nullptr, int whom = -1, c
     char nm[20];
     if (who >= 0) {
         fighter_name(fg->b.f[who], nm, sizeof nm);
+        p.names |= static_cast<uint8_t>(1u << p.lines);
         line(nm, name_colour(fg->b.f[who]));
     }
     line(a, 10);
     if (whom >= 0) {
         fighter_name(fg->b.f[whom], nm, sizeof nm);
+        p.names |= static_cast<uint8_t>(1u << p.lines);
         line(nm, name_colour(fg->b.f[whom]));
     }
     line(b2, 10);
@@ -2178,9 +2187,28 @@ void show_page(pic::Canvas& c)
         clear_panel(c, 7, 9);
         panel_box_text(c, t, 7, 10, 9, false);
     }
-    clear_panel(c, 10, 21);
+    // The originals' messages (PoolRad ovr14 +0x2FA, Curse / Secret / Darkness
+    // / Gateway / Treasures / Champions the same routine): a name printed as
+    // it is (a row of its own), the words through the boxed print from the
+    // next row - the next print starts at its last row + 1 (+ 1 more when it
+    // ended on the box's last column); a fall after a hit goes on below the
+    // hit's words, the rows above kept (the box cleared from there down).
+    // (The Dark Queen's print: not read - the old wrap.)
     int row = 10;
-    for (int k = 0; k < p.lines; ++k) row = panel_text(c, page_line(p, k), row, p.colour[k]);
+    if (p.cont && !hl() && fg->page_end > 10 && fg->page_end <= 21) row = fg->page_end;
+    clear_panel(c, row, 21);
+    const bool sf = gateway() || d->prof->variant.tr;
+    for (int k = 0; k < p.lines; ++k) {
+        const char* s = page_line(p, k);
+        if (hl()) row = panel_text(c, s, row, p.colour[k]);
+        else if (p.names & (1u << k)) {
+            if (row <= 21) put(c, s, 23, row, p.colour[k]);
+            ++row;
+        } else {
+            row = panel_box_text(c, s, row, p.colour[k], 21, sf);
+        }
+    }
+    fg->page_end = static_cast<int8_t>(row < 10 ? 10 : row > 22 ? 22 : row);
     if (fg->rolls && opts.rolls) show_rolls(c, fg->rolls->page[fg->at - 1], row);
     fg->fx_at = 0;
     page_fx(c);
@@ -2271,7 +2299,7 @@ void end_turn(pic::Canvas& c)
 void bozak_burst(int t);
 void kapak_acid(int t);
 void damage_text(int amount, int kind, char* t, size_t cap);
-void down_page(int t)
+void down_page(int t, bool after_hit = false)
 {
     if (fg->b.f[t].escaped) {
         // Pool's vampire: "Turns gaseous and escapes"
@@ -2279,7 +2307,12 @@ void down_page(int t)
         return;
     }
     const combat::Down dn = combat::down_state(fg->b.f[t]);
-    if (dn == combat::Down::Dead) add_page(t, fw(profile::kIsKilled));
+    // After a hit (PoolRad ovr14 +0x550, Curse / Secret / Darkness / Gateway /
+    // Treasures / Champions alike): below the hit's words, "goes down", then
+    // "and is Dying" or (dead, stoned, gone) the name again and "is killed"
+    fg->cont_next = after_hit && !hl();
+    if (dn == combat::Down::Dead && after_hit && !hl()) add_page(t, fw(profile::kGoesDown), nullptr, t, fw(profile::kIsKilled));
+    else if (dn == combat::Down::Dead) add_page(t, fw(profile::kIsKilled));
     else if (dn == combat::Down::Dying) add_page(t, fw(profile::kGoesDown), fw(profile::kIsDying));
     else add_page(t, fw(profile::kGoesDown));
     page_fx_set(1, skull_fx(t));
@@ -2787,8 +2820,19 @@ void attack_pages(int a, int t, const combat::Attack& at, bool behind, bool shot
         }
         first = false;
     };
+    int hit_pg = -1;                    // (the last hit's page: a fall goes on below it)
+    // The target's name is printed before the blow's damage (PoolRad ovr14
+    // +0x372, the damage at +0x484): in its colour while still standing
+    auto target_up = [&]() {
+        if (fg->page_dropped || hl()) return;
+        Page& p = fg->page[fg->pages - 1];
+        for (int k = 0; k < p.lines; ++k)
+            if (k > 0 && (p.names & (1u << k))) p.colour[k] = fg->b.f[t].team() ? 14 : 11;
+    };
     if (at.slain) {
         add_page(a, fw(profile::kSlays), fw(profile::kCruelBlow), t);
+        target_up();
+        hit_pg = fg->page_dropped ? -1 : fg->pages - 1;
         hit_page();
     }
     for (int k = 0; k < at.n && !at.slain; ++k) {
@@ -2821,6 +2865,8 @@ void attack_pages(int a, int t, const combat::Attack& at, bool behind, bool shot
         snprintf(line, sizeof line, "%s%s%d%s%s", behind ? fw(profile::kFromBehind) : "", fw(profile::kHittingFor), dmg,
                  dmg == 1 ? fw(profile::kPointW) : fw(profile::kPointsW), fw(profile::kOfDamage));
         add_page(a, fw(at.backstab ? profile::kBackstabs : profile::kAttacksW), line, t);
+        target_up();
+        hit_pg = fg->page_dropped ? -1 : fg->pages - 1;
         if (at.hits[k].weapon && !fg->page_dropped) fg->page[fg->pages - 1].weapon = at.hits[k].weapon;
         page_roll(take_roll(combat::RollKind::Hit, t, k));
         page_roll(take_roll(combat::RollKind::Damage, t, k));
@@ -2839,7 +2885,7 @@ void attack_pages(int a, int t, const combat::Attack& at, bool behind, bool shot
     bool swallowed = false;
     for (int j = 0; j < at.n_ev; ++j) swallowed = swallowed || at.ev[j].ev == combat::Ev::Swallowed;
     if (at.down && !swallowed) {
-        down_page(t);
+        down_page(t, hit_pg >= 0 && hit_pg == fg->pages - 1);
         if (!shot) baaz_weapon(a, t);
     }
 }
