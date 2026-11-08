@@ -4302,13 +4302,27 @@ void ai_step(pic::Canvas& c)
         // Gateway's computer (GAME.OVR 0xD266, before its spells): not turned
         // yet and a cleric's skill level - no paladins (its menu's Turn has
         // them); Champions' (0xC772, before its spells): the menu's test
+        // Champions' computer (0xC772): a cleric, or a former cleric's level
+        // over record 0xD7 (the engine's 0xE6) - signed - and turns under the
+        // undead loaded (its finder's type limit is never set there: any).
+        // Darkness's (GAME.OVR 0x9D14) / Treasures' (0xAB2C): not fleeing,
+        // the menu's test (skill levels, turns under the undead loaded);
+        // Death Knights' (0xA46C) the menu's test; all three after a pending
+        // spell, before their spells. Gateway's finder (GAME.OVR 0x17679):
+        // undead types 1-12 only
+        const bool dk_ai = fg->t.turn_cols == 11 && !hl();
         auto ai_turns = [&]() {
-            if (gateway() ? f.turned_undead || combat::skill_level(f.rec, 0) <= 0 : !combat::can_turn(b, fg->t, f))
+            if (d->prof->game == games::Game::ChampionsOfKrynn) {
+                if (!fg->t.turn_known || f.undead_turns >= b.undead_loaded ||
+                    !(static_cast<int8_t>(f.rec[0x109]) > 0 || static_cast<int8_t>(f.rec[0x111]) > static_cast<int8_t>(f.rec[0xE6])))
+                    return false;
+            } else if (gateway() ? f.turned_undead || combat::skill_level(f.rec, 0) <= 0
+                                 : !combat::can_turn(b, fg->t, f) || (dk_ai && fg->t.turn_rule != 3 && f.fleeing))
                 return false;
             for (int e = 0; e < b.n; ++e) {
                 const combat::Fighter& o = b.f[e];
                 if (o.up() && o.size && !(o.fleeing && !o.panic) && (o.team() ? 1 : 0) != (f.team() ? 1 : 0) && o.rec[0xE9] &&
-                    combat::range(b, fg->t, i, e, false, nullptr)) {
+                    (!gateway() || o.rec[0xE9] < 13) && combat::range(b, fg->t, i, e, false, nullptr)) {
                     fg->cur = i;
                     fight_turn_undead(c);
                     return true;
@@ -4317,7 +4331,7 @@ void ai_step(pic::Canvas& c)
             return false;
         };
         if ((d->prof->game == games::Game::CurseOfTheAzureBonds || gateway() ||
-             d->prof->game == games::Game::ChampionsOfKrynn) && ai_turns())
+             d->prof->game == games::Game::ChampionsOfKrynn || dk_ai) && ai_turns())
             return;
         if ((f.team() || f.rec[0xF7] >= 0x80) && f.can_cast && !no_magic_area() && load_magic()) {
             int tg[combat::kMaxFighters], nt = 0;

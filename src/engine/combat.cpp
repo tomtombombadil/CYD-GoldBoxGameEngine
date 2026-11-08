@@ -5473,11 +5473,25 @@ Morale morale(Battle& b, const Tables& t, int i)
 // the count (D*: 1d6 + 6, else 1d12) the first time; the roll at least the
 // value: turned (> 0) or destroyed (0, D* -1), the count down (D*'s extra 6);
 // too low: the limit - 1 and a weaker type next
+// Pools of Darkness's / Treasures' skill level (Darkness GAME.OVR 0x392EE,
+// Treasures 0x4392C): a human whose first class has passed its former
+// level - the larger of the class's level and its former one; else the
+// level (Death Knights' turning reads the levels: rule 3)
+static int dk_skill(const Rec& r, const Tables& t, int cls)
+{
+    const int lv = r[kLevels + cls];
+    if (t.turn_rule == 3 || r[0x74] != 7) return lv;
+    int k = 0;
+    while (k < 6 && r[kLevels + k] == 0) ++k;
+    const int old = r[kLevels + k] > r[0xE6] ? r[0x111 + cls] : 0;
+    return lv > old ? lv : old;
+}
+
 static int turn_undead_dk(Battle& b, const Tables& t, int cleric, create::Dice& d, int* out, int cap)
 {
     Fighter& me = b.f[cleric];
     ++me.undead_turns;
-    const int cl = me.rec[kLevels], pa = me.rec[kLevels + 3] - 2;
+    const int cl = dk_skill(me.rec, t, 0), pa = dk_skill(me.rec, t, 3) - 2;
     int lv = cl > pa ? cl : pa;
     if (t.turn_rule == 3 && me.god == 2) lv += 2;     // (Death Knights: Majere's)
     int col = lv <= 8 ? lv : lv < 14 ? 9 : 10;
@@ -5574,7 +5588,10 @@ static int turn_undead_ck(Battle& b, const Tables& t, int cleric, create::Dice& 
 bool can_turn(const Battle& b, const Tables& t, const Fighter& f)
 {
     if (!t.turn_known) return false;
-    if (t.turn_cols == 11) return (f.rec[0x109] > 0 || f.rec[0x10C] > 2) && f.undead_turns < b.undead_loaded;
+    // (Darkness GAME.OVR 0x8D4B / Treasures 0x9DD5: skill levels - a human's
+    // former cleric too; Death Knights 0x94CC: levels)
+    if (t.turn_cols == 11)
+        return (dk_skill(f.rec, t, 0) > 0 || dk_skill(f.rec, t, 3) > 2) && f.undead_turns < b.undead_loaded;
     switch (t.turn_rule) {
     case 2: {
         // (Champions, GAME.OVR 0xB73A: a cleric, or a former one whose new

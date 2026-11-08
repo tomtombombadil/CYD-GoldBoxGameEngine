@@ -302,6 +302,20 @@ void former()
     if (tcols == 11) {
         expect(P, "Turn (Darkness's rule): a paladin of 3, not of 2; a cleric; a fighter not",
                may({{3, 3}}, {}, 0) && !may({{3, 2}}, {}, 0) && may({{0, 1}}, {}, 0) && !may({{2, 9}}, {}, 0));
+        // Darkness (GAME.OVR 0x8D4B) / Treasures (0x9DD5) by skill levels
+        // (0x392EE: a human past its former level - max(level, former));
+        // Death Knights (0x94CC) by levels
+        if (game() == 4 || game() == 9 || game() == 6) {
+            const bool sk = game() != 6;
+            const int r74 = F(0).rec[0x74];
+            F(0).rec[0x74] = 7;
+            const bool passed = may({{2, 9}}, {{0, 7}}, 7), notyet = may({{2, 5}}, {{0, 7}}, 7);
+            const bool pal = may({{2, 9}}, {{3, 3}}, 7);
+            F(0).rec[0x74] = static_cast<uint8_t>(r74);
+            snprintf(w, sizeof w, "Turn: a human fighter 9 once a cleric of 7 %s, a fighter 5 not; once a paladin of 3 %s",
+                     sk ? "yes (skill levels)" : "no (levels)", sk ? "yes" : "no");
+            expect(P, w, passed == sk && !notyet && pal == sk, "passed %d not yet %d paladin %d", passed, notyet, pal);
+        }
         return;
     }
     const bool pal3 = may({{3, 3}}, {}, 0);
