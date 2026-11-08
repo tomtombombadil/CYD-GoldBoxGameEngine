@@ -54,6 +54,27 @@ static bool over(const party::Character& c, int cls, int n)
 
 bool can_use(const party::Character& c, const classes::Tables& t, int s)
 {
+    if (t.lay.queen && s >= 1 && s < t.lay.spell_count) {
+        // The Dark Queen (DQK.EXE ovl 0xA file 0x5A311, by its spell row's
+        // class word; levels, no former ones): cleric spells and the gods'
+        // specials - Wisdom over 8 and a cleric, a knight past 5th or a
+        // paladin past 8th; druid spells - Wisdom over 8 and a ranger past
+        // 7th; magic-user spells - Intelligence over 8 and a magic-user or a
+        // ranger past 8th (a human magic-user in armour, ranger to 8th, not
+        // in fights - not here); the items' none
+        constexpr int kKnight = 7;
+        switch (t.spell_code(s)) {
+        case 0:
+        case 5:
+            if (t.spell_code(s) == 0 && !usable(t, s)) return false;
+            return c.rec[kWis] > 8 && (c.level(classes::Cleric) > 0 || c.level(kKnight) > 5 || c.level(classes::Paladin) > 8);
+        case 1: return usable(t, s) && c.rec[kWis] > 8 && c.level(classes::Ranger) > 7;
+        case 3:
+            return usable(t, s) && c.rec[kInt] > 8 &&
+                   (c.level(classes::MagicUser) > 0 || c.level(classes::Ranger) > 8);
+        default: return false;
+        }
+    }
     if (!usable(t, s)) return false;
     if (t.lay.krynn && !t.lay.queen) {
         // Champions (GAME.OVR 0x2DC8E) / Death Knights (0x29C84): clerics,
@@ -153,8 +174,9 @@ int in_memory(const party::Character& c, const classes::Tables& t, bool learning
         const uint8_t v = c.rec[kListAt + i];
         if (!v || ((v & 0x80) != 0) != learning) continue;
         // (the Dark Queen's god-given spells: memorized, cast from a level of
-        // their own, "Special" - spell_class 4)
-        if (!can_use(c, t, v & 0x7F) && !(t.lay.queen && t.spell_class(v & 0x7F) == 4)) continue;
+        // their own, "Special" - spell_class 4; its can-learn takes them as
+        // a cleric's)
+        if (!can_use(c, t, v & 0x7F)) continue;
         ids[n++] = v & 0x7F;
     }
     sort_by_level(t, ids, n);

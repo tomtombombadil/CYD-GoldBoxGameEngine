@@ -98,6 +98,7 @@ void q_strip_restore(pic::Canvas& c)
 void q_moons(int out[3])
 {
     for (int i = 0; i < 3; ++i) out[i] = vm ? vm->get(static_cast<uint16_t>(0x4CF9 + i)) & 3 : 0;
+    magic::set_moons(out[0], out[1], out[2]);       // (its mages' caster levels: DQK.EXE res 0xB5E6)
 }
 
 // The party menu's box (queen_facts_3.md 1): 8-311 x 8-109 (the version

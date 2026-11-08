@@ -1617,6 +1617,9 @@ void tr_lattice(pic::Canvas& c)
 // 0x15 / 0x0D / 0x11 - block 202's tile itself
 void krynn_moons(pic::Canvas* c)
 {
+    // (the Dark Queen's moons - the same area words - for its mages' caster
+    // levels and saves; drawn by its own frame, q_moons)
+    if (hl() && vm) magic::set_moons(vm->get(0x4CF9) & 3, vm->get(0x4CFA) & 3, vm->get(0x4CFB) & 3);
     if (!krynn_rules() || !vm || !d->tables.top_row) return;
     static const uint8_t kCol[3] = {8, 19, 30}, kAdd[3] = {10, 6, 14}, kAddDk[3] = {0x15, 0x0D, 0x11};
     magic::set_moons(vm->get(0x4CF9) & 3, vm->get(0x4CFA) & 3, vm->get(0x4CFB) & 3);

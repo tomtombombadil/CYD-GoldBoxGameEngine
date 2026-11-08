@@ -553,9 +553,80 @@ void moons()
 // max(cleric, knight - 8), a mage's max(mage, ranger - 8) (skill levels);
 // Death Knights max(cleric, knight) and max(mage, ranger) (levels) - their
 // knights (class 7), never paladins; a ranger's druid spells ranger - 7
+// The Dark Queen's caster level (DQK.EXE res 0xB4E0, from its own code):
+// no cleric (level 0xA5), magic-user (0xAA), ranger (0xA9) past 7th or
+// knight (0xA6) past 8th - 6; by the spell row's class word: 0 / 3 (a
+// god's) max(cleric, knight); 1 ranger - 7, at least 0; 2 magic-user, with
+// a robe (0x19D > 0) its moon's phase (game block 0x1F9 + robe) 0: - 1, 2:
+// + 1 past 5th, then the larger of that and ranger - 8 (signed bytes); 4 12
+void queen_caster()
+{
+    if (!fight()) return;
+    combat::Fighter& f = F(0);
+    const classes::Tables& t = m->tables;
+    // (the game's class words by the engine's row codes 0, 1, 3, 5, 4)
+    static const int kCode[5] = {0, 1, 3, 5, 4}, kOrig[5] = {0, 1, 2, 3, 4};
+    int sp[5] = {};
+    for (int s = 1; s < t.lay.spell_count; ++s)
+        for (int k = 0; k < 5; ++k)
+            if (!sp[k] && t.spell_code(s) == kCode[k]) sp[k] = s;
+    uint32_t seed = 4242;
+    auto rnd = [&](int n) { seed = seed * 1103515245u + 12345u; return static_cast<int>((seed >> 16) % n); };
+    int bad = 0, n = 0;
+    char first[160] = "";
+    for (int k = 0; k < 1500; ++k) {
+        const int cl = rnd(3) ? 0 : 1 + rnd(14), kn = rnd(3) ? 0 : 1 + rnd(14), ra = rnd(3) ? 0 : 1 + rnd(14),
+                  mu = rnd(3) ? 0 : 1 + rnd(14), pa = rnd(4) ? 0 : 1 + rnd(14);
+        const int robe = rnd(4), ph[3] = {rnd(4), rnd(4), rnd(4)};
+        magic::set_moons(ph[0], ph[1], ph[2]);
+        levels(0, {{0, cl}, {3, pa}, {4, ra}, {5, mu}, {7, kn}});
+        f.robe = static_cast<uint8_t>(robe);
+        party::Character ch;
+        f.rec.read(ch.rec);
+        ch.ext[party::kExtRobe] = static_cast<uint8_t>(robe);
+        for (int j = 0; j < 5; ++j) {
+            if (!sp[j]) continue;
+            int want;
+            if (cl == 0 && mu == 0 && ra < 8 && kn < 9) want = 6;
+            else
+                switch (kOrig[j]) {
+                case 0: case 3: want = std::max(cl, kn); break;
+                case 1: want = std::max(ra - 7, 0); break;
+                case 2: {
+                    int a = mu;
+                    if (mu > 0 && robe > 0) {
+                        const int p = ph[robe - 1];
+                        if (p == 0) --a;
+                        else if (p == 2 && mu > 5) ++a;
+                    }
+                    want = std::max(a, ra - 8);
+                    break;
+                }
+                default: want = 12;
+                }
+            const int a = combat::power_of(f, t, sp[j]), b = spells::power(ch, t, sp[j]);
+            n += 2;
+            if (a != want || b != want) {
+                bad += (a != want) + (b != want);
+                if (!*first)
+                    snprintf(first, sizeof first, "cl %d kn %d ra %d mu %d robe %d moon %d class %d: fight %d, camp %d, want %d", cl,
+                             kn, ra, mu, robe, robe ? ph[robe - 1] : -1, kOrig[j], a, b, want);
+            }
+        }
+    }
+    magic::set_moons(0, 0, 0);
+    f.robe = 0;
+    expect(P, "the Dark Queen's caster levels (its res 0xB4E0: knights, rangers, the robe's moon)", bad == 0 && sp[0] && sp[2],
+           "%d of %d wrong (%s)", bad, n, first);
+}
+
 void caster()
 {
-    if (!m->tables.lay.krynn || m->tables.lay.queen) return;
+    if (m->tables.lay.queen) {
+        queen_caster();
+        return;
+    }
+    if (!m->tables.lay.krynn) return;
     if (!fight()) return;
     combat::Fighter& f = F(0);
     const classes::Tables& t = m->tables;
@@ -631,11 +702,14 @@ void unlearn(party::Character& c, int s)
 void learning()
 {
     const classes::Tables& t = m->tables;
-    if (t.lay.queen) return;                // (its own lists, queen_facts_4.md 8 - read before)
-    if (prog.empty()) find_table();
-    const uint32_t ds = d->prof->create.ds_image;
-    auto pb = [&](uint32_t a) { return a < prog.size() ? prog[a] : 0; };
     const int g = game();
+    // (the Dark Queen: DQK.EXE read as a file, its data segment at file 0x63A20)
+    std::vector<uint8_t> dqk;
+    if (g == 7) read_file(game_dir + "/DQK.EXE", dqk);
+    else if (prog.empty()) find_table();
+    const std::vector<uint8_t>& img = g == 7 ? dqk : prog;
+    const uint32_t ds = g == 7 ? 0x63A20 : d->prof->create.ds_image;
+    auto pb = [&](uint32_t a) { return a < img.size() ? img[a] : 0; };
     // the spell table's class / level bytes where each original reads them
     uint32_t cls_at = 0, top = 100;
     int kind = 0;                           // 0 by the table (codes 0-2 Curse's), 1 Pool's, 2 class 2 only, 3 lists
@@ -649,7 +723,12 @@ void learning()
     case 9: cls_at = 0x578A; top = 126; kind = 2; break;
     case 5: kind = 3; lists = 0x4208; break;
     case 6: kind = 3; lists = 0x8189; break;
+    case 7: kind = 4; lists = 0x16CE; break;
     default: return;
+    }
+    if (g == 7 && dqk.empty()) {
+        expect(P, "training's new spell: DQK.EXE read", false);
+        return;
     }
     party::Character base = pt->m[0];
     uint32_t seed = 12345;
@@ -672,7 +751,28 @@ void learning()
             if (s < t.lay.spell_count && rnd(3) == 0) classes::to_book(ch, s);
         }
         std::vector<int> want;
-        if (kind == 3) {
+        if (kind == 4) {
+            // The Dark Queen's mode 5 (ovl 0xA file 0x5AFD9): list 2 (White,
+            // record 0x19D == 1) else 3; L = 1..9 with magic-user slots; DS
+            // 0x16CE + (list - 1) x 90 + (L - 1) x 10 + i, i < 10, 0 ends; not
+            // known; each put in by its add-to-list (0x5A8AC): after every
+            // entry of a level <= its own (the spell row's [2], DS 0x27E9 +
+            // 22 x spell), a duplicate not added
+            const uint32_t b = ds + lists + (ch.ext[party::kExtRobe] == 1 ? 1 : 2) * 90;
+            auto lvl = [&](int s) { return pb(ds + 0x27E9 + 22 * s + 2); };
+            for (int lv = 1; lv <= 9; ++lv) {
+                if (classes::slots(ch, 2, lv) <= 0) continue;
+                for (int i = 0; i < 10; ++i) {
+                    const int s = pb(b + (lv - 1) * 10 + i);
+                    if (!s) break;
+                    if (classes::in_book(ch, s)) continue;
+                    size_t at = 0;
+                    bool dup = false;
+                    while (at < want.size() && lvl(want[at]) <= lvl(s) && !(dup = want[at] == s)) ++at;
+                    if (!dup) want.insert(want.begin() + static_cast<long>(at), s);
+                }
+            }
+        } else if (kind == 3) {
             const bool kr = g != 3;
             const int levels = g == 3 ? 7 : g == 6 ? 8 : 4, per = kr ? 10 : 11;
             const uint32_t b = ds + lists + (kr ? (ch.ext[party::kExtRobe] == 1 ? 2 : 3) * (g == 6 ? 80 : 40) : 0);
@@ -822,11 +922,17 @@ void krynn_can()
 {
     const classes::Tables& t = m->tables;
     const int g = game();
-    if (g != 5 && g != 6) return;
-    int sp[4] = {};
+    if (g != 5 && g != 6 && g != 7) return;
+    // (the Dark Queen - DQK.EXE ovl 0xA file 0x5A311, its row's class
+    // word: 0 cleric / 3 a god's special - Wisdom over 8 and a cleric, a
+    // knight past 5th or a paladin past 8th; 1 druid - Wisdom and a ranger
+    // past 7th; 2 magic-user - Intelligence and a magic-user or a ranger
+    // past 8th; levels, never former ones. The engine's row codes: 0, 1,
+    // 3 magic-user, 5 special)
+    int sp[6] = {};
     for (int s = 1; s < t.lay.spell_count; ++s) {
         const int code = t.spell_code(s);
-        if (code >= 0 && code < 4 && code != 2 && !sp[code] && t.spell_level(s) >= 1) sp[code] = s;
+        if (code >= 0 && code < 6 && code != 2 && code != 4 && !sp[code] && (t.spell_level(s) >= 1 || code == 5)) sp[code] = s;
     }
     party::Character base = pt->m[0];
     uint32_t seed = 99;
@@ -840,12 +946,13 @@ void krynn_can()
         c.rec[0x13] = static_cast<uint8_t>(3 + rnd(16));
         c.rec[0x15] = static_cast<uint8_t>(3 + rnd(16));
         const int cl = c.rec[0x109], pa = c.rec[0x10C], ra = c.rec[0x10D], kn = c.rec[0x110];
-        for (int code : {0, 1, 3}) {
+        const int mu = c.rec[0x10E];
+        for (int code : {0, 1, 3, 5}) {
             if (!sp[code]) continue;
             bool want;
-            if (code == 0) want = c.rec[0x15] > 8 && (cl > 0 || kn > 5 || (g == 6 && pa > 8));
-            else if (code == 1) want = c.rec[0x15] > 8 && ra > (g == 6 ? 7 : 6);
-            else want = c.rec[0x13] > 8;
+            if (code == 0 || code == 5) want = c.rec[0x15] > 8 && (cl > 0 || kn > 5 || (g != 5 && pa > 8));
+            else if (code == 1) want = c.rec[0x15] > 8 && ra > (g != 5 ? 7 : 6);
+            else want = c.rec[0x13] > 8 && (g != 7 || mu > 0 || ra > 8);
             const bool got = magic::can_use(c, t, sp[code]);
             ++n;
             if (got != want) {
@@ -857,7 +964,7 @@ void krynn_can()
         }
     }
     expect(P, "Krynn: who may learn / memorize a spell (clerics, knights past 5th, the druid's rangers)", bad == 0 && n > 0,
-           "%d of %d wrong (%s; spells %d %d %d)", bad, n, first, sp[0], sp[1], sp[3]);
+           "%d of %d wrong (%s; spells %d %d %d %d)", bad, n, first, sp[0], sp[1], sp[3], sp[5]);
 }
 
 void run()

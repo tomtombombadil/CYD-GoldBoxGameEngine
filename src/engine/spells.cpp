@@ -98,6 +98,8 @@ int power(const party::Character& c, const classes::Tables& t, int s)
     const bool kr = t.lay.krynn && !t.lay.queen;
     const int cl = c.level(classes::Cleric), mu = c.level(classes::MagicUser), ra = c.level(classes::Ranger);
     const int kn = c.level(classes::Monk);
+    if (t.lay.queen)
+        return combat::queen_power(cl, ra, mu, kn, t.spell_code(s), combat::moon_level(t, c.ext[party::kExtRobe], mu));
     if (kr) {
         if (cl == 0 && mu == 0 && kn < 9 && ra < 8) return 6;
         // (by the game's own code: 0 / 2 a cleric's, 1 a druid's, 3 a magic-user's, 4 the items')

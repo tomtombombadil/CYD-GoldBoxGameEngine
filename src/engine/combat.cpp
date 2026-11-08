@@ -3721,10 +3721,31 @@ int moon_level(const classes::Tables& st, int robe, int mage_level)
 {
     // (Champions GAME.OVR 0x3911F, Death Knights 0x34E8C: a mage - its
     // current level - with a robe; the robe's moon new -1, full +1 past 5th.
-    // The Dark Queen's not looked at: none there)
-    if (!st.lay.krynn || st.lay.queen || robe < 1 || robe > 3 || mage_level <= 0) return 0;
+    // The Dark Queen's the same - DQK.EXE res 0xB5E6: its game block's
+    // 0x1F9 + robe, the area words 0x4CF9-0x4CFB here)
+    if (!st.lay.krynn || robe < 1 || robe > 3 || mage_level <= 0) return 0;
     const int ph = magic::moon(robe - 1);
     return ph == 0 ? -1 : ph == 2 && mage_level > 5 ? 1 : 0;
+}
+
+int queen_power(int cl, int ra, int mu, int kn, int code, int moon)
+{
+    // The Dark Queen (DQK.EXE res 0xB4E0; levels, no former ones; its
+    // spell row's class word): no cleric, magic-user, ranger past 7th or
+    // knight past 8th - 6; cleric spells and the gods' specials max(cleric,
+    // knight); druid ranger - 7 (0 at least); magic-user max(magic-user +
+    // the robe's moon, ranger - 8) - signed; the items' 12 (the engine's row
+    // codes 0, 5, 1, 3, 4)
+    if (cl == 0 && mu == 0 && ra < 8 && kn < 9) return 6;
+    switch (code) {
+    case 0: case 5: return cl > kn ? cl : kn;
+    case 1: return ra > 7 ? ra - 7 : 0;
+    case 3: {
+        const int a = mu + moon, b = ra - 8;
+        return a > b ? a : b;
+    }
+    default: return 12;
+    }
 }
 
 int skill_level(const Rec& r, int cls)
@@ -3743,7 +3764,8 @@ int power_of(const Rec& r, const classes::Tables& st, int s, bool item, int robe
     // (Champions / Death Knights: their knights, not paladins, and the
     // games' own spell codes - spells::power)
     const bool kr = st.lay.krynn && !st.lay.queen;
-    if (kr && cl == 0 && mu == 0 && kn < 9 && ra < 8) return 6;
+    if (st.lay.krynn && cl == 0 && mu == 0 && kn < 9 && ra < 8) return 6;
+    if (st.lay.queen) return queen_power(cl, ra, mu, kn, st.spell_code(s), moon_level(st, robe, mu));
     if (kr && st.lay.dkk) {
         switch (st.spell_code(s)) {
         case 0: case 2: return most(cl, kn);

@@ -1231,6 +1231,10 @@ inline int power_of(const Fighter& f, const classes::Tables& st, int spell, bool
 // The moons' change to a mage's caster level (robe 1-3, its current mage
 // level): new -1, full +1 past 5th; 0 otherwise (and outside Krynn)
 int moon_level(const classes::Tables& st, int robe, int mage_level);
+// The Dark Queen's caster level (DQK.EXE res 0xB4E0) from the levels of
+// cleric, ranger, magic-user and knight, the engine's spell row code and
+// the moon's change (moon_level)
+int queen_power(int cl, int ra, int mu, int kn, int code, int moon);
 
 // A cone (Fear, Cone of Cold; coab's facts): the line from the caster
 // through (tx, ty) carried on (its steps repeated) to `reach` squares
