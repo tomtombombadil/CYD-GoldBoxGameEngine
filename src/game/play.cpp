@@ -11273,6 +11273,18 @@ void train_character(pic::Canvas& c)
 
 bool open_learn(pic::Canvas& c);
 
+// Training's new spell offered (the spell list, when it has any): a
+// magic-user's new level, or any training of a ranger past 8th (the
+// original asks whichever class went up; Champions GAME.OVR 0x2566D the
+// same); the Dark Queen (ovl 5 +0x563B) and Death Knights (GAME.OVR
+// 0x199E5, ovl 0x61 +0x49E5): a ranger's own new level past 8th
+bool train_offers_spell(const party::Character& ch, int mu_before, int ranger_before)
+{
+    const int rg = ch.level(classes::Ranger);
+    const bool ranger = hl() || dkk() ? rg > 8 && rg > ranger_before : rg > 8;
+    return ch.level(classes::MagicUser) > mu_before || ranger;
+}
+
 bool train_yes_no(Ask what, char k, pic::Canvas& c)
 {
     if (what != Ask::Train) return false;
@@ -11299,12 +11311,7 @@ bool train_yes_no(Ask what, char k, pic::Canvas& c)
             ch->rec[0x1A5] = kept[2];
         }
         end_training();
-        // A magic-user's new level, or any training of a ranger past 8th (the
-        // original asks whichever class went up): a new spell (the Dark
-        // Queen: a ranger's own new level past 8th - ovl 5 +0x563B)
-        const bool ranger = hl() ? ch->level(classes::Ranger) > 8 && ch->level(classes::Ranger) > rg
-                                 : ch->level(classes::Ranger) > 8;
-        if ((ch->level(classes::MagicUser) > mu || ranger) && open_learn(c)) return true;
+        if (train_offers_spell(*ch, mu, rg) && open_learn(c)) return true;
         train_note(profile::kCongrats, c);
         return true;
     }

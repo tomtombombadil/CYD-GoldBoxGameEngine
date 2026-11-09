@@ -2,7 +2,7 @@
 // -DBEHAVE_MATRIX - its cleared field and plain fighters; any game: GAME,
 // BOOTSLOT, MAREA / MBLOCK, FIGHTAT as the fuzzer's; ONLY= table, turn,
 // former, restore, rest, haste, moons, caster, learn, use, aiorder, canuse,
-// wrap, qpages, aiturn). Expectations from the originals'
+// wrap, qpages, aiturn, trainspell). Expectations from the originals'
 // code (rules_round4_facts.md in the Project: the turn routines of Curse's
 // listing ovr014:1228, Gateway's GAME.OVR 0x17455, Champions' 0x16021, the
 // Krynn moons' 0x3911F / 0x34E8C / 0x30E0B) and coab's facts (cast_restore,
@@ -1805,6 +1805,36 @@ void queen_pages()
            "with the space %d, without %d", wrow, wrow0);
 }
 
+// Training's spell list offered at all (read for the Krynn games): a
+// magic-user's new level, or - Champions (GAME.OVR 0x25666: [0x4B58] = 0,
+// creation's own levelling aside) - a ranger past 8th after any training;
+// Death Knights (GAME.OVR 0x199DE, ovl 0x61 +0x49DE) and the Dark Queen
+// (ovl 5 +0x563B): a ranger past 8th whose own level went up. Every pair
+// of levels before / after for magic-user and ranger 7-11
+void train_spell_offer()
+{
+    const int g = game();
+    if (g != 5 && g != 6 && g != 7) return;
+    int bad = 0, n = 0;
+    char first[120] = "";
+    party::Character c = pt->m[0];
+    for (int mb = 0; mb <= 2; ++mb)
+        for (int ma = mb; ma <= mb + 1; ++ma)
+            for (int rb = 7; rb <= 11; ++rb)
+                for (int ra = rb; ra <= rb + 1; ++ra) {
+                    for (int k = 0; k < 8; ++k) c.rec[0x109 + k] = 0;
+                    c.rec[0x109 + 5] = static_cast<uint8_t>(ma);
+                    c.rec[0x109 + 4] = static_cast<uint8_t>(ra);
+                    const bool got = play::train_offers_spell(c, mb, rb);
+                    const bool want = ma > mb || (g == 5 ? ra > 8 : ra > 8 && ra > rb);
+                    ++n;
+                    if (got != want && !bad++)
+                        snprintf(first, sizeof first, "mu %d->%d ranger %d->%d: offered %d, want %d", mb, ma, rb, ra, got, want);
+                }
+    expect(P, "training's spell list offered (a magic-user's level; Champions any ranger past 8th, Death Knights / the Dark Queen a ranger's new level past 8th)",
+           bad == 0, "game %d: %d of %d wrong (%s)", g, bad, n, first);
+}
+
 void run()
 {
     if (!monkey_boot() || !play::load_rules(m) || !m) {
@@ -1835,6 +1865,7 @@ void run()
     if (want("use")) using_items();
     if (want("aiorder")) ai_pending();
     if (want("aiturn")) ai_turn_types();
+    if (want("trainspell")) train_spell_offer();
     if (want("canuse")) {
         krynn_can();
         armour_can();

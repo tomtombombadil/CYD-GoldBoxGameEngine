@@ -2427,7 +2427,10 @@ in sight (its finder's limit is a stack leftover, the AI's last dice's
 side count: 4 - 2 after a d8 of 8, not kept); its can-learn has the
 armoured human magic-user's fight clause too (GAME.OVR 0x2DD6B: a ranger
 past 8th, or a passed dual class with a former ranger past 8th and a
-magic-user level, may).
+magic-user level, may). Training's new spell: Champions (GAME.OVR
+0x25666) after a magic-user's new level or any training of a ranger past
+8th; Death Knights (0x199DE) as the Dark Queen - a ranger's own new level
+past 8th (`play::train_offers_spell`).
 Treasures' own items (GAME.OVR 0x2E15B, 2026-11-08): byte 0x3E 0x11 puts
 effect 0x3D on the user (already there: "is already affected", nothing
 used; the Potion of Spell Enhancing's 0x9F lasts 1d4 x 10 + 40, "Is

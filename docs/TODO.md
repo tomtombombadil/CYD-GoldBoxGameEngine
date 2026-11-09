@@ -1232,6 +1232,11 @@ the Project as claude/TODO.md.
       last dice call's side count (the dice routine's pushed argument at
       that stack place: 4, 2 after a d8 of 8) - types 1-4 here; its
       can-learn has the fight clause (0x2DD6B) - rules4 aiturn, canuse.
+      Training's spell list: Champions (0x25666) a magic-user's new level
+      or any training of a ranger past 8th (as here); Death Knights
+      (0x199DE, ovl 0x61 +0x49DE) a ranger's own new level past 8th, as the
+      Dark Queen (here: any training) - fixed; rules4 trainspell. Both
+      skip it while creation levels a new character ([0x4B58] / [0x8C5C]).
 - [ ] Round 8 left: the Dark Queen's "lost a spell" at the hit (B14E row
       12 with a wait, 0x816B / 0x9106 / 0x2522F) - here only at the turn's
       start; its other fixed / computed rows ("reflects it!" at 12, "is %s",
@@ -1241,7 +1246,9 @@ the Project as claude/TODO.md.
       D35F(0, 0xB) - row 24 colour 11 here). Champions' d8-of-8 limit 2
       (its AI's per-fighter roll 0x15 not kept). Death Knights' AI: where
       its bandaging comes (0x151D, after the spells; here a Quick member
-      bandages first) not compared.
+      bandages first) not compared. Training's spell list condition in
+      PoolRad, Curse, Secret, Gateway, Darkness, Treasures: not read this
+      round (the engine: a magic-user's new level or a ranger past 8th).
 - [ ] Round 7 left: Treasures' effect 0x3B's handler (none of its items
       has it). The Dark Queen: its weapon name's trailing space (0x9FDC not
       read); its fight pages' rows after a hit (each page from row 10 here:
