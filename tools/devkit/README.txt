@@ -163,3 +163,22 @@ Round 11 rules (2026-11-09):
                cloud's 1d4 + 1 and who breathes nothing), aiorder / bandorder on Champions
   verify11.sh                            round 11's batch (oracle, rebuilds, rules4 / economy all nine, budgets, fuzz,
                                          saveload all nine) -> /tmp/claude-0/ag11
+
+Quick Actions + round 12 bandaging (2026-11-09):
+  rules4 ONLY=bandorder    the computer's bandaging as each original's code has it (all nine): in the move step, after
+                           Turn Undead, before the blow; PoolRad never (GAME.OVR 0xA806's callers)
+  rules4 ONLY=quickacts    each column on / off in a cleared-field scene (Melee, Missile - a thrown weapon from the
+                           game's ITEMS, Move, Turn Undead, Guard, Items / Spells, Bandage First before the blow and
+                           before Turn), the defaults = the switch off, NPCs ignore the grid, QUICK.TXT round trip
+                           (12 odd names, a missing file); QADEBUG=1 prints each scene
+  rules4 ONLY=quickpage    the page in exploring and in a fight: cursor keys, Select, taps (lit as they touch), a
+                           heading, the "?" help, Exit, the game screen back byte for byte; QASHOT=dir: its canvases
+  fightfuzz QAFUZZ=1       random grids (half the fights all on Quick), fight_check R13: no action an unticked switch
+                           forbids; QAOFF=1: the switch off
+  qa_verify.sh <bin> [games]   the fuzz (3 seeds x 40) + the defaults-vs-off action-log comparison (2 seeds x 25)
+  saveload.sh <bin> [games]    sweep saveload on each game
+  playsim CAMPRUN ops: '|' open the page, '<' '>' Left / Right, ',' Select (each a snapshot qa<n>), 'v' '^' Up / Down
+  fuzz.sh TAGP=x, budgetx.sh LOGS= / TAGP=, host_tests.sh HTOUT= (parallel agents); host_tests.sh now pipefail
+  Baselines: rules4 full PoolRad 30/0, Curse 33/0, Secret 27/0, Darkness 29/0, Gateway 28/0, Treasures 31/0,
+  Champions 41/0, Knights 33/0, Queen 51/0; budgets (bytes) Curse 133679, PoolRad 135330, Darkness 149976,
+  Champions 135886, Knights 135896, Queen 143202, Treasures 151876.

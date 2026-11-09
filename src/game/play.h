@@ -108,6 +108,16 @@ bool walk_pending();
 // free, Modify for anyone) on the game screen - false when not ready
 bool cheats_ready();
 bool cheat_open(int which, pic::Canvas& c);
+// The Quick tab (Tom, 2026-11-09; features.h CYD_QUICK_ACTIONS,
+// Options::quick_acts): quick_ready - a game open with a character of the
+// player's own in the party and no typing (in a fight too); quick_open puts
+// the Quick Actions page on the game screen (the screen waits on the card,
+// _CYD/QUICK.TMP, and comes back when it's left) - false when not ready.
+// While it's up (quick_page) the play functions (tap, nav, act, tick ...)
+// work it and the game waits
+bool quick_ready();
+bool quick_open(pic::Canvas& c);
+bool quick_page();
 // A fight wants the direction keys (Tom, 2026-10-10: a fight's own keys -
 // the 8 ways and Select): a fighter moving or aiming by hand
 bool fight_pad();
@@ -134,6 +144,7 @@ struct Options {
     bool rolls = true;            // fights show the rolls just made under the messages (CYD_COMBAT_ROLLS)
     bool camp_fix = true;         // Pool's camp has Fix as the later games' (CYD_CAMP_FIX)
     bool cheats = true;           // the Game menu's Cheats tab (CYD_CHEATS)
+    bool quick_acts = true;       // the per-character Quick Actions and the Game menu's Quick tab (CYD_QUICK_ACTIONS)
     bool max_hp = false;          // hit dice at their highest (training, creation) - a cheat the player opts into (CYD_MAX_HP)
     uint8_t font = 0;             // the game's text (CYD_CLEAR_FONT): 0 its own (the default), 1 the engine's
                                   // Clear font, 2 the player's Pools of Darkness font (set_darkness_dir),

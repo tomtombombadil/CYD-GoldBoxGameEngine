@@ -149,7 +149,10 @@ The games draw a 320x200 screen. The canvas is presented:
     until the game changes between moving and not. **Esc** moved into the
     Game menu (v0.52.0, Tom): a key at the right of its tab bar - back to
     the game, then Esc (at the game's top level that leaves the Play Test,
-    as the key did). Its slot went to **Map** (Claude's pick, Tom to
+    as the key did; later Exit Game - with the Quick tab on, 2026-11-09,
+    a narrow key with its two words on two lines, both sizes, so seven
+    tabs fit; the Quick Actions page is on the game screen and takes the
+    cursor keys: section 11). Its slot went to **Map** (Claude's pick, Tom to
     confirm; SPEC's old plan of a Companion key): the Companion's map
     (walls, gold doors, red locked doors, the party's arrow, the area /
     script / map lines) drawn over the game screen until the next tap; the
@@ -2748,6 +2751,55 @@ a PC, PortMaster handhelds):
     16 +10, F/T +7, F/MU +7 / +4; Pool C/F/MU Con 12 (8+10+4)/3 = +7;
     Treasures F/MU/T Con 18 (MU) 4/3 + 2/3 = +1; Champions knight Con 18
     +14.
+  - `CYD_QUICK_ACTIONS` (Tom, 2026-11-09): **Quick Actions** - what each
+    of the player's own characters may do when Quick plays it in a fight.
+    The Game menu's **Quick** tab (between Logs and Cheats; with it on,
+    Exit Game is a narrow two-line key so seven tabs fit) opens one page
+    ON the game screen in the game's own look (its text-screen border and
+    font; the screen waits in `_CYD/QUICK.TMP` and comes back byte for
+    byte; a fight's colour swap off meanwhile; the game - a fight too -
+    waits): QUICK ACTIONS and a circled "?" at the top, the column
+    headings Mel Mis Spl Itm Bnd Mov Trn Grd staggered over rows 2 / 3,
+    then a row a character (its name, eight 7 x 7 boxes - a dot when
+    ticked; up to 8 rows 16 px apart), two help lines for the column
+    under the cursor, Exit on the menu line. Party NPCs aren't listed (they
+    act as their game makes them). A tap on a box lights it (the cursor
+    moves there as the stylus touches) and ticks / unticks it on release;
+    a heading or name moves the cursor; the "?" opens a help page (how it
+    works, a line a column; any tap / key closes it); Exit, or Back,
+    closes the page. Cursor keys: Up / Down through "?", the characters,
+    Exit (round), Left / Right through the columns, Select = a tap there.
+    Unticked: **Melee** - no blow at a foe next to it (a thrown weapon can
+    still be thrown at it, Missile ticked); **Missile** - no shot or throw,
+    and no missile weapon readied (the melee one); **Spells** - casts
+    nothing (the games' Quick never casts for a character of the player's
+    own - only monsters and NPCs - so this stops nothing there today);
+    **Items** - no potion, wand or other item; **Move** - never steps
+    toward enemies (holds its square: guards when it can't reach), and with
+    Melee unticked and no missile to use it never steps either; **Turn
+    Undead** - never turns; **Guard** - where it would guard the turn just
+    ends. **Bandage First** ticked: a dying friend is bandaged at the
+    turn's start (before items, Turn, spells, the blow) in every game -
+    PoolRad too, whose computer never bandages; unticked: the game's own
+    order (below, section 12). Free attacks and guard blows stay the
+    game's. Defaults: everything ticked but Bandage First - each game's own
+    Quick exactly (checked: the fight fuzzer's action logs with the
+    defaults and with the switch off identical in all nine games). Kept
+    by NAME in `/GOLDBOX/_CYD/QUICK.TXT` (a comment line, then a line a
+    name: the eight switches as 1 / 0 in the columns' order, a space, the
+    name; names compared without case and trailing spaces; an unknown name
+    has the defaults), so the switches follow a character across save
+    slots and into the later games; read at each fight's start and when
+    the page opens (a byte a party member kept, `play::qa_mask`), written
+    (QUICK.NEW, then renamed) at each change. The Settings key **Quick
+    Actions** (with its "?" help; `comforts_off2` bit 8; on by default -
+    the defaults are the originals'; As Original turns it off): off,
+    Quick is each original's and the tab is hidden. Where:
+    `engine/quickacts.*` (the file's lines), `combat::Fighter::qa`,
+    `combat::think` / `choose_weapon`, play_fight.inc `ai_step`,
+    `game/play_quick.inc` (the page), viewer.cpp (the tab, the key).
+    Checks: rules4 ONLY=quickacts / quickpage, fight_check R13 with
+    QAFUZZ=1, tools/devkit/qa_verify.sh.
 
 ## 12. Where the engine differs from the original games (Tom, 2026-10-10: keep this list up to date)
 
@@ -2797,6 +2849,19 @@ the game's Settings (As Original: all of them).
   Game Fixes every thrown weapon takes it (AD&D's hurled weapons,
   `rules::recalc`). Darts throw 3 a round in every game (the ITEMS
   file's 6 half attacks - as the originals).
+- **Quick Actions** (Tom, 2026-11-09; switch `CYD_QUICK_ACTIONS` -
+  section 11): the player may stop a Quick character's melee, missiles,
+  spells, items, moving, Turn Undead or guarding, and have it bandage a
+  dying friend first thing in its turn. With its defaults (all but
+  Bandage First) Quick is the original's. (Not a difference - a fix of
+  the engine, round 12, 2026-11-09: the computer bandages in its
+  move-and-attack step in every game, after morale, items, the pending
+  spell, Turn Undead, spells and the weapon - Curse GAME.OVR 0xC829 in
+  0xC7EC, Secret 0xDC94, Gateway 0xDEC1, Treasures 0xB575, Darkness
+  0xA71B, as Death Knights / Champions / the Dark Queen; PoolRad's
+  computer never bandages - its bandage routine 0xA806 has only the
+  menu's caller. The engine bandaged at the turn's start in the six DAX
+  games until then.)
 - **Pool's camp has Fix** and **every game has the Cheats tab** (Tom,
   2026-11-01; switches `CYD_CAMP_FIX`, `CYD_CHEATS` - section 11; its
   Trainer and the Max Hit Points switch since 2026-11-06, `CYD_MAX_HP`).

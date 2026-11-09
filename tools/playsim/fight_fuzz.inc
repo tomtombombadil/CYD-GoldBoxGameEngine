@@ -308,6 +308,24 @@ static void sweep_fightfuzz(unsigned seed, int fights)
             continue;
         }
         ++run;
+        // Quick Actions (Tom, 2026-11-09): QAOFF=1 the switch off; QAFUZZ=1
+        // each party member's eight switches at random this fight (R13 checks them)
+        play::opts.quick_acts = !getenv("QAOFF");
+        if (getenv("QAFUZZ")) {
+            std::string g = " grid";
+            for (int i = 0; i < play::pt->count && i < party::kMaxParty; ++i) {
+                play::qa_mask[i] = static_cast<uint8_t>(ff::fr() & 0xFF);
+                char h[8];
+                snprintf(h, sizeof h, " %02X", play::qa_mask[i]);
+                g += h;
+            }
+            // (every other fight the whole party on Quick from the start)
+            if (ff::fpick(2) && play::fg) {
+                for (int i = 0; i < play::fg->b.party_size; ++i) play::fg->b.f[i].quick = true;
+                g += " all-quick";
+            }
+            ff::steps += g;
+        }
         before = fc::broken;
         if (getenv("FXCHECK")) {
             fxc::begin(t);

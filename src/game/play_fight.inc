@@ -4511,11 +4511,23 @@ void ai_step(pic::Canvas& c)
         fg->ai_diced = true;
         champ_ai_dice(f);
     }
-    // Quick party members bandage a dying friend first (at the turn's start)
-    // (a spell begun earlier goes first, as it did at the turn's start).
-    // Death Knights and the Dark Queen: later - in the move-and-attack step,
-    // after morale, items, the pending spell, Turn, spells and the weapon
-    // (below: GAME.OVR 0xAF23 in 0xAEE7; DQK.EXE 0x2E98B in 0x2E94D)
+    // Quick Actions (Tom, 2026-11-09; features.h CYD_QUICK_ACTIONS): the
+    // player's switches for one of its own Quick characters - kDefault (all
+    // but Bandage First) for everyone else and with the switch off: as the game
+    f.qa = quick_mask(f);
+    // The computer bandages a dying friend in its move-and-attack step -
+    // after morale, items, the pending spell, Turn, spells and the weapon,
+    // with moves left and a foe to go for (below): Curse GAME.OVR 0xC829 in
+    // 0xC7EC (called by the AI 0xBC69), Secret 0xDC94, Gateway 0xDEC1,
+    // Treasures 0xB575, Darkness 0xA71B, Death Knights 0xAF23 in 0xAEE7,
+    // Champions' move step 0xD270, the Dark Queen DQK.EXE 0x2E98B in
+    // 0x2E94D. PoolRad's computer never bandages: its bandage routine
+    // (GAME.OVR 0xA806, its overlay's +0xFFF, no stub entry) is called only
+    // by the menu's Bandage (0xA7CD) and the dying checks (0xA11E / 0xA6D0,
+    // al 0). (Round 12, Tom 2026-11-09: the engine bandaged at the turn's
+    // start in the six DAX games until then.) Quick Actions' Bandage First
+    // ticked: a dying friend bandaged at the turn's start instead (a spell
+    // begun earlier goes first), in every game - PoolRad too
     auto bandage_now = [&]() {
         if (combat::anyone_dying(b)) CYD_TEST_ACT(b, i, Bandage, -1, 0);
         const int k = combat::bandage(b);
@@ -4528,8 +4540,9 @@ void ai_step(pic::Canvas& c)
     };
     // (Champions too: its AI's move step 0xD270 bandages first - GAME.OVR
     // 0xD2A9, after the weapon at 0xC706; round 11)
-    const bool late_bandage = dkk() || hl() || d->prof->game == games::Game::ChampionsOfKrynn;
-    if (!late_bandage && !f.team() && !fg->ai_checked && !fg->flee_told && !f.spell && combat::anyone_dying(b) && bandage_now())
+    const bool late_bandage = !pool_files();
+    const bool first_bandage = (f.qa & quickacts::kBandage) != 0;
+    if (first_bandage && !f.team() && !fg->ai_checked && !fg->flee_told && !f.spell && combat::anyone_dying(b) && bandage_now())
         return;
     // Morale (monsters, NPCs), once a turn (flee_told: done)
     if (!fg->ai_checked && !fg->flee_told) {
@@ -4599,7 +4612,8 @@ void ai_step(pic::Canvas& c)
         // rolls its d7 rounds and walks the items but never keeps one (its
         // chosen-item pointer [bp-0x14] is only ever set to 0): no item
         // either; the Dark Queen's (DQK.EXE 0x2E105) an empty body too
-        const bool ai_items = !darkness_files() && !hl();
+        // (Quick Actions' Items unticked: none)
+        const bool ai_items = !darkness_files() && !hl() && (f.qa & quickacts::kItems);
         if (ai_items && f.n_items && f.can_use && combat::standing(b, f.team() ? 0 : 1) && load_magic()) {
             int tg[combat::kMaxFighters], nt = 0;
             const int k = combat::choose_item(b, fg->t, mrules->tables, i, *names, d->prof->fight.spells,
@@ -4644,6 +4658,7 @@ void ai_step(pic::Canvas& c)
         // undead types 1-12 only
         const bool dk_ai = fg->t.turn_cols == 11;      // (the Dark Queen's AI 0x2E078 too: not fleeing, the menu's test)
         auto ai_turns = [&]() {
+            if (!(f.qa & quickacts::kTurn)) return false;      // (Quick Actions' Turn Undead unticked)
             if (d->prof->game == games::Game::ChampionsOfKrynn) {
                 if (!fg->t.turn_known || f.undead_turns >= b.undead_loaded ||
                     !(static_cast<int8_t>(f.rec[0x109]) > 0 || static_cast<int8_t>(f.rec[0x111]) > static_cast<int8_t>(f.rec[0xE6])))
@@ -4667,7 +4682,11 @@ void ai_step(pic::Canvas& c)
         if ((d->prof->game == games::Game::CurseOfTheAzureBonds || gateway() ||
              d->prof->game == games::Game::ChampionsOfKrynn || dk_ai) && ai_turns())
             return;
-        if ((f.team() || f.rec[0xF7] >= 0x80) && f.can_cast && !no_magic_area() && load_magic()) {
+        // (the computer's own spells: monsters and NPCs - the games' Quick
+        // never casts for a character of the player's own; Quick Actions'
+        // Spells unticked: none either)
+        if ((f.team() || f.rec[0xF7] >= 0x80) && (f.qa & quickacts::kSpells) && f.can_cast && !no_magic_area() &&
+            load_magic()) {
             int tg[combat::kMaxFighters], nt = 0;
             const int sp = combat::choose_spell(b, fg->t, mrules->tables, i, d->prof->fight.spells,
                                                 d->prof->fight.n_spells, rng, tg, &nt);
@@ -4721,9 +4740,10 @@ void ai_step(pic::Canvas& c)
         end_turn(c);
         return;
     }
-    // (Death Knights / the Dark Queen: a party member with moves left and a
-    // foe to go for bandages a dying friend - its moves then 0, the turn over;
-    // GAME.OVR 0xAEE7 +0x3C, DQK.EXE 0x2E94D +0x3B - each step it takes)
+    // (every game but PoolRad: a party member - NPCs too - with moves left
+    // and a foe to go for bandages a dying friend - its moves then 0, the
+    // turn over; the move step's start, above: Curse GAME.OVR 0xC7EC +0x3D,
+    // Death Knights 0xAEE7 +0x3C, DQK.EXE 0x2E94D +0x3B - each step it takes)
     if (late_bandage && !f.team() && f.moves > 0 && combat::anyone_dying(b) && combat::standing(b, 1) && bandage_now()) {
         f.moves = 0;
         return;
@@ -4766,6 +4786,11 @@ void ai_step(pic::Canvas& c)
         return;
     }
     case combat::Act::Guard:
+        // (Quick Actions' Guard unticked: the turn just ends)
+        if (!(f.qa & quickacts::kGuard)) {
+            end_turn(c);
+            return;
+        }
         CYD_TEST_ACT(b, i, Guard, -1, 0);
         f.guarding = true;
         end_turn(c);
@@ -4860,6 +4885,7 @@ void fight_start(pic::Canvas& c)
         return;
     }
     anim_stop();
+    qa_load();                          // (Quick Actions: the party's switches, by name - a small file)
     // A level can be drained (Pool's undead): the experience each level
     // needs, from the rule tables (loaded for this, before the field's blocks)
     int32_t level_exp[8][13] = {};

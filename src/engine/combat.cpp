@@ -3401,6 +3401,9 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
     if (!f.up() || !f.size || f.delay <= 0) return p;
     const int my = f.team() ? 1 : 0;
     auto enemy = [&](int c) { return seen_enemy(b, i, c); };
+    // Quick Actions (Tom, 2026-11-09): the player's switches for one of its
+    // own Quick characters (kDefault for everyone else: as the games)
+    const bool melee_ok = (f.qa & quickacts::kMelee) != 0, missile_ok = (f.qa & quickacts::kMissile) != 0;
     if (f.fleeing && f.moves == 1) {
         // (half a square left: it guards - coab's moralFailureEscape, its
         // move / 2 = 0 -> TryGuarding)
@@ -3481,7 +3484,7 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
             p.act = Act::Guard;
             return p;
         }
-        for (int c = -1; c < b.n; ++c) {
+        for (int c = -1; c < b.n && melee_ok; ++c) {
             const int e = c < 0 ? f.target : c;            // (its target first)
             if ((c < 0 || enemy(c)) && adjacent(b, i, e)) {
                 f.target = e;
@@ -3491,7 +3494,7 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
             }
         }
         int ammo = -1, sq = 0;
-        const int reach = missile(b, f, &ammo);
+        const int reach = missile_ok ? missile(b, f, &ammo) : 0;
         if (reach > 0 && range(b, t, i, f.target, false, &sq) && sq <= reach) {
             p.act = Act::Attack;
             p.target = f.target;
@@ -3510,12 +3513,12 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
     }
     // Next to an enemy: attack it (the target first)
     if ((f.attacks[0] > 0 || f.attacks[1] > 0)) {
-        if (adjacent(b, i, f.target)) {
+        if (melee_ok && adjacent(b, i, f.target)) {
             p.act = Act::Attack;
             p.target = f.target;
             return p;
         }
-        for (int c = 0; c < b.n; ++c)
+        for (int c = 0; c < b.n && melee_ok; ++c)
             if (enemy(c) && adjacent(b, i, c)) {
                 f.target = c;
                 p.act = Act::Attack;
@@ -3524,7 +3527,7 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
             }
         // A missile weapon: the target in reach and sight, else one there
         int ammo = -1;
-        const int reach = missile(b, f, &ammo);
+        const int reach = missile_ok ? missile(b, f, &ammo) : 0;
         if (reach > 0) {
             int sq;
             int shot = -1;
@@ -3547,6 +3550,16 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
         }
     } else {
         return p;
+    }
+    // Quick Actions: Move unticked - it holds its square (it guards); no step
+    // either with nothing to go forward for: Melee unticked and no missile
+    // it may use now
+    if ((f.qa | quickacts::kBandage) != quickacts::kAll) {
+        int ammo = -1;
+        if (!(f.qa & quickacts::kMove) || (!melee_ok && !(missile_ok && missile(b, f, &ammo) > 0))) {
+            p.act = Act::Guard;
+            return p;
+        }
     }
     // An unarmoured magic-user doesn't go forward: it guards
     if (f.rec[0x10E] > 0 && b.names && f.items) {
@@ -5946,7 +5959,10 @@ int choose_weapon(const Battle& b, int i)
         }
     }
     int want = best_melee;
-    if (best_missile >= 0 && missile_r > melee_r / 2) {
+    // (Quick Actions: Missile unticked - no missile weapon readied; Melee
+    // unticked - the missile weapon whenever it can shoot)
+    if (!(f.qa & quickacts::kMissile)) best_missile = -1;
+    if (best_missile >= 0 && (missile_r > melee_r / 2 || !(f.qa & quickacts::kMelee))) {
         const items::TypeInfo& ti = n.type(f.items[best_missile][0x2E]);
         // What it shoots: itself (thrown), its readied arrows / quarrels, or nothing (a sling)
         bool loaded = (ti.flags & 0x10) != 0 || (ti.flags & 0xFF) == 0x0A;

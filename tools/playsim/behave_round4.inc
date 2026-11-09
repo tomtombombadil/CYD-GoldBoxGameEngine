@@ -2,7 +2,7 @@
 // -DBEHAVE_MATRIX - its cleared field and plain fighters; any game: GAME,
 // BOOTSLOT, MAREA / MBLOCK, FIGHTAT as the fuzzer's; ONLY= table, turn,
 // former, restore, rest, haste, moons, caster, learn, use, aiorder, canuse,
-// wrap, qpages, qlost, aiturn, bandorder, trainspell). Expectations from the originals'
+// wrap, qpages, qlost, aiturn, bandorder, quickacts, quickpage, trainspell). Expectations from the originals'
 // code (rules_round4_facts.md in the Project: the turn routines of Curse's
 // listing ovr014:1228, Gateway's GAME.OVR 0x17455, Champions' 0x16021, the
 // Krynn moons' 0x3911F / 0x34E8C / 0x30E0B) and coab's facts (cast_restore,
@@ -1252,62 +1252,7 @@ void ai_turn_types()
     }
 }
 
-// Death Knights' / the Dark Queen's bandaging comes late in the computer's
-// turn: in its move-and-attack step (GAME.OVR 0xAEE7 +0x3C; DQK.EXE 0x2E94D
-// +0x3B), after the morale test, items, the pending spell, Turn Undead
-// (0xA46C / 0x2E078) and spells - a Quick cleric next to an undead foe turns
-// it, the dying friend left; with nothing else to do it bandages (moves
-// then 0)
-void ai_bandage_order()
-{
-    const int g = game();
-    if ((g != 5 && g != 6 && g != 7) || !play::fg->t.turn_known || !fight()) return;   // (Champions: 0xD270 +0x39 - round 11)
-    combat::Battle& b = fg->b;
-    if (b.party_size < 2) {
-        expect(P, "Death Knights / the Dark Queen: bandaging after Turn Undead (two party members)", false);
-        return;
-    }
-    auto setup = [&](int type) {
-        fight();
-        combat::Battle& b = fg->b;          // (a new fight: its own battle)
-        mx::put(0, 0, 10, 10, 60);
-        mx::put(1, 0, 9, 10, 60);
-        mx::put(B, 1, 11, 10, 60);
-        for (int k = B + 1; k < b.n; ++k) b.f[k].size = 0;
-        for (int k = 2; k < b.party_size; ++k) b.f[k].size = 0;
-        combat::occupancy(b);
-        levels(0, {{0, 5}});
-        combat::Fighter& f = b.f[0];
-        f.rec[0x15] = f.rec[0x14] = 16;
-        f.quick = true;
-        f.n_items = 0;
-        f.spell = 0;
-        f.can_cast = false;
-        f.fleeing = false;
-        f.moves = 12;
-        b.f[1].rec[0x195] = party::Dying;
-        b.f[B].rec[0xE9] = static_cast<uint8_t>(type);
-        b.undead_loaded = 2;
-        fg->cur = 0;
-        fg->ai_checked = false;
-        fg->flee_told = false;
-        fg->use_item = -1;
-        fg->pages = fg->at = 0;
-        fg->ptext_used = 0;
-        ai_step(C);
-        const bool turned = f.undead_turns > 0, dying = b.f[1].rec[0x195] == party::Dying;
-        b.f[B].rec[0xE9] = 0;
-        b.f[1].rec[0x195] = party::Okay;
-        fg->pages = fg->at = 0;
-        fg->ptext_used = 0;
-        fg->st = FSt::Turn;
-        return std::make_pair(turned, dying);
-    };
-    const auto [t1, d1] = setup(1);     // (a skeleton next to it)
-    const auto [t0, d0] = setup(0);     // (no undead: nothing to turn)
-    expect(P, "Death Knights / the Dark Queen / Champions: a Quick cleric turns the undead before bandaging (0xAEE7 / 0x2E94D / 0xD2A9); with no undead it bandages",
-           t1 && d1 && !t0 && !d0, "game %d: undead - turned %d, friend still dying %d; none - turned %d, still dying %d", g, t1, d1, t0, d0);
-}
+#include "behave_quick.inc"
 
 void treasures_fight_items()
 {
@@ -2449,6 +2394,8 @@ void run()
     if (want("use")) using_items();
     if (want("aiorder")) ai_pending();
     if (want("bandorder")) ai_bandage_order();
+    if (want("quickacts")) quick_actions();
+    if (want("quickpage")) quick_page_check();
     if (want("aiturn")) ai_turn_types();
     if (want("trainspell")) train_spell_offer();
     if (want("tohit")) to_hit_sides();

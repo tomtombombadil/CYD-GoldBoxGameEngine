@@ -3078,10 +3078,26 @@ bool tap_keyboard(const ui::Tap& t)
 // Journal PDF (the book). More tabs as the engine grows. Back to Game at
 // the bottom.
 
-enum MenuTab { kTabJournal, kTabPdf, kTabSounds, kTabSettings, kTabLogs, kTabCheats, kTabs };
-// (the Cheats tab - last - only with Settings' Cheats Tab on: features.h CYD_CHEATS)
+enum MenuTab { kTabJournal, kTabPdf, kTabSounds, kTabSettings, kTabLogs, kTabQuick, kTabCheats, kTabs };
+// (the Quick tab only with Settings' Quick Actions on - features.h
+// CYD_QUICK_ACTIONS, Tom 2026-11-09; the Cheats tab - last - only with
+// Settings' Cheats Tab on: CYD_CHEATS)
 bool cheats_tab_on();
-int n_tabs() { return cheats_tab_on() ? kTabs : kTabs - 1; }
+bool quick_tab_on();
+bool tab_shown(int t) { return t == kTabCheats ? cheats_tab_on() : t == kTabQuick ? quick_tab_on() : true; }
+int n_tabs()
+{
+    int n = 0;
+    for (int t = 0; t < kTabs; ++t) n += tab_shown(t);
+    return n;
+}
+// The tab in the bar's place `slot` (left to right)
+int tab_at(int slot)
+{
+    for (int t = 0; t < kTabs; ++t)
+        if (tab_shown(t) && slot-- == 0) return t;
+    return kTabJournal;
+}
 int  menu_tab = kTabJournal;
 int  menu_page = 0;
 bool from_menu = false;       // the journal / PDF screens go back to the Menu
@@ -3089,38 +3105,43 @@ char menu_note[160] = {};
 
 // Exit Game at the tab bar's right, both sizes (Tom, 2026-10-10: it was
 // 320x240's Esc): out of the Play Test, back to the game's page
+// (with seven tabs - the Quick tab on - Exit Game is a narrow key, its two
+// words on two lines, so the tabs keep their room)
+bool menu_esc_narrow() { return n_tabs() >= 7; }
 ui::Rect menu_esc_rect()
 {
-    const int gp = ui::gap(), w = ui::large() ? 100 : 62;
+    const int gp = ui::gap(), w = menu_esc_narrow() ? (ui::large() ? 48 : 34) : ui::large() ? 100 : 62;
     return {ui::width() - gp - w, 2, w, ui::header_h() - 4};
 }
 
-// (five tabs and Exit Game, in the small text - 320x240's book tab is
+// (the tabs and Exit Game, in the small text - 320x240's book tab is
 // "PDF"; Logs since v0.86.0, Tom: to look at the logs in the game;
 // Settings since v0.91.0, the one Settings screen - was Options)
-const char* const kTabNames[kTabs] = {"Journal", "Journal PDF", "Sounds", "Settings", "Logs", "Cheats"};
-const char* const kTabShort[kTabs] = {"Journal", "PDF", "Sounds", "Settings", "Logs", "Cheats"};
-const char* tab_label(int i) { return ui::large() ? kTabNames[i] : kTabShort[i]; }
+const char* const kTabNames[kTabs] = {"Journal", "Journal PDF", "Sounds", "Settings", "Logs", "Quick", "Cheats"};
+const char* const kTabShort[kTabs] = {"Journal", "PDF", "Sounds", "Settings", "Logs", "Quick", "Cheats"};
+const char* tab_label(int t) { return ui::large() ? kTabNames[t] : kTabShort[t]; }
 
-// Each tab as wide as its word plus an equal share of the rest
-ui::Rect tab_rect(int i)
+// Each tab as wide as its word plus an equal share of the rest (by its
+// place in the bar)
+ui::Rect tab_rect(int slot)
 {
     const int gp = ui::gap();
     const int right = menu_esc_rect().x;
     int words = 0, x = gp;
     const int nt = n_tabs();
-    for (int k = 0; k < nt; ++k) words += ui::text_width(tab_label(k), ui::Font::Small);
+    for (int k = 0; k < nt; ++k) words += ui::text_width(tab_label(tab_at(k)), ui::Font::Small);
     const int extra = (right - gp * (nt + 1) - words) / nt;
-    for (int k = 0; k < i; ++k) x += ui::text_width(tab_label(k), ui::Font::Small) + extra + gp;
-    return {x, 2, ui::text_width(tab_label(i), ui::Font::Small) + extra, ui::header_h() - 4};
+    for (int k = 0; k < slot; ++k) x += ui::text_width(tab_label(tab_at(k)), ui::Font::Small) + extra + gp;
+    return {x, 2, ui::text_width(tab_label(tab_at(slot)), ui::Font::Small) + extra, ui::header_h() - 4};
 }
 
 void draw_tabs(int active)
 {
     ui::gfx().fillRect(0, 0, ui::width(), ui::header_h(), style::kHeader);
     for (int i = 0; i < n_tabs(); ++i)
-        ui::key_small(tab_rect(i), tab_label(i), i == active ? ui::KeyStyle::Lit : ui::KeyStyle::Normal);
-    if (ui::large()) ui::key(menu_esc_rect(), "Exit Game");
+        ui::key_small(tab_rect(i), tab_label(tab_at(i)), tab_at(i) == active ? ui::KeyStyle::Lit : ui::KeyStyle::Normal);
+    if (menu_esc_narrow()) ui::key_small(menu_esc_rect(), "Exit\nGame");
+    else if (ui::large()) ui::key(menu_esc_rect(), "Exit Game");
     else ui::key_small(menu_esc_rect(), "Exit Game");
 }
 
@@ -3133,7 +3154,7 @@ bool menu_esc_hit(const ui::Tap& t)
 int tab_hit(const ui::Tap& t)
 {
     for (int i = 0; i < n_tabs(); ++i)
-        if (tab_rect(i).contains(t.x, t.y)) return i;
+        if (tab_rect(i).contains(t.x, t.y)) return tab_at(i);
     return -1;
 }
 
@@ -3251,7 +3272,7 @@ void tap_sounds(const ui::Tap& t)
 // One set for all games (settings.h comforts_off), on the one Settings
 // screen (below); a comfort compiled out (app/features.h) isn't listed.
 enum Comfort { kCFont, kCGallery, kCBigIcon, kCJournal, kCDemoTap, kCMoreGuys, kCPortrait, kCItemFixes, kCRolls,
-               kCCampFix, kCCheats, kCCompanion, kCMaxHp, kComforts };
+               kCCampFix, kCCheats, kCCompanion, kCMaxHp, kCQuick, kComforts };
 
 bool comfort_built(int c)
 {
@@ -3269,6 +3290,7 @@ bool comfort_built(int c)
     case kCCheats: return CYD_CHEATS;
     case kCCompanion: return CYD_COMPANION_VIEWS;
     case kCMaxHp: return CYD_MAX_HP;
+    case kCQuick: return CYD_QUICK_ACTIONS;
     default: return true;
     }
 }
@@ -3277,7 +3299,7 @@ uint16_t comfort_bit(int c)
 {
     static const uint16_t kBits[kComforts] = {0, kOffGallery, kOffBigIcon, kOffJournal, kOffDemoTap, kOffMoreGuys,
                                               kOffPortrait, kOffItemFixes, kOffRolls, kOff2CampFix << 8,
-                                              kOff2Cheats << 8, kOff2Companion << 8, 0};
+                                              kOff2Cheats << 8, kOff2Companion << 8, 0, kOff2Quick << 8};
     return kBits[c];
 }
 uint16_t comforts_off() { return static_cast<uint16_t>(cfg->comforts_off | cfg->comforts_off2 << 8); }
@@ -3296,6 +3318,7 @@ bool comfort_on(int c)
 }
 
 bool cheats_tab_on() { return comfort_on(kCCheats); }
+bool quick_tab_on() { return comfort_on(kCQuick); }
 
 void apply_options()
 {
@@ -3309,6 +3332,7 @@ void apply_options()
     o.camp_fix = comfort_on(kCCampFix);
     o.cheats = comfort_on(kCCheats);
     o.max_hp = comfort_on(kCMaxHp);
+    o.quick_acts = comfort_on(kCQuick);
     o.font = comfort_on(kCFont) ? cfg->game_font : kFontGame;
     play::set_options(o);
 }
@@ -3341,7 +3365,7 @@ ui::Rect comfort_qmark(const ui::Rect& cell)
 const char* const kComfortNames[kComforts] = {"Game Font",        "Icon Gallery",    "Large Icon",    "Journal Pop-Up",
                                               "Tap to Stop Demo", "More Characters", "Icon Portrait", "Game Fixes",
                                               "Show Rolls",       "Camp Fix",        "Cheats Tab",      "Companion Views",
-                                              "Max Hit Points"};
+                                              "Max Hit Points",   "Quick Actions"};
 
 // What each option does (sentence case; Tom, v0.84.0)
 const char* comfort_help_text(int c)
@@ -3439,6 +3463,12 @@ const char* comfort_help_text(int c)
                "Sanctuary - the game's own camp, where nothing interrupts a rest (no wandering monsters, no "
                "city watch); Trainer - the game's own training hall for every class it has, free, with "
                "Modify Character for anyone there. Off: no Cheats tab.";
+    case kCQuick:
+        return "Choose what each of your own characters may do when Quick plays it in a fight: melee, "
+               "missiles, spells, items, bandaging first, moving, turning undead, guarding. The choices are "
+               "on the Game menu's Quick tab, kept by the character's name for every saved game and the "
+               "later games. As they start, everything but Bandage First is ticked - Quick as the game's "
+               "own. Off: Quick as the original, no Quick tab.";
     case kCMaxHp:
         return "A cheat: a new character's hit points and each level gained by training (a training hall "
                "or the Cheats tab's Trainer) get the most their hit dice can give - 10 a fighter, 8 a "
@@ -3767,6 +3797,27 @@ void tap_game_menu(const ui::Tap& t)
     }
     if (tab == kTabLogs) {
         open_game_logs();
+        return;
+    }
+    if (tab == kTabQuick) {
+        // Quick Actions (Tom, 2026-11-09): the page on the game screen at
+        // once (play_quick.inc) - back to it when it's up already
+        if (play::quick_page()) {
+            leave_menu();
+            return;
+        }
+        if (play::quick_ready()) {
+            leave_menu();
+            if (screen == Screen::Play && play::quick_open(frame::canvas())) return;
+            go(Screen::GameMenu);           // (the game screen couldn't wait on the card)
+            strlcpy(menu_note, "Quick Actions can't open just now: no room on the card for the game screen.",
+                    sizeof menu_note);
+        } else {
+            strlcpy(menu_note, "Quick Actions: not while the game asks for typing, or with no characters of your own "
+                               "in the party.", sizeof menu_note);
+        }
+        menu_tab = kTabQuick;
+        dirty = true;
         return;
     }
     if (tab == kTabJournal || tab == kTabSounds || tab == kTabSettings || tab == kTabCheats) {

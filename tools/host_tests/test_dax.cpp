@@ -50,6 +50,7 @@
 #include "engine/spells.h"
 #include "engine/combat.h"
 #include "engine/overland.h"
+#include "engine/quickacts.h"
 
 static int failures = 0;
 #define CHECK(c) do { if (!(c)) { printf("FAIL %s:%d  %s\n", __FILE__, __LINE__, #c); ++failures; } } while (0)
@@ -1886,6 +1887,45 @@ static void test_add_fighter()
     CHECK(a == &store[1] && a->x == 0 && b.n == 2);
     CHECK(combat::add_fighter(b) == &store[2] && b.n == 3);
     CHECK(combat::add_fighter(b) == nullptr && b.n == 3);
+}
+
+// Quick Actions' file lines (engine/quickacts.*; Tom, 2026-11-09)
+static void test_quickacts()
+{
+    using namespace quickacts;
+    char out[2048];
+    CHECK(find(nullptr, 0, "ANY") == kDefault);
+    size_t n = set(nullptr, 0, "ALIAS THE BOLD ", 0x5A, out, sizeof out);
+    std::string t(out, n);
+    CHECK(t.rfind("#", 0) == 0);
+    CHECK(t.find("\n01011010 ALIAS THE BOLD\n") != std::string::npos);
+    CHECK(find(t.data(), t.size(), "alias the bold") == 0x5A);
+    CHECK(find(t.data(), t.size(), "ALIAS") == kDefault);
+    n = set(t.data(), t.size(), "Mary-Jo O'Neil!", 0x00, out, sizeof out);
+    t.assign(out, n);
+    n = set(t.data(), t.size(), "alias the bold", 0xFF, out, sizeof out);       // (replaced, kept in place)
+    t.assign(out, n);
+    CHECK(find(t.data(), t.size(), "ALIAS THE BOLD") == 0xFF);
+    CHECK(find(t.data(), t.size(), "MARY-JO O'NEIL!") == 0x00);
+    int lines = 0;
+    for (char c : t) lines += c == '\n';
+    CHECK(lines == 3);
+    CHECK(t.find("alias the bold") < t.find("Mary-Jo"));      // (in its place, as spelt last)
+    CHECK(set(t.data(), t.size(), "X", 1, out, 8) == 0);            // (too small: nothing)
+    CHECK(set(t.data(), t.size(), "   ", 1, out, sizeof out) == 0); // (no name)
+    char nm[kNameMax + 1];
+    clean_name("A\tB\nC   ", nm);
+    CHECK(std::string(nm) == "A B C");
+    // A bad line (not 8 switches) is passed over, a line without its newline read
+    const char* odd = "# c\n1101 SHORT\n11111110 LAST";
+    CHECK(find(odd, strlen(odd), "SHORT") == kDefault);
+    CHECK(find(odd, strlen(odd), "LAST") == 0x7F);
+    // The page's text fits the game screen's 38 cells
+    for (int k = 0; k < kCols; ++k) {
+        CHECK(strlen(kHead[k]) == 3);
+        CHECK(strlen(kHelp[k][0]) <= 38 && strlen(kHelp[k][1]) <= 38);
+    }
+    CHECK(kDefault == (kAll & ~kBandage));
 }
 
 static void test_inflate()
@@ -8942,6 +8982,7 @@ static void test_thumb()
 int main()
 {
     test_rle_known_bytes();
+    test_quickacts();
     test_heal_target();
     test_thumb();
     test_round_trip();

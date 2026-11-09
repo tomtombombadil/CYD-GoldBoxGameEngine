@@ -119,6 +119,7 @@ int last_round = -1;
 bool endless_told = false;
 unsigned long hp_seen = ~0ul;                 // (R10: the fighters' hit points, the round they last changed)
 int  hp_round = 0;
+long qa_seen = 0;                             // (R13: a Quick member's own actions with any switch unticked)
 
 void on_act(const combat::Battle& b, int i, combat::TestAct a, int t, int extra)
 {
@@ -186,6 +187,36 @@ void on_act(const combat::Battle& b, int i, combat::TestAct a, int t, int extra)
     // (a hold's bite at the turn's start - Pool's mantis, its own rule: not a blow of its choosing)
     if (own && f.fleeing && ((a == TestAct::Attack && f.moves > 0 && !in_bite) || a == TestAct::Special))
         bad("R5", std::string(act_name(a)) + " on its own turn while fleeing (moves left " + std::to_string(f.moves) + "): " + who(b, i));
+    // R13 Quick Actions (Tom, 2026-11-09): one of the player's own characters
+    // played by Quick does on its own turn nothing its switches untick -
+    // Melee: no blow at one next to it; Missile: no shot; Move: no step
+    // (fleeing aside); Spells: no spell (one it began itself before - the
+    // player's - aside); Items: no item; Turn Undead: no turn; Guard: no
+    // guard. (Its free attacks and guard blows are the game's, not checked.)
+    if (own && f.quick && !f.team() && f.member >= 0 && f.rec[0xF7] < 0x80 && f.status() != party::Animated && play::qa_on()) {
+        using namespace quickacts;
+        const uint8_t q = f.qa;
+        if ((q | quickacts::kBandage) != quickacts::kAll) ++qa_seen;
+        const char* broke = nullptr;
+        if (a == TestAct::Attack && !in_bite && t >= 0 && t < b.n) {
+            const bool next = combat::adjacent(b, i, t);
+            // (one next to it with Melee unticked: only a throw - a dagger, a
+            // spear thrown at it, Missile ticked)
+            int ammo = -1;
+            if (next && !(q & kMelee) && !((q & kMissile) && combat::missile(b, f, &ammo) > 0)) broke = "a blow with Melee unticked";
+            if (!next && !(q & kMissile)) broke = "a shot with Missile unticked";
+        }
+        if (a == TestAct::Step && !f.fleeing && !(q & kMove)) broke = "a step with Move unticked";
+        if (a == TestAct::Cast && !(q & kSpells) && !(static_cast<size_t>(i) < pending.size() && pending[i])) broke = "a spell with Spells unticked";
+        if (a == TestAct::UseItem && !(q & kItems)) broke = "an item with Items unticked";
+        if (a == TestAct::TurnUndead && !(q & kTurn)) broke = "Turn Undead unticked";
+        if (a == TestAct::Guard && !(q & kGuard)) broke = "a guard with Guard unticked";
+        if (broke) {
+            char m[16];
+            snprintf(m, sizeof m, " (mask %02X)", q);
+            bad("R13", std::string(broke) + m + ": " + who(b, i));
+        }
+    }
     switch (a) {
     case TestAct::Bite: in_bite = true; break;
     case TestAct::Attack:
@@ -295,7 +326,7 @@ void tick()
 
 void report()
 {
-    printf("== fight checks: %ld actions, %ld ticks;", acts, ticks);
+    printf("== fight checks: %ld actions, %ld ticks, %ld Quick actions under unticked switches (R13);", acts, ticks, qa_seen);
     if (broken.empty()) printf(" no rule broken\n");
     for (auto& kv : broken) printf(" %s x%d", kv.first.c_str(), kv.second);
     if (!broken.empty()) printf("\n");

@@ -268,6 +268,7 @@ static void item_ops(const char* ops)
 // '?' the selected one's memorized list, '!' everyone's HP and effects, -n sets member n to 1 HP,
 // 'v' / '^' the cursor keys Down / Up, '[' gives the selected one a magic-user's scroll of 3 spells, ']' lists their items and spell book,
 // '{' a readied potion of healing, '}' a readied wand of magic missiles, '(' a readied bow and 20 arrows,
+// '|' the Quick Actions page opened, '<' / '>' the cursor keys Left / Right, ',' Select (each a snapshot qa<n>),
 // '*' Esc (play::back), @X a tap on the menu word X (a digit too: "1st-color"); CAMPTICK=ms the time after
 // each op (5000)
 static void run_ops(const char* q)
@@ -298,6 +299,19 @@ static void run_ops(const char* q)
         else if (*q == '-') { ++q; play::pt->m[*q - '0'].rec[0x1A4] = 1; }
         else if (*q == '!') { for (int i = 0; i < play::pt->count; ++i) { const party::Character& ch = play::pt->m[i]; char nm[20]; ch.name(nm, 20); printf("  %s HP %d/%d st %d fx:", nm, ch.hp(), ch.hp_max(), ch.health()); for (int k = 0; k < ch.n_affects; ++k) printf(" %02X/%d/%d", ch.affects[k][0], ch.affects[k][1] | ch.affects[k][2] << 8, ch.affects[k][3]); printf("\n"); } }
         else if (*q == '~') { for (int k = 0; k < 600; ++k) { g_now += 100; play::tick(g_now, C); } }
+        // (Quick Actions' page: '|' opens it, '<' / '>' the cursor keys Left / Right,
+        // ',' Select - nav_point, the tap highlight, the tap - each a snapshot qa<n>)
+        else if (*q == '|' || *q == '<' || *q == '>' || *q == ',') {
+            static int qa_n = 0;
+            if (*q == '|') printf("  quick page: %s\n", play::quick_open(C) ? "open" : "not ready");
+            else if (*q != ',') play::nav(*q == '<' ? play::Nav::Left : play::Nav::Right, C);
+            else { int x, y, y0, y1; if (play::nav_point(&x, &y)) { play::tap_highlight(x, y, C, &y0, &y1); play::tap(x, y, C); play::tap_highlight_end(C); } }
+            printf("  quick page %s: row %d col %d help %d masks", play::quick_page() ? "up" : "closed", play::qp.row, play::qp.col, play::qp.help);
+            for (int i = 0; i < play::pt->count; ++i) printf(" %02X", play::qa_mask[i]);
+            printf("\n");
+            char t[16]; snprintf(t, 16, "qa%d", qa_n++); shot(t);
+            continue;
+        }
         else if (*q == '"' && q[1]) { ++q; const bool ok = play::cheat_open(*q - '0', C); printf("  cheat %c: %s, screen %d, %d goods\n", *q, ok ? "open" : "not ready", (int)play::screen, play::ground ? play::goods_count() : -1); }     // ("n: the Cheats tab's 0 Healer, 1 Merchant, 2 Sanctuary)
         else if (*q == '$') printf("  clock %d %d %d %d %d (screen %d)\n", play::vm->get(0x4BC6), play::vm->get(0x4BC7), play::vm->get(0x4BC8), play::vm->get(0x4BC9), play::vm->get(0x4BCA), (int)play::screen);
         else if (*q == 'v' || *q == '^') {      // the cursor keys Down / Up (a list's highlight)

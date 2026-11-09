@@ -105,9 +105,46 @@ the Project as claude/TODO.md.
       goes on with any key or a tap (movement keys too), unlike the
       original; after a script moves the party the position line shows
       the new square at once (the original shows the old one). SPEC 12.
+- [ ] Try Quick Actions (2026-11-09, not pushed yet; SPEC 11): the Game
+      menu's Quick tab (Exit Game is a narrow two-line key now). Check the
+      page fits and reads well on both sizes and the 5.0"; tick / untick
+      boxes with the stylus (each lights as it touches) and with the
+      cursor keys (Up / Down, Left / Right, Select); the "?" help page; a
+      fight: set a fighter to Melee off (it guards beside a foe), Move off
+      (it holds its square), Guard off (its turn just ends), a cleric to
+      Turn Undead off, someone to Bandage First (a dying friend bandaged
+      first thing in its turn), then Quick; the switches follow a
+      character into another save / the next game (QUICK.TXT on the card,
+      readable). Settings - Quick Actions off hides the tab and plays
+      Quick as the originals. Also new (a fix, round 12): the computer
+      (Quick members, NPCs) bandages in its move step as the originals,
+      not first thing; PoolRad's never bandages.
+- [ ] Quick Actions' Spells column (Claude, 2026-11-09): the games' own
+      Quick never casts for a character of the player's own (the engine's
+      AI casts only for monsters and NPCs), so Spells unticked stops
+      nothing there yet - Tom: should ticked Spells let Quick cast (a
+      change from the originals, behind the column)? Not asked before.
 
 ## Claude
 
+- [x] Round 12 rule fix (2026-11-09, Tom: "the original does Bandage
+      last"; with Quick Actions, not pushed yet): the computer's
+      bandaging, found in each original's code - the bandage routine by
+      the fight menu's 'B' (al = 1), its other al = 1 caller the AI's
+      move-and-attack step, first thing there (party side, then moves 0):
+      Curse GAME.OVR 0xC829 in 0xC7EC (the AI 0xBA77 calls it at 0xBC69
+      after its target, moves and in-fight tests; routine stub ed:101,
+      menu 0xB6DC), Secret 0xDC94 (151:10B, menu 0xCC01), Gateway 0xDEC1
+      (FE:FC, menu 0xC097), Treasures 0xB575 (105:101, menu 0x9B17),
+      Darkness 0xA71B (EC:101, menu 0x8E7E) - as Death Knights 0xAF23,
+      Champions 0xD2A9, the Dark Queen 0x2E98B. PoolRad: the routine
+      (GAME.OVR 0xA806 = overlay 0x9807 +0xFFF; its stub seg 0x35 exports
+      only +0x7A / +0x127A) is called only near - 0xA7CD (the menu's B,
+      al 1), 0xA11E / 0xA6D0 (al 0: the dying checks) - so its computer
+      never bandages. The engine bandaged at the turn's start in the six
+      DAX games: now the move step everywhere, none in PoolRad
+      (play_fight.inc ai_step); rules4 bandorder on all nine (9/9).
+      For the Project's rules facts: claude/rules_round12_facts.md (to write).
 - [x] Memory audit of the screens that load rule tables (Tom, 2026-11-07:
       "Not enough memory sounds like a real problem"; not pushed yet):
       every screen in all nine games measured from save A (playsim

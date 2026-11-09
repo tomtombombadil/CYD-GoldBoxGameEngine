@@ -26,6 +26,7 @@
 #include "geo.h"
 #include "items.h"
 #include "party.h"
+#include "quickacts.h"
 #include "spells.h"
 
 namespace combat {
@@ -619,6 +620,11 @@ struct Fighter {
     // last die (4, 2 after a d8 of 8): its Turn Undead's finder limit
     // (0xC772's unset [bp-6] holds it - the undead types up to it)
     uint8_t ai_mood = 0, ai_sides = 4;
+    // Quick Actions (Tom, 2026-11-09; features.h CYD_QUICK_ACTIONS): what the
+    // computer may do with this fighter (quickacts::kMelee ... bits; set by
+    // the caller for the player's own Quick characters - everyone else, and
+    // all with the switch off, kDefault: as the games)
+    uint8_t qa = quickacts::kDefault;
     uint8_t spell_t[24] = {};
     int     team() const { return rec[0x197]; }
     bool    up() const { return rec[0x196] != 0; }          // able to fight

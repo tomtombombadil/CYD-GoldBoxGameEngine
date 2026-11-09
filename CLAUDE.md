@@ -484,6 +484,19 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   a Settings key and the same switch on the Cheats tab; training's hit
   dice at their highest (`create::Dice::max`), the rest of the game's sum
   unchanged; level-ups only, not creation.
+- Quick Actions (Tom, 2026-11-09; `CYD_QUICK_ACTIONS`, Settings key,
+  `comforts_off2` bit 8, on by default; SPEC 11): the Game menu's Quick
+  tab - one page on the game screen in the game's look, the party's own
+  characters (no NPCs) x Mel Mis Spl Itm Bnd Mov Trn Grd boxes, a "?"
+  help page, cursor keys take part; kept BY NAME in `_CYD/QUICK.TXT`.
+  Defaults: all ticked but Bandage First (Tom: unticked = the game's own
+  bandage order; ticked = at the turn's start) - the original's Quick.
+  The column is "Move" (Tom), never "Advance". Engine: `Fighter::qa`,
+  `think` / `choose_weapon`, `ai_step`, `play_quick.inc`.
+- The computer's bandaging (round 12, 2026-11-09, from the originals'
+  code): in its move-and-attack step in every game (Curse GAME.OVR
+  0xC7EC +0x3D ...), never at the turn's start; PoolRad's computer never
+  bandages (SPEC 12; rules4 bandorder).
 - Gold Box Companion files (Tom, 2026-10-11): its author's work - read
   from the player's copy on the card, NEVER shipped or copied into the
   repo (no license). Its combat icons: `/GOLDBOX/GBC/DAX-Icons-EGA`
