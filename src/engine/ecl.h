@@ -116,6 +116,11 @@ struct OpSet {
     // the same (DQK.EXE 0x5D6E from its clock's carries, 0x60C8) on its game
     // block's bytes: phases 0x1FA-0x1FC, counters 0x1FD-0x1FF
     bool moons = false;
+    // Champions' character codes for coins (its operand loader GAME.OVR
+    // 0x9330 / writer 0x96AD): 0xBB its record's 0xEB (coin 0, silver),
+    // 0xBD copper, 0xBF bronze, 0xC1 platinum, 0xC3 steel - turned into
+    // Curse's codes for the places party::from_krynn keeps them
+    bool krynn_coins = false;
     // Gateway (gateway_facts.md 10; its CALL handler, GAME.OVR 0xAB8 +
     // 0x3150): CALL 0x809 waits for a key ("Press Enter to continue."),
     // CALL 0x80C asks Yes / No - 0 / 1 into 0x7F79 (0: none of these)

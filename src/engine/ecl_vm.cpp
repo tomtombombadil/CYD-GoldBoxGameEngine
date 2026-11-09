@@ -556,7 +556,7 @@ uint16_t Vm::get(uint16_t a) const
             not_found_ = false;                            // LOAD CHARACTER found no one
             return 0;
         }
-        const uint16_t off = static_cast<uint16_t>(a - 0x7C00);
+        const uint16_t off = krynn_coin_code(static_cast<uint16_t>(a - 0x7C00));
         coins_touch(a, false);
         if (const uint8_t* mr = sel_rec()) {
             // a loaded monster LOAD CHARACTER chose (its place: after the party)
@@ -607,7 +607,7 @@ void Vm::set(uint16_t a, uint16_t v)
         word_to(s_.area2, (a - 0x7C00u) * 2, v);
         if (a == 0x7C00 && v == 0) cleared_name_ = true;
         if (a == 0x7D00 && v == 0) cleared_status_ = true;
-        const uint16_t off = static_cast<uint16_t>(a - 0x7C00);
+        const uint16_t off = krynn_coin_code(static_cast<uint16_t>(a - 0x7C00));
         if (uint8_t* mr = sel_rec()) {
             if (a < 0x7EB0) {
                 if (set_.secret_fields) party::script_set_secret(mr, off, v);
@@ -831,6 +831,19 @@ void Vm::restore_selected()
 // in platinum then takes gold, electrum ... (the original compares the
 // platinum alone: Phlan's inn refused a member with 30 gold). A first
 // write only marks them (a script setting a coin outright keeps the rest).
+uint16_t Vm::krynn_coin_code(uint16_t off) const
+{
+    if (!set_.krynn_coins) return off;
+    switch (off) {
+    case 0xBB: return 0xBF;                    // coin 0 (silver): electrum's place
+    case 0xBD: return 0xBB;                    // copper
+    case 0xBF: return 0xBD;                    // bronze: silver's
+    case 0xC1: return 0xC3;                    // platinum
+    case 0xC3: return 0xC1;                    // steel: gold's
+    default:   return off;
+    }
+}
+
 void Vm::coins_touch(uint16_t a, bool write) const
 {
     if (!set_.five_coins || a < 0x7CBB || a > 0x7CC3 || ((a - 0x7CBB) & 1) || !rules::fixes()) return;

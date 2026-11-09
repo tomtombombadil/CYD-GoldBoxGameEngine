@@ -4099,11 +4099,12 @@ void pool_pay(int money[7], int cost)
 }
 
 // Champions of Krynn's money (GAME.OVR 0x2A18F / 0x2BA47; DS 0x0F46 its
-// worths 1 5 10 25 50 for the record's 0xEB, copper, bronze, platinum,
-// steel - a price in steel, its last): the worth in steel rounded down;
-// a payment sets the coins to the steel left, the others none
+// worths 1 5 10 25 50 for the record's 0xEB (coin 0, silver - the engine's
+// electrum place 2), copper, bronze, platinum, steel - a price in steel,
+// its last): the worth in steel rounded down; a payment sets the coins to
+// the steel left, the others (coin 0 too) none
 bool champions_money() { return krynn() && !dk_ui(); }
-int champ_worth(const int m[7]) { return static_cast<int>((m[0] * 5L + m[1] * 10L + m[4] * 25L + m[3] * 50L) / 50); }
+int champ_worth(const int m[7]) { return static_cast<int>((m[2] * 1L + m[0] * 5L + m[1] * 10L + m[4] * 25L + m[3] * 50L) / 50); }
 int champ_worth(const party::Character& ch)
 {
     int m[7];
@@ -7733,6 +7734,20 @@ void list_coins()
         // treasure's lists jewelry first)
         for (int k = 4; k < 7; ++k)
             if (coins_there(k) > 0) take_kind[take_n++] = k;
+        return;
+    }
+    if (champions_money()) {
+        // (Champions: the counter's list GAME.OVR 0x2C61C its record order
+        // up - coin 0 (silver) first; View's Trade / Drop 0x29D75 from
+        // jewelry down to copper, coin 0 never listed)
+        static const int8_t kUp[7] = {2, 0, 1, 4, 3, 5, 6}, kDown[6] = {6, 5, 3, 4, 1, 0};
+        if (!take_mode) {
+            for (int k : kUp)
+                if (coins_there(k) > 0) take_kind[take_n++] = k;
+        } else {
+            for (int k : kDown)
+                if (coins_there(k) > 0) take_kind[take_n++] = k;
+        }
         return;
     }
     if (pool_files() && !take_mode) {
@@ -12223,6 +12238,7 @@ __attribute__((noinline)) void load_party_text(dax::ByteSource& exe, const exepa
         d->facts.light_magic_armour = pi.light_magic_armour;
         memcpy(d->facts.race_weapon, pi.race_weapon, sizeof d->facts.race_weapon);
         d->facts.unarmed_no_str_hit = hl();
+        d->facts.weightless_coin = static_cast<int8_t>(champions_money() ? 2 : -1);
         d->facts.speed_fx = pi.speed_fx;
         d->facts.sell_secret = pi.sell_secret;
         d->facts.sell_keep = pi.sell_keep;
@@ -12363,11 +12379,12 @@ __attribute__((noinline)) void load_party_text(dax::ByteSource& exe, const exepa
         if (krynn()) {
             // Champions' coin names (Silver, Copper, Bronze, Platinum, Steel,
             // Gems, Jewelry) in the places party::from_krynn keeps its coins:
-            // copper, bronze (silver's), -, steel (gold's), platinum, gems,
-            // jewelry; its races stay in its own order (race_name)
+            // copper, bronze (silver's), silver (coin 0, electrum's), steel
+            // (gold's), platinum, gems, jewelry; its races stay in its own
+            // order (race_name)
             char tmp[7][11];
             memcpy(tmp, d->money, sizeof tmp);
-            static const int8_t kFrom[7] = {1, 2, -1, 4, 3, 5, 6};
+            static const int8_t kFrom[7] = {1, 2, 0, 4, 3, 5, 6};
             for (int i = 0; i < 7; ++i) {
                 if (kFrom[i] >= 0) memcpy(d->money[i], tmp[kFrom[i]], sizeof tmp[0]);
                 else d->money[i][0] = 0;

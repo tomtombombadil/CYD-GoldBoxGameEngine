@@ -78,7 +78,7 @@ enum Ext : uint8_t {
     kExtKnight = 123, kExtGod = 124, kExtRobe = 125,
     // Champions of Krynn only (in Darkness's places: never both)
     kExtK5F = 38,                      // 0x5F (not known yet)
-    kExtKE9 = 39,                       // 0xE9-0xEC (4; not known yet)
+    kExtKE9 = 39,                       // 0xE9-0xEA (2; not known yet - 0xEB, coin 0, is in electrum's place)
     kExtKSlots = 43,                    // 0x126-0x12A: a third group of spell slots (5)
     kExtK141 = 48,                      // 0x141 (not known yet)
     // Death Knights of Krynn (its 216-byte record and 220-byte spell part):
@@ -185,9 +185,9 @@ constexpr int    kDarknessMemorized = 141;
 // Champions of Krynn's characters (champions_facts.md 2; the Gold Box
 // Companion's record list): a 409-byte record (.SAV / .WHO) in Curse's order
 // with fewer memorized places (58), spells 1-100 as Curse's (its 101-107 the
-// knights' in ext), six coins (copper, bronze, platinum, steel, gems,
-// jewelry: kept in Curse's copper, silver, platinum, gold, gems, jewellery
-// places), the knight's order, god and robe (ext); items .STF (63 bytes, as
+// knights' in ext), seven coins (0xEB coin 0 - silver, worth 1 - copper,
+// bronze, platinum, steel, gems, jewelry: kept in Curse's electrum,
+// copper, silver, platinum, gold, gems, jewellery places), the knight's order, god and robe (ext); items .STF (63 bytes, as
 // Curse's), effects .SFX (9). Its races 0 Silvanesti elf, Qualinesti elf,
 // half-elf, mountain dwarf, hill dwarf, kender, human, 7 monster: the
 // record gets Curse's number (elves elf, dwarves dwarf, kender halfling),

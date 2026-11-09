@@ -1516,6 +1516,7 @@ constexpr ecl::OpSet kChampionsEcl = [] {
     s.sizes[0x41] = 2;
     s.area_by_block = true;
     s.moons = true;
+    s.krynn_coins = true;
     return s;
 }();
 

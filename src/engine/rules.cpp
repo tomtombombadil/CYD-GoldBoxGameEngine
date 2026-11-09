@@ -432,7 +432,8 @@ void recalc_values(party::Character& c, const items::Names& names, const ItemFac
         if (it.type() == f.quarrel) quarrels = c.items[i];
         hands += t.hands;
     }
-    for (int m = 0; m < 7; ++m) weight += c.money(m);
+    for (int m = 0; m < 7; ++m)
+        if (m != f.weightless_coin) weight += c.money(m);
     put16(r, kWeight, weight);
     r[kHands] = static_cast<uint8_t>(hands);
 

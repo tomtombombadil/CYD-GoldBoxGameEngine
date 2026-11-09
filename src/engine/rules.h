@@ -55,6 +55,10 @@ struct ItemFacts {
     // The Dark Queen: with no weapon readied its routine (DQK resident
     // 0x9BF6) adds nothing - the THAC0 without Strength's to-hit
     bool unarmed_no_str_hit = false;
+    // Champions: coin 0 (its record's 0xEB, here money place 2) weighs
+    // nothing in the recalculation (GAME.OVR 0x37484 adds coins 1-6 to the
+    // weight) though pooling and sharing move the weight with it (-1: none)
+    int8_t weightless_coin = -1;
 };
 
 // The stats as they stand (the games' recalculation; spell_facts.md and

@@ -32,6 +32,14 @@
 //      a shop's factor (never above the value)
 //   R1 items worn and put away: the record and effects as before
 //   R2 rest: a point of healing a day; an effect of N minutes gone after N
+//   L1 Champions' coin lists: the counter's (GAME.OVR 0x2C61C) its record's
+//      coins 0-6 up, coin 0 (0xEB, silver) too; View's Trade / Drop
+//      (0x29D75) 6 down to 1 - coin 0 never; K1 its scripts' coin codes
+//      (0x9330 read, 0x96AD write): 0xBB + 2i = the record's 0xEB + 2i, i 0-4
+//   (Champions' coins are named by their record places, 0xEB + 2i: the
+//   engine's place of each found by writing the member out as the game's
+//   file - party::to_krynn - and the worths 1 5 10 25 50 read from its
+//   program, DS 0x0F46)
 
 namespace beco {
 
@@ -110,6 +118,38 @@ void summary(const char* what, int cases, int before)
 long worth(const int* m) { return rules::copper_worth(m); }
 long worth(const party::Character& c) { return rules::copper_worth(c); }
 
+// Champions: the engine's money place of each record coin (0xEB + 2i,
+// i 0-6), from the save code; its worths (DS 0x0F46, five dwords)
+bool champ() { return krynn() && !dk_ui(); }
+int  cplace[7] = {-1, -1, -1, -1, -1, -1, -1};
+long cworth[5] = {};
+bool champ_facts()
+{
+    if (!champ()) return false;
+    if (cplace[0] >= 0) return true;
+    party::Character c = pt->m[0];
+    for (int k = 0; k < 7; ++k) {
+        for (int j = 0; j < 7; ++j) set_money(c, j, j == k ? 1 : 0);
+        uint8_t out[party::kKrynnRecordSize];
+        party::to_krynn(c, out);
+        for (int i = 0; i < 7; ++i)
+            if (u16(out + 0xEB + 2 * i) == 1) cplace[i] = k;
+    }
+    uint8_t b[20] = {};
+    if (!program_ds(0x0F46, b, sizeof b)) return false;
+    for (int i = 0; i < 5; ++i) cworth[i] = b[4 * i] | b[4 * i + 1] << 8 | static_cast<long>(b[4 * i + 2]) << 16;
+    for (int i = 0; i < 7; ++i)
+        if (cplace[i] < 0) return false;
+    return cworth[4] > 0;
+}
+// Its worth in steel (GAME.OVR 0x2A18F): coins 0-4 x their worths, / steel's
+int champ_steel(const int* m)
+{
+    long t = 0;
+    for (int i = 0; i < 5; ++i) t += m[cplace[i]] * cworth[i];
+    return static_cast<int>(t / cworth[4]);
+}
+
 // ---- W1
 void weight()
 {
@@ -129,7 +169,8 @@ void weight()
         for (int m = 0; m < 7; ++m) {
             const int v = rn(3) ? rn(300) : 0;
             set_money(c, m, v);
-            want += v;
+            // (Champions: coins 1-6 - GAME.OVR 0x37484 - not coin 0)
+            if (!champ() || m != cplace[0]) want += v;
         }
         rules::recalc(c, *names, d->facts);
         ++cases;
@@ -311,16 +352,12 @@ void identify()
         if (!dk_ui() && !krynn() && rn(3) == 0) set_money(c, 1, rn(500));      // (silver: the worth rounds)
         // (Champions: its other coins too, half the time - copper, bronze,
         // platinum in the engine's copper / silver / platinum places)
-        const bool champ = krynn() && !dk_ui();
+        const bool champ = beco::champ();
         if (champ && rn(2)) {
-            set_money(c, 0, rn(300));
-            set_money(c, 1, rn(300));
-            set_money(c, 4, rn(200));
-            if (rn(2)) {
-                ground->money[0] = rn(300);
-                ground->money[1] = rn(300);
-                ground->money[4] = rn(200);
-            }
+            // (record coins 0-3: silver, copper, bronze, platinum)
+            for (int i = 0; i < 4; ++i) set_money(c, cplace[i], rn(i == 0 ? 600 : i == 3 ? 200 : 300));
+            if (rn(2))
+                for (int i = 0; i < 4; ++i) ground->money[cplace[i]] = rn(i == 0 ? 600 : i == 3 ? 200 : 300);
         }
         rules::recalc(c, *names, d->facts);
         const long w0 = worth(c), g0 = worth(ground->money);
@@ -329,7 +366,7 @@ void identify()
         // from DS 0x0F46 - copper 5, bronze 10, platinum 25, steel 50 - summed,
         // / steel's 50, rounded down); its payment (0x2BA47): every coin 0,
         // the steel the worth less the price
-        auto steel_worth = [](const int* m) { return static_cast<int>((m[0] * 5L + m[1] * 10L + m[4] * 25L + m[3] * 50L) / 50); };
+        auto steel_worth = [](const int* m) { return champ_steel(m); };
         int om[7], gm[7];
         for (int i = 0; i < 7; ++i) om[i] = c.money(i), gm[i] = ground->money[i];
         screen = Screen::Items;
@@ -346,10 +383,10 @@ void identify()
             int* pay = ow >= cost ? om : gw >= cost ? gm : nullptr;
             if (pay) {
                 const int left = (ow >= cost ? ow : gw) - cost;
-                for (int i = 0; i < 5; ++i) pay[i] = i == 3 ? left : 0;
+                for (int i = 0; i < 5; ++i) pay[cplace[i]] = i == 4 ? left : 0;
             }
             bool same = known == can;
-            for (int i = 0; i < 5; ++i) same = same && c.money(i) == om[i] && ground->money[i] == gm[i];
+            for (int i = 0; i < 7; ++i) same = same && c.money(i) == om[i] && ground->money[i] == gm[i];
             if (!same)
                 bad("I1 Id's price (Champions: all its coins' worth in steel)", "worth %d own / %d counter, price %d: steel %d / %d, copper %d, known %d; the program's steel %d / %d (%d)",
                     ow, gw, cost, c.money(3), ground->money[3], c.money(0), known, om[3], gm[3], can);
@@ -523,10 +560,15 @@ void share()
         }
         bool left = false;
         for (int m = 0; m < 7; ++m) left |= ground->money[m] > 0;
+        // (Champions' share - GAME.OVR 0x2BF2C - weighs coin 0 as it gives
+        // it, 0xB945, though the recalculation doesn't: its room that way)
+        auto room_of = [](const party::Character& c) {
+            return rules::max_load(c) - c.encumbrance() - (champ() ? c.money(cplace[0]) : 0);
+        };
         if (left)
             for (int i = 0; i < n; ++i)
-                if (!pt->m[i].npc() && rules::max_load(pt->m[i]) - pt->m[i].encumbrance() > 0)
-                    bad("T1 coins left only when nobody has room", "member %d has %d room", i, rules::max_load(pt->m[i]) - pt->m[i].encumbrance());
+                if (!pt->m[i].npc() && room_of(pt->m[i]) > 0)
+                    bad("T1 coins left only when nobody has room", "member %d has %d room", i, room_of(pt->m[i]));
     }
     back();
     ground->clear();
@@ -777,6 +819,60 @@ void rest_check()
     summary("R2 rest: a point a day, effects end on the clock", cases, f0);
 }
 
+// ---- L1 / K1 (Champions)
+void champ_coins()
+{
+    if (!champ()) return;
+    const int f0 = fails;
+    int cases = 0;
+    for (int k = 0; k < 300; ++k) {
+        party::Character& c = bare();
+        ground->clear();
+        int m[7];
+        for (int i = 0; i < 7; ++i) {
+            m[i] = rn(3) ? 0 : 1 + rn(900);
+            set_money(c, cplace[i], m[i]);
+            ground->money[cplace[i]] = rn(3) ? 0 : 1 + rn(900);
+        }
+        // the counter's list: record coins 0-6 up, those there
+        int want[7], nw = 0;
+        for (int i = 0; i < 7; ++i)
+            if (ground->money[cplace[i]] > 0) want[nw++] = cplace[i];
+        take_mode = 0;
+        list_coins();
+        ++cases;
+        bool same = take_n == nw;
+        for (int i = 0; same && i < nw; ++i) same = take_kind[i] == want[i];
+        if (!same) bad("L1 the counter's coins (0x2C61C: coins 0-6 up)", "%d listed, %d wanted (first %d / %d)", take_n, nw, take_n ? take_kind[0] : -1, nw ? want[0] : -1);
+        // View's Trade / Drop: record coins 6 down to 1
+        nw = 0;
+        for (int i = 6; i >= 1; --i)
+            if (m[i] > 0) want[nw++] = cplace[i];
+        take_mode = 1;
+        view_by = 0;
+        list_coins();
+        ++cases;
+        same = take_n == nw;
+        for (int i = 0; same && i < nw; ++i) same = take_kind[i] == want[i];
+        if (!same) bad("L1 View's coins (0x29D75: coins 6-1 down)", "%d listed, %d wanted (first %d / %d)", take_n, nw, take_n ? take_kind[0] : -1, nw ? want[0] : -1);
+        take_mode = 0;
+        // the scripts' codes: 0xBB + 2i reads / writes record coin i (i 0-4)
+        for (int i = 0; i < 5; ++i) {
+            ++cases;
+            const uint16_t a = static_cast<uint16_t>(0x7CBB + 2 * i);
+            if (vm->get(a) != m[i]) bad("K1 a script reads a coin (0x9330)", "code %02X: %d, record coin %d holds %d", 0xBB + 2 * i, vm->get(a), i, m[i]);
+            const uint16_t v = static_cast<uint16_t>(rn(5000));
+            vm->set(a, v);
+            uint8_t out[party::kKrynnRecordSize];
+            party::to_krynn(c, out);
+            if (u16(out + 0xEB + 2 * i) != v) bad("K1 a script writes a coin (0x96AD)", "code %02X = %d: record 0x%02X %d", 0xBB + 2 * i, v, 0xEB + 2 * i, u16(out + 0xEB + 2 * i));
+        }
+    }
+    back();
+    ground->clear();
+    summary("L1 / K1 Champions' coin lists and script codes (coin 0 too)", cases, f0);
+}
+
 void run()
 {
     if (!monkey_boot() || !pt || !pt->count || !ground) {
@@ -803,6 +899,7 @@ void run()
     }
     const char* only = getenv("ONLY");
     auto want = [&](const char* p) { return !only || strstr(only, p); };
+    if (champ() && !champ_facts()) expect(P, "Champions' coin places and worths (to_krynn, DS 0x0F46)", false);
     if (want("weight")) weight();
     if (want("armour")) armour();
     if (want("sell")) sell();
@@ -813,6 +910,7 @@ void run()
     if (want("cheats")) cheats();
     if (want("wear")) wear();
     if (want("rest")) rest_check();
+    if (want("coins")) champ_coins();
 }
 
 } // namespace beco
