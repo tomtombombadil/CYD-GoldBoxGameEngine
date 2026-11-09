@@ -12,11 +12,11 @@
 //   for the SD card, which holds the player's game files.
 //   RGB LED (active low) : R 4, G 16, B 17
 //   LDR 34, speaker amp 26, BOOT button 0
-//   Amplifier enable 4 (low = on) - the red LED's pin too (Tom, 2026-11-08:
-//   his 2.8" ILI9341 was silent in this engine and in his Classic-Games /
-//   Classic-Arcade, which drive 26 with the LED pins high; a CYD with the
-//   same silence played once 4 was held low - witnessmenow's CYD issue
-//   #372). So the red LED on the board's back lights while a game plays.
+//   ILI9341 board only: amplifier enable 4 (low = on), the red LED's pin too
+//   - set in board_select.h (Tom, 2026-11-08: his 2.8" ILI9341 was silent in
+//   this engine and in Classic-Games / Classic-Arcade, which keep 4 high; a
+//   CYD with the same silence played once 4 was low - witnessmenow's CYD
+//   issue #372). NOT the ST7789 board: its sound works as it is (Tom).
 //
 // Do not include directly - include boards/board_select.h.
 #pragma once
@@ -31,7 +31,6 @@
 #define BOARD_PIN_LED_B       17
 #define BOARD_LED_ACTIVE_LOW  1
 #define BOARD_PIN_LDR         34
-#define BOARD_PIN_AUDIO_EN    4    // low = amplifier on (shared with the red LED)
 #define BOARD_PIN_SPEAKER     26   // speaker connector (through the amp)
 #define BOARD_AUDIO_DAC       1    // sound from the DAC on GPIO 26
 #define BOARD_PIN_SD_CS       5
