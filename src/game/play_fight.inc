@@ -707,7 +707,8 @@ void blit4(pic::Canvas& c, const uint8_t* p, int w, int h, int x, int y, bool mi
 enum class FSt : uint8_t {
     Begin, Turn, Menu, Move, Aim, DoneMenu, Speed, Ai, Pages, RoundEnd, Results, Destroyed, AllyAsk, FleeAsk,
     ContinueAsk, Next, UseAim, AbortAsk, RoundRest, Clouds, Resume, FlameAsk, FlameAbort, OldAge,
-    NpcShare                            // Pool: the NPCs' share page, the results page next
+    NpcShare,                           // Pool: the NPCs' share page, the results page next
+    More                                // the Dark Queen: a page's box full - a key, then the rest (res 0xCEEA)
 };
 
 // A page's pictures: a missile or spell flying, a burst / sparkles on a
@@ -848,6 +849,10 @@ struct Fight {
     bool     page_dropped = false;      // the last add_page found no room (its pictures / sound aren't set)
     bool     cont_next = false;         // the next add_page goes on below the last page shown
     int8_t   page_end = 10;             // the row after the last page shown's print (the originals' text row + 1)
+    // The Dark Queen's full box (res 0xCD31 +0x1B9): the page's line and
+    // character it goes on from after a key, the box's first row
+    int8_t   more_line = -1, more_top = 0;
+    uint8_t  more_at = 0;
     int8_t   yielding = -1;             // the one whose "Surrenders" is on the pages (leaves the field after them)
     // A sweep under way (melee): its blows one at a time, each one's pages
     // (the hit, the fall, the skull, the icon gone) before the next blow
@@ -1631,7 +1636,7 @@ int panel_text(pic::Canvas& c, const char* s, int row, uint8_t colour, int last 
 //   23-38, rows to 21): the first rule's words, but a word whose trailing
 //   space is the one just past the box is printed without it and the row
 //   ends there (queen)
-int panel_box_text(pic::Canvas& c, const char* s, int row, uint8_t colour, int last, bool sf, bool queen = false)
+int panel_box_text(pic::Canvas& c, const char* s, int row, uint8_t colour, int last, bool sf, bool queen = false, int* cut = nullptr)
 {
     const int x0 = 23, x1 = 38;
     const int len = static_cast<int>(strlen(s));
@@ -1710,6 +1715,16 @@ int panel_box_text(pic::Canvas& c, const char* s, int row, uint8_t colour, int l
         print(start, end);
         start = end + 1;
     }
+    // (the Dark Queen's: a new row past the box with two characters or more
+    // left - its 0xCEEA waits for a key, clears the box and goes on at its
+    // top; `cut` = the character it goes on from, 0-based - the caller
+    // waits. One left: its loop goes on and prints it on the row past the box)
+    if (cut) *cut = queen && row > last && start < len ? start - 1 : -1;
+    if (queen && row == last + 1 && start == len) {
+        const char one[2] = {at(start), 0};
+        put(c, one, x0, row, colour);
+        col = x0 + 1;
+    }
     if (col > x1) ++row;
     return row + 1;
 }
@@ -1734,9 +1749,13 @@ void draw_panel_for(pic::Canvas& c, int i)
     if (wi >= 0) {
         names->name(items::Item{f.items[wi]}, t, sizeof t - 1);
         // (the Dark Queen's, res 0xA50B: the name through its boxed print
-        // 0xCD31, rows 7-9; the status two rows past where it ended - 0xA561)
-        if (hl()) row = panel_box_text(c, t, 7, 10, 9, false, true) + 1;
-        else {
+        // 0xCD31, rows 7-9; the status two rows past where it ended - 0xA561;
+        // its name builder res 0x9FDC ends every part with " ", or "s " for
+        // the plural - the last one too)
+        if (hl()) {
+            strcat(t, " ");
+            row = panel_box_text(c, t, 7, 10, 9, false, true) + 1;
+        } else {
             // (the originals' names keep their last word's space - PoolRad
             // START 0x12CC, Gateway GAME.OVR 0x3F384: " " / "s " added)
             strcat(t, " ");
@@ -2184,6 +2203,7 @@ void show_rolls(pic::Canvas& c, const combat::Roll* pr, int row)
     }
 }
 
+void page_lines(pic::Canvas& c, int k0, int from, int row);
 void show_page(pic::Canvas& c)
 {
     page_over(c);
@@ -2210,25 +2230,58 @@ void show_page(pic::Canvas& c)
     // ended on the box's last column); a fall after a hit goes on below the
     // hit's words, the rows above kept (the box cleared from there down).
     // (The Dark Queen's: res 0xB14E - the name at the row, the words through
-    // its boxed print 0xCD31 from the next; its pages' continuation rows
-    // not read: each page from row 10)
+    // its boxed print 0xCD31 from the next; a fall goes on at the row after
+    // the hit's / damage text's last, DQK.EXE 0x25020 / res 0x8F04)
     int row = 10;
-    if (p.cont && !hl() && fg->page_end > 10 && fg->page_end <= 21) row = fg->page_end;
+    if (p.cont && fg->page_end > 10 && fg->page_end <= 21) row = fg->page_end;
     clear_panel(c, row, 21);
+    page_lines(c, 0, 0, row);
+}
+
+// A page's lines from line k (its character `from` on), at `row`; then its
+// rolls and pictures (the page's wait) - or, the Dark Queen's box full, the
+// key it waits for first (FSt::More: res 0xCEEA's "Press button or enter to
+// continue", the box rows from the words' first cleared, on from there)
+void page_lines(pic::Canvas& c, int k0, int from, int row)
+{
+    const Page& p = fg->page[fg->at - 1];
     const bool sf = gateway() || d->prof->variant.tr;
-    for (int k = 0; k < p.lines; ++k) {
-        const char* s = page_line(p, k);
+    for (int k = k0; k < p.lines; ++k) {
+        const char* s = page_line(p, k) + (k == k0 ? from : 0);
         if (p.names & (1u << k)) {
             if (row <= 21) put(c, s, 23, row, p.colour[k]);
             ++row;
         } else {
-            row = panel_box_text(c, s, row, p.colour[k], 21, sf, hl());
+            int cut = -1;
+            const int top = row;
+            row = panel_box_text(c, s, row, p.colour[k], 21, sf, hl(), hl() ? &cut : nullptr);
+            if (cut >= 0) {
+                fg->more_line = static_cast<int8_t>(k);
+                fg->more_at = static_cast<uint8_t>((k == k0 ? from : 0) + cut);
+                fg->more_top = static_cast<int8_t>(top);
+                fg->st = FSt::More;
+                fg->until = 0;
+                clear_menu_line(c);
+                put(c, d->press_key, 0, text::kMenuRow, 11);
+                return;
+            }
         }
     }
     fg->page_end = static_cast<int8_t>(row < 10 ? 10 : row > 22 ? 22 : row);
     if (fg->rolls && opts.rolls) show_rolls(c, fg->rolls->page[fg->at - 1], row);
     fg->fx_at = 0;
     page_fx(c);
+}
+
+// The key after a full box: cleared from the words' first row, the rest there
+void page_more(pic::Canvas& c)
+{
+    const int k = fg->more_line, top = fg->more_top, from = fg->more_at;
+    fg->more_line = -1;
+    fg->st = FSt::Pages;
+    clear_menu_line(c);
+    clear_panel(c, top, 21);
+    page_lines(c, k, from, top);
 }
 
 // A page's pictures, as the games show them
@@ -2316,6 +2369,27 @@ void end_turn(pic::Canvas& c)
 void bozak_burst(int t);
 void kapak_acid(int t);
 void damage_text(int amount, int kind, char* t, size_t cap);
+// The Dark Queen's fall after a damage text (DQK.EXE res 0x8F04): on the
+// same screen, from the row after that text's last (res 0xB14E at
+// [0xAE4E] + 1, no wait between) - "is killed" (0xFC), "Goes Down and is
+// Dying" ("%s and is Dying" 0x1A5 round "Goes Down" 0x19B), "Goes Down"
+void q_fall(int who, combat::Down dn)
+{
+    fg->cont_next = fg->pages > 0 && !fg->page_dropped;
+    if (dn == combat::Down::Dead) {
+        add_page(who, fw(profile::kIsKilled));
+        return;
+    }
+    if (dn != combat::Down::Dying) {
+        add_page(who, fw(profile::kGoesDownS));
+        return;
+    }
+    // (the format's "%s" taken out at loading: " and is Dying" after it)
+    char t[48];
+    snprintf(t, sizeof t, "%s%s", fw(profile::kGoesDownS), fw(profile::kGoesDownDyingQ));
+    add_page(who, t);
+}
+
 void down_page(int t, bool after_hit = false)
 {
     if (fg->b.f[t].escaped) {
@@ -2327,8 +2401,11 @@ void down_page(int t, bool after_hit = false)
     // After a hit (PoolRad ovr14 +0x550, Curse / Secret / Darkness / Gateway /
     // Treasures / Champions alike): below the hit's words, "goes down", then
     // "and is Dying" or (dead, stoned, gone) the name again and "is killed"
-    fg->cont_next = after_hit && !hl();
-    if (dn == combat::Down::Dead && after_hit && !hl()) add_page(t, fw(profile::kGoesDown), nullptr, t, fw(profile::kIsKilled));
+    // (the Dark Queen's after a hit, DQK.EXE 0x25020: the same - its res
+    // 0xB14E at the row after the hit's words; after a damage text: q_fall)
+    fg->cont_next = after_hit;
+    if (hl() && !after_hit) q_fall(t, dn);
+    else if (dn == combat::Down::Dead && after_hit) add_page(t, fw(profile::kGoesDown), nullptr, t, fw(profile::kIsKilled));
     else if (dn == combat::Down::Dead) add_page(t, fw(profile::kIsKilled));
     else if (dn == combat::Down::Dying) add_page(t, fw(profile::kGoesDown), fw(profile::kIsDying));
     else add_page(t, fw(profile::kGoesDown));
@@ -2696,7 +2773,8 @@ void event_words(const combat::Event& e)
             break;
         }
         const combat::Down dn = combat::down_state(fg->b.f[who]);
-        if (dn == combat::Down::Dead) add_page(who, fw(profile::kIsKilled));
+        if (hl()) q_fall(who, dn);
+        else if (dn == combat::Down::Dead) add_page(who, fw(profile::kIsKilled));
         else if (dn == combat::Down::Dying) add_page(who, fw(profile::kGoesDownS), fw(profile::kIsDying));
         else add_page(who, fw(profile::kGoesDownS));
         page_fx_set(1, skull_fx(who));
@@ -3329,6 +3407,49 @@ void tr_jump(pic::Canvas& c)
     say(c, FSt::Next);
 }
 
+bool ai_controls(const combat::Fighter& f) { return f.quick || f.team() || f.rec[0xF7] >= 0x80; }
+
+// A spell begun earlier this round goes off (lost if they were hurt)
+void fire_pending(pic::Canvas& c)
+{
+    combat::Battle& b = fg->b;
+    combat::Fighter& f = b.f[fg->cur];
+    const int sp = f.spell;
+    f.spell = 0;
+    if (!f.can_cast) {
+        if (!f.spell_n) forget_spell(f, sp);
+        f.spell_n = 0;
+        add_page(fg->cur, fw(profile::kLostSpell));
+        say(c, FSt::Next);
+        return;
+    }
+    if (fight_miscast(c, sp)) {
+        if (f.spell_n) remember_spell(f, sp);
+        f.spell_n = 0;
+        return;
+    }
+    if (f.spell_n) {
+        // The computer's: the targets it chose
+        if (!load_magic()) {
+            end_turn(c);
+            return;
+        }
+        fg->spell = sp;
+        fg->sp_n = 0;
+        for (int k = 0; k < f.spell_n; ++k)
+            if (b.f[f.spell_t[k]].size) fg->sp_t[fg->sp_n++] = f.spell_t[k];
+        f.spell_n = 0;
+        if (!fg->sp_n) {
+            end_turn(c);
+            return;
+        }
+        cast_now(c, true);
+        return;
+    }
+    begin_targeting(c, sp);
+    return;
+}
+
 void start_turn(pic::Canvas& c)
 {
     combat::Battle& b = fg->b;
@@ -3425,41 +3546,14 @@ void start_turn(pic::Canvas& c)
             return;
         }
     }
-    if (f.spell) {
-        // A spell begun earlier this round goes off (lost if they were hurt)
-        const int sp = f.spell;
-        f.spell = 0;
-        if (!f.can_cast) {
-            if (!f.spell_n) forget_spell(f, sp);
-            f.spell_n = 0;
-            add_page(fg->cur, fw(profile::kLostSpell));
-            say(c, FSt::Next);
-            return;
-        }
-        if (fight_miscast(c, sp)) {
-            if (f.spell_n) remember_spell(f, sp);
-            f.spell_n = 0;
-            return;
-        }
-        if (f.spell_n) {
-            // The computer's: the targets it chose
-            if (!load_magic()) {
-                end_turn(c);
-                return;
-            }
-            fg->spell = sp;
-            fg->sp_n = 0;
-            for (int k = 0; k < f.spell_n; ++k)
-                if (b.f[f.spell_t[k]].size) fg->sp_t[fg->sp_n++] = f.spell_t[k];
-            f.spell_n = 0;
-            if (!fg->sp_n) {
-                end_turn(c);
-                return;
-            }
-            cast_now(c, true);
-            return;
-        }
-        begin_targeting(c, sp);
+    // A spell begun earlier goes off now - the computer's (monsters, NPCs,
+    // Quick) in Darkness, Treasures, Death Knights and the Dark Queen only
+    // after its morale test and its items (their turn routine sends a
+    // computer fighter straight to its AI, which fires the pending spell
+    // after those: Death Knights GAME.OVR 0x9384 -> 0xA21B +0x141, Darkness
+    // 0x9AC5 +0x15A, the Dark Queen DQK.EXE 0x2DF74)
+    if (f.spell && !((darkness_files() || hl()) && ai_controls(f))) {
+        fire_pending(c);
         return;
     }
     if (f.quick || f.team() || f.rec[0xF7] >= 0x80) {
@@ -4291,7 +4385,8 @@ void ai_step(pic::Canvas& c)
     const int i = fg->cur;
     combat::Fighter& f = b.f[i];
     // Quick party members bandage a dying friend first (at the turn's start)
-    if (!f.team() && !fg->ai_checked && !fg->flee_told && combat::anyone_dying(b)) {
+    // (a spell begun earlier goes first, as it did at the turn's start)
+    if (!f.team() && !fg->ai_checked && !fg->flee_told && !f.spell && combat::anyone_dying(b)) {
         if (combat::anyone_dying(b)) CYD_TEST_ACT(b, i, Bandage, -1, 0);
         const int k = combat::bandage(b);
         if (k >= 0) {
@@ -4366,9 +4461,11 @@ void ai_step(pic::Canvas& c)
         // nothing there asks about the flight). Darkness's and Treasures'
         // computer never uses an item: its item routine, called before the
         // pending spell, Turn and spells (Darkness GAME.OVR 0x9D9A, Treasures
-        // 0xABB4), is an empty body that answers no. Death Knights' (0xA4D3,
-        // d7 rounds) comes first there too
-        const bool ai_items = !(darkness_files() && !dkk());
+        // 0xABB4), is an empty body that answers no. Death Knights' (0xA4D3)
+        // rolls its d7 rounds and walks the items but never keeps one (its
+        // chosen-item pointer [bp-0x14] is only ever set to 0): no item
+        // either; the Dark Queen's (DQK.EXE 0x2E105) an empty body too
+        const bool ai_items = !darkness_files() && !hl();
         if (ai_items && f.n_items && f.can_use && combat::standing(b, f.team() ? 0 : 1) && load_magic()) {
             int tg[combat::kMaxFighters], nt = 0;
             const int k = combat::choose_item(b, fg->t, mrules->tables, i, *names, d->prof->fight.spells,
@@ -4385,6 +4482,13 @@ void ai_step(pic::Canvas& c)
                 return;
             }
         }
+        // Darkness / Treasures / Death Knights / the Dark Queen: the spell
+        // begun earlier now - after the morale test and the items (start_turn
+        // left it)
+        if (f.spell && (darkness_files() || hl())) {
+            fire_pending(c);
+            return;
+        }
         // Turn Undead when an enemy undead is in sight and the fighter may
         // turn (combat::can_turn) - Curse's before its spells (coab's facts
         // 5.1: a pending spell, Turn Undead, then a spell - the cleric or
@@ -4394,13 +4498,17 @@ void ai_step(pic::Canvas& c)
         // them); Champions' (0xC772, before its spells): the menu's test
         // Champions' computer (0xC772): a cleric, or a former cleric's level
         // over record 0xD7 (the engine's 0xE6) - signed - and turns under the
-        // undead loaded (its finder's type limit is never set there: any).
+        // undead loaded; its finder's type limit is a local never set there
+        // ([bp-6]): it holds what the AI's last dice call left on the stack
+        // at that place - the dice routine's pushed side count (the AI's
+        // d4 / d8 / d2 at its start, GAME.OVR 0xC5C3-0xC601): 4, or 2 when its
+        // d8 came up 8 (that roll not kept here: 4) - undead types 1-4 only.
         // Darkness's (GAME.OVR 0x9D14) / Treasures' (0xAB2C): not fleeing,
         // the menu's test (skill levels, turns under the undead loaded);
         // Death Knights' (0xA46C) the menu's test; all three after a pending
         // spell, before their spells. Gateway's finder (GAME.OVR 0x17679):
         // undead types 1-12 only
-        const bool dk_ai = fg->t.turn_cols == 11 && !hl();
+        const bool dk_ai = fg->t.turn_cols == 11;      // (the Dark Queen's AI 0x2E078 too: not fleeing, the menu's test)
         auto ai_turns = [&]() {
             if (d->prof->game == games::Game::ChampionsOfKrynn) {
                 if (!fg->t.turn_known || f.undead_turns >= b.undead_loaded ||
@@ -4412,7 +4520,9 @@ void ai_step(pic::Canvas& c)
             for (int e = 0; e < b.n; ++e) {
                 const combat::Fighter& o = b.f[e];
                 if (o.up() && o.size && !(o.fleeing && !o.panic) && (o.team() ? 1 : 0) != (f.team() ? 1 : 0) && o.rec[0xE9] &&
-                    (!gateway() || o.rec[0xE9] < 13) && combat::range(b, fg->t, i, e, false, nullptr)) {
+                    (!gateway() || o.rec[0xE9] < 13) &&
+                    (d->prof->game != games::Game::ChampionsOfKrynn || static_cast<int8_t>(o.rec[0xE9]) <= 4) &&
+                    combat::range(b, fg->t, i, e, false, nullptr)) {
                     fg->cur = i;
                     fight_turn_undead(c);
                     return true;
@@ -4714,7 +4824,7 @@ void fight_start(pic::Canvas& c)
         // (the Dark Queen's too: its saves DQK.EXE 0x85CC, caster levels 0xB616 -
         // a mage, rec 0xAA, with a robe 0x19D: game block 0x1F9 + robe)
         f.robe = (krynn_rules() || hl()) && ch.level(classes::MagicUser) > 0 ? ch.ext[party::kExtRobe] : 0;
-        f.god = krynn_rules() ? ch.ext[party::kExtGod] : 0;
+        f.god = krynn_rules() || hl() ? ch.ext[party::kExtGod] : 0;
     }
     b.party_size = pt->count;
     // The original recalculates every combatant's values at the battle's
@@ -5843,7 +5953,8 @@ void spell_pages(int caster, const combat::SpellLine* l, int n, const combat::Fi
         }
         case combat::Did::Down: {
             const combat::Down dn = combat::down_state(f);
-            if (dn == combat::Down::Dead) add_page(l[k].who, fw(profile::kIsKilled));
+            if (hl()) q_fall(l[k].who, dn);
+            else if (dn == combat::Down::Dead) add_page(l[k].who, fw(profile::kIsKilled));
             else if (dn == combat::Down::Dying) add_page(l[k].who, fw(profile::kGoesDownS), fw(profile::kIsDying));
             else add_page(l[k].who, fw(profile::kGoesDownS));
             page_fx_set(1, skull_fx(l[k].who));
@@ -6362,6 +6473,9 @@ void fight_tap(int x, int y, pic::Canvas& c)
         return;
     }
     switch (fg->st) {
+    case FSt::More:
+        page_more(c);
+        return;
     case FSt::Pages:
         if (fg->fx_on) {                // a tap cuts the pictures short and moves on
             fx_end(c);

@@ -1,7 +1,8 @@
 // Behaviour checks, round 4 (sweep's `behave rules4`, -DBEHAVE_ROUND4 with
 // -DBEHAVE_MATRIX - its cleared field and plain fighters; any game: GAME,
 // BOOTSLOT, MAREA / MBLOCK, FIGHTAT as the fuzzer's; ONLY= table, turn,
-// former, restore, rest, haste, moons, caster, learn, use, canuse). Expectations from the originals'
+// former, restore, rest, haste, moons, caster, learn, use, aiorder, canuse,
+// wrap, qpages, aiturn, trainspell). Expectations from the originals'
 // code (rules_round4_facts.md in the Project: the turn routines of Curse's
 // listing ovr014:1228, Gateway's GAME.OVR 0x17455, Champions' 0x16021, the
 // Krynn moons' 0x3911F / 0x34E8C / 0x30E0B) and coab's facts (cast_restore,
@@ -137,10 +138,17 @@ struct Case {
     std::vector<std::pair<int, int>> lv, old;
     int hd, god, c12, c20, c6;
     std::vector<int> types;
+    int minus = 0;          // (11 columns: the script's penalty, game byte 0x0F)
 };
 // The reference: Curse / Pool (rule 0), Gateway (1), Champions (2),
 // Darkness's (11 columns - its facts R13; Death Knights' the same with
-// Majere's + 2, read 2026-11-07; the Dark Queen's assumed Darkness's)
+// Majere's + 2, read 2026-11-07; the Dark Queen's DQK.EXE 0x25E77, read
+// 2026-11-09: L = max(cleric level, paladin level - 2) (its 0xBE14: the plain
+// level), Majere's (record word 0x19B = 2) + 2, 9-13 -> 9, 14+ -> 10, less
+// the game block's byte 0x0F (0 when more); one d20 first, the count at the
+// first undead found (D* d6 + 6, else d12); the finder 0x260BE takes the
+// highest type up to the limit (13 first) and makes the limit that type; a
+// roll under |value|: the limit - 1)
 std::vector<int> ref(const Case& c, int rule, bool fixes)
 {
     int lvl[8] = {}, old[8] = {};
@@ -156,8 +164,9 @@ std::vector<int> ref(const Case& c, int rule, bool fixes)
     int count = c.c12 ? c.c12 : 1, extra = 6;
     if (tcols == 11) {
         // (Death Knights, rule 3 - GAME.OVR 0x1FEAA: Majere's clerics + 2)
-        const int L = std::max(lvl[0], lvl[3] - 2) + (rule == 3 && c.god == 2 ? 2 : 0);
-        const int col = L <= 8 ? L : L < 14 ? 9 : 10;
+        const int L = std::max(lvl[0], lvl[3] - 2) + (rule >= 3 && c.god == 2 ? 2 : 0);
+        int col = L <= 8 ? L : L < 14 ? 9 : 10;
+        col = c.minus > col ? 0 : col - c.minus;
         int limit = 13;
         count = -1;
         for (;;) {
@@ -167,6 +176,7 @@ std::vector<int> ref(const Case& c, int rule, bool fixes)
             if (best < 0 || count == 0) break;
             const int v = tv(type, col);
             if (count < 0) count = v < 0 ? (c.c6 ? c.c6 : 1) + 6 : (c.c12 ? c.c12 : 1);
+            limit = type;                   // (0x260BE: the limit becomes the type found)
             if (roll < std::abs(v)) {
                 if (--limit < 1) break;
                 continue;
@@ -235,7 +245,7 @@ std::vector<int> engine_turn(const Case& c)
         F(i).rec[0xE9] = static_cast<uint8_t>(c.types[k]);
     }
     play::fg->b.undead_loaded = static_cast<int>(c.types.size());
-    play::fg->b.turn_minus = 0;
+    play::fg->b.turn_minus = c.minus;
     dice(c.c12, c.c20, c.c6);
     int out[16];
     const int n = combat::turn_undead(play::fg->b, play::fg->t, 0, play::rng, out, 16);
@@ -260,11 +270,20 @@ void turning()
         for (int r20 : {1, 4, 7, 10, 13, 16, 19, 20})
             for (int c12 : {1, 2, 12}) cases.push_back({{{0, L}}, {}, 0, 0, c12, r20, 1, {1, 3, 5, 7, 9, 2}});
     // the mixes: several of a type, the weakest / highest first, D* extras
+    // (three undead: the fights with few monster places - the Dark Queen's)
+    for (int L : {1, 4, 8, 11, 14})
+        for (int r20 : {2, 7, 11, 16, 20})
+            for (int c12 : {1, 3}) cases.push_back({{{0, L}}, {}, 0, 0, c12, r20, 2, {1, 5, 10}});
     for (int c12 : {1, 3}) cases.push_back({{{0, 12}}, {}, 0, 0, c12, 20, 6, {1, 1, 1, 1, 1, 1, 1, 1}});
     cases.push_back({{{0, 4}}, {}, 0, 0, 12, 9, 1, {8, 2, 2, 11}});
     // paladins (Gateway: as a cleric 2 lower; Darkness's the same), Majere (Champions + 2)
     for (int P2 : {2, 3, 6, 11}) cases.push_back({{{3, P2}}, {}, 0, 0, 4, 12, 1, {1, 2, 3}});
     cases.push_back({{{0, 3}}, {}, 0, 2, 4, 12, 1, {1, 2, 3, 4}});
+    for (int L : {3, 7, 12}) cases.push_back({{{0, L}}, {}, 0, 2, 4, 15, 1, {1, 2, 3}});
+    // the script's penalty (11 columns: game byte 0x0F)
+    if (tcols == 11)
+        for (int mi : {1, 3, 9})
+            for (int L : {4, 9, 14}) cases.push_back({{{0, L}}, {}, 0, 0, 5, 14, 3, {1, 2, 6}, mi});
     int bad = 0, done = 0;
     std::string first;
     for (const Case& c : cases) {
@@ -304,9 +323,10 @@ void former()
                may({{3, 3}}, {}, 0) && !may({{3, 2}}, {}, 0) && may({{0, 1}}, {}, 0) && !may({{2, 9}}, {}, 0));
         // Darkness (GAME.OVR 0x8D4B) / Treasures (0x9DD5) by skill levels
         // (0x392EE: a human past its former level - max(level, former));
-        // Death Knights (0x94CC) by levels
-        if (game() == 4 || game() == 9 || game() == 6) {
-            const bool sk = game() != 6;
+        // Death Knights (0x94CC) and the Dark Queen (DQK.EXE 0x22DC7 menu /
+        // 0x2E078 AI, its 0xBE14) by levels
+        if (game() == 4 || game() == 9 || game() == 6 || game() == 7) {
+            const bool sk = game() != 6 && game() != 7;
             const int r74 = F(0).rec[0x74];
             F(0).rec[0x74] = 7;
             const bool passed = may({{2, 9}}, {{0, 7}}, 7), notyet = may({{2, 5}}, {{0, 7}}, 7);
@@ -590,10 +610,14 @@ void queen_moons()
            bad == 0, "%d of %d wrong (%s)", bad, n, first);
 }
 
+void queen_moon_room();
 void moons()
 {
     if (!m->tables.lay.krynn) return;
-    if (m->tables.lay.queen) queen_moons();
+    if (m->tables.lay.queen) {
+        queen_moons();
+        queen_moon_room();
+    }
     if (!fight()) return;
     combat::Fighter& f = F(0);
     mx::put(0, 0, 10, 10, 50);
@@ -638,6 +662,44 @@ void moons()
     f.robe = 0;
     expect(P, "the moons: a mage's caster level (new -1, full +1 past 5th) and saves (new -1, full +1) by its robe's moon", bad == 0 && spell,
            "%d of %d wrong (spell %d)", bad, n, spell);
+}
+
+// The Dark Queen's moon extras (DQK.EXE 0x4501C: phase 1 -> 1, 2 -> 2, less
+// what is over the slots at levels 1-9; memorize 0x45519: a magic-user spell
+// is taken with no room at its level when extras are left - any level, no
+// slots asked): a mage of level 1 (slots at level 1 only), Int 18, nothing
+// memorized - room at each level 1-9 = its slots + the extras (the slots'
+// room alone without a robe)
+void queen_moon_room()
+{
+    if (!m->tables.lay.queen) return;
+    const classes::Tables& t = m->tables;
+    party::Character c = pt->m[0];
+    for (int k = 0; k < 8; ++k) c.rec[0x109 + k] = c.rec[0x111 + k] = 0;
+    c.rec[0x109 + 5] = 1;
+    c.rec[0x13] = c.rec[0x12] = 18;
+    for (int k = 0; k < magic::kListSize; ++k) c.rec[magic::kListAt + k] = 0;
+    int bad = 0, n = 0, no_slot = 0;
+    char first[120] = "";
+    for (int robe = 0; robe <= 3; ++robe)
+        for (int ph = 0; ph < 3; ++ph) {
+            c.ext[party::kExtRobe] = static_cast<uint8_t>(robe);
+            int p[3] = {0, 0, 0};
+            if (robe) p[robe - 1] = ph;
+            magic::set_moons(p[0], p[1], p[2]);
+            const int extras = robe ? (ph == 1 ? 1 : ph == 2 ? 2 : 0) : 0;
+            for (int lv = 1; lv <= 9; ++lv) {
+                const int slots = lv <= t.slot_levels() ? classes::slots(c, magic::MagicUser, lv) : 0;
+                if (!slots) ++no_slot;
+                const int got = magic::room(c, t, magic::MagicUser, lv), want = slots + extras;
+                ++n;
+                if (got != want && !bad++)
+                    snprintf(first, sizeof first, "robe %d phase %d level %d (slots %d): room %d, want %d", robe, ph, lv, slots, got, want);
+            }
+        }
+    magic::set_moons(0, 0, 0);
+    expect(P, "the Dark Queen's moon extras: a magic-user spell of any level, slots or none (0x45519)", bad == 0 && no_slot > 0,
+           "%d of %d wrong (%s; %d without slots)", bad, n, first, no_slot);
 }
 
 // ---- C: the Krynn games' caster levels by class (Champions GAME.OVR
@@ -949,10 +1011,12 @@ void learning()
 // Words: the routine's own Pascal strings (cs:0x1FAC / 0x1FBC / 0x1FCC of
 // overlay 0x2BC21), read from the player's GAME.OVR here.
 bool fight();
-// The computer's items: Darkness's and Treasures' never (their item routine,
-// GAME.OVR 0x9D9A / 0xABB4, called first in the computer's turn, is an
-// empty body answering no); the others' (Death Knights 0xA4D3, Curse's /
-// Pool's d7 rounds) use a readied wand whose spell the item chooser takes.
+// The computer's items: Darkness's, Treasures' and Death Knights' never
+// (their item routine, GAME.OVR 0x9D9A / 0xABB4, called first in the
+// computer's turn, is an empty body answering no; Death Knights' 0xA4D3
+// rolls d7 rounds and walks the items, but its chosen-item pointer is
+// only ever 0); the others' (Curse's / Pool's d7 rounds) use a readied
+// wand whose spell the item chooser takes.
 // A monster with one wand (a fight spell of priority 7 against its enemy,
 // the dice highest), no spells: the chooser takes it (the control), and its
 // turn uses it - or, Darkness / Treasures, doesn't
@@ -990,7 +1054,7 @@ void ai_items()
         printf("  (ai items: no wand spell the chooser takes here)\n");
         return;
     }
-    const bool want = !(d->prof->variant.darkness_files && !d->prof->variant.dkk);
+    const bool want = !d->prof->variant.darkness_files && !d->prof->variant.hlib;
     fg->cur = B;
     fg->ai_checked = false;
     fg->flee_told = true;
@@ -1004,8 +1068,108 @@ void ai_items()
         f.items = nullptr;
         f.n_items = 0;
     }
-    expect(P, "the computer's items: Darkness / Treasures never (an empty item routine), the others a wand", used == want,
+    expect(P, "the computer's items: Darkness / Treasures / Death Knights never (no item kept), the others a wand", used == want,
            "game %d, wand spell %d: used %d, want %d", g, found, used, want);
+}
+
+// The computer's spell begun earlier (Darkness / Treasures / Death Knights):
+// their turn routine sends a computer fighter straight to its AI (Death
+// Knights GAME.OVR 0x9384 -> overlay 0xA21B; Darkness 0x9AC5), which takes
+// the morale test (+0x1260 / +0x11E7: one fleeing says so), then its items,
+// THEN the pending spell (combat byte 0, +0x141 / +0x15A). The other games
+// here: at the turn's start. A monster fleeing with a spell begun: the turn's
+// start leaves the spell (Darkness-type) or casts it (the others); the flight
+// page first, then the spell
+void ai_pending()
+{
+    if (!fight()) return;
+    combat::Battle& b = fg->b;
+    mx::put(0, 0, 10, 10, 60);
+    mx::put(B, 1, 13, 10, 60);
+    for (int k = B + 1; k < b.n; ++k) b.f[k].size = 0;
+    for (int k = 1; k < b.party_size; ++k) b.f[k].size = 0;
+    combat::occupancy(b);
+    combat::Fighter& f = b.f[B];
+    const bool dk = d->prof->variant.darkness_files || d->prof->variant.hlib;
+    f.n_items = 0;
+    f.can_cast = f.can_use = true;
+    f.fleeing = true;
+    f.panic = false;
+    f.spell = 1;
+    f.spell_n = 1;
+    f.spell_t[0] = 0;
+    fg->cur = B;
+    fg->fx_done = false;
+    fg->pages = 0;
+    start_turn(C);
+    const bool left = f.spell == 1;
+    bool fled_first = false, then_cast = false;
+    if (left) {
+        const int before = fg->pages;
+        ai_step(C);
+        fled_first = f.spell == 1 && fg->pages > before;
+        if (fled_first) {
+            ai_step(C);
+            then_cast = f.spell == 0;
+        }
+    }
+    f.spell = 0;
+    f.spell_n = 0;
+    f.fleeing = false;
+    fg->pages = 0;
+    const bool ok = dk ? left && fled_first && then_cast : !left;
+    expect(P, "the computer's pending spell: Darkness / Treasures / Death Knights after the morale page and the items, the others at the turn's start",
+           ok, "game %d: left at the start %d, flight page first %d, then cast %d", game(), left, fled_first, then_cast);
+}
+
+// The computer's Turn Undead by the undead's type: Champions' AI (GAME.OVR
+// 0xC772) asks its finder for one up to a type limit it never sets - the
+// stack holds the AI's last dice call's side count there, 4 (2 when its
+// d8 came up 8, not kept here): types 1-4 only; the Dark Queen's (DQK.EXE
+// 0x2E078, limit 13) and Death Knights' (0xA46C, 13) any type. A monster
+// cleric of 5th, a party member of each undead type 1-13 next to it
+void ai_turn_types()
+{
+    const int g = game();
+    if ((g != 5 && g != 6 && g != 7) || !play::fg->t.turn_known || !fight()) return;
+    int bad = 0, n = 0, turned_n = 0;
+    char first[120] = "";
+    for (int type = 1; type <= 13; ++type) {
+        fight();
+        combat::Battle& b = fg->b;
+        mx::put(0, 0, 10, 10, 60);
+        mx::put(B, 1, 11, 10, 60);
+        for (int k = B + 1; k < b.n; ++k) b.f[k].size = 0;
+        for (int k = 1; k < b.party_size; ++k) b.f[k].size = 0;
+        combat::occupancy(b);
+        levels(B, {{0, 5}});
+        combat::Fighter& f = b.f[B];
+        f.rec[0x15] = f.rec[0x14] = 16;
+        f.n_items = 0;
+        f.spell = 0;
+        f.can_cast = false;
+        f.fleeing = false;
+        b.f[0].rec[0xE9] = static_cast<uint8_t>(type);
+        b.undead_loaded = 2;
+        fg->cur = B;
+        fg->ai_checked = false;
+        fg->flee_told = true;
+        fg->use_item = -1;
+        fg->pages = 0;
+        ai_step(C);
+        const bool turned = f.undead_turns > 0;
+        b.f[0].rec[0xE9] = 0;
+        fg->pages = fg->at = 0;
+        fg->ptext_used = 0;
+        fg->st = FSt::Turn;
+        const bool want = g == 5 ? type <= 4 : true;
+        ++n;
+        turned_n += turned;
+        if (turned != want && !bad++)
+            snprintf(first, sizeof first, "type %d: turned %d, want %d", type, turned, want);
+    }
+    expect(P, "the computer's Turn Undead by type (Champions 1-4 - its finder's unset limit; the Dark Queen / Death Knights any)",
+           bad == 0 && turned_n > 0, "game %d: %d of %d wrong (%s)", g, bad, n, first);
 }
 
 void treasures_fight_items()
@@ -1251,7 +1415,10 @@ void using_items()
 {
     const classes::Tables& t = m->tables;
     const int g = game();
-    if (g == 7) return;                     // (the Dark Queen: not read)
+    if (g == 7) {                           // (the Dark Queen: its computer's items only)
+        ai_items();
+        return;
+    }
     const magic::Scrolls sc = play::scroll_facts();
     uint32_t seed = 777;
     auto rnd = [&](int n) { seed = seed * 1103515245u + 12345u; return static_cast<int>((seed >> 16) % n); };
@@ -1335,16 +1502,16 @@ void using_items()
 // magic-user spells - Intelligence over 8 (outside fights)
 // The can-learn routines' fight clause (Secret GAME.OVR 0x2C76B, Darkness
 // 0x29DED, Treasures 0x32CCE, Death Knights 0x29D23, the Dark Queen DQK.EXE
-// 0x5A402 - their own race numbers 6 / 5 / 5 / 6 / 6, human): in a fight
-// (the fight state byte 5) a human magic-user with armour readied (the
-// record's armour pointer) can't use magic-user spells, unless a ranger
-// past 8th; outside fights, without armour, another race: can. Curse,
-// PoolRad, Gateway and Champions have no such clause
+// 0x5A402, Champions 0x2DD6B - their own race numbers 6 / 5 / 5 / 6 / 6 /
+// 6, human): in a fight (the fight state byte 5) a human magic-user with
+// armour readied (the record's armour pointer) can't use magic-user spells,
+// unless a ranger past 8th; outside fights, without armour, another race:
+// can. Curse, PoolRad and Gateway have no such clause
 void armour_can()
 {
     const classes::Tables& t = m->tables;
     const int g = game();
-    const bool clause = g == 3 || g == 4 || g == 9 || g == 6 || g == 7;
+    const bool clause = g == 3 || g == 4 || g == 9 || g == 6 || g == 7 || g == 5;
     int armour_type = -1;
     for (int ty = 0; ty < 256 && armour_type < 0; ++ty)
         if (names->type(static_cast<uint8_t>(ty)).slot == items::kSlotArmour) armour_type = ty;
@@ -1385,6 +1552,37 @@ void armour_can()
             if (!*first)
                 snprintf(first, sizeof first, "race %d ranger %d armour %d fight %d: can %d, want %d", cs.race, cs.ranger,
                          cs.armour, cs.fighting, got, want);
+        }
+    }
+    // Champions' way out (GAME.OVR 0x2DD6B): a human whose new class has
+    // passed his old one (fighter 10 over 9 - record 0xE6) with a former
+    // ranger past 8th and a magic-user level, now or former, can; not yet
+    // passed (fighter 5), or no magic-user level at all, can't
+    if (g == 5) {
+        struct Dual { int fighter, old_ranger, mu, old_mu; bool want; };
+        const Dual ds[] = {{10, 9, 0, 5, true}, {10, 9, 3, 0, true}, {5, 9, 0, 5, false}, {10, 8, 0, 5, false}, {10, 9, 0, 0, false}};
+        for (const Dual& dc : ds) {
+            party::Character c = pt->m[0];
+            for (int j = 0; j < 8; ++j) c.rec[0x109 + j] = c.rec[0x111 + j] = 0;
+            c.rec[0x109 + 2] = static_cast<uint8_t>(dc.fighter);
+            c.rec[0x109 + 5] = static_cast<uint8_t>(dc.mu);
+            c.rec[0x111 + 4] = static_cast<uint8_t>(dc.old_ranger);
+            c.rec[0x111 + 5] = static_cast<uint8_t>(dc.old_mu);
+            c.rec[0xE6] = 9;
+            c.rec[0x13] = c.rec[0x12] = 15;
+            c.rec[0x74] = 7;
+            memset(c.items[0], 0, sizeof c.items[0]);
+            c.items[0][0x2E] = static_cast<uint8_t>(armour_type);
+            c.items[0][0x34] = 1;
+            c.n_items = 1;
+            const bool got = magic::can_use(c, t, spell);
+            ++n;
+            if (got != dc.want) {
+                ++bad;
+                if (!*first)
+                    snprintf(first, sizeof first, "Champions dual: fighter %d old ranger %d mu %d old mu %d: can %d, want %d", dc.fighter,
+                             dc.old_ranger, dc.mu, dc.old_mu, got, dc.want);
+            }
         }
     }
     expect(P, "the armoured human magic-user in a fight (the can-learn's fight clause)", bad == 0, "%d of %d wrong (%s)", bad, n,
@@ -1462,22 +1660,21 @@ void queen_wrap()
     uint32_t seed = 31337;
     auto rnd = [&](int n) { seed = seed * 1103515245u + 12345u; return static_cast<int>((seed >> 16) % n); };
     auto punct = [](char ch) { return strchr("-.,?!:;", ch) != nullptr; };     // (its strchr: 0 too)
-    int bad = 0, n = 0, edge = 0;
+    int bad = 0, n = 0, edge = 0, fulls = 0;
     char first[160] = "";
     for (int k = 0; k < 3000; ++k) {
-        char s[96] = "";
-        const int words = 1 + rnd(7);
+        char s[400] = "";
+        const int words = 1 + rnd(k % 3 ? 7 : 22);
         for (int w2 = 0; w2 < words; ++w2) {
             if (w2) strcat(s, rnd(8) ? " " : "  ");
             strcat(s, kWords[rnd(sizeof kWords / sizeof kWords[0])]);
         }
         if (rnd(4) == 0) strcat(s, " ");
-        const int row0 = 11 + rnd(4);
+        const int row0 = 11 + rnd(k % 3 ? 4 : 10);
         // the original's loop (0-based; L = the last index)
         C2.clear(0);
         const int L = static_cast<int>(strlen(s)) - 1, x0 = 23, x1 = 38, y1 = 21;
         int col = x0, row = row0, di = 0;
-        bool full = false;
         while (L >= 0 && di <= L) {
             int si = di;
             while (si < L && punct(s[si])) ++si;
@@ -1501,8 +1698,15 @@ void queen_wrap()
                 ++row;
                 while (di <= L && s[di] == ' ') ++di;
                 if (row > y1 && di < L) {
-                    full = true;
-                    break;
+                    // (0xCEEA: a key, the box cleared, the word at its top)
+                    ++fulls;
+                    C2.fill(x0 * 8, row0 * 8, 16 * 8, (y1 + 1 - row0) * 8, 0);
+                    col = x0;
+                    row = row0;
+                    for (; di <= si; ++di, ++col) {
+                        const char one[2] = {s[di], 0};
+                        play::put(C2, one, col, row, 10);
+                    }
                 }
                 continue;
             }
@@ -1512,17 +1716,123 @@ void queen_wrap()
             }
         }
         px2 = px;
-        if (full) continue;
         C.clear(0);
-        play::panel_box_text(C, s, row0, 10, 21, false, true);
+        int cut = -1, from = 0;
+        play::panel_box_text(C, s, row0, 10, 21, false, true, &cut);
+        while (cut >= 0) {                  // (the engine's FSt::More: the key, then the rest)
+            from += cut;
+            C.fill(23 * 8, row0 * 8, 16 * 8, (22 - row0) * 8, 0);
+            play::panel_box_text(C, s + from, row0, 10, 21, false, true, &cut);
+        }
         ++n;
         if (memcmp(px.data(), px2.data(), px2.size()) != 0) {
             ++bad;
             if (!*first) snprintf(first, sizeof first, "\"%s\" from row %d", s, row0);
         }
     }
-    snprintf(w, sizeof w, "the Dark Queen's fight words wrap as its res 0xCD31 (letter by letter; %d words' space just past the box)", edge);
-    expect(P, w, bad == 0 && n > 0 && edge > 0, "%d of %d differ (%s)", bad, n, first);
+    snprintf(w, sizeof w, "the Dark Queen's fight words wrap as its res 0xCD31 (letter by letter; %d words' space just past the box, %d full boxes - 0xCEEA)",
+             edge, fulls);
+    expect(P, w, bad == 0 && n > 0 && edge > 0 && fulls > 0, "%d of %d differ (%s)", bad, n, first);
+}
+
+// The Dark Queen's falls (DQK.EXE 0x25020, the hit: the attacker's name at
+// row 10, "Attacks" 11, the target's name 12, the words from 13; then -
+// no wait between, res 0xB14E at [0xAE4E] + 1, the row after the words'
+// last - the name, "goes down", "and is Dying" a row each; res 0x8F04, a
+// damage text from row 10: the name at the row after its words, "Goes Down"
+// + " and is Dying" (0x19B, "%s and is Dying" 0x1A5) through the box), the
+// rows above kept. Rows read from the canvas: a row "used" when its columns
+// 23-38 have a lit pixel
+bool row_used(int r)
+{
+    for (int y = r * 8; y < r * 8 + 8; ++y)
+        for (int x = 23 * 8; x < 39 * 8; ++x)
+            if (C.get(x, y)) return true;
+    return false;
+}
+void queen_pages()
+{
+    if (game() != 7 || !fight()) return;
+    combat::Battle& b = fg->b;
+    mx::put(0, 0, 10, 10, 60);
+    mx::put(B, 1, 11, 10, 60);
+    auto run = [&](bool hit) {
+        fg->pages = fg->at = 0;
+        fg->ptext_used = 0;
+        fg->page_end = 10;
+        C.fill(23 * 8, 10 * 8, 16 * 8, 12 * 8, 0);
+        b.f[B].rec[0x195] = party::Dying;
+        if (hit) {
+            add_page(0, fw(profile::kAttacksW), "Hitting for 7 points of damage", B);
+            down_page(B, true);
+        } else {
+            add_page(B, "takes 7 points of damage");
+            down_page(B, false);
+        }
+        fg->st = FSt::Pages;
+        show_page(C);
+        const int end1 = fg->page_end;
+        const bool words_kept = row_used(hit ? 13 : 11);
+        show_page(C);
+        const Page& p2 = fg->page[1];
+        std::string l1 = p2.lines > 1 ? page_line(p2, 1) : "";
+        const int end2 = fg->page_end;
+        b.f[B].rec[0x195] = party::Okay;
+        fg->pages = fg->at = 0;
+        fg->ptext_used = 0;
+        fg->st = FSt::Turn;
+        return std::make_tuple(end1, end2, words_kept, l1, row_used(end1), p2.lines);
+    };
+    auto [h1, h2, hk, hl1, hn, hlines] = run(true);
+    // (the hit: 10 name, 11 Attacks, 12 name, 13-14 "Hitting for 7 / points of damage" - "damage" in the box's
+    // last column, so 0xCD31's end moves the row on: [0xAE4E] = 15, the fall from 16)
+    expect(P, "the Dark Queen's fall after a hit: below the hit's words (0x25020) - name, goes down, and is Dying a row each",
+           h1 == 16 && hk && hn && h2 == 19 && hlines == 3, "hit ended %d (want 16), words kept %d, name there %d, fall ended %d (want 19), lines %d",
+           h1, hk, hn, h2, hlines);
+    auto [d1, d2, dk, dl1, dn, dlines] = run(false);
+    char want[64];
+    snprintf(want, sizeof want, "%s%s", fw(profile::kGoesDownS), fw(profile::kGoesDownDyingQ));
+    // (10 name, 11-12 "takes 7 points / of damage"; the fall from 13: name, then "Goes Down and is" / "Dying")
+    expect(P, "the Dark Queen's fall after a damage text (res 0x8F04): below its words, \"Goes Down and is Dying\" as one",
+           d1 == 13 && dk && dn && d2 == 16 && dlines == 2 && dl1 == want && dl1 == std::string("Goes Down and is Dying"),
+           "text ended %d (want 13), kept %d, name %d, fall ended %d (want 16), lines %d, words \"%s\"", d1, dk, dn, d2, dlines, dl1.c_str());
+    // The weapon line's trailing space (res 0x9FDC: every part + " "): a
+    // 15-letter name's space fills the box's last column - the print ends a
+    // row lower, the status (two rows past) at row 10, not 9
+    const int wrow = panel_box_text(C, "Footman's Flail ", 7, 10, 9, false, true) + 1;
+    const int wrow0 = panel_box_text(C, "Footman's Flail", 7, 10, 9, false, true) + 1;
+    expect(P, "the Dark Queen's weapon name ends with a space (res 0x9FDC) - the status row after it", wrow == 10 && wrow0 == 9,
+           "with the space %d, without %d", wrow, wrow0);
+}
+
+// Training's spell list offered at all (read for the Krynn games): a
+// magic-user's new level, or - Champions (GAME.OVR 0x25666: [0x4B58] = 0,
+// creation's own levelling aside) - a ranger past 8th after any training;
+// Death Knights (GAME.OVR 0x199DE, ovl 0x61 +0x49DE) and the Dark Queen
+// (ovl 5 +0x563B): a ranger past 8th whose own level went up. Every pair
+// of levels before / after for magic-user and ranger 7-11
+void train_spell_offer()
+{
+    const int g = game();
+    if (g != 5 && g != 6 && g != 7) return;
+    int bad = 0, n = 0;
+    char first[120] = "";
+    party::Character c = pt->m[0];
+    for (int mb = 0; mb <= 2; ++mb)
+        for (int ma = mb; ma <= mb + 1; ++ma)
+            for (int rb = 7; rb <= 11; ++rb)
+                for (int ra = rb; ra <= rb + 1; ++ra) {
+                    for (int k = 0; k < 8; ++k) c.rec[0x109 + k] = 0;
+                    c.rec[0x109 + 5] = static_cast<uint8_t>(ma);
+                    c.rec[0x109 + 4] = static_cast<uint8_t>(ra);
+                    const bool got = play::train_offers_spell(c, mb, rb);
+                    const bool want = ma > mb || (g == 5 ? ra > 8 : ra > 8 && ra > rb);
+                    ++n;
+                    if (got != want && !bad++)
+                        snprintf(first, sizeof first, "mu %d->%d ranger %d->%d: offered %d, want %d", mb, ma, rb, ra, got, want);
+                }
+    expect(P, "training's spell list offered (a magic-user's level; Champions any ranger past 8th, Death Knights / the Dark Queen a ranger's new level past 8th)",
+           bad == 0, "game %d: %d of %d wrong (%s)", g, bad, n, first);
 }
 
 void run()
@@ -1553,11 +1863,15 @@ void run()
         }
     }
     if (want("use")) using_items();
+    if (want("aiorder")) ai_pending();
+    if (want("aiturn")) ai_turn_types();
+    if (want("trainspell")) train_spell_offer();
     if (want("canuse")) {
         krynn_can();
         armour_can();
     }
     if (want("wrap")) queen_wrap();
+    if (want("qpages")) queen_pages();
     if (want("restore")) restore();
     if (want("rest")) rest();
     rules::set_fixes(true);

@@ -639,6 +639,8 @@ static void run_fight()
                     if (n < 6) { char t[16]; snprintf(t, 16, "fmenu%d", n++); shot(t); }
                     ++turns;
                     if (!tap_word('Q') && tap_word('D')) tap_word('A');     // (Champions: Done's Auto)
+                } else if (play::fg->st == play::FSt::More) {
+                    play::tap(2, 2, C);                     // (the Dark Queen's full box: a key)
                 } else if (play::fg->st == play::FSt::NpcShare) {
                     shot("npc_share");
                     play::tap(2, 2, C);
