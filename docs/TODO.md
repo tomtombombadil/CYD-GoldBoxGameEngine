@@ -1264,21 +1264,49 @@ the Project as claude/TODO.md.
       Knights' fuzz "boot": the save's own opening fight lost while booting
       (the dice) - the fuzzer passes it over. Champions' d8-of-8 limit 2:
       still open (below).
-- [ ] Round 9 left: Champions' coin 0 (record 0xEB, silver, worth 1 - DS
-      0x0F46): its worth (GAME.OVR 0x2A18F), payment (0x2BA47 zeroes it),
-      View, weight and treasure count it; the engine keeps it in an Ext
-      place and leaves it out everywhere. The Dark Queen's Feeblemind
-      ("loses intellect" with a wait, then "lost a spell" at 12 - 0x53F17)
-      and a cloud's damage (0x816B) still lose the spell silently / at the
-      turn; its 0xFF-class spells' caster level (res 0xB4E0's [bp-2] is
-      the caller's stack leftovers - ten callers, not determinable from the
-      code; 12 here). Champions' d8-of-8 limit 2 (its AI's per-fighter roll
-      0x15 not kept). Death Knights' / the Dark Queen's gem and jewel values
-      (no appraise_div - not read). Queen fightfuzz seed 13 fight 26: R10
-      (a guarding white head and a Quick member past round 120) - the same
-      before round 9, not looked into.
+- [x] Round 9 left (done 2026-11-09, round 10 - facts: scratch
+      round10_facts.md, for the Project's claude/rules_round10_facts.md):
+      Champions' coin 0 (record 0xEB, Silver, worth 1 - DS 0x0F46) now the
+      engine's money place 2 (electrum's): worth (GAME.OVR 0x2A18F) and
+      payment (0x2BA47) count / zero it, pooling (0x2BE03), sharing
+      (0x2BF2C, 6 down to 0, weighed as given - 0xB945), a fight's coins
+      (0x63D4) and the NPCs' share (0x798E) move it; the weight's
+      recalculation (0x37484) and View (0x273D2) leave it out (coins 1-6).
+      The counter's coin list (0x2C61C) is the record's order up from
+      coin 0; View's Trade / Drop (0x29D75) jewelry down to copper - both
+      were the engine's 6-0 order (platinum before steel). Its scripts'
+      coin codes 0xBB-0xC3 are the record's 0xEB-0xF3 (0x9330 / 0x96AD) -
+      they read copper / bronze / steel / platinum one place off before.
+      Death Knights' coins: steel 0x3F, gems 0x41, jewelry 0x43 only (no
+      indexed coin code in its GAME.OVR); the Dark Queen's 0x4C-0x50, its
+      weight 0xA971 three - as the engine. economy L1 / K1 (2100), W1 / I1
+      from the record and DS 0x0F46. Appraise: Death Knights' (GAME.OVR
+      0x295A7 / 0x297FD) Champions' halved values - it had Curse's whole;
+      the Dark Queen's (DQK.EXE case tables 0x49D87 / 0x4A03C) the same
+      but its 41-50 jewel 250 + random(1500); oracles/appraise.py, economy
+      G2 (300 a game). The Dark Queen: Feeblemind says "loses intellect"
+      (it said nothing) and loses the spell under way at once ("lost a
+      spell" at 12 - 0x53EDE / 0x53F17); one coughing in a stinking cloud
+      (its save made) loses it too (0x816B; nausea not) - rules4 qlost 7 /
+      8. Champions' computer: combat byte 0x15's dice at each turn's start
+      (0xC5B0-0xC614) kept per fighter, the last die's sides its Turn
+      Undead limit (2 after a d8 of 8) - rules4 aiturn (3584 dice cases,
+      the limit 2). Queen fightfuzz seed 13 fight 26: not a stall - the
+      last member's bow hits the AC -10 white heads only on a 20 and wins
+      near round 150; R10 now reports only fights whose hit points stand
+      still 60 rounds past FIGHTCAP (or past 4 x FIGHTCAP).
+- [ ] Round 10 left: the Dark Queen's to-hit (a 20 always hits, a 1
+      always misses here, every game's rule) not found in DQK.EXE yet; its
+      stinking cloud's coughing is given 1d4 + 1 (the value pushed at
+      0x80F6, as nausea's) - one round here, the parameter's meaning not
+      checked; its Feeblemind effect's number (Facts .feeble 0: no effect
+      kept) and the handler's last loop (0x53F43: every memorized entry
+      still to be memorized, 0x80, cleared - not done), Int / Wis in use
+      set to 3 there (7 here, recalculated to 3); Champions' combat byte
+      0x15 (the "mood") read only for the Turn limit - its other readers
+      not looked for. The 0xFF-class spells' caster level (round 9) stays.
 - [ ] Round 7 left: Treasures' effect 0x3B's handler (none of its items
-      has it). The Dark Queen: its weapon name's trailing space (0x9FDC not
+      has it - round 10 left it: nothing in the game carries it). The Dark Queen: its weapon name's trailing space (0x9FDC not
       read); its fight pages' rows after a hit (each page from row 10 here:
       its print routine 0xB14E takes the row from its 137 callers - the
       damage text 0x8F04 not followed through) and the box's page-full wait

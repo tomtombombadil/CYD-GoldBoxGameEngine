@@ -131,3 +131,18 @@ Round 9 run scripts (kept from scratch, 2026-11-09; logs in $LOGS, default /tmp/
   r4full.sh <bin> <tag> games...              full behave rules4, 3 at a time
   fuzz.sh <bin> <game> <fights> seeds...      fightfuzz, a line a seed (rule breaks, sanitizer errors)
   budgetx.sh                                  budget.sh with the simx binary (logs budx_<game>.log)
+
+Round 10 rules (2026-11-09):
+  oracles/appraise.py <champions|knights|queen> <GAME.OVR | DQK.EXE>   Appraise's gem / jewel value for every d100
+                         from the original's code (GAME.OVR's compare chains; DQK.EXE's two 100-case tables)
+                         -> /tmp/claude-0/bt/oracle_appraise_<game>.txt, read by behave economy G2
+  economy adds: G2 (Krynn: each d100's value), L1 / K1 (Champions' coin lists - the counter's 0-6 up, View's 6-1 -
+                and its scripts' coin codes 0xBB-0xC3), Champions' W1 / I1 from its record (to_krynn) and DS 0x0F46's
+                worths (ONLY=coins for L1 / K1)
+  rules4 adds: qlost 7 / 8 (the Dark Queen's Feeblemind and stinking-cloud coughing lose the spell under way),
+               aiturn (Champions' turn-start dice for every mood and face; the Turn limit 2 after a d8 of 8)
+  fight_check: FCROLLS=1 (each blow's rolls under FCACTLOG), FCACTN=n (how many actions FCACTLOG prints), the AC
+               in each fighter's line; R10 reports a fight past FIGHTCAP only when no hit points changed in 60
+               rounds (or past 4 x FIGHTCAP) - the fuzzer gives up at that point
+  budgetx.sh: SIMBIN=<binary> for another build.
+  Header changes (combat.h's Fighter): REBUILD=1 for every binary, or the objects disagree (a crash in place()).
