@@ -214,11 +214,17 @@ the Project as claude/TODO.md.
       Trade / Drop Esc and a late coin number opened the last shop's
       counter in camp. Open: (2) wands / scrolls / potions' use outside
       fights, poison / disease over a rest, level drain / Restoration,
-      ageing - not checked by rule yet; (3) Darkness's rest isn't
-      reached by the camp fuzzer (0 rests: its own menu words);
-      (4) Champions' Sell / Appraise in its other coins (only steel
-      checked); (5) Curse's plain-armour movement: confirm once in
-      DOSBox (a fighter in chain mail: 9 here, 12 before).
+      ageing - not checked by rule yet. Done 2026-11-09 (round 9): (3)
+      Darkness's save A camps in a town, where its Rest is off the menus
+      (correct); with CFSANCT=1 the camp fuzzer rests (38 rests, clean),
+      and it now leaves the icon editor / Alter soon; (4) Champions'
+      Appraise paid value / 5 platinum and Curse's gem values - its own
+      (GAME.OVR 0x2D21B) are halved (appraise_div 2) and paid in steel
+      (0x2BAE4: room, the rest to the pool) - fixed; economy's Id now
+      puts all its coins in the purse (0x2A18F's worth, 0x2BA47's
+      payment) and G1 checks the steel; (5) Curse's armour movement read
+      in its code (GAME.OVR 0x378C3: plain chain mail 9, +3 only with a
+      plus) - as here, no DOSBox run needed.
 
 - [ ] Money with Game Fixes (Tom, 2026-10-31; SPEC 12 "Money"): done for
       Pool, Curse, Secret, Gateway. Open: (1) Champions' coin worths
@@ -1237,18 +1243,40 @@ the Project as claude/TODO.md.
       (0x199DE, ovl 0x61 +0x49DE) a ranger's own new level past 8th, as the
       Dark Queen (here: any training) - fixed; rules4 trainspell. Both
       skip it while creation levels a new character ([0x4B58] / [0x8C5C]).
-- [ ] Round 8 left: the Dark Queen's "lost a spell" at the hit (B14E row
-      12 with a wait, 0x816B / 0x9106 / 0x2522F) - here only at the turn's
-      start; its other fixed / computed rows ("reflects it!" at 12, "is %s",
-      "breathes %s", "engulfs %s" ...: not followed); an undead target's
-      fall (record 0xC8 & 8: "goes down" / "Goes Down" only, never "is
-      killed") not done; the page-full prompt's place / colour (res 0xD400:
-      D35F(0, 0xB) - row 24 colour 11 here). Champions' d8-of-8 limit 2
-      (its AI's per-fighter roll 0x15 not kept). Death Knights' AI: where
-      its bandaging comes (0x151D, after the spells; here a Quick member
-      bandages first) not compared. Training's spell list condition in
-      PoolRad, Curse, Secret, Gateway, Darkness, Treasures: not read this
-      round (the engine: a magic-user's new level or a ranger past 8th).
+- [x] Round 8 left (done 2026-11-09, round 9 - facts in the Project's
+      claude/round9_facts.md): training's spell list read in every DAX
+      game (GAME.OVR: Curse 0x25534, Secret 0x22837, Gateway 0x2BEFC,
+      Darkness 0x18DF6, Treasures 0x1E6E7 - a magic-user's new level or
+      any training of a ranger past 8th, as here; PoolRad 0x1C8DE: a
+      magic-user's new level only - fixed; rules4 trainspell on all
+      nine). The Dark Queen: "lost a spell" now at the hurt (row 12, its
+      wait clearing the box; after a blow 0x2522F the fall at the blow's
+      end, after a damage text 0x9106 below it; the spell marked spent,
+      nothing at the turn); "reflects it!" at 12 under the gaze, "engulfs
+      %s" / "constricts %s" at 12 on a blank box (their words were missing
+      from its table - added); an undead's fall (record 0xC8 & 8) "goes
+      down" / "Goes Down" only; the full box's key is the prompt box
+      "Press [Return] to continue." (res 0xD400 -> 0xE645, its arguments
+      unused) - rules4 qlost (6 checks). Death Knights' / the Dark Queen's
+      bandaging: in the move-and-attack step after morale, items, the
+      pending spell, Turn, spells (GAME.OVR 0xAEE7 +0x3C - 0x151D was the
+      weapon choice; DQK.EXE 0x2E94D) - fixed; rules4 bandorder. Death
+      Knights' fuzz "boot": the save's own opening fight lost while booting
+      (the dice) - the fuzzer passes it over. Champions' d8-of-8 limit 2:
+      still open (below).
+- [ ] Round 9 left: Champions' coin 0 (record 0xEB, silver, worth 1 - DS
+      0x0F46): its worth (GAME.OVR 0x2A18F), payment (0x2BA47 zeroes it),
+      View, weight and treasure count it; the engine keeps it in an Ext
+      place and leaves it out everywhere. The Dark Queen's Feeblemind
+      ("loses intellect" with a wait, then "lost a spell" at 12 - 0x53F17)
+      and a cloud's damage (0x816B) still lose the spell silently / at the
+      turn; its 0xFF-class spells' caster level (res 0xB4E0's [bp-2] is
+      the caller's stack leftovers - ten callers, not determinable from the
+      code; 12 here). Champions' d8-of-8 limit 2 (its AI's per-fighter roll
+      0x15 not kept). Death Knights' / the Dark Queen's gem and jewel values
+      (no appraise_div - not read). Queen fightfuzz seed 13 fight 26: R10
+      (a guarding white head and a Quick member past round 120) - the same
+      before round 9, not looked into.
 - [ ] Round 7 left: Treasures' effect 0x3B's handler (none of its items
       has it). The Dark Queen: its weapon name's trailing space (0x9FDC not
       read); its fight pages' rows after a hit (each page from row 10 here:

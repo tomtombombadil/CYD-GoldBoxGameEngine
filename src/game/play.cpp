@@ -8243,18 +8243,22 @@ void appraise_key(char k, pic::Canvas& c)
             it[0x3B] = static_cast<uint8_t>(appraised >> 8);
             rules::add_item(ch, it);
         } else if (k == 'S' || k == 'K') {
-            const int plat = dk_ui() ? appraised : appraised / 5;     // (Darkness: the value in platinum)
+            // (Darkness: the value in platinum; Champions: the value in steel
+            // - its appraise GAME.OVR 0x2D735 -> 0x2BAE4: steel + what the
+            // seller has room for, the rest the pool's steel, "Overloaded")
+            const int coin = champions_money() ? 3 : 4;
+            const int plat = dk_ui() || champions_money() ? appraised : appraised / 5;
             const int room = rules::max_load(ch) - ch.encumbrance();
             if (plat > room) {
-                add_coins(ch, 4, room > 0 ? room : 0);
-                ground->money[4] += plat - (room > 0 ? room : 0);
+                add_coins(ch, coin, room > 0 ? room : 0);
+                ground->money[coin] += plat - (room > 0 ? room : 0);
                 char t[44];
                 sw(profile::kOverPool, t, sizeof t);
                 note(c, t);
             } else {
-                add_coins(ch, 4, plat);
+                add_coins(ch, coin, plat);
             }
-            if (coin_fix() && appraised % 5) {
+            if (coin_fix() && !champions_money() && appraised % 5) {
                 // (Game Fixes: the odd gold too - the original drops it)
                 if (ch.encumbrance() + 1 <= rules::max_load(ch)) add_coins(ch, 3, appraised % 5);
                 else ground->money[3] += appraised % 5;

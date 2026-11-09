@@ -309,9 +309,29 @@ void identify()
         set_money(c, coin, have);
         if (rn(3) == 0) ground->money[coin] = rn(3) ? unit + rn(50) : rn(unit);
         if (!dk_ui() && !krynn() && rn(3) == 0) set_money(c, 1, rn(500));      // (silver: the worth rounds)
+        // (Champions: its other coins too, half the time - copper, bronze,
+        // platinum in the engine's copper / silver / platinum places)
+        const bool champ = krynn() && !dk_ui();
+        if (champ && rn(2)) {
+            set_money(c, 0, rn(300));
+            set_money(c, 1, rn(300));
+            set_money(c, 4, rn(200));
+            if (rn(2)) {
+                ground->money[0] = rn(300);
+                ground->money[1] = rn(300);
+                ground->money[4] = rn(200);
+            }
+        }
         rules::recalc(c, *names, d->facts);
         const long w0 = worth(c), g0 = worth(ground->money);
         const int own0 = c.money(coin), ctr0 = ground->money[coin];
+        // Champions' worth in steel (GAME.OVR 0x2A18F: each coin x its worth
+        // from DS 0x0F46 - copper 5, bronze 10, platinum 25, steel 50 - summed,
+        // / steel's 50, rounded down); its payment (0x2BA47): every coin 0,
+        // the steel the worth less the price
+        auto steel_worth = [](const int* m) { return static_cast<int>((m[0] * 5L + m[1] * 10L + m[4] * 25L + m[3] * 50L) / 50); };
+        int om[7], gm[7];
+        for (int i = 0; i < 7; ++i) om[i] = c.money(i), gm[i] = ground->money[i];
         screen = Screen::Items;
         view_from = Screen::Shop;
         identify_item(0, C);
@@ -320,6 +340,21 @@ void identify()
         items_after_note = false;
         ++cases;
         const bool known = dk_ui() ? !(c.items[0][0x35] & 7) : c.items[0][0x35] == 0;
+        if (champ && !coin_fix()) {
+            const int ow = steel_worth(om), gw = steel_worth(gm);
+            const bool can = ow >= cost || gw >= cost;
+            int* pay = ow >= cost ? om : gw >= cost ? gm : nullptr;
+            if (pay) {
+                const int left = (ow >= cost ? ow : gw) - cost;
+                for (int i = 0; i < 5; ++i) pay[i] = i == 3 ? left : 0;
+            }
+            bool same = known == can;
+            for (int i = 0; i < 5; ++i) same = same && c.money(i) == om[i] && ground->money[i] == gm[i];
+            if (!same)
+                bad("I1 Id's price (Champions: all its coins' worth in steel)", "worth %d own / %d counter, price %d: steel %d / %d, copper %d, known %d; the program's steel %d / %d (%d)",
+                    ow, gw, cost, c.money(3), ground->money[3], c.money(0), known, om[3], gm[3], can);
+            continue;
+        }
         if (dk_ui() || krynn()) {
             const bool can = own0 >= cost || (dk_ui() ? own0 + ctr0 >= cost : ctr0 >= cost);
             int want_own = own0, want_ctr = ctr0;
@@ -558,10 +593,24 @@ void appraise()
             continue;
         }
         const bool keep = rn(2) && c.n_items < party::kMaxItems;
+        const int steel0 = c.money(3), pool0 = ground->money[3], plat0 = c.money(4), load0 = c.encumbrance();
         appraise_key(keep ? 'K' : 'S', C);
         note_until = 0;
         if (keep && c.n_items == n0 + 1) {
             if (u16(c.items[n0] + 0x3A) != v) bad("G1 kept: an item of its value", "%d, valued %d", u16(c.items[n0] + 0x3A), v);
+            continue;
+        }
+        if (krynn() && !dk_ui()) {
+            // Champions (GAME.OVR 0x2D735 -> 0x2BAE4): the value in steel - the
+            // seller's room's worth (0x2B95F: its load + the coins past what
+            // it may carry: the room left, 0 when past it already), the rest
+            // the pool's steel; its gem values 5 25 50 250 500 2500 (0x2D4F1)
+            const int room = std::max(0, rules::max_load(c) - load0);
+            const int to_own = v > room ? room : v;
+            const bool val_ok = jewel || v == 5 || v == 25 || v == 50 || v == 250 || v == 500 || v == 2500;
+            if (c.money(3) - steel0 != to_own || ground->money[3] - pool0 != v - to_own || !val_ok || c.money(4) != plat0)
+                bad("G1 sold (Champions: steel)", "valued %d room %d: steel +%d (pool +%d) platinum %d -> %d; the program's +%d (+%d)%s", v, room,
+                    c.money(3) - steel0, ground->money[3] - pool0, plat0, c.money(4), to_own, v - to_own, val_ok ? "" : ", not one of its gem values");
             continue;
         }
         const long got = worth(c) + worth(ground->money) - w0;

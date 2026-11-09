@@ -2279,6 +2279,12 @@ constexpr auto kQueenFight = [] {
     // "goes down" is 0x5B8B - and "%s and is Dying" 0x1A5)
     f.words[kGoesDownS] = qw(0x19B);
     f.words[kGoesDownDyingQ] = qw(0x1A5);
+    // (its gaze sent back, "reflects it!" 0x8373; "engulfs %s" 0x84E7,
+    // "constricts %s" 0x85F8 - the target's name after them: DQK.EXE
+    // 0x4EAEF, 0x5181C, 0x529E9)
+    f.words[kReflects] = qw(0x8373);
+    f.words[kEngulfs] = qw(0x84E7);
+    f.words[kConstrictsGw] = qw(0x85F8);
     // (the effects a fight's end takes away: Death Knights' list)
     const uint8_t ends[16] = {0x03, 0x06, 0x0B, 0x15, 0x17, 0x1B, 0x1E, 0x1F, 0x23, 0x34, 0x35, 0x4D, 0x6A, 0x6B, 0x6F, 0x76};
     for (int i = 0; i < 16; ++i) f.ends[i] = ends[i];
@@ -3059,7 +3065,9 @@ const Profile kProfiles[] = {
      .door = {0x1A11B, 0x1A120, 0x1A126, 0x73FA, 0x1A133, 0x1F},
      .won = {},
      .variant = {.program_words = true, .bars = {20, 23, 24, 25, 20, 23, 24, 25},
-                 .bigpic_from = 0x70, .fight_unswapped = true, .party_menu_col = 9, .krynn = true, .shop_words_stay = true,
+                 // (appraise_div 2: its gems 5 25 50 250 500 2500 steel, its jewels
+                 // half Curse's - GAME.OVR 0x2D4F1 / 0x2D772)
+                 .bigpic_from = 0x70, .appraise_div = 2, .fight_unswapped = true, .party_menu_col = 9, .krynn = true, .shop_words_stay = true,
                  .press_words = {0x1A8E, 0x1AB2}, .order_words = {0x26DB3, 0x26DC1, 0x26DCF},
                  .yell_words = {0xB5DE, 0x33FBF},
                  .burst_words = {0x1248C, 0x12496, 0x1299C}, .acid_words = {0x12C0A, 0x1387E},

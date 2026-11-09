@@ -753,6 +753,10 @@ struct Page {
     uint8_t weapon = 0;                 // Darkness's Kalistes: its blow's weapon + "+4" in the panel's rows 7-9
     uint8_t names = 0;                  // the lines that are names (bit k: printed as they are, a row each)
     bool    cont = false;               // goes on below the page before (its rows kept), as the originals' fall after a hit
+    int8_t  row = 0;                    // its first row when not 10 (the Dark Queen's res 0xB14E rows: "lost a spell", "reflects it!" at 12)
+    bool    clears = false;             // its wait clears 10-21 (res 0xB14E's wait: 0xB245) - a page going on after it starts on a blank box
+    bool    blank = false;              // its own row on a blank box (the page before it cleared at its end)
+    bool    keep_end = false;           // a page after it goes on below the page before it (DQK.EXE 0x25020's fall row)
     int     lines = 0;
     uint8_t sound = 0;                  // the game's sound effect as it shows (0: none)
     Fx      fx[2];                      // then these, one after the other; then the page's wait
@@ -1850,6 +1854,10 @@ void add_page(int who, const char* a, const char* b2 = nullptr, int whom = -1, c
     p.weapon = 0;
     p.names = 0;
     p.cont = fg->cont_next;
+    p.row = 0;
+    p.clears = false;
+    p.blank = false;
+    p.keep_end = false;
     fg->cont_next = false;
     p.fx[0] = p.fx[1] = Fx{};
     auto line = [&](const char* s, uint8_t col) {
@@ -2232,9 +2240,12 @@ void show_page(pic::Canvas& c)
     // (The Dark Queen's: res 0xB14E - the name at the row, the words through
     // its boxed print 0xCD31 from the next; a fall goes on at the row after
     // the hit's / damage text's last, DQK.EXE 0x25020 / res 0x8F04)
-    int row = 10;
+    // (a page after the Dark Queen's "lost a spell" - its own row, its wait
+    // clearing 10-21, res 0xB245 - goes on at the row kept, the box blank)
+    int row = p.row ? p.row : 10;
+    const bool after_own_row = fg->at >= 2 && fg->page[fg->at - 2].clears;
     if (p.cont && fg->page_end > 10 && fg->page_end <= 21) row = fg->page_end;
-    clear_panel(c, row, 21);
+    clear_panel(c, (p.cont && after_own_row) || p.blank ? 10 : row, 21);
     page_lines(c, 0, 0, row);
 }
 
@@ -2261,13 +2272,15 @@ void page_lines(pic::Canvas& c, int k0, int from, int row)
                 fg->more_top = static_cast<int8_t>(top);
                 fg->st = FSt::More;
                 fg->until = 0;
-                clear_menu_line(c);
-                put(c, d->press_key, 0, text::kMenuRow, 11);
+                // (res 0xD400 -> 0xD35F -> 0xE6C1 -> 0xE645: its arguments
+                // unused - the prompt box's "Press [Return] to continue." at
+                // row 24, as press_line draws it)
+                press_line(c, 11);
                 return;
             }
         }
     }
-    fg->page_end = static_cast<int8_t>(row < 10 ? 10 : row > 22 ? 22 : row);
+    if (!p.keep_end) fg->page_end = static_cast<int8_t>(row < 10 ? 10 : row > 22 ? 22 : row);
     if (fg->rolls && opts.rolls) show_rolls(c, fg->rolls->page[fg->at - 1], row);
     fg->fx_at = 0;
     page_fx(c);
@@ -2376,11 +2389,13 @@ void damage_text(int amount, int kind, char* t, size_t cap);
 void q_fall(int who, combat::Down dn)
 {
     fg->cont_next = fg->pages > 0 && !fg->page_dropped;
-    if (dn == combat::Down::Dead) {
+    // (record 0xC8 & 8 - the undead -: "Goes Down" whatever the status, res
+    // 0x8F04 0x9157)
+    if (dn == combat::Down::Dead && !(fg->b.f[who].flags2 & 8)) {
         add_page(who, fw(profile::kIsKilled));
         return;
     }
-    if (dn != combat::Down::Dying) {
+    if (dn != combat::Down::Dying || (fg->b.f[who].flags2 & 8)) {
         add_page(who, fw(profile::kGoesDownS));
         return;
     }
@@ -2388,6 +2403,31 @@ void q_fall(int who, combat::Down dn)
     char t[48];
     snprintf(t, sizeof t, "%s%s", fw(profile::kGoesDownS), fw(profile::kGoesDownDyingQ));
     add_page(who, t);
+}
+
+// The Dark Queen: a caster hurt with a spell under way loses it at once -
+// after a blow's page (DQK.EXE 0x2522F) or a damage text's (0x9106): res
+// 0xB14E(target, "lost a spell", row 12, wait), the memorized spell marked
+// spent (res 0xAF26), the spell gone - nothing at its turn. After a blow the
+// fall goes on at the row after the blow's words (0x251F2: kept before);
+// after a damage text, below "lost a spell" (0x91B4: [0xAE4E] + 1).
+// Returns whether its page was added.
+void forget_spell(combat::Fighter& f, int sp);
+bool q_lost_spell(int who, bool after_blow)
+{
+    if (!hl()) return false;
+    combat::Fighter& f = fg->b.f[who];
+    if (!f.spell || f.can_cast) return false;
+    if (!f.spell_n) forget_spell(f, f.spell);
+    f.spell = 0;
+    f.spell_n = 0;
+    add_page(who, fw(profile::kLostSpell));
+    if (fg->page_dropped) return false;
+    Page& p = fg->page[fg->pages - 1];
+    p.row = 12;
+    p.clears = true;
+    p.keep_end = after_blow;
+    return true;
 }
 
 void down_page(int t, bool after_hit = false)
@@ -2405,6 +2445,7 @@ void down_page(int t, bool after_hit = false)
     // 0xB14E at the row after the hit's words; after a damage text: q_fall)
     fg->cont_next = after_hit;
     if (hl() && !after_hit) q_fall(t, dn);
+    else if (hl() && (fg->b.f[t].flags2 & 8)) add_page(t, fw(profile::kGoesDown));   // (DQK.EXE 0x2528C: the undead)
     else if (dn == combat::Down::Dead && after_hit) add_page(t, fw(profile::kGoesDown), nullptr, t, fw(profile::kIsKilled));
     else if (dn == combat::Down::Dead) add_page(t, fw(profile::kIsKilled));
     else if (dn == combat::Down::Dying) add_page(t, fw(profile::kGoesDown), fw(profile::kIsDying));
@@ -2677,10 +2718,13 @@ void event_page(const combat::Event& e)
 {
     const int before = fg->pages;
     event_words(e);
-    if (!fg->rolls || fg->pages == before) return;
-    page_roll(take_roll(combat::RollKind::Save, e.who, 0xFE));
-    if (e.ev == combat::Ev::Damage || e.ev == combat::Ev::Unaffected)
-        page_roll(take_roll(combat::RollKind::Damage, e.who, 0xFF));
+    if (fg->rolls && fg->pages != before) {
+        page_roll(take_roll(combat::RollKind::Save, e.who, 0xFE));
+        if (e.ev == combat::Ev::Damage || e.ev == combat::Ev::Unaffected)
+            page_roll(take_roll(combat::RollKind::Damage, e.who, 0xFF));
+    }
+    // (the Dark Queen: a caster hurt loses the spell under way - res 0x8F04)
+    if (e.ev == combat::Ev::Damage && fg->pages != before) q_lost_spell(e.who, false);
 }
 void event_words(const combat::Event& e)
 {
@@ -2704,6 +2748,14 @@ void event_words(const combat::Event& e)
                                                          : profile::kConstrictsGw;
         snprintf(t, sizeof t, "%s%s", fw(w), nm);
         add_page(who, t);
+        // (the Dark Queen's "engulfs %s" / "constricts %s": res 0xB14E at row
+        // 12 with a wait - DQK.EXE 0x5181C / 0x529E9 -, after the blow's
+        // page, whose end cleared the box - 0x25330)
+        if (hl() && !fg->page_dropped && (e.ev == combat::Ev::Engulfs || e.ev == combat::Ev::Constricts)) {
+            Page& p = fg->page[fg->pages - 1];
+            p.row = 12;
+            p.clears = p.blank = true;
+        }
         break;
     }
     case combat::Ev::BreathesAcid: said(profile::kBreathesAcid); break;
@@ -2752,7 +2804,12 @@ void event_words(const combat::Event& e)
     case combat::Ev::Poisoned: said(profile::kIsPoisoned); break;
     case combat::Ev::Paralyzed: said(profile::kIsParalyzedC); break;
     case combat::Ev::ParalyzedLow: said(profile::kIsParalyzedL); break;
-    case combat::Ev::Reflects: said(profile::kReflects); break;
+    case combat::Ev::Reflects:
+        said(profile::kReflects);
+        // (the Dark Queen's: at row 12 under the gaze's page, no wait between -
+        // DQK.EXE 0x4EAEF / 0x4FBB7 / 0x59958)
+        if (hl() && !fg->page_dropped) fg->page[fg->pages - 1].row = 12;
+        break;
     case combat::Ev::Stoned: fallen(profile::kIsStonedR); break;
     case combat::Ev::GazeStoned: fallen(profile::kIsStonedG); break;
     case combat::Ev::Disintegrated: fallen(profile::kIsDisint); break;
@@ -2967,6 +3024,8 @@ void attack_pages(int a, int t, const combat::Attack& at, bool behind, bool shot
         page_roll(take_roll(combat::RollKind::Damage, t, k));
         hit_page();
         // What the hit did besides (poison, paralysis, a touch's damage, engulfing ...)
+        // (the Dark Queen: the blow's page, then "lost a spell" - DQK.EXE 0x2522F)
+        if (dmg > 0 && hit_pg >= 0 && q_lost_spell(t, true)) hit_pg = fg->pages - 1;
         for (int j = 0; j < at.n_ev; ++j)
             if (at.ev[j].hit == k) event_page(at.ev[j]);
     }
@@ -4385,18 +4444,23 @@ void ai_step(pic::Canvas& c)
     const int i = fg->cur;
     combat::Fighter& f = b.f[i];
     // Quick party members bandage a dying friend first (at the turn's start)
-    // (a spell begun earlier goes first, as it did at the turn's start)
-    if (!f.team() && !fg->ai_checked && !fg->flee_told && !f.spell && combat::anyone_dying(b)) {
+    // (a spell begun earlier goes first, as it did at the turn's start).
+    // Death Knights and the Dark Queen: later - in the move-and-attack step,
+    // after morale, items, the pending spell, Turn, spells and the weapon
+    // (below: GAME.OVR 0xAF23 in 0xAEE7; DQK.EXE 0x2E98B in 0x2E94D)
+    auto bandage_now = [&]() {
         if (combat::anyone_dying(b)) CYD_TEST_ACT(b, i, Bandage, -1, 0);
         const int k = combat::bandage(b);
-        if (k >= 0) {
-            add_page(k, fw(profile::kBandaged));
-            f.delay = 0;
-            say(c, FSt::Next);            // (the turn is over: not an attack)
-            fg->cur = i;
-            return;
-        }
-    }
+        if (k < 0) return false;
+        add_page(k, fw(profile::kBandaged));
+        f.delay = 0;
+        say(c, FSt::Next);                // (the turn is over: not an attack)
+        fg->cur = i;
+        return true;
+    };
+    const bool late_bandage = dkk() || hl();
+    if (!late_bandage && !f.team() && !fg->ai_checked && !fg->flee_told && !f.spell && combat::anyone_dying(b) && bandage_now())
+        return;
     // Morale (monsters, NPCs), once a turn (flee_told: done)
     if (!fg->ai_checked && !fg->flee_told) {
         // The holds it had (engulfing, hugging) let go, as the original does
@@ -4585,6 +4649,13 @@ void ai_step(pic::Canvas& c)
         // A bow with an enemy next to them: another weapon, and the turn is over
         if (ai_ready_weapon(i)) draw_panel_for(c, i);
         end_turn(c);
+        return;
+    }
+    // (Death Knights / the Dark Queen: a party member with moves left and a
+    // foe to go for bandages a dying friend - its moves then 0, the turn over;
+    // GAME.OVR 0xAEE7 +0x3C, DQK.EXE 0x2E94D +0x3B - each step it takes)
+    if (late_bandage && !f.team() && f.moves > 0 && combat::anyone_dying(b) && combat::standing(b, 1) && bandage_now()) {
+        f.moves = 0;
         return;
     }
     const combat::Plan p = combat::think(b, fg->t, i, rng);
@@ -5989,6 +6060,8 @@ void spell_pages(int caster, const combat::SpellLine* l, int n, const combat::Fi
                 fg->page[before].fx[0] = e;
             }
         }
+        // (the Dark Queen: a caster hurt loses the spell under way - res 0x8F04)
+        if (l[k].did == combat::Did::Damage && fg->pages > before) q_lost_spell(l[k].who, false);
     }
 }
 

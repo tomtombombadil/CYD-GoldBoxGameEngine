@@ -2,7 +2,7 @@
 // -DBEHAVE_MATRIX - its cleared field and plain fighters; any game: GAME,
 // BOOTSLOT, MAREA / MBLOCK, FIGHTAT as the fuzzer's; ONLY= table, turn,
 // former, restore, rest, haste, moons, caster, learn, use, aiorder, canuse,
-// wrap, qpages, aiturn, trainspell). Expectations from the originals'
+// wrap, qpages, qlost, aiturn, bandorder, trainspell). Expectations from the originals'
 // code (rules_round4_facts.md in the Project: the turn routines of Curse's
 // listing ovr014:1228, Gateway's GAME.OVR 0x17455, Champions' 0x16021, the
 // Krynn moons' 0x3911F / 0x34E8C / 0x30E0B) and coab's facts (cast_restore,
@@ -1172,6 +1172,63 @@ void ai_turn_types()
            bad == 0 && turned_n > 0, "game %d: %d of %d wrong (%s)", g, bad, n, first);
 }
 
+// Death Knights' / the Dark Queen's bandaging comes late in the computer's
+// turn: in its move-and-attack step (GAME.OVR 0xAEE7 +0x3C; DQK.EXE 0x2E94D
+// +0x3B), after the morale test, items, the pending spell, Turn Undead
+// (0xA46C / 0x2E078) and spells - a Quick cleric next to an undead foe turns
+// it, the dying friend left; with nothing else to do it bandages (moves
+// then 0)
+void ai_bandage_order()
+{
+    const int g = game();
+    if ((g != 6 && g != 7) || !play::fg->t.turn_known || !fight()) return;
+    combat::Battle& b = fg->b;
+    if (b.party_size < 2) {
+        expect(P, "Death Knights / the Dark Queen: bandaging after Turn Undead (two party members)", false);
+        return;
+    }
+    auto setup = [&](int type) {
+        fight();
+        combat::Battle& b = fg->b;          // (a new fight: its own battle)
+        mx::put(0, 0, 10, 10, 60);
+        mx::put(1, 0, 9, 10, 60);
+        mx::put(B, 1, 11, 10, 60);
+        for (int k = B + 1; k < b.n; ++k) b.f[k].size = 0;
+        for (int k = 2; k < b.party_size; ++k) b.f[k].size = 0;
+        combat::occupancy(b);
+        levels(0, {{0, 5}});
+        combat::Fighter& f = b.f[0];
+        f.rec[0x15] = f.rec[0x14] = 16;
+        f.quick = true;
+        f.n_items = 0;
+        f.spell = 0;
+        f.can_cast = false;
+        f.fleeing = false;
+        f.moves = 12;
+        b.f[1].rec[0x195] = party::Dying;
+        b.f[B].rec[0xE9] = static_cast<uint8_t>(type);
+        b.undead_loaded = 2;
+        fg->cur = 0;
+        fg->ai_checked = false;
+        fg->flee_told = false;
+        fg->use_item = -1;
+        fg->pages = fg->at = 0;
+        fg->ptext_used = 0;
+        ai_step(C);
+        const bool turned = f.undead_turns > 0, dying = b.f[1].rec[0x195] == party::Dying;
+        b.f[B].rec[0xE9] = 0;
+        b.f[1].rec[0x195] = party::Okay;
+        fg->pages = fg->at = 0;
+        fg->ptext_used = 0;
+        fg->st = FSt::Turn;
+        return std::make_pair(turned, dying);
+    };
+    const auto [t1, d1] = setup(1);     // (a skeleton next to it)
+    const auto [t0, d0] = setup(0);     // (no undead: nothing to turn)
+    expect(P, "Death Knights / the Dark Queen: a Quick cleric turns the undead before bandaging (0xAEE7 / 0x2E94D); with no undead it bandages",
+           t1 && d1 && !t0 && !d0, "game %d: undead - turned %d, friend still dying %d; none - turned %d, still dying %d", g, t1, d1, t0, d0);
+}
+
 void treasures_fight_items()
 {
     std::vector<uint8_t> ovr;
@@ -1805,6 +1862,167 @@ void queen_pages()
            "with the space %d, without %d", wrow, wrow0);
 }
 
+// The Dark Queen's "lost a spell" (round 9): a caster hurt with a spell under
+// way loses it on the spot - res 0xB14E(target, "lost a spell", 12, wait)
+// after a blow's page (DQK.EXE 0x2522F: the rows above 12 kept, its wait
+// clearing 10-21; the fall then at the row after the blow's words, kept at
+// 0x251F2, on a blank box) or a damage text's (0x9106: the fall at [0xAE4E]
+// + 1 - the row after "lost a spell"); nothing left for its turn. The
+// undead (record 0xC8 & 8): "goes down" / "Goes Down" only (0x2528C,
+// 0x9157). "reflects it!" at row 12 under the gaze's page (0x4EAEF), "engulfs
+// %s" at 12 on a blank box (0x5181C). The full box's key: res 0xD400 ->
+// 0xE645, the prompt box "Press [Return] to continue." (press_line)
+void queen_lost()
+{
+    if (game() != 7 || !fight()) return;
+    combat::Battle& b = fg->b;
+    mx::put(0, 0, 10, 10, 60);
+    mx::put(B, 1, 11, 10, 60);
+    auto reset = [&]() {
+        fg->pages = fg->at = 0;
+        fg->ptext_used = 0;
+        fg->page_end = 10;
+        fg->st = FSt::Turn;
+        fg->fx_redraw = false;
+        C.fill(0, 0, pic::kScreenW, pic::kScreenH, 0);
+    };
+    // (a page shown; its pictures' field redraw left out - the panel's rows only)
+    auto show = [&]() {
+        fg->fx_redraw = false;
+        show_page(C);
+        fg->fx_redraw = false;
+    };
+    // (a row used: a pixel in columns 23-38 not the box's own colour - its
+    // clear is the paper colour, grey, not black)
+    auto rows = [&]() {
+        const uint8_t blank = C.paper >= 0 ? static_cast<uint8_t>(C.paper) : 0;
+        uint32_t m = 0;
+        for (int r = 10; r <= 21; ++r)
+            for (int y = r * 8; y < r * 8 + 8 && !(m >> r & 1); ++y)
+                for (int x = 23 * 8; x < 39 * 8; ++x)
+                    if (C.get(x, y) != blank) {
+                        m |= 1u << r;
+                        break;
+                    }
+        return m;
+    };
+    auto casting = [&]() {
+        b.f[B].spell = 0x0E;
+        b.f[B].spell_n = 0;
+        b.f[B].can_cast = false;
+    };
+    // (rows as bits; the blow: 10 name, 11 Attacks, 12 name, 13-14 words - ends 15, the fall from 16)
+    auto R = [](int a, int z) { uint32_t m = 0; for (int r = a; r <= z; ++r) m |= 1u << r; return m; };
+    // 1. after a blow, the target dying
+    reset();
+    casting();
+    b.f[B].rec[0x195] = party::Dying;
+    add_page(0, fw(profile::kAttacksW), "Hitting for 7 points of damage", B);
+    const bool got = q_lost_spell(B, true);
+    down_page(B, true);
+    const int pages = fg->pages;
+    fg->st = FSt::Pages;
+    show();
+    show();
+    const uint32_t m2 = rows();
+    const std::string l2 = page_line(fg->page[1], 1);
+    show();
+    const uint32_t m3 = rows();
+    expect(P, "the Dark Queen: \"lost a spell\" after the blow (0x2522F) - row 12 under the blow's first rows, the fall at the blow's end on a blank box, the spell gone",
+           got && pages == 3 && l2 == fw(profile::kLostSpell) && m2 == (R(10, 11) | R(12, 13)) && m3 == R(16, 18) && b.f[B].spell == 0,
+           "added %d, pages %d, \"%s\", rows after it %x (want %x), after the fall %x (want %x), spell %d", got, pages, l2.c_str(), m2,
+           R(10, 13), m3, R(16, 18), b.f[B].spell);
+    // 2. after a damage text, the target dying
+    reset();
+    casting();
+    add_page(B, "takes 7 points of damage");
+    const bool got2 = q_lost_spell(B, false);
+    down_page(B, false);
+    fg->st = FSt::Pages;
+    show();
+    show();
+    const uint32_t d2 = rows();
+    show();
+    const uint32_t d3 = rows();
+    // (10 name, 11-12 the damage; 12 name, 13 "lost a spell" - [0xAE4E] 13; the fall from 14: name, "Goes Down and is" / "Dying")
+    expect(P, "the Dark Queen: \"lost a spell\" after a damage text (0x9106) - row 12, the fall at the row after it (0x91B4) on a blank box",
+           got2 && d2 == R(10, 13) && d3 == R(14, 16) && b.f[B].spell == 0, "added %d, rows %x (want %x), fall %x (want %x), spell %d", got2, d2,
+           R(10, 13), d3, R(14, 16), b.f[B].spell);
+    // 3. no spell under way, or not hurt: nothing; not the Dark Queen's rule elsewhere (fire_pending)
+    reset();
+    b.f[B].spell = 0x0E;
+    b.f[B].can_cast = true;
+    const bool none1 = !q_lost_spell(B, true);
+    b.f[B].spell = 0;
+    b.f[B].can_cast = false;
+    const bool none2 = !q_lost_spell(B, true);
+    expect(P, "the Dark Queen: no \"lost a spell\" page without a spell under way or a hurt", none1 && none2 && fg->pages == 0,
+           "unhurt %d, no spell %d, pages %d", none1, none2, fg->pages);
+    // 4. the undead: "goes down" / "Goes Down" whatever the status
+    const uint8_t f2 = b.f[B].flags2;
+    b.f[B].flags2 = static_cast<uint8_t>(f2 | 8);
+    b.f[B].rec[0x195] = party::Dead;
+    reset();
+    add_page(0, fw(profile::kAttacksW), "Hitting for 7 points of damage", B);
+    down_page(B, true);
+    const std::string u1 = fg->pages == 2 && fg->page[1].lines == 2 ? page_line(fg->page[1], 1) : "?";
+    reset();
+    add_page(B, "takes 7 points of damage");
+    down_page(B, false);
+    const std::string u2 = fg->pages == 2 && fg->page[1].lines == 2 ? page_line(fg->page[1], 1) : "?";
+    b.f[B].flags2 = f2;
+    reset();
+    add_page(B, "takes 7 points of damage");
+    down_page(B, false);
+    const std::string u3 = fg->pages == 2 ? page_line(fg->page[1], fg->page[1].lines - 1) : "?";
+    b.f[B].rec[0x195] = party::Okay;
+    expect(P, "the Dark Queen: an undead's fall (record 0xC8 & 8) - \"goes down\" after a blow (0x2528C), \"Goes Down\" after a damage text (0x9157); others \"is killed\"",
+           u1 == fw(profile::kGoesDown) && u2 == fw(profile::kGoesDownS) && u3 == fw(profile::kIsKilled), "\"%s\", \"%s\", others \"%s\"",
+           u1.c_str(), u2.c_str(), u3.c_str());
+    // 5. "reflects it!" at row 12, the gaze's rows kept; "engulfs" at 12 on a blank box
+    reset();
+    add_page(0, fw(profile::kGazes));
+    combat::Event e{};
+    e.ev = combat::Ev::Reflects;
+    e.who = B;
+    e.to = -1;
+    event_words(e);
+    e.ev = combat::Ev::Engulfs;
+    e.who = 0;
+    e.to = B;
+    event_words(e);
+    fg->st = FSt::Pages;
+    show();
+    show();
+    const uint32_t r2 = rows();
+    show();
+    const uint32_t r3 = rows();
+    expect(P, "the Dark Queen: \"reflects it!\" at row 12 under the gaze's rows (0x4EAEF), \"engulfs %s\" at 12 on a blank box (0x5181C)",
+           r2 == R(10, 13) && (r3 & R(10, 13)) == R(12, 13), "reflects %x (want %x), engulfs %x (want rows 12-13 used, 10-11 blank: %x); words \"%s\" \"%s\" \"%s\"", r2, R(10, 13), r3,
+           R(12, 13), fw(profile::kGazes), fw(profile::kReflects), fw(profile::kEngulfs));
+    // 6. the full box's key: the prompt box (res 0xD400 -> 0xE645) as press_line draws it
+    reset();
+    // (going on below a page that ended at row 15: past the box's last row)
+    const char* longw = "Hitting for 7 points of damage and more words";
+    fg->page_end = 15;
+    fg->cont_next = true;
+    add_page(0, longw, longw, B, longw);
+    fg->st = FSt::Pages;
+    show();
+    const bool more = fg->st == FSt::More;
+    std::vector<uint8_t> a(pic::kScreenW * 8), z(pic::kScreenW * 8);
+    for (int y = 0; y < 8; ++y)
+        for (int x = 0; x < pic::kScreenW; ++x) a[y * pic::kScreenW + x] = C.get(x, text::kMenuRow * 8 + y);
+    pic::Canvas& C0 = C;
+    C0.fill(0, text::kMenuRow * 8, pic::kScreenW, 8, 0);
+    press_line(C0, 11);
+    for (int y = 0; y < 8; ++y)
+        for (int x = 0; x < pic::kScreenW; ++x) z[y * pic::kScreenW + x] = C.get(x, text::kMenuRow * 8 + y);
+    expect(P, "the Dark Queen: a full box's key is the prompt box \"Press [Return] to continue.\" (res 0xD400 -> 0xE645)",
+           more && a == z && d->w_press[0][0], "full %d, same %d, prompt words %d", more, a == z, d->w_press[0][0] != 0);
+    reset();
+}
+
 // Training's spell list offered at all (read for the Krynn games): a
 // magic-user's new level, or - Champions (GAME.OVR 0x25666: [0x4B58] = 0,
 // creation's own levelling aside) - a ranger past 8th after any training;
@@ -1866,6 +2084,7 @@ void run()
     }
     if (want("use")) using_items();
     if (want("aiorder")) ai_pending();
+    if (want("bandorder")) ai_bandage_order();
     if (want("aiturn")) ai_turn_types();
     if (want("trainspell")) train_spell_offer();
     if (want("canuse")) {
@@ -1874,6 +2093,7 @@ void run()
     }
     if (want("wrap")) queen_wrap();
     if (want("qpages")) queen_pages();
+    if (want("qlost")) queen_lost();
     if (want("restore")) restore();
     if (want("rest")) rest();
     rules::set_fixes(true);

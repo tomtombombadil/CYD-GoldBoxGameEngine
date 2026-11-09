@@ -112,3 +112,15 @@ Round 8 (2026-11-09) - the Dark Queen's code read from DQK.EXE itself (no EXEPAC
   tools/lst_callers.py <listing> "<call text>" [n]     every call site with the n lines before it (the pushed rows)
   rules4 checks added: aiorder, aiturn, qpages (+ turn's rule-4 / penalty cases, moons' queen_moon_room, wrap's full
   boxes, canuse's Champions clause). Binaries this round: bin/r4w, bin/simw (built from the worktree).
+
+Round 9 rules (2026-11-09):
+  tools/lst_b14e.py <DQK.EXE> <listing>   every call of the Dark Queen's fight-page print res 0xB14E with its
+                                         pushed wait / row / text (the DS words read from DQK.EXE)
+  rules4 checks added: qlost (the Dark Queen's "lost a spell", undead falls, fixed rows, the full box's
+  prompt), bandorder (Death Knights / the Dark Queen bandage after Turn / spells); trainspell on all nine.
+  economy: Champions' Id with all its coins, Appraise paid in steel. campfuzz: Darkness's save A camps in a
+  town (no Rest) - CFSANCT=1 to rest there. fightfuzz: a lost opening fight while booting (Death Knights'
+  save A) is passed over, not a problem.
+  Baselines: rules4 PoolRad 16/0, Curse 18/0, Secret 14/0, Darkness 14/0, Champions 22/0, Knights 19/0,
+  Queen 30/0, Gateway 13/0, Treasures 16/0; economy 12/0 each; budgets (bytes) Curse 133643, PoolRad
+  135483, Darkness 149580, Champions 135913, Knights 135860, Queen 143166, Treasures 151840.

@@ -279,7 +279,19 @@ static void sweep_fightfuzz(unsigned seed, int fights)
         rnd.seed(fs);
         g_now = 1000;
         if (!monkey_boot()) {
-            problem("boot");
+            // (why: the title again - the party lost a fight the save's own
+            // script starts at once, Death Knights' save A outdoors - or the
+            // party menu / no game; a lost boot fight is the dice, not a rule:
+            // that fight is passed over - Death Knights seed 2 fight 31, 2026-11-09)
+            if (play::d && play::pt && !play::pt->count && !play::fg && play::screen == play::Screen::PartyMenu) {
+                printf("  (fight %d: the save's own opening fight lost while booting - passed over)\n", k);
+                ++skipped;
+                continue;
+            }
+            char t[120];
+            snprintf(t, sizeof t, "boot (screen %d, game %d, party %d, a fight %d)", static_cast<int>(play::screen), play::d != nullptr,
+                     play::pt ? play::pt->count : -1, play::fg != nullptr);
+            problem(t);
             break;
         }
         const ff::Mon m = ff::mons[ff::fpick(static_cast<int>(ff::mons.size()))];

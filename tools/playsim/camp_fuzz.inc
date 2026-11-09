@@ -117,7 +117,12 @@ void run(unsigned seed, int rounds)
         const bool wt0 = waiting, ran0 = resume_after_note, cfs0 = camp_from_script;
         const int th0 = (int)then;
         const uint32_t nu0 = note_until;
-        if (screen == Screen::Rest && !rest.running && pick(3) == 0) {
+        // (the icon editor and Alter swallow random taps - left soon, as the
+        // monkey does; Darkness's camp spent 2/3 of its actions there and
+        // never reached its rest, 2026-11-09)
+        if ((screen == Screen::Icon || screen == Screen::Alter || screen == Screen::Effects) && pick(8) == 0) {
+            play::back(C);
+        } else if (screen == Screen::Rest && !rest.running && pick(3) == 0) {
             // a rest of random length: days / hours / minutes up, then Rest
             for (int k = pick(6); k > 0; --k) {
                 const char unit = "DHM"[pick(3)];
