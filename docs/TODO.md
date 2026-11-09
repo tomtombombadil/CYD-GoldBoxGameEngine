@@ -1244,7 +1244,7 @@ the Project as claude/TODO.md.
       Dark Queen (here: any training) - fixed; rules4 trainspell. Both
       skip it while creation levels a new character ([0x4B58] / [0x8C5C]).
 - [x] Round 8 left (done 2026-11-09, round 9 - facts in the Project's
-      claude/round9_facts.md): training's spell list read in every DAX
+      claude/rules_round9_facts.md): training's spell list read in every DAX
       game (GAME.OVR: Curse 0x25534, Secret 0x22837, Gateway 0x2BEFC,
       Darkness 0x18DF6, Treasures 0x1E6E7 - a magic-user's new level or
       any training of a ranger past 8th, as here; PoolRad 0x1C8DE: a

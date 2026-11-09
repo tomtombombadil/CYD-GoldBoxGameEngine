@@ -124,3 +124,10 @@ Round 9 rules (2026-11-09):
   Baselines: rules4 PoolRad 16/0, Curse 18/0, Secret 14/0, Darkness 14/0, Champions 22/0, Knights 19/0,
   Queen 30/0, Gateway 13/0, Treasures 16/0; economy 12/0 each; budgets (bytes) Curse 133643, PoolRad
   135483, Darkness 149580, Champions 135913, Knights 135860, Queen 143166, Treasures 151840.
+
+Round 9 run scripts (kept from scratch, 2026-11-09; logs in $LOGS, default /tmp/claude-0/ag9):
+  beh.sh <bin> <mode> <ONLY> <tag> games...   behave <mode> on each game, one at a time
+  r4only.sh <bin> <ONLY> <tag> games...       behave rules4 ONLY=... a summary line a game
+  r4full.sh <bin> <tag> games...              full behave rules4, 3 at a time
+  fuzz.sh <bin> <game> <fights> seeds...      fightfuzz, a line a seed (rule breaks, sanitizer errors)
+  budgetx.sh                                  budget.sh with the simx binary (logs budx_<game>.log)
