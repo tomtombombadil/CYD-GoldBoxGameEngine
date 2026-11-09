@@ -1306,19 +1306,48 @@ the Project as claude/TODO.md.
       load runs the area's start again) are left out; PoolRad's wall-set
       words 0x4CFA-0x4CFF (written at each save for the original's load,
       not read back by the engine's) excepted. The check prints the values.
-- [ ] Round 10 left: the Dark Queen's to-hit (a 20 always hits, a 1
-      always misses here, every game's rule) not found in DQK.EXE yet; its
-      stinking cloud's coughing is given 1d4 + 1 (the value pushed at
-      0x80F6, as nausea's) - one round here, the parameter's meaning not
-      checked; its Feeblemind effect's number (Facts .feeble 0: no effect
-      kept) and the handler's last loop (0x53F43: every memorized entry
-      still to be memorized, 0x80, cleared - not done), Int / Wis in use
-      set to 3 there (7 here, recalculated to 3); Champions' combat byte
-      0x15 (the "mood") read only for the Turn limit - its other readers
-      not looked for. The 0xFF-class spells' caster level (round 9) stays.
-      The Dark Queen's sweep saveload: 4 problems (script memory not the
-      same after a load, effects differ x3) - the same at v0.181.0
-      (ac91c45) before this round; not looked into.
+- [x] Round 10 left, done in round 11 (2026-11-09; facts: the Project's
+      claude/rules_round11_facts.md): the to-hit roll found in every
+      program by its shape (tools/devkit/tools/tohit.py; DQK.EXE 0x8461,
+      called from the blow 0x26407): d20 1 a miss, 20 counted 100 (always
+      a hit), 17+ the high-roll flag - the engine's already; the side's
+      bonus was missing in Darkness, Treasures and the Dark Queen (their
+      game block's 0x2F / 0x01, the engine read Curse's 0x7F71 / 0x7F70 -
+      nothing there) and every difficulty adjustment: Darkness-type and the
+      Dark Queen 1 +2, 2 +1, 4 -1, 5 -2 (byte 0x27), Gateway 0 +2 ... 4 -2
+      (word 0x4CF4). Secret / Death Knights / Champions compare a constant
+      (0x1F4) - none (Secret's and Death Knights' given by Game Fixes, SPEC
+      12). play::side_bonuses; rules4 tohit against oracles/tohit.py (the
+      switch walked for every value) - 9 games, 0 wrong. The Dark Queen's
+      coughing: 1d4 + 1 minutes (a minute a round), data 0xFF, as nausea;
+      nothing for the undead, the nauseous, effect 0x8F, flags 2 & 0x18
+      (DQK.EXE 0x805D) - rules4 qlost 8 / 9. Its Feeblemind (spell handler
+      0x58108): effect 0x44 kept (no time), Int / Wis in use 3 at once, the
+      spells being memorized forgotten - rules4 qlost 7. Champions' byte
+      0x15: every reader found - its step rows (DS 0x396 by mood, 0xCC6A /
+      0xCF53; the flee's d2 is its mood, the way the party's facing as
+      PoolRad's; a step back: the next row, then the target dropped, then
+      no more moving) - rules4 aimood (240 cases + the step back); its AI
+      order as Death Knights' (the pending spell after morale and items,
+      0xC699; bandaging in the move step 0xD270) - rules4 aiorder /
+      bandorder now on Champions. The Dark Queen's saveload: 0 problems
+      since v0.182.1.
+- [ ] Round 11 left: the step rows by mood in the other DAX games - the
+      same AI dice in each (GAME.OVR PoolRad 0xAC14, Curse 0xBACB, Secret
+      0xCFD6, Gateway 0xD02E, Darkness 0x9B45, Treasures 0xA957, Death
+      Knights 0xA28C; Curse's rows DS 0x2B8, read at 0xC1A0 / 0xC637, its
+      flee from the party's facing [0x722B] 0xC54F) while the engine steps
+      straight, then +1 -1 +2 -2, and flees from the nearest enemy (PoolRad
+      by the side's way); Champions' count-2 branch after a step back
+      (0x88:0x84 / 0xD6B5) and its cloud square exceptions (effects 0x20 /
+      0x1E / 0x63 / 0x3F, combat +0x10) not done. The Dark Queen's to-hit
+      effect hooks (events 0xA / 0x10 at 0x84BE / 0x84CD) not compared one
+      by one; its one-target roll 0x83D0 (roll + bonus > the value,
+      strictly; caller 0x427AB) not followed; its clock takes at most 10
+      minutes off an effect a step (0x5F86) - the fight's step per round
+      not read. Darkness's / Treasures' / Death Knights' Feeblemind: 7 in
+      use here and no recalculation to 3 (no stat_fx in their profiles) -
+      their handlers not read.
 - [ ] Round 7 left: Treasures' effect 0x3B's handler (none of its items
       has it - round 10 left it: nothing in the game carries it). The Dark Queen: its weapon name's trailing space (0x9FDC not
       read); its fight pages' rows after a hit (each page from row 10 here:

@@ -38,7 +38,24 @@ def resolve(seg, off):
     return f, 'resident'
 
 
+def inside(seg, off):
+    # a call from inside an overlay names the overlay's own segment (no stub):
+    # every overlay whose region (region seg + size paras) holds seg
+    out = []
+    for w in [0] + [n - 1 for n in rows if n >= 2]:
+        if w != 0 and (w + 1) not in rows:
+            continue
+        r = rows[0] if w == 0 else rows[w + 1]
+        region, code = overlay(w)
+        if region <= seg < region + r[6]:     # (r[6]: its size in paragraphs)
+            out.append((w, code + (seg - region) * 16 + off))
+    return out
+
+
 for a in sys.argv[2:]:
     s, o = (int(x, 16) for x in a.split(':'))
     f, how = resolve(s, o)
     print('%s -> file 0x%X (%s)' % (a, f, how))
+    if how == 'resident':
+        for w, x in inside(s, o):
+            print('    (from inside overlay w%d: file 0x%X)' % (w, x))

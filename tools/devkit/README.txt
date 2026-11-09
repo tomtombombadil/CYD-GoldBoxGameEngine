@@ -147,3 +147,19 @@ Round 10 rules (2026-11-09):
   budgetx.sh: SIMBIN=<binary> for another build.
   Header changes (combat.h's Fighter): REBUILD=1 for every binary, or the objects disagree (a crash in place()).
   verify10.sh: round 10's whole verification batch (rebuilds with REBUILD=1, rules4 / economy / fuzz / budgets / saveload); tools/refs.py <listing> <text> [before] [after]: a listing grep.
+
+Round 11 rules (2026-11-09):
+  tools/tohit.py <GAME.OVR | DQK.EXE> ...   every to-hit routine found by its shape (a d20 kept, 20 made 100), each
+                                         disassembled
+  oracles/tohit.py [games]               oracle_tohit_<game>.txt: the attacker-against-target roll's side bonuses
+                                         (the bytes it loads, as script addresses) and its difficulty switch walked
+                                         for each value 0-6 (fixadj: Secret's / Death Knights' / Champions' switch as
+                                         if it tested the difficulty word it names) - read by rules4 tohit
+  tools/dqk_addr.py                      now also prints a seg:off as a call from inside an overlay (no stub: the
+                                         overlay's own segment; size = row word 6)
+  rules4 adds: tohit (all nine: play::side_bonuses for every difficulty, Game Fixes off and on), aimood
+               (Champions: its step rows by mood - the table found from GAME.OVR's code, read from the program -
+               and the step back), qlost 7-9 (the Dark Queen's Feeblemind effect / Int / Wis / memorizing, its
+               cloud's 1d4 + 1 and who breathes nothing), aiorder / bandorder on Champions
+  verify11.sh                            round 11's batch (oracle, rebuilds, rules4 / economy all nine, budgets, fuzz,
+                                         saveload all nine) -> /tmp/claude-0/ag11

@@ -464,6 +464,34 @@ void fight_duel(bool rolf)
     ++ml->groups;
 }
 
+// The sides' to-hit bonuses (round 11: each game's attacker-against-target
+// roll - tools/devkit/tools/tohit.py finds it): d20 + the attacker's to-hit
+// + its side's bonus >= the AC needed. The bonus: the scripts' bytes - Curse's
+// area words 0x7F71 (the party) / 0x7F70 (the others; Death Knights the same
+// bytes of its byte map, GAME.OVR 0x30D2E); Darkness / Treasures / the Dark
+// Queen their game block's 0x2F / 0x01 (GAME.OVR 0x32A43, 0x3C6D6; DQK.EXE
+// 0x84DD). The party's then the difficulty's: Darkness-type 1 +2, 2 +1,
+// 4 -1, 5 -2 (game byte 0x27); Gateway's 0-4 (word 0x4CF4, GAME.OVR 0x3D5D8)
+// 0 +2 ... 4 -2. Secret's (GAME.OVR 0x36E88) and Death Knights' (0x30D42)
+// compare a constant, never their difficulty - none there; the Game Fixes
+// give theirs (SPEC 12). PoolRad, Curse, Champions: no difficulty.
+void side_bonuses(combat::Battle& b)
+{
+    int level = -1;                             // 0-4, 2 the plain one
+    if (dk_ui() && !dkk()) {
+        b.to_hit_party = static_cast<int8_t>(vm->get(0x2F));
+        b.to_hit_monsters = static_cast<int8_t>(vm->get(0x01));
+        level = (vm->get(0x27) & 0xFF) - 1;
+    } else {
+        b.to_hit_party = static_cast<int8_t>(vm->get(0x7F71));
+        b.to_hit_monsters = static_cast<int8_t>(vm->get(0x7F70));
+        if (gateway()) level = vm->get(0x4CF4);
+        else if (rules::fixes() && (secret_files() || dkk())) level = vm->get(0x4CF4) - (dkk() ? 1 : 0);
+    }
+    static constexpr int8_t kLevel[5] = {2, 1, 0, -1, -2};
+    if (level >= 0 && level < 5) b.to_hit_party += kLevel[level];
+}
+
 // Darkness's Monster Summoning reserve (R10; GAME.OVR 0x7D2B, at every
 // COMBAT): 10 monsters of the MON block the frame style (block +0x39)
 // picks, out of the fight (status 9) until a Monster Summoning brings them
@@ -2413,6 +2441,11 @@ void q_fall(int who, combat::Down dn)
 // fall goes on at the row after the blow's words (0x251F2: kept before);
 // after a damage text, below "lost a spell" (0x91B4: [0xAE4E] + 1).
 // Returns whether its page was added.
+// The computer's spell begun earlier waits for its AI - after the morale
+// test and the items (Darkness, Treasures, Death Knights, the Dark Queen,
+// Champions); the others cast it at the turn's start
+bool late_spell() { return darkness_files() || hl() || d->prof->game == games::Game::ChampionsOfKrynn; }
+
 void forget_spell(combat::Fighter& f, int sp);
 bool q_lost_spell(int who, bool after_blow)
 {
@@ -3614,12 +3647,13 @@ void start_turn(pic::Canvas& c)
         }
     }
     // A spell begun earlier goes off now - the computer's (monsters, NPCs,
-    // Quick) in Darkness, Treasures, Death Knights and the Dark Queen only
-    // after its morale test and its items (their turn routine sends a
-    // computer fighter straight to its AI, which fires the pending spell
-    // after those: Death Knights GAME.OVR 0x9384 -> 0xA21B +0x141, Darkness
-    // 0x9AC5 +0x15A, the Dark Queen DQK.EXE 0x2DF74)
-    if (f.spell && !((darkness_files() || hl()) && ai_controls(f))) {
+    // Quick) in Darkness, Treasures, Death Knights, the Dark Queen and
+    // Champions only after its morale test and its items (their turn routine
+    // sends a computer fighter straight to its AI, which fires the pending
+    // spell after those: Death Knights GAME.OVR 0x9384 -> 0xA21B +0x141,
+    // Darkness 0x9AC5 +0x15A, the Dark Queen DQK.EXE 0x2DF74, Champions
+    // 0xB271 -> 0xC572, its pending spell at 0xC699 - round 11)
+    if (f.spell && !(late_spell() && ai_controls(f))) {
         fire_pending(c);
         return;
     }
@@ -4492,7 +4526,9 @@ void ai_step(pic::Canvas& c)
         fg->cur = i;
         return true;
     };
-    const bool late_bandage = dkk() || hl();
+    // (Champions too: its AI's move step 0xD270 bandages first - GAME.OVR
+    // 0xD2A9, after the weapon at 0xC706; round 11)
+    const bool late_bandage = dkk() || hl() || d->prof->game == games::Game::ChampionsOfKrynn;
     if (!late_bandage && !f.team() && !fg->ai_checked && !fg->flee_told && !f.spell && combat::anyone_dying(b) && bandage_now())
         return;
     // Morale (monsters, NPCs), once a turn (flee_told: done)
@@ -4583,7 +4619,7 @@ void ai_step(pic::Canvas& c)
         // Darkness / Treasures / Death Knights / the Dark Queen: the spell
         // begun earlier now - after the morale test and the items (start_turn
         // left it)
-        if (f.spell && (darkness_files() || hl())) {
+        if (f.spell && late_spell()) {
             fire_pending(c);
             return;
         }
@@ -5008,15 +5044,21 @@ void fight_start(pic::Canvas& c)
     // first round's initiative, so it counts for this fight only
     b.surprise = vm->get(0x7ECB) & 3;
     vm->set(0x7ECB, 0);
-    b.to_hit_party = static_cast<int8_t>(vm->get(0x7F71));
-    b.to_hit_monsters = static_cast<int8_t>(vm->get(0x7F70));
+    side_bonuses(b);
     if (pool_files()) {
         combat::place_pool(b, fg->t, d->gs.dir & 6, vm->fight_distance(), b.indoors ? &d->map : nullptr, d->gs.x, d->gs.y);
         const int fd = d->gs.dir & 6;
         b.flee_dir = (fd - ((fd + 2) % 4) / 2 + 8) & 7;
-    } else
+    } else {
         combat::place(b, fg->t, d->gs.dir & 6, vm->fight_distance(), b.indoors ? solid_side : nullptr, nullptr,
                       darkness_files() ? vm->fight_sides() : 0);
+        // (Champions, GAME.OVR 0xCFC4: a run's way from the party's facing
+        // [0x6D87] as Pool's - round 11)
+        if (fg->t.mood_known) {
+            const int fd = d->gs.dir & 6;
+            b.flee_dir = (fd - ((fd + 2) % 4) / 2 + 8) & 7;
+        }
+    }
     combat::battle_start(b, &rng);           // those invisible from the start
     // Their pictures
     fight_party_icons();

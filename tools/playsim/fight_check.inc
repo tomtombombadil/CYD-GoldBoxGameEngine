@@ -117,7 +117,7 @@ bool in_bite = false;               // (a hold's bite: Bite, then its Attack)
 const void* last_fg = nullptr;
 int last_round = -1;
 bool endless_told = false;
-long hp_seen = -1;                  // (R10: the fighters' hit points, the round they last changed)
+unsigned long hp_seen = ~0ul;                 // (R10: the fighters' hit points, the round they last changed)
 int  hp_round = 0;
 
 void on_act(const combat::Battle& b, int i, combat::TestAct a, int t, int extra)
@@ -243,7 +243,7 @@ void tick()
         last_fg = fg;
         last_round = -1;
         endless_told = false;
-        hp_seen = -1;
+        hp_seen = ~0ul;
         hp_round = 0;
         turn_round.assign(b.n, -1);
         pending.assign(b.n, 0);
@@ -279,8 +279,8 @@ void tick()
         else if (held(b, f)) bad("R2", "a menu for a held / stunned one: " + who(b, fg->cur));
     }
     {
-        long hp = 0;
-        for (int i = 0; i < b.n; ++i) hp = hp * 7 + b.f[i].hp() + (b.f[i].up() ? 1000 : 0);
+        unsigned long hp = 0;   // (a hash of the hit points: wraps, never overflows)
+        for (int i = 0; i < b.n; ++i) hp = hp * 7 + static_cast<unsigned long>(b.f[i].hp() + (b.f[i].up() ? 1000 : 0));
         if (hp != hp_seen) hp_seen = hp, hp_round = b.round;
     }
     if (b.round > fight_cap && (b.round - hp_round > 60 || b.round > 4 * fight_cap) && !endless_told) {

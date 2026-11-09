@@ -243,6 +243,8 @@ bool read_tables(Tables& t, const TableAt& at, ReadDs read, void* ctx)
     t.turn_cols = at.turn_cols;
     t.turn_rule = at.turn_rule;
     for (int k = 0; k < 5; ++k) t.reserve_mon[k] = t.reserve_pic[k] = 0;
+    t.mood_known = at.mood_rows != 0;
+    if (t.mood_known && !read(ctx, at.mood_rows, t.mood, sizeof t.mood)) return false;
     if (at.reserve && !(read(ctx, at.reserve, t.reserve_mon, 5) && read(ctx, static_cast<uint16_t>(at.reserve + 5), t.reserve_pic, 5)))
         return false;
     return read(ctx, at.ground, &t.ground[0][0], sizeof t.ground) &&
@@ -3352,6 +3354,46 @@ int taunt(Battle& b, int kender, create::Dice& d, int* out, int cap)
     return n;
 }
 
+namespace {
+// Champions' step toward its target (round 11; GAME.OVR 0xCF53 - 0xD17C, a
+// try 0xCC6A): the five directions of its mood's row (combat byte 0x15, the
+// table DS 0x396: row m, columns 1-5) added to the way to the target, the
+// first it can take - its cost within the moves left, a stinking cloud only
+// with a save made, a poison cloud never below 7 Hit Dice; no
+// "not further away" test. None, or the one back the way it came last: the
+// count of such goes up and the mood turns to the next row (m % 6 + 1) -
+// the second time its target is dropped, the third ends its moving; with
+// none the turn's moving ends there (it guards)
+Plan mood_step(Battle& b, const Tables& t, int i, int base, create::Dice& d, Plan p)
+{
+    Fighter& f = b.f[i];
+    const int m = f.ai_mood <= 6 ? f.ai_mood : 0;
+    int dir = -1;
+    for (int col = 1; col <= 5 && dir < 0; ++col) {
+        const int dd = (t.mood[m * 5 + col] + base) & 7;
+        const int cost = step_cost(b, t, i, dd, nullptr, nullptr);
+        if (cost == 0xFF || cost > f.moves) continue;
+        const int nx = f.x + kDx[dd], ny = f.y + kDy[dd];
+        if (b.ground[ny][nx] == cloud_g(b) && !saving_throw(f, 0, 0, d)) continue;
+        if (b.ground[ny][nx] == poison_g(b) && f.rec[0xE5] < 7) continue;
+        dir = dd;
+    }
+    if (dir < 0 || (f.flee_last < 8 && ((dir + 4) & 7) == f.flee_last)) {
+        f.ai_mood = static_cast<uint8_t>(f.ai_mood % 6 + 1);
+        if (++f.flee_back > 1) f.target = -1;
+        if (dir < 0 || f.flee_back > 2) {
+            f.moves = 0;
+            p.act = Act::Guard;
+            return p;
+        }
+    }
+    f.flee_last = static_cast<uint8_t>(dir);
+    p.act = Act::Step;
+    p.dir = dir;
+    return p;
+}
+} // namespace
+
 Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
 {
     Plan p;
@@ -3385,9 +3427,17 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
         // right two first by a d2, DS 0x2AE's rows 8 7 6 1 2 / 8 1 2 7 6)
         static const int kPoolAway[2][5] = {{0, -1, -2, 1, 2}, {0, 1, 2, -1, -2}};
         const int* tries = kAway;
+        int rows[5];
         if (b.flee_dir >= 0) {
             base = (b.flee_dir + (f.team() ? 0 : 4)) & 7;
-            tries = kPoolAway[d.roll(2, 1) - 1];
+            const int r = d.roll(2, 1);
+            tries = kPoolAway[r - 1];
+            if (t.mood_known) {
+                // (Champions, GAME.OVR 0xCFAD: the d2 is its mood - row 1 / 2 of its table)
+                f.ai_mood = static_cast<uint8_t>(r);
+                for (int j = 0; j < 5; ++j) rows[j] = t.mood[r * 5 + 1 + j] & 7;
+                tries = rows;
+            }
         }
         for (int j = 0; j < 5; ++j) {
             const int k = tries[j];
@@ -3404,6 +3454,7 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
             // byte_1AB18 / byte_1AB19 - one turn's count; a ground costing
             // nothing had a cornered gargoyle step to and fro for ever)
             if (f.flee_last < 8 && ((dir + 4) & 7) == f.flee_last) {
+                if (t.mood_known) f.ai_mood = static_cast<uint8_t>(f.ai_mood % 6 + 1);   // (Champions, 0xD0F0)
                 if (++f.flee_back > 2) break;
                 if (f.flee_back > 1) f.target = -1;
             }
@@ -3516,6 +3567,7 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
     const int base = direction(f.x, f.y, tg.x, tg.y);
     if (base > 7) return p;
     static const int kTry[5] = {0, 1, -1, 2, -2};
+    if (t.mood_known) return mood_step(b, t, i, base, d, p);
     int ox[4], oy[4];
     const int n0 = squares(tg.size ? tg.size : 1, ox, oy);
     int now_best = 9999;
@@ -4339,7 +4391,16 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
                 continue;
             }
             if (b.fx && b.fx->feeble) give_aff(f, b.fx->feeble, 0, pw, false);
-            f.rec[0x13] = f.rec[0x15] = 7;          // Intelligence, Wisdom in use (a recalculation makes them 3)
+            if (b.fx && b.fx->feeble_direct) {
+                // The Dark Queen's (its spell DQK.EXE 0x58108, effect 0x44's
+                // handler 0x53EA6): Intelligence and Wisdom in use 3 at once,
+                // and every spell still being memorized (+ 0x80) forgotten
+                f.rec[0x13] = f.rec[0x15] = 3;
+                for (int s = 0; s < magic::kListSize; ++s)
+                    if (f.rec[magic::kListAt + s] & 0x80) f.rec[magic::kListAt + s] = 0;
+            } else {
+                f.rec[0x13] = f.rec[0x15] = 7;      // Intelligence, Wisdom in use (a recalculation makes them 3)
+            }
             f.can_cast = false;
             if (!(b.fx && b.fx->feeble_lost)) f.spell = 0;
             say(who[k], Did::Word, 0);
@@ -5980,6 +6041,17 @@ Did breathe_cloud(Battle& b, int i, create::Dice& d)
     // its effects can't be dispelled (data 0xFF)
     const bool sec = b.fx && b.fx->secret;
     if (sec && (f.rec[0xE9] || hasx(f, b.fx->mon.no_poison) || (f.flags2 & 8))) return Did::Unaffected;
+    // The Dark Queen's (DQK.EXE 0x805D-0x8200, round 11): the undead (type
+    // 0x5C), one nauseous already, one with effect 0x8F or flags 2 & 0x18
+    // breathe nothing; the save against poison - coughing (made) or nausea,
+    // each for 1d4 + 1 (rolled after the save; the effects' minutes, as the
+    // clock counts them), data 0xFF
+    if (b.fx && b.fx->q_cloud_proof) {
+        if (f.rec[0xE9] || f.has(b.fx->held[3]) || hasx(f, b.fx->q_cloud_proof) || (f.flags2 & 0x18)) return Did::Unaffected;
+        const bool saved = saving_throw(f, 0, 0, d);
+        give_aff(f, saved ? b.fx->cough : b.fx->held[3], d.roll(4, 1) + 1, 0xFF, false);
+        return saved ? Did::Word2 : Did::Word;
+    }
     const int data = sec ? 0xFF : 0;
     if (saving_throw(f, 0, 0, d)) {
         if (b.fx && b.fx->cough) give_aff(f, b.fx->cough, 1, data, false);      // coughing for a round

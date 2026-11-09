@@ -3319,5 +3319,12 @@ the game's Settings (As Original: all of them).
   on a cell picks it (the original: the arrow keys - the cursor keys do
   that here too); the cells' light grey is EGA 7 (the original's VGA
   blue-grey not found in its files).
+- **The difficulty's to-hit in Secret and Death Knights** (Game Fixes;
+  round 11): their attacker-against-target roll (GAME.OVR 0x36E88 /
+  0x30D42) means to add the difficulty's +2 / +1 / 0 / -1 / -2 to the
+  party's rolls (as Gateway's, Darkness's and the Dark Queen's do) but
+  compares a constant, never the difficulty - nothing is added. With Game
+  Fixes on the engine adds it (Secret's Level 0-4, Death Knights' 1-5 -
+  area word 0x4CF4); off: as the originals.
 - Smaller things kept from the originals although they look like bugs are
   NOT differences: they're listed as quirks in the facts docs.

@@ -84,6 +84,11 @@ struct Tables {
     // bytes, never a name), and the two the gnomes dodge too (from its
     // GAME.OVR, set by the caller); by_name: these count, not the class bits
     bool    by_name;
+    // Champions' computer steps (round 11; GAME.OVR 0xCC6A / 0xCF53, the
+    // table DS 0x396): rows of 5 by combat byte 0x15 (the AI mood, 1-6) -
+    // the five directions it tries, each added to the way it goes (8 = straight)
+    bool    mood_known;
+    uint8_t mood[36];                   // (row m, column c: m x 5 + c - rows 0-6, columns 1-5)
     uint8_t foe_names[20][16];
     uint8_t dodge_names[2][16];
 };
@@ -100,6 +105,7 @@ struct TableAt {
     uint8_t  turn_cols = 10;            // the turn table's columns (Darkness 11, its rows 0-13)
     uint16_t reserve = 0;               // Darkness: the summoning reserve's MON blocks (5) and CPIC (5) by frame style
     uint8_t  turn_rule = 0;             // Tables::turn_rule
+    uint16_t mood_rows = 0;             // Tables::mood (0: none)
 };
 // Reads them: read(ctx, ds offset, out, n) gives the data segment's bytes
 using ReadDs = bool (*)(void* ctx, uint16_t ds, uint8_t* out, size_t n);
@@ -413,6 +419,14 @@ struct Facts {
     // spell under way to the fight's pages - "lost a spell" at once, as a
     // hurt caster's (the others drop it unsaid)
     bool feeble_lost = false;
+    // ... and its effect 0x44's handler (0x53EA6, round 11): Intelligence /
+    // Wisdom in use set to 3 there and then (the others' 7, recalculated),
+    // every memorized entry still to be memorized (+ 0x80) cleared
+    bool feeble_direct = false;
+    // The Dark Queen's stinking cloud (DQK.EXE 0x805D, round 11): this effect
+    // keeps one from breathing it (with the undead, the nauseous, flags 2 &
+    // 0x18); coughing and nausea 1d4 + 1 each, data 0xFF. 0: the others' rule
+    uint8_t q_cloud_proof = 0;
     // Gateway to the Savage Frontier's (its effect handlers DS 0x826A on, the
     // check lists of its work_on_00 - SPEC 6e; 0: none). `ways`: the deadly
     // poison (0x40) after attack 1's hit, not attack 2's, the paralysing bite

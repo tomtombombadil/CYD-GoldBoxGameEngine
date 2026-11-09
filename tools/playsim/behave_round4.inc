@@ -1090,7 +1090,7 @@ void ai_pending()
     for (int k = 1; k < b.party_size; ++k) b.f[k].size = 0;
     combat::occupancy(b);
     combat::Fighter& f = b.f[B];
-    const bool dk = d->prof->variant.darkness_files || d->prof->variant.hlib;
+    const bool dk = d->prof->variant.darkness_files || d->prof->variant.hlib || game() == 5;   // (Champions: 0xC699 - round 11)
     f.n_items = 0;
     f.can_cast = f.can_use = true;
     f.fleeing = true;
@@ -1118,7 +1118,7 @@ void ai_pending()
     f.fleeing = false;
     fg->pages = 0;
     const bool ok = dk ? left && fled_first && then_cast : !left;
-    expect(P, "the computer's pending spell: Darkness / Treasures / Death Knights after the morale page and the items, the others at the turn's start",
+    expect(P, "the computer's pending spell: Darkness / Treasures / Death Knights / the Dark Queen / Champions after the morale page and the items, the others at the turn's start",
            ok, "game %d: left at the start %d, flight page first %d, then cast %d", game(), left, fled_first, then_cast);
 }
 
@@ -1261,7 +1261,7 @@ void ai_turn_types()
 void ai_bandage_order()
 {
     const int g = game();
-    if ((g != 6 && g != 7) || !play::fg->t.turn_known || !fight()) return;
+    if ((g != 5 && g != 6 && g != 7) || !play::fg->t.turn_known || !fight()) return;   // (Champions: 0xD270 +0x39 - round 11)
     combat::Battle& b = fg->b;
     if (b.party_size < 2) {
         expect(P, "Death Knights / the Dark Queen: bandaging after Turn Undead (two party members)", false);
@@ -1305,7 +1305,7 @@ void ai_bandage_order()
     };
     const auto [t1, d1] = setup(1);     // (a skeleton next to it)
     const auto [t0, d0] = setup(0);     // (no undead: nothing to turn)
-    expect(P, "Death Knights / the Dark Queen: a Quick cleric turns the undead before bandaging (0xAEE7 / 0x2E94D); with no undead it bandages",
+    expect(P, "Death Knights / the Dark Queen / Champions: a Quick cleric turns the undead before bandaging (0xAEE7 / 0x2E94D / 0xD2A9); with no undead it bandages",
            t1 && d1 && !t0 && !d0, "game %d: undead - turned %d, friend still dying %d; none - turned %d, still dying %d", g, t1, d1, t0, d0);
 }
 
@@ -1952,6 +1952,22 @@ void queen_pages()
 // 0x9157). "reflects it!" at row 12 under the gaze's page (0x4EAEF), "engulfs
 // %s" at 12 on a blank box (0x5181C). The full box's key: res 0xD400 ->
 // 0xE645, the prompt box "Press [Return] to continue." (press_line)
+// (round 11: a fighter's effects, read and put on as the engine keeps them)
+int q_find(const combat::Fighter& f, uint8_t t)
+{
+    for (int k = 0; f.n_aff && k < *f.n_aff; ++k)
+        if (f.aff[k][0] == t) return k;
+    return -1;
+}
+void q_add(combat::Fighter& f, uint8_t t, int minutes)
+{
+    if (!f.n_aff || *f.n_aff >= f.max_aff) return;
+    uint8_t* a = f.aff[(*f.n_aff)++];
+    memset(a, 0, party::kAffectSize);
+    a[0] = t;
+    a[1] = static_cast<uint8_t>(minutes);
+}
+
 void queen_lost()
 {
     if (game() != 7 || !fight()) return;
@@ -2114,6 +2130,12 @@ void queen_lost()
         bool ok = false;
         std::string w1, w2;
         int n = 0, row2 = -1;
+        // (round 11: a spell being memorized, one memorized - 0x58184 / 0x53F43
+        // clear the first only; Intelligence / Wisdom in use 3 at once; effect
+        // 0x44 kept, its time 0 - the spell's row: no duration)
+        b.f[B].rec[magic::kListAt + 10] = 0x85;
+        b.f[B].rec[magic::kListAt + 11] = 0x07;
+        b.f[B].rec[0x13] = b.f[B].rec[0x15] = 15;
         if (fs && !mrules) load_magic();
         if (fs && mrules) {
             create::g_die_hook = [](int sides) { return sides == 20 ? 0 : -1; };
@@ -2131,6 +2153,16 @@ void queen_lost()
             ow(fs->word, want1, sizeof want1);
             ok = w1 == want1 && w2 == fw(profile::kLostSpell) && row2 == 12 && b.f[B].spell == 0;
         }
+        const int fk = q_find(b.f[B], 0x44);
+        const bool kept = fk >= 0 && b.f[B].aff[fk][1] == 0 && b.f[B].aff[fk][2] == 0;
+        const bool ints = b.f[B].rec[0x13] == 3 && b.f[B].rec[0x15] == 3;
+        const bool list = b.f[B].rec[magic::kListAt + 10] == 0 && b.f[B].rec[magic::kListAt + 11] == 0x07;
+        expect(P, "the Dark Queen: Feeblemind keeps effect 0x44 (no time - its row, 0x5B2FB), Intelligence / Wisdom in use 3 at once (0x53EC5), the spells being memorized forgotten, the memorized kept (0x58184)",
+               kept && ints && list, "effect %d (time %d), Int %d Wis %d, list %02x %02x", fk >= 0,
+               fk >= 0 ? b.f[B].aff[fk][1] | b.f[B].aff[fk][2] << 8 : -1, int(b.f[B].rec[0x13]), int(b.f[B].rec[0x15]),
+               int(b.f[B].rec[magic::kListAt + 10]), int(b.f[B].rec[magic::kListAt + 11]));
+        combat::lose_aff(b.f[B], 0x44);
+        b.f[B].rec[magic::kListAt + 11] = 0;
         expect(P, "the Dark Queen: Feeblemind - \"loses intellect\", then \"lost a spell\" at row 12 (0x53EDE / 0x53F17), the spell gone",
                ok, "spell found %d, %d lines, pages %d: \"%s\" / \"%s\" row %d, spell %d (fighters %d, B up %d status %d)", fs != nullptr, n,
                fg->pages, w1.c_str(), w2.c_str(), row2, b.f[B].spell, b.n, b.f[B].up(), b.f[B].status());
@@ -2146,7 +2178,7 @@ void queen_lost()
         const bool laid = combat::lay_cloud(b, fg->t, b.f[B].x, b.f[B].y, 3);
         static int want_save;
         want_save = saved;
-        create::g_die_hook = [](int sides) { return sides == 20 ? (want_save ? 19 : 0) : -1; };
+        create::g_die_hook = [](int sides) { return sides == 20 ? (want_save ? 19 : 0) : sides == 4 ? 2 : -1; };
         cloud_breath(B);
         create::g_die_hook = nullptr;
         const std::string last = fg->pages ? page_line(fg->page[fg->pages - 1], 1) : "";
@@ -2155,8 +2187,37 @@ void queen_lost()
         expect(P, saved ? "the Dark Queen: one coughing in a stinking cloud loses the spell under way - \"lost a spell\" at row 12 (0x816B)"
                         : "the Dark Queen: nausea in a stinking cloud (its save failed, 0x819B) says nothing of the spell",
                ok, "cloud %d, pages %d, last \"%s\", spell %d", laid, fg->pages, last.c_str(), b.f[B].spell);
+        // (round 11, 0x80EF / 0x81BC: coughing / nausea for 1d4 + 1 - the d4 a 3 here - data 0xFF)
+        const int ck = q_find(b.f[B], saved ? 0x1E : 0x1F);
+        expect(P, saved ? "the Dark Queen: coughing for 1d4 + 1 (0x80EF), data 0xFF" : "the Dark Queen: nausea for 1d4 + 1 (0x81BC), data 0xFF",
+               ck >= 0 && b.f[B].aff[ck][1] == 4 && b.f[B].aff[ck][2] == 0 && b.f[B].aff[ck][3] == 0xFF, "effect %d: time %d, data %d", ck >= 0,
+               ck >= 0 ? b.f[B].aff[ck][1] : -1, ck >= 0 ? b.f[B].aff[ck][3] : -1);
+        combat::lose_aff(b.f[B], saved ? 0x1E : 0x1F);
         while (b.n_clouds) combat::clouds_round(b);
         b.f[B].spell = 0;
+    }
+    // 9. who breathes nothing (0x805D-0x80AB): the undead (type 0x5C), one
+    // nauseous already (0x1F), effect 0x8F, flags 2 & 0x18 - no effect added
+    {
+        int bad = 0;
+        char first[80] = "";
+        for (int c = 0; c < 4; ++c) {
+            combat::Fighter& f = b.f[B];
+            const uint8_t type = f.rec[0xE9], f2 = f.flags2;
+            if (c == 0) f.rec[0xE9] = 1;
+            if (c == 1) q_add(f, 0x1F, 3);
+            if (c == 2) q_add(f, 0x8F, 3);
+            if (c == 3) f.flags2 = static_cast<uint8_t>(f2 | 0x10);
+            const int before = *f.n_aff;
+            const combat::Did r = combat::breathe_cloud(b, B, rng);
+            if ((r != combat::Did::Unaffected || *f.n_aff != before) && !bad++) snprintf(first, sizeof first, "case %d: effects %d -> %d", c, before, *f.n_aff);
+            f.rec[0xE9] = type;
+            f.flags2 = f2;
+            for (uint8_t t : {uint8_t(0x1F), uint8_t(0x8F), uint8_t(0x1E)}) {
+                while (q_find(f, t) >= 0 && combat::lose_aff(f, t)) {}
+            }
+        }
+        expect(P, "the Dark Queen: the undead, the nauseous, effect 0x8F and flags 2 & 0x18 breathe no stinking cloud (0x805D-0x80AB)", bad == 0, "%s", first);
     }
     reset();
 }
@@ -2193,6 +2254,171 @@ void train_spell_offer()
            bad == 0, "game %d: %d of %d wrong (%s)", g, bad, n, first);
 }
 
+// Champions' computer steps (round 11): its step try (GAME.OVR 0xCC6A) reads
+// a row by combat byte 0x15 - "mov al,[di+X]" after the mood x 5 + column -
+// found in GAME.OVR by that code, the row read from the program's data
+// segment there (not the profile's address). For each mood 1-6 and each way
+// to the target, the first k - 1 directions of its row walled off: the step
+// is the row's k-th (+ the way, & 7); one back the way it came last: the
+// mood the next row (m % 6 + 1, 0xD0F0), the second time the target dropped
+// (0xD11D), the third its moving over (0xD13E). And the engine reads the
+// same row.
+void ai_mood_steps()
+{
+    if (game() != 5 || !fight()) return;
+    std::vector<uint8_t> ovr;
+    read_file(game_dir + "/GAME.OVR", ovr);
+    static const uint8_t sig[] = {0xD1, 0xE7, 0xD1, 0xE7, 0x01, 0xF7, 0x03, 0xFA, 0x8A, 0x85};
+    auto it = std::search(ovr.begin(), ovr.end(), std::begin(sig), std::end(sig));
+    find_table();
+    if (it == ovr.end() || prog.empty()) {
+        expect(P, "Champions' step rows: the try's table in GAME.OVR", false, "found %d, program %d", it != ovr.end(), !prog.empty());
+        return;
+    }
+    const int at = it[10] | it[11] << 8;
+    const uint8_t* row = &prog[d->prof->data_base + at];
+    combat::Battle& b = fg->b;
+    const auto& t = fg->t;
+    bool same = t.mood_known;
+    for (int k = 0; same && k < 36; ++k) same = t.mood[k] == row[k];
+    for (int k = B + 1; k < b.n; ++k) b.f[k].size = 0;
+    for (int k = 1; k < b.party_size; ++k) b.f[k].size = 0;
+    const uint8_t floor = b.ground[3][5];
+    int bad = 0, n = 0;
+    char first[160] = "";
+    auto setup = [&](int dir, int mood) {
+        for (int y = 0; y < combat::kH; ++y)
+            for (int x = 0; x < combat::kW; ++x) b.ground[y][x] = floor;
+        mx::put(0, 0, 5 + 3 * combat::dx(dir), 5 + 3 * combat::dy(dir), 60);
+        mx::put(B, 1, 5, 5, 60);
+        combat::occupancy(b);
+        combat::Fighter& f = b.f[B];
+        f.ai_mood = static_cast<uint8_t>(mood);
+        f.flee_last = 8;
+        f.flee_back = 0;
+        f.moves = 12;
+        f.attacks[0] = 1;
+        f.target = 0;
+        f.rec[0x10E] = 0;
+    };
+    for (int mood = 1; mood <= 6; ++mood)
+        for (int dir = 0; dir < 8; ++dir)
+            for (int k = 1; k <= 5; ++k) {
+                setup(dir, mood);
+                for (int j = 1; j < k; ++j) {
+                    const int dd = (row[mood * 5 + j] + dir) & 7;
+                    b.ground[5 + combat::dy(dd)][5 + combat::dx(dd)] = 0;     // (no floor: no step there)
+                }
+                const int want = (row[mood * 5 + k] + dir) & 7;
+                const combat::Plan p = combat::think(b, t, B, rng);
+                ++n;
+                if ((p.act != combat::Act::Step || p.dir != want) && !bad++)
+                    snprintf(first, sizeof first, "mood %d way %d column %d: act %d dir %d, want a step %d", mood, dir, k, (int)p.act, p.dir, want);
+            }
+    // back the way it came: the mood turns, then the target goes, then the moving
+    int rev_bad = 0;
+    char rev[160] = "";
+    setup(2, 3);
+    const int d1 = (row[3 * 5 + 1] + 2) & 7;
+    combat::Fighter& f = b.f[B];
+    for (int time = 1; time <= 3; ++time) {
+        f.flee_last = static_cast<uint8_t>((d1 + 4) & 7);
+        f.target = 0;
+        f.moves = 12;
+        const int m0 = f.ai_mood;
+        const int want_mood = m0 % 6 + 1;
+        const int dir_now = (row[m0 * 5 + 1] + 2) & 7;
+        const bool reverse = ((dir_now + 4) & 7) == f.flee_last;
+        const combat::Plan p = combat::think(b, t, B, rng);
+        bool ok;
+        if (!reverse) ok = p.act == combat::Act::Step;      // (the row turned: not back any more)
+        else if (time == 1) ok = p.act == combat::Act::Step && f.ai_mood == want_mood && f.flee_back == 1 && f.target == 0;
+        else if (time == 2) ok = p.act == combat::Act::Step && f.flee_back == 2 && f.target < 0;
+        else ok = p.act != combat::Act::Step && f.moves == 0;
+        if (!ok && !rev_bad++)
+            snprintf(rev, sizeof rev, "time %d (back %d): act %d mood %d->%d back %d target %d moves %d", time, reverse, (int)p.act, m0,
+                     (int)f.ai_mood, (int)f.flee_back, f.target, f.moves);
+        if (!reverse) break;
+        f.ai_mood = static_cast<uint8_t>(m0);                // (the same row again for the next time)
+    }
+    for (int y = 0; y < combat::kH; ++y)
+        for (int x = 0; x < combat::kW; ++x) b.ground[y][x] = floor;
+    expect(P, "Champions: the computer's step - its mood's row of the program's table (DS 0x396, read at 0xCC9C), the first it can take",
+           same && bad == 0, "engine's rows the program's %d (table DS 0x%X); %d of %d wrong (%s)", same, at, bad, n, first);
+    expect(P, "Champions: a step back the way it came - the next row (0xD0F0), the target dropped the second time, the moving over the third",
+           rev_bad == 0, "%s", rev);
+}
+
+// The sides' to-hit bonuses (round 11): oracle_tohit_<game>.txt from the
+// original's attacker-against-target roll (tools/devkit/oracles/tohit.py -
+// the bonus bytes it loads and its difficulty switch walked for each value
+// 0-6). The script places set (party 3, the others -2) and the difficulty
+// to each value; play::side_bonuses' sums against the original's, the Game
+// Fixes off - and on: Secret's / Death Knights' switch on their difficulty
+// (fixadj: the switch walked as if it tested it), the rest unchanged
+void to_hit_sides()
+{
+    static const char* kName[] = {"", "poolrad", "curse", "secret", "darkness", "champions", "knights", "queen", "gateway", "treasures"};
+    const int g = game();
+    char path[256];
+    snprintf(path, sizeof path, "%s/oracle_tohit_%s.txt", getenv("ORACLE_DIR") ? getenv("ORACLE_DIR") : "/tmp/claude-0/bt",
+             g >= 1 && g <= 9 ? kName[g] : "?");
+    FILE* fo = fopen(path, "r");
+    if (!fo) {
+        expect(P, "to-hit sides: oracle_tohit (tools/devkit/oracles/tohit.py)", false, "%s missing", path);
+        return;
+    }
+    unsigned party_at = 0, mons_at = 0, diff_at = 0;
+    int adj[7] = {}, fixadj[7] = {};
+    bool has_fix = false;
+    char line[160];
+    while (fgets(line, sizeof line, fo)) {
+        int v, dv;
+        unsigned x;
+        if (sscanf(line, "party %x", &x) == 1) party_at = x;
+        else if (sscanf(line, "monsters %x", &x) == 1) mons_at = x;
+        else if (sscanf(line, "difficulty const %x (area word %x)", &v, &x) == 2) diff_at = x;
+        else if (sscanf(line, "difficulty %x", &x) == 1) diff_at = x;
+        else if (sscanf(line, "adj %d %d", &v, &dv) == 2 && v >= 0 && v < 7) adj[v] = dv;
+        else if (sscanf(line, "fixadj %d %d", &v, &dv) == 2 && v >= 0 && v < 7) {
+            fixadj[v] = dv;
+            has_fix = true;
+        }
+    }
+    fclose(fo);
+    if (!fight()) return;
+    combat::Battle& b = fg->b;
+    const uint16_t keep_p = party_at ? vm->get(static_cast<uint16_t>(party_at)) : 0;
+    const uint16_t keep_m = mons_at ? vm->get(static_cast<uint16_t>(mons_at)) : 0;
+    const uint16_t keep_d = diff_at ? vm->get(static_cast<uint16_t>(diff_at)) : 0;
+    // (Secret and Death Knights have a difficulty to give: their Level menu)
+    const bool fix_game = g == 3 || g == 6;
+    int bad = 0, n = 0;
+    char first[160] = "";
+    for (int fixes = 0; fixes <= 1; ++fixes) {
+        rules::set_fixes(fixes != 0);
+        for (int v = 0; v <= 6; ++v) {
+            if (!diff_at && v) break;
+            if (party_at) vm->set(static_cast<uint16_t>(party_at), 3);
+            if (mons_at) vm->set(static_cast<uint16_t>(mons_at), 0xFE);
+            if (diff_at) vm->set(static_cast<uint16_t>(diff_at), static_cast<uint16_t>(v));
+            b.to_hit_party = b.to_hit_monsters = 99;
+            play::side_bonuses(b);
+            const int want_p = 3 + (fixes && fix_game && has_fix ? fixadj[v] : adj[v]);
+            ++n;
+            if ((b.to_hit_party != want_p || b.to_hit_monsters != -2) && !bad++)
+                snprintf(first, sizeof first, "fixes %d difficulty %d: party %d others %d, want %d / -2", fixes, v, b.to_hit_party,
+                         b.to_hit_monsters, want_p);
+        }
+    }
+    rules::set_fixes(true);
+    if (party_at) vm->set(static_cast<uint16_t>(party_at), keep_p);
+    if (mons_at) vm->set(static_cast<uint16_t>(mons_at), keep_m);
+    if (diff_at) vm->set(static_cast<uint16_t>(diff_at), keep_d);
+    expect(P, "to-hit: each side's bonus as the original's roll takes it (the script bytes, the party's difficulty switch)",
+           bad == 0, "game %d: %d of %d wrong (%s)", g, bad, n, first);
+}
+
 void run()
 {
     if (!monkey_boot() || !play::load_rules(m) || !m) {
@@ -2225,6 +2451,8 @@ void run()
     if (want("bandorder")) ai_bandage_order();
     if (want("aiturn")) ai_turn_types();
     if (want("trainspell")) train_spell_offer();
+    if (want("tohit")) to_hit_sides();
+    if (want("aimood")) ai_mood_steps();
     if (want("canuse")) {
         krynn_can();
         armour_can();

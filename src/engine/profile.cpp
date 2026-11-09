@@ -2035,7 +2035,7 @@ constexpr combat::Facts kQueenFightFacts = {.held = {0x33, 0x34, 0x35, 0x1F}, .b
                 .shot_pointed = {9, 21, 100, 28, 31, 73}, .shot_spinning = {2, 7, 20}, .shot_flask = {85, 86},
                 .shot_sling = {47, 98, 101},
                 .bestow = 0x24, .blink = 0x25, .fumbling = 0x1B, .silence = 0x15, .entangle = 0x1B, .sticks = 0x03,
-                .faerie = 0, .blinded = 0x21, .animals_blind = 0, .feeble = 0,
+                .faerie = 0, .blinded = 0x21, .animals_blind = 0, .feeble = 0x44,
                 .mon = {.poison = 0x40, .poison_m2 = 0x56, .kreen_bite = 0x45, .need_magic = 0x67, .no_cold = 0x62,
                         .no_elec = 0, .globe = 0x3F, .elf_sleep = 0x5F, .detect = 0x18, .prot_evil_near = 0x2D,
                         .acid_breath = 0x60, .fire_breath = 0x54,
@@ -2047,7 +2047,8 @@ constexpr combat::Facts kQueenFightFacts = {.held = {0x33, 0x34, 0x35, 0x1F}, .b
                        .stun = 0x6A},
                 .race = {0x5E, 0x12, 0x1A, 0x07, 0x2F, 0x30, 0x69, true},
                 .items = {.displace = 0x59, .ring_invisible = 0x38, .fire_ring = 0x3D},
-                .berserk = 0x6B, .taunted = 0x5B, .feeble_lost = true};
+                .berserk = 0x6B, .taunted = 0x5B, .feeble_lost = true, .feeble_direct = true,
+                .q_cloud_proof = 0x8F};
 // The Dark Queen's spells (queen_facts_4.md 8): Darkness's numbers 1-126 and
 // their workings (its handler table DS 0xAF45 + 4 x spell shares handlers as
 // Darkness's), its words found again among its C strings; "is " + an effect's
@@ -3007,7 +3008,7 @@ const Profile kProfiles[] = {
                {0x24222, 0x24226, 0x24235, 0x24239, 0x2423F, 0x24258, 0x2425D, 0x24282}},
      // Fights: Curse's tables at Champions' places (its effect numbers:
      // chunk 7)
-     .fight = {{0x1EE4, 0x03BA, 0x03CA, 0x03DA, 0x03DE, 0x03E6, 0x03EE, 0x0432, 0x0444, 0, 13, 0, 2},   // (turn undead: DS 0x444, 13 columns, its own rules - rules_round4_facts.md T3)
+     .fight = {{0x1EE4, 0x03BA, 0x03CA, 0x03DA, 0x03DE, 0x03E6, 0x03EE, 0x0432, 0x0444, 0, 13, 0, 2, 0x0396},   // (turn undead: DS 0x444, 13 columns, its own rules - rules_round4_facts.md T3; the AI's step rows DS 0x396 - round 11)
                {0xFDDF, 0xB5BD, 0xB5C3, 0xB5CD, 0xB5D2, 0xB5D8, 0xB5E4,
                 0xBABE, 0xBADE, 0xBAE4, 0xBE59,
                 0x17D59, 0x17D65, 0x17D6D, 0x17D7F, 0x17D8B,
