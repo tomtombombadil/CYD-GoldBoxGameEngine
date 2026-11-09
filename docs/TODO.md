@@ -6,12 +6,11 @@ to the bottom with their version, then drop off after a while. Synced to
 the Project as claude/TODO.md.
 
 ## Tom
-- [ ] 2.8" ILI9341: no sound (Tom, 2026-11-08, PoolRad). Same DAC code as the
-      3.2" / 3.5" (sound heard); differences: no amplifier pin, touch on its own
-      wires (GPIO 25 = the DAC's other pad). Tom to check: (1) CYD-Classic-Games'
-      sounds (PWM on 26) on this board, (2) Memory log "NOT ENOUGH MEMORY for a
-      sound", (3) a classic 2.8" ST7789 if he has one. Classic-Games audible ->
-      Claude moves this board to PDM on 26 (as the C5).
+- [ ] 2.8" ILI9341: no sound (Tom, 2026-11-08) - silent in Classic-Games /
+      Classic-Arcade too, the 3.2" fine. v0.179.1: GPIO 4 (the red LED's pin)
+      is the amplifier's enable on the 2.8" boards, low from Play's start (a
+      CYD with the same silence played once 4 was low - CYD issue #372). Tom:
+      flash v0.179.1 and listen; the red LED on the back lights while playing.
 
 - [ ] "Game Enhancements" (Tom, 2026-11-01: "We may need to have another
       toggle/list in addition to Game Fixes ... I'll think about that"):
