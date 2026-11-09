@@ -1224,6 +1224,11 @@ the Project as claude/TODO.md.
       can-learn in fights not read. When each original shows the training
       spell list at all - not compared. Gateway's rules4 / behave runs need
       its test saves (lost with the machine: the SAVE folder is empty).
+      [x] 2026-11-09: Death Knights' Add Character list was always empty
+      (the NPC byte read at Darkness's 0x147, past its 0xD8 record - now
+      0x3E), its saved games' members are .GAM, and an added character's
+      .WIZ spells were never read; Champions' list read Curse's 0xF7 (its
+      NPC byte is 0xE7). make_saves: Knights B, Champions C.
 - [ ] Tom: Darkness's and Treasures' computer never uses an item (their
       item routine is compiled out - kept as the originals; a Game Fix to
       give monsters their wands back? not added: not an AD&D mistake).

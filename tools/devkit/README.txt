@@ -55,7 +55,7 @@ Round 8 rebuild (2026-11-08) - the behave oracles, ITEMS_BIN and test saves:
   items_bin.sh [games]   ITEMS_BIN (sweep testchars ALLITEMS=1) -> /tmp/claude-0/sw/items_<short>.bin (+ items.bin)
   make_saves.sh <g> [slot] [race,sex,class,align:NAME ...]   a test party made with the playsim (CREATE x6,
                          ADDGUYS, SAVENOW) into the scratch game's SAVE and /tmp/claude-0/saves/<g>. Gateway A works;
-                         Death Knights' Add list comes back empty (its .PC files aren't listed) - B not made.
+                         Death Knights B and Champions C made 2026-11-09 (the Add list fixed).
   behave.sh [games]      the per-game behave runs (oracles, build b<game>, run) -> logs/behave_<game>.log + summary.
   Baselines this round: Curse 6002/1 (the 1: no oracle_events.txt), PoolRad 430/0/0, Secret 5312/0/0,
   Gateway rules4 11/0 (save A made).

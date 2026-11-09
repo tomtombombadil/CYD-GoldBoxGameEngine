@@ -5642,7 +5642,7 @@ void find_guys(char from = 'C')
         const size_t ne = strlen(ext_guy());
         const bool guy = n > ne && n <= 12 && strcasecmp(nm + n - ne, ext_guy()) == 0;
         const bool member = CYD_MORE_CHARACTERS && opts.more_guys && n == 12 && strncasecmp(nm, "CHRDAT", 6) == 0 &&
-                            strcasecmp(nm + 8, ".SAV") == 0;
+                            strcasecmp(nm + 8, ext_member()) == 0;     // (Death Knights' .GAM)
         if (hl()) {
             // (the Dark Queen's NAME.QCH: its record - the name a C string at
             // 0x68, NPC 0x9B -, its items and effects after it)
@@ -5666,7 +5666,13 @@ void find_guys(char from = 'C')
         }
         if (f.isDirectory() || (!guy && !member) || f.size() != rec_file_size()) continue;
         uint8_t rec[0x150];
-        const int ctl = pool_files() ? 0x84 : secret_files() ? 0xFF : darkness_files() ? 0x147 : 0xF7;     // (Secret's record: 0xFF)
+        // (the control byte - an NPC from 0x80 - in each record: Secret's
+        // 0xFF, Death Knights' 0x3E and Champions' 0xE7 - party.cpp's
+        // kDkkRuns / kKrynnRuns; until 2026-11-09 Death Knights read
+        // Darkness's 0x147 past its 0xD8 bytes - its list was always
+        // empty - and Champions Curse's 0xF7)
+        const int ctl = pool_files() ? 0x84 : secret_files() ? 0xFF : dkk() ? 0x3E : darkness_files() ? 0x147
+                      : krynn() ? 0xE7 : 0xF7;
         if (f.read(rec, ctl + 1) != ctl + 1 || rec[ctl] > 0x7F) continue;     // NPCs aren't listed
         char name[16];
         size_t len = rec[0] > 15 ? 15 : rec[0];
@@ -5859,6 +5865,13 @@ void add_character(int i, pic::Canvas& c)
     }
     f.close();
     if (!ok) return;
+    if (dkk()) {
+        // (Death Knights: its spells are a file of their own, NAME.WIZ -
+        // until 2026-11-09 an added character came without them)
+        char rp[160];
+        save_path(d->guy_file[i], rp, sizeof rp);
+        dkk_read_spells(rp, ch);
+    }
     char fn[24];
     snprintf(fn, sizeof fn, "%s%s", base, ext_items());
     if (open_save_file(fn, f)) {
