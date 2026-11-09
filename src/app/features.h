@@ -234,31 +234,40 @@
 #define CYD_MAX_HP 1
 #endif
 
-// Quick Actions (Tom, 2026-11-09): what each of the player's own characters
-// may do when Quick plays it in a fight - the Game menu's Quick tab, one
-// page on the game screen in the game's look: the party's own characters
-// (not party NPCs - they act as their game makes them) down, eight columns
-// of boxes across - Melee, Missile, Spells, Items, Bandage First, Move, Turn
-// Undead, Guard; a tap (or the cursor keys and Select) ticks / unticks a
-// box, the "?" explains it all. Unticked: Melee - no melee attacks;
-// Missile - no shots or throws (no missile weapon readied); Spells - casts
-// nothing (ticked: casts its memorized spells - the originals' Magic On,
-// Alt-M in a fight, off as each fight starts); Items - uses no items; Move - never steps toward enemies (holds
-// its square, fights what is in reach or range; with Melee unticked and no
-// missile to use it never steps either); Turn Undead - never turns; Guard
-// - ends its turn instead of guarding. Bandage First ticked: a dying
-// friend is bandaged at the turn's start in every game (PoolRad too);
-// unticked: the game's own order (the move step; PoolRad's computer never
-// bandages). Default: all ticked but Bandage First and Spells - each
-// original's Quick, Magic Off (Tom, 2026-11-09). Kept by the character's NAME in /GOLDBOX/_CYD/QUICK.TXT (a line
-// a name: the eight switches, the name), so it follows the character
-// across save slots and into the later games; read at each fight's start
-// and when the page opens. The Settings key Quick Actions (on by default;
-// As Original turns it off): off, Quick is each original's own and the
-// tab is hidden. 0: no such switch. Where: engine/quickacts.* (the file's
-// lines), engine/combat.cpp think / choose_weapon (Fighter::qa),
-// play_fight.inc ai_step, play_quick.inc (the page), viewer.cpp (the tab,
-// the key).
+// Quick Actions (Tom, 2026-11-09): what each party member may do when
+// Quick (or, for an NPC, the computer) plays it in a fight - the Game
+// menu's Quick tab, in the ENGINE's look on the whole screen under the tab
+// bar (Tom: "I intended it for the game/settings menu of the engine where
+// you could use smaller fonts and be more descriptive"): the whole party
+// down the left (full names; NPCs marked "NPC"), the chosen member's eight
+// switches as keys with a box and the full words - Melee, Missile, Spells,
+// Items, Bandage First, Move, Turn Undead, Guard - what the switch last
+// tapped does under them, Back to Game and a "?" (the whole story). A tap
+// on a switch flips it and writes the file at once. Unticked: Melee - no
+// melee attacks; Missile - no shots or throws (no missile weapon readied);
+// Spells - casts nothing (ticked: casts its memorized spells - the
+// originals' Magic On, Alt-M in a fight, off as each fight starts); Items -
+// uses no items; Move - never steps toward enemies (holds its square,
+// fights what is in reach or range; with Melee unticked and no missile to
+// use it never steps either); Turn Undead - never turns; Guard - ends its
+// turn instead of guarding. Bandage First ticked: a dying friend is
+// bandaged at the turn's start in every game (PoolRad too); unticked: the
+// game's own order (the move step; PoolRad's computer never bandages).
+// Defaults: the player's own characters all ticked but Bandage First and
+// Spells - each original's Quick, Magic Off; the party's NPCs (Tom,
+// 2026-11-09) all but Bandage First, Spells ticked - the originals' AI for
+// them (spells whatever the flag), so nothing changes until the player
+// unticks one (our comfort - SPEC 11 / 12). Kept by the character's NAME in
+// /GOLDBOX/_CYD/QUICK.TXT (a line a name: the eight switches, the name), so
+// it follows the character across save slots and into the later games; a
+// name not there starts by its kind then (own / NPC); read at each fight's
+// start and when the tab opens. The Settings key Quick Actions (on by
+// default; As Original turns it off): off, Quick and NPCs are each
+// original's own and the tab is hidden. 0: no such switch. Where:
+// engine/quickacts.* (the file's lines, the columns' names and words),
+// engine/combat.cpp think / choose_weapon (Fighter::qa), play_fight.inc
+// ai_step, play_quick.inc (the masks, the file, the tab's model:
+// play::quick_begin / quick_toggle ...), viewer.cpp (the tab, the key).
 #ifndef CYD_QUICK_ACTIONS
 #define CYD_QUICK_ACTIONS 1
 #endif

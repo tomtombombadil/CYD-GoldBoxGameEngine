@@ -16408,8 +16408,27 @@ void cheat_sanctuary(pic::Canvas& c)
 } // namespace
 
 bool quick_ready() { return qa_ready(); }
-bool quick_open(pic::Canvas& c) { return qa_open(c); }
-bool quick_page() { return d && qp.on; }
+int quick_begin() { return qa_begin(); }
+bool quick_name(int r, char* out, size_t cap)
+{
+    const int m = qa_row_member(r);
+    if (m < 0 || !cap) return false;
+    pt->m[m].name(out, cap);
+    return true;
+}
+bool quick_npc(int r) { return qa_npc(qa_row_member(r)); }
+uint8_t quick_get(int r)
+{
+    const int m = qa_row_member(r);
+    return m < 0 ? 0 : qa_mask[m];
+}
+bool quick_toggle(int r, int k)
+{
+    const int m = qa_row_member(r);
+    if (m < 0 || k < 0 || k >= quickacts::kCols) return false;
+    qa_mask[m] = static_cast<uint8_t>(qa_mask[m] ^ (1 << k));
+    return qa_write(m);
+}
 
 bool cheats_ready() { return CYD_CHEATS && opts.cheats && d && cheats_ready_in(); }
 
@@ -17300,7 +17319,7 @@ void close()
         delete fg;
         fg = nullptr;
     }
-    qp = QuickPage{};                       // (the Quick Actions page with the game)
+    qa_rows = 0;                            // (the Quick tab's rows with the game)
     reset_session();
     font::set_ink_remap(-1, 0);
     text::set_menu_origin(0);
@@ -17386,10 +17405,6 @@ bool act(Act a, pic::Canvas& c)
 {
     if (!d) return false;
     cv = &c;
-    if (qp.on) {                            // (the Quick Actions page: the game waits; a key closes its help)
-        if (qp.help) qa_tap(0, 0, c);
-        return true;
-    }
     if (demo_input(c)) return true;
     if (screen == Screen::Fight) return fight_act(a, c);
     if (screen == Screen::Modify) return modify_act(a, c);
@@ -17692,7 +17707,6 @@ bool nav(Nav n, pic::Canvas& c)
 {
     if (!d || input_mode != Input::None) return false;
     cv = &c;
-    if (qp.on) return qa_nav(n, c);
     if (demo_input(c)) return true;
     const bool first = !pm_lit();
     if (screen == Screen::Won) {
@@ -17741,7 +17755,7 @@ bool nav(Nav n, pic::Canvas& c)
 
 bool fight_pad()
 {
-    return d && input_mode == Input::None && !qp.on && screen == Screen::Fight && fg &&
+    return d && input_mode == Input::None && screen == Screen::Fight && fg &&
            (fg->st == FSt::Move || (fg->st == FSt::Aim && fg->manual));
 }
 
@@ -17774,7 +17788,7 @@ bool fight_select(pic::Canvas& c)
 
 bool walking()
 {
-    if (!d || input_mode != Input::None || qp.on) return false;
+    if (!d || input_mode != Input::None) return false;
     if (screen == Screen::Fight) return fg && (fg->st == FSt::Move || (fg->st == FSt::Aim && fg->manual));
     // (the Dark Queen's overland too: its menu is Encamp alone, the movement keys step)
     return screen == Screen::Game && !waiting && then == Then::Idle &&
@@ -17785,7 +17799,7 @@ void set_present_now(void (*fn)()) { g_present_now = fn; }
 
 bool walk_pending()
 {
-    if (!d || input_mode != Input::None || qp.on || screen != Screen::Game || page_prompt) return false;
+    if (!d || input_mode != Input::None || screen != Screen::Game || page_prompt) return false;
     if (!waiting) return then != Then::Idle && then != Then::Door;
     if (vm->wait() != ecl::Wait::Print) return false;
     for (const char* t = vm->text(); *t; ++t)
@@ -17797,7 +17811,6 @@ bool nav_point(int* x, int* y)
 {
     if (!d || input_mode != Input::None) return false;
     keys_used = true;
-    if (qp.on) return qa_point(x, y);
     auto at_word = [&]() {
         const int sel = menu.selected >= 0 && menu.selected < menu.count ? menu.selected : 0;
         // (a menu on two rows - Darkness's, Gateway's, Krynn's fights - the
@@ -18023,13 +18036,6 @@ bool tap_highlight(int x, int y, pic::Canvas& c, int* y0, int* y1)
 {
     tap_highlight_end(c);
     if (!d) return false;
-    if (qp.on) {
-        cv = &c;
-        if (!qa_press(x, y, c)) return false;
-        *y0 = 0;
-        *y1 = pic::kScreenH;
-        return true;
-    }
     fl.box = false;
 #if CYD_ICON_GALLERY
     // An icon gallery cell: a frame around it
@@ -18146,10 +18152,6 @@ void tap(int x, int y, pic::Canvas& c)
 {
     if (!d) return;
     cv = &c;
-    if (qp.on) {
-        qa_tap(x, y, c);
-        return;
-    }
     // (Pool: a key during a character's timed words waits for them and then
     // acts - the delay doesn't eat it)
     if (note_until && status_after_note) redraw_menu(c);
@@ -18322,7 +18324,6 @@ void tap(int x, int y, pic::Canvas& c)
 void tick(uint32_t now, pic::Canvas& c)
 {
     if (!d) return;
-    if (qp.on) return;                      // (the Quick Actions page: the game waits, a fight too)
     tidy_memory();
     // Effects run out as game time passes (walking, searching, scripts)
     if (vm && pt) {
@@ -18601,11 +18602,6 @@ bool back(pic::Canvas& c)
 {
     if (!d) return false;
     cv = &c;
-    if (qp.on) {
-        if (qp.help) qa_tap(0, 0, c);
-        else qa_close(c);
-        return true;
-    }
     if (demo_input(c)) return true;
     if (screen == Screen::Won) {
         won_key(c);
@@ -18777,7 +18773,7 @@ bool exit_requested()
     return e;
 }
 
-bool journal_waiting() { return d && !qp.on && journal_due && n_pending; }
+bool journal_waiting() { return d && journal_due && n_pending; }
 
 bool journal_request(char* kind, int* number)
 {

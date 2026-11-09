@@ -14,7 +14,9 @@
 #
 # TAPS.TXT: "x y wait_ms" a line (screen pixels; the next tap after the
 # wait), "mem [wait_ms]" prints the heap, "panic" crashes (the
-# crash line in the Restarts log), '#' comments. The firmware prints
+# crash line in the Restarts log), "shot <name> [wait_ms]" the screen's
+# pixels (S3 builds: their frame buffer - the 4.0" 480x320, the 5.0"'s
+# 320x240) written by --shots <dir> as <dir>/<name>.png, '#' comments. The firmware prints
 # "[qemu] ... heap free N, largest block N, min free N" after each step.
 import argparse
 import os
@@ -33,6 +35,8 @@ ap.add_argument("--seconds", type=int, default=120)
 ap.add_argument("--out", default="/tmp/claude-0/qemu/run")
 ap.add_argument("--card-mb", type=int, default=128)
 ap.add_argument("--s3", action="store_true", help="the ESP32-S3 build (env qemus3)")
+ap.add_argument("--shots", help="a folder for the screenshots (TAPS.TXT's shot steps) - scratch only: real game screens")
+ap.add_argument("--keep-going", action="store_true", help="no early stop at 'script done'")
 ap.add_argument("--env", help="the emulator env (default qemus3 / qemu28; qemus3_50 = the 5.0\" S3 board, with --s3)")
 a = ap.parse_args()
 
@@ -90,15 +94,49 @@ else:
 # (Espressif's QEMU now and then panics at boot with a cache error before
 # the firmware's first line: tried again, 8 times at most)
 for attempt in range(8):
-    try:
-        subprocess.run(cmd, timeout=a.seconds, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    except subprocess.TimeoutExpired:
-        pass
+    # (stopped at the timeout, or soon after the script's end - "script
+    # done" - unless --keep-going)
+    import time
+    if os.path.exists(log):
+        os.remove(log)
+    p = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    t0 = time.time()
+    while p.poll() is None and time.time() - t0 < a.seconds:
+        time.sleep(1)
+        if not a.keep_going and os.path.exists(log) and b"script done" in open(log, "rb").read():
+            time.sleep(3)
+            break
+    if p.poll() is None:
+        p.kill()
+        p.wait()
     text = open(log, "rb").read().decode("latin-1")
     if "CYD BYOG" in text:
         break
     print("(boot panic in QEMU - again)")
-print(text)
+# (the shots' pixel rows are left out of the printed log)
+print("\n".join(l for l in text.splitlines()
+                if not (l.startswith("[shot] ") and len(l.split()) == 3 and l.split()[1].isdigit())))
+if a.shots:
+    # "[shot] begin name w h", "[shot] y rrggbb...", "[shot] end name"
+    from PIL import Image
+    os.makedirs(a.shots, exist_ok=True)
+    cur = None
+    for l in text.splitlines():
+        if l.startswith("[shot] begin "):
+            _, _, name, w, h = l.split()[:5]
+            cur = (name, int(w), int(h), Image.new("RGB", (int(w), int(h))))
+        elif l.startswith("[shot] end") and cur:
+            out = os.path.join(a.shots, cur[0] + ".png")
+            cur[3].save(out)
+            print("shot: " + out)
+            cur = None
+        elif l.startswith("[shot] ") and cur:
+            parts = l.split()
+            if len(parts) == 3 and parts[1].isdigit():
+                y, hx = int(parts[1]), parts[2]
+                row = bytes.fromhex(hx[:cur[1] * 6])
+                for x in range(len(row) // 3):
+                    cur[3].putpixel((x, y), (row[3 * x], row[3 * x + 1], row[3 * x + 2]))
 low = [l for l in text.splitlines() if "[qemu]" in l and "largest block" in l]
 if low:
     sizes = [int(l.split("largest block")[1].split(",")[0]) for l in low]

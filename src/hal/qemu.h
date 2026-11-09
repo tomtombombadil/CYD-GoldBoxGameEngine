@@ -18,5 +18,8 @@ bool     touch(int32_t* x, int32_t* y);
 bool     journal(char* kind, int* number);
 // The heap / stack line now
 void     mem_now(const char* why);
+// A "shot <name>" step of the script (once): the viewer dumps the screen
+// (ui::qemu_shot) when it's drawn
+bool     shot(char* name, size_t cap);
 }
 #endif

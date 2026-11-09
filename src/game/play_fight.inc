@@ -4513,8 +4513,9 @@ void ai_step(pic::Canvas& c)
     }
     // Quick Actions (Tom, 2026-11-09; features.h CYD_QUICK_ACTIONS): the
     // player's switches for one of its own Quick characters - kDefault (all
-    // but Bandage First and Spells: the game's start) with the switch off,
-    // kComputer for monsters and NPCs: as the game
+    // but Bandage First and Spells: the game's start) with the switch off -
+    // and for the party's NPCs (kComputer as they start: the game's AI);
+    // kComputer for monsters: as the game
     f.qa = quick_mask(f);
     // The computer bandages a dying friend in its move-and-attack step -
     // after morale, items, the pending spell, Turn, spells and the weapon,

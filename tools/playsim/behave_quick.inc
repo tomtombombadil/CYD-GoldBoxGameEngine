@@ -20,7 +20,8 @@
 // item; Spells - no spell), Bandage First ticked bandages at the turn's
 // start in every game (before Turn Undead), the defaults (all but Bandage
 // First and Spells) and the switch off are the game's own, Spells ticked is
-// the games' Magic On (qa_spells), party NPCs ignore the grid,
+// the games' Magic On (qa_spells), the party's NPCs follow their own
+// switches (kComputer as they start: the game's AI, as the switch off),
 // and QUICK.TXT keeps the switches by name.
 
 std::vector<std::pair<combat::TestAct, int>> qa_acts;     // fighter 0's actions: (act, target)
@@ -69,8 +70,9 @@ QaOut qa_scene(int mask, int dist, bool dying, int undead, int cls = 0, bool thr
     }
     f.fleeing = false;
     f.moves = 12;
-    if (npc) f.rec[0xF7] = 0x80 | 50;
     party::Character& ch = pt->m[f.member];
+    const uint8_t keep_ctl = f.rec[0xF7], keep_pctl = ch.rec[0xF7];
+    if (npc) f.rec[0xF7] = ch.rec[0xF7] = 0x80 | 50;      // (an NPC: the party's record says so too)
     ch.n_items = 0;
     if (thrown) {
         // A thrown weapon only (no blow with it), its reach past the foe -
@@ -132,6 +134,8 @@ QaOut qa_scene(int mask, int dist, bool dying, int undead, int cls = 0, bool thr
     }
     qa_mask[0] = keep_mask;
     play::opts.quick_acts = keep_on;
+    f.rec[0xF7] = keep_ctl;
+    ch.rec[0xF7] = keep_pctl;
     o.bandaged = dying && b.f[1].rec[0x195] != party::Dying;
     o.turned = qa_did(combat::TestAct::TurnUndead);
     for (auto& x : qa_acts)
@@ -170,8 +174,10 @@ QaOut qa_scene(int mask, int dist, bool dying, int undead, int cls = 0, bool thr
 // a Quick magic-user with Magic Missile memorized casts it (on some of 40
 // turns: the AI's d7 rounds against the spell's priority) and it leaves
 // memory; unticked, the start (kDefault) and Quick Actions off (the game's
-// start: Magic Off) - never; a party NPC (control 0x80 on) casts whatever
-// the grid says
+// start: Magic Off) - never; a party NPC (control 0x80 on) casts as it
+// starts (kComputer: the original's AI, spells whatever the flag) and with
+// the switch off, never with its Spells unticked (Tom, 2026-11-09: NPCs'
+// switches too - our comfort)
 void qa_spells()
 {
     using namespace quickacts;
@@ -197,13 +203,15 @@ void qa_spells()
     };
     int f_on, f_def, f_off, f_npc;
     const int on = tries(D | kSpells, false, &f_on), def = tries(D, false, &f_def), off = tries(-1, false, &f_off);
-    const int npc = tries(0, true, &f_npc);
+    const int npc = tries(kComputer, true, &f_npc), npc_off = tries(-1, true, &f_npc);
+    const int npc_no = tries(kComputer & ~kSpells, true, &f_npc);
     expect(P, "Quick Actions, Spells (the games' Magic On): ticked - a Quick magic-user casts its memorized Magic Missile "
               "and it leaves memory; unticked (the start, as each fight's Magic Off) and Quick Actions off - never; a party "
-              "NPC casts whatever the grid says (every game's spell step: control over 0x7F or the flag)",
-           on > 0 && f_on == on && def == 0 && off == 0 && npc > 0,
-           "spell %02X of 40 turns: ticked cast %d (left memory %d), unticked %d, switch off %d, NPC %d", mm, on, f_on, def, off,
-           npc);
+              "NPC casts as it starts (kComputer) and with the switch off (every game's spell step: control over 0x7F), "
+              "never with its Spells unticked",
+           on > 0 && f_on == on && def == 0 && off == 0 && npc > 0 && npc_off > 0 && npc_no == 0,
+           "spell %02X of 40 turns: ticked cast %d (left memory %d), unticked %d, switch off %d, NPC start %d, NPC switch off "
+           "%d, NPC Spells unticked %d", mm, on, f_on, def, off, npc, npc_off, npc_no);
 }
 
 void ai_bandage_order()
@@ -244,7 +252,7 @@ void quick_file()
     // (a missing file: the defaults)
     qa_load();
     bool ok_missing = true;
-    for (int i = 0; i < pt->count; ++i) ok_missing = ok_missing && (!qa_member(i) || qa_mask[i] == quickacts::kDefault);
+    for (int i = 0; i < pt->count; ++i) ok_missing = ok_missing && (!qa_member(i) || qa_mask[i] == qa_start(i));
     // Twelve names through the text functions
     std::string text;
     const char* names12[12] = {"ALIAS",       "DRAGONBAIT", "AKABAR BEL AKASH", "o'Brien-Smith", "X",         "   PADDED   ",
@@ -284,6 +292,35 @@ void quick_file()
         expect(P, "Quick Actions' file: written by name on the card and read back at a fight's start (QUICK.TXT)",
                ok_missing && qa_mask[0] == 0x3C && found, "missing-file defaults %d, read back %02X, in the file %d", ok_missing,
                qa_mask[0], found);
+    }
+    // An NPC (Tom, 2026-11-09): not in the file - kComputer (spells ticked);
+    // its line written - the line decides, whatever kind it is later
+    if (pt->count > 1) {
+        plat::remove(path);
+        party::Character& ch = pt->m[1];
+        const uint8_t keep_ctl = ch.rec[0xF7], keep1 = qa_mask[1];
+        ch.rec[0xF7] = 0x80 | 50;
+        qa_load();
+        const bool start = qa_npc(1) && qa_mask[1] == quickacts::kComputer && qa_mask[0] == quickacts::kDefault &&
+                           quickacts::find("", 0, "NOBODY", quickacts::kComputer) == quickacts::kComputer;
+        qa_mask[1] = 0x11;
+        qa_write(1);
+        ch.rec[0xF7] = static_cast<uint8_t>(keep_ctl & 0x7F);
+        qa_load();
+        const bool kept = !qa_npc(1) && qa_mask[1] == 0x11;
+        // (the tab's model: the NPC's row marked, its toggle writes)
+        ch.rec[0xF7] = 0x80 | 50;
+        const int rows = quick_begin();
+        const bool row_npc = rows == pt->count && quick_npc(1) && !quick_npc(0) && quick_get(1) == 0x11;
+        const bool tog = quick_toggle(1, 2) && quick_get(1) == (0x11 ^ quickacts::kSpells);
+        qa_load();
+        const bool back = qa_mask[1] == (0x11 ^ quickacts::kSpells);
+        ch.rec[0xF7] = keep_ctl;
+        qa_mask[1] = keep1;
+        expect(P, "Quick Actions' file, an NPC: not in the file - kComputer (the game's AI, Spells ticked); its line once "
+                  "written decides; the tab's rows are the whole party, the NPC's marked; a toggle written at once",
+               start && kept && row_npc && tog && back, "start %d, kept %d, rows %d npc-row %d, toggle %d, read back %d", start,
+               kept, rows, row_npc, tog, back);
     }
     plat::remove(path);
     qa_mask[0] = keep;
@@ -348,45 +385,39 @@ void quick_actions()
     expect(P, "Quick Actions, Items / Spells unticked: no item used, no spell cast", !i_off.item && !i_off.cast,
            "item %d cast %d", i_off.item, i_off.cast);
     qa_spells();
-    // The switch off, and party NPCs: the grid not followed
-    const QaOut o_off = qa_scene(-1, 1, false, 0, 2), o_npc = qa_scene(0, 1, false, 0, 2, false, true);
-    const QaOut o_none = qa_scene(0, 1, false, 0, 2);
-    expect(P, "Quick Actions: the switch off - the grid not followed; a party NPC acts as its game makes it; everything "
-              "unticked - nothing done",
-           o_off.attacked && o_npc.attacked && !o_none.attacked && !o_none.stepped && !o_none.guarded,
-           "off attacked %d; NPC attacked %d; none attacked %d stepped %d guarded %d", o_off.attacked, o_npc.attacked,
-           o_none.attacked, o_none.stepped, o_none.guarded);
+    // The switch off: the grid not followed; everything unticked: nothing
+    const QaOut o_off = qa_scene(-1, 1, false, 0, 2), o_none = qa_scene(0, 1, false, 0, 2);
+    expect(P, "Quick Actions: the switch off - the grid not followed; everything unticked - nothing done",
+           o_off.attacked && !o_none.attacked && !o_none.stepped && !o_none.guarded,
+           "off attacked %d; none attacked %d stepped %d guarded %d", o_off.attacked, o_none.attacked, o_none.stepped,
+           o_none.guarded);
+    // The party's NPCs (Tom, 2026-11-09): their switches start at kComputer -
+    // the game's AI, the same actions as the switch off; Melee unticked: no
+    // blow (it guards); Move unticked: no step; all unticked: nothing
+    const QaOut n_def = qa_scene(kComputer, 1, false, 0, 2, false, true), n_off = qa_scene(-1, 1, false, 0, 2, false, true);
+    const QaOut n_mel = qa_scene(kComputer & ~kMelee, 1, false, 0, 2, false, true);
+    const QaOut n_mov = qa_scene(kComputer & ~kMove, 4, false, 0, 2, false, true);
+    const QaOut n_mov_on = qa_scene(kComputer, 4, false, 0, 2, false, true);
+    const QaOut n_none = qa_scene(0, 1, false, 0, 2, false, true);
+    expect(P, "Quick Actions, a party NPC: as it starts (kComputer) the same as the switch off (the game's AI); Melee "
+              "unticked - no blow, it guards; Move unticked - no step; all unticked - nothing done",
+           n_def.attacked == n_off.attacked && n_def.stepped == n_off.stepped && n_def.guarded == n_off.guarded &&
+               n_def.attacked && !n_mel.attacked && n_mel.guarded && n_mov_on.stepped && !n_mov.stepped && !n_none.attacked &&
+               !n_none.stepped && !n_none.guarded,
+           "start attacked %d stepped %d guarded %d, off %d %d %d; no melee attacked %d guarded %d; move stepped %d, no move "
+           "%d; none %d %d %d", n_def.attacked, n_def.stepped, n_def.guarded, n_off.attacked, n_off.stepped, n_off.guarded,
+           n_mel.attacked, n_mel.guarded, n_mov_on.stepped, n_mov.stepped, n_none.attacked, n_none.stepped, n_none.guarded);
     quick_file();
 }
 
-// QASHOT=dir: the canvas as dir/qa<game>_<tag>.ppm (scratch only - real game screens)
-void qa_shot(const char* tag)
-{
-    const char* dir = getenv("QASHOT");
-    if (!dir) return;
-    char path[300];
-    snprintf(path, sizeof path, "%s/qa%d_%s.ppm", dir, game(), tag);
-    FILE* f = fopen(path, "wb");
-    if (!f) return;
-    fprintf(f, "P6 320 200 255\n");
-    for (int y = 0; y < 200; ++y)
-        for (int x = 0; x < 320; ++x) {
-            const pic::Rgb& c = pic::kEga[C.get(x, y) & 15];
-            fputc(c.r, f), fputc(c.g, f), fputc(c.b, f);
-        }
-    fclose(f);
-}
-
-// The Quick Actions page itself (quickpage), in a fight and outside one:
-// it opens over the game screen and the game waits (no tick moves the
-// fight, the movement / fight keys are off); the cursor keys move its
-// cursor (Up / Down through "?", the characters and Exit, round; Left /
-// Right through the columns, round) and Select = a tap at nav_point (a box
-// ticks / unticks - the file written; the "?" opens the help page, any key
-// closes it; Exit closes the page); a tap lights its target as it touches
-// (the cursor moves there) and acts on release; a heading moves the cursor
-// to its column without ticking; closing puts the game screen back byte for
-// byte (and a fight's colours)
+// The Quick tab's model (quickpage; the tab itself is the engine's Game
+// menu, ui/viewer.cpp - drawn by LovyanGFX, its pictures from QEMU:
+// tools/devkit/qemu_shots.sh), in a fight and outside one, through the
+// play:: functions the tab uses: quick_ready; quick_begin's rows are the
+// whole party in party order (names as the party's, NPCs marked); a toggle
+// flips that one switch and writes QUICK.TXT at once (read back by name);
+// a second toggle puts it back; the game screen, the fight and its colours
+// are untouched (the tab draws nothing on the game canvas); typing: not ready
 void quick_page_one(const char* where)
 {
     std::vector<uint8_t> before(static_cast<size_t>(C.stride()) * C.h);
@@ -400,85 +431,55 @@ void quick_page_one(const char* where)
     char first[200] = "";
     auto fail = [&](const char* w) {
         ++bad;
-        if (!*first) snprintf(first, sizeof first, "%s (row %d col %d help %d)", w, qp.row, qp.col, qp.help);
+        if (!*first) snprintf(first, sizeof first, "%s", w);
     };
-    if (!quick_open(C)) {
-        expect(P, (std::string("the Quick Actions page opens - ") + where).c_str(), false, "not ready");
+    if (!quick_ready()) {
+        expect(P, (std::string("the Quick tab is ready - ") + where).c_str(), false, "not ready");
         return;
     }
-    qa_shot(where);
-    if (!quick_page() || walking() || fight_pad() || qp.row != 0 || qp.col != 0 || qp.n < 1) fail("open: page up, keys off, cursor 0,0");
-    if (fight_colours() != 0) fail("a fight's colours off while it's up");
-    for (int k = 0; k < 5; ++k) tick(g_now += 1000, C);
-    if (fg && (static_cast<int>(fg->st) != st || fg->cur != cur || fg->b.round != round)) fail("the fight moved on while it was up");
-    if (act(Act::Forward, C) && !quick_page()) fail("a movement key closed it");
-    auto select = [&]() {
-        int x, y, y0, y1;
-        if (!nav_point(&x, &y)) return fail("no nav_point");
-        tap_highlight(x, y, C, &y0, &y1);
-        tap(x, y, C);
-        tap_highlight_end(C);
-    };
-    // Down, Right, Select: member 1's Missile
-    nav(Nav::Down, C);
-    nav(Nav::Right, C);
-    const int n = qp.n;
-    if (qp.row != (n > 1 ? 1 : n) || qp.col != (n > 1 ? 1 : 0)) fail("Down / Right");
-    if (n > 1) {
-        const uint8_t m0 = qa_mask[qp.member[1]];
-        select();
-        if (qa_mask[qp.member[1]] != (m0 ^ quickacts::kMissile)) fail("Select didn't tick the box under the cursor");
-        size_t len;
-        char* t = qa_read(&len);
-        char nm[24];
-        pt->m[qp.member[1]].name(nm, sizeof nm);
-        if (!t || quickacts::find(t, len, nm) != qa_mask[qp.member[1]]) fail("the file not written");
-        free(t);
-        // Left round to the last column
-        nav(Nav::Left, C);
-        nav(Nav::Left, C);
-        if (qp.col != quickacts::kCols - 1) fail("Left round");
+    const int n = quick_begin();
+    if (n != pt->count || n > party::kMaxParty) fail("rows: not the whole party");
+    for (int r = 0; r < n; ++r) {
+        char a[24], b2[24];
+        pt->m[r].name(b2, sizeof b2);
+        if (!quick_name(r, a, sizeof a) || strcmp(a, b2)) fail("a row's name isn't its party member's");
+        if (quick_npc(r) != pt->m[r].npc()) fail("a row's NPC mark");
+        if (quick_get(r) != qa_start(r)) fail("a row's switches aren't its start (no file)");
     }
-    // A tap on row 0's Itm box: lit (cursor there) as it touches, ticked on release
+    char nm[24];
+    if (quick_name(n, nm, sizeof nm) || quick_toggle(n, 0) || quick_toggle(0, quickacts::kCols)) fail("a row / column past the end");
+    for (int r = 0; r < n; ++r)
+        for (int k = 0; k < quickacts::kCols; ++k) {
+            const uint8_t m0 = quick_get(r);
+            if (!quick_toggle(r, k) || quick_get(r) != (m0 ^ (1 << k))) fail("a toggle didn't flip its one switch");
+            size_t len;
+            char* t = qa_read(&len);
+            quick_name(r, nm, sizeof nm);
+            if (!t || quickacts::find(t, len, nm, qa_start(r)) != quick_get(r)) fail("the file not written at once");
+            free(t);
+            if (k == 3 || k == 6) continue;                 // (left flipped: read back below)
+            quick_toggle(r, k);
+        }
+    // (the file read back: what the toggles left)
+    uint8_t want[party::kMaxParty];
+    for (int r = 0; r < n; ++r) want[r] = quick_get(r);
+    qa_load();
+    for (int r = 0; r < n; ++r)
+        if (qa_mask[r] != want[r] || want[r] != (qa_start(r) ^ quickacts::kItems ^ quickacts::kTurn)) fail("read back");
+    if (memcmp(before.data(), C.px, before.size()) != 0) fail("the game screen changed");
+    if (fight_palette_on != pal) fail("the fight's colours changed");
+    if (fg && (static_cast<int>(fg->st) != st || fg->cur != cur || fg->b.round != round)) fail("the fight's state changed");
     {
-        const int x = kQaGridX + 3 * kQaColW + 12, y = qa_row_y(0) + 3;
-        int y0, y1;
-        const uint8_t m0 = qa_mask[qp.member[0]];
-        if (!tap_highlight(x, y, C, &y0, &y1) || qp.row != 0 || qp.col != 3) fail("the tap's highlight");
-        if (qa_mask[qp.member[0]] != m0) fail("ticked before the release");
-        tap(x, y, C);
-        tap_highlight_end(C);
-        if (qa_mask[qp.member[0]] != (m0 ^ quickacts::kItems)) fail("a tap on a box didn't tick it");
+        const Input keep = input_mode;
+        input_mode = Input::Text;
+        if (quick_ready() || quick_begin()) fail("ready while the game asks for typing");
+        input_mode = keep;
     }
-    // A tap on Mov's heading: the cursor's column, nothing ticked
-    {
-        const uint8_t m0 = qa_mask[qp.member[0]];
-        const int x = kQaGridX + 5 * kQaColW + 4, y = 3 * 8 + 3;
-        int y0, y1;
-        tap_highlight(x, y, C, &y0, &y1);
-        tap(x, y, C);
-        tap_highlight_end(C);
-        if (qp.col != 5 || qa_mask[qp.member[0]] != m0) fail("a heading's tap");
-    }
-    // Up to the "?" (from row 0), Select: the help page; a key closes it
-    while (qp.row > -1) nav(Nav::Up, C);
-    select();
-    if (!qp.help) fail("the ? didn't open the help");
-    qa_shot((std::string(where) + "_help").c_str());
-    nav(Nav::Down, C);
-    if (qp.help || !quick_page()) fail("a key didn't close the help");
-    // Up from the "?": Exit (round); Select closes the page
-    nav(Nav::Up, C);
-    if (qp.row != qp.n) fail("Up from the ? isn't Exit");
-    select();
-    if (quick_page()) fail("Exit didn't close it");
-    if (memcmp(before.data(), C.px, before.size()) != 0) fail("the game screen didn't come back as it was");
-    if (fight_palette_on != pal) fail("the fight's colours didn't come back");
-    if (fg && (static_cast<int>(fg->st) != st || fg->cur != cur)) fail("the fight's state changed");
-    qa_shot((std::string(where) + "_after").c_str());
     plat::remove(path);
     qa_load();
-    expect(P, (std::string("the Quick Actions page - ") + where + ": cursor keys, Select, taps, the ?, Exit, the screen back").c_str(),
+    expect(P, (std::string("the Quick tab's model - ") + where +
+               ": the whole party's rows (names, NPCs marked), each toggle written at once and read back, the game "
+               "screen and fight untouched, not while typing").c_str(),
            bad == 0, "%d wrong: %s", bad, first);
 }
 

@@ -177,7 +177,7 @@ Quick Actions + round 12 bandaging (2026-11-09):
                            forbids; QAOFF=1: the switch off
   qa_verify.sh <bin> [games]   the fuzz (3 seeds x 40) + the defaults-vs-off action-log comparison (2 seeds x 25)
   saveload.sh <bin> [games]    sweep saveload on each game
-  playsim CAMPRUN ops: '|' open the page, '<' '>' Left / Right, ',' Select (each a snapshot qa<n>), 'v' '^' Up / Down
+  playsim CAMPRUN ops: '|' the Quick tab's rows (quick_begin), ',' toggle row 0's next column; 'v' '^' Up / Down
   fuzz.sh TAGP=x, budgetx.sh LOGS= / TAGP=, host_tests.sh HTOUT= (parallel agents); host_tests.sh now pipefail
   Baselines: rules4 full PoolRad 30/0, Curse 33/0, Secret 27/0, Darkness 29/0, Gateway 28/0, Treasures 31/0,
   Champions 41/0, Knights 33/0, Queen 51/0; budgets (bytes) Curse 133679, PoolRad 135330, Darkness 149976,
@@ -187,3 +187,18 @@ Quick's spells = the originals' Magic On (2026-11-09): tools/devkit/quickmagic/ 
 Alt-M flag, AI gate and fight-start reset (magic_find.py), the DOSBox runs that showed it (dosrun.py, mkscr.py,
 mkfight.py, memchk.py; Curse's bar fight, PoolRad's goblin guards), rwalk.sh. rules4 ONLY=quickacts now has
 qa_spells (all nine). QUICK.TXT "# Quick Actions 2:" (v0.184.0 files read with Spl unticked).
+
+The Quick tab as an engine page + the party's NPCs (2026-11-09, round 14):
+  rules4 ONLY=quickpage    now the tab's model (play::quick_begin / quick_name / quick_npc / quick_get / quick_toggle):
+                           the whole party's rows, each toggle written at once and read back, the game screen and the
+                           fight untouched, not while typing; ONLY=quickacts adds the NPC cases (kComputer = the switch
+                           off, Melee / Move / Spells unticked limit an NPC) and the NPC file case
+  fightfuzz QANPC=1        the party's last member made an NPC for the fights (R13 checks NPCs too)
+  r4all.sh                 BIN= LOGS= TAGP= (parallel agents); board_build.sh [env] (KEEP=1 keeps .pio/build/<env>)
+  playsim MAKENPC=k        member k made an NPC before SAVENOW (a test save with an NPC; scratch only)
+  qemu_shots.sh [dir]      real screenshots of the engine's screens from the firmware in QEMU - the S3 builds' frame
+                           buffers (qemus3: boards/qemu_fb.hpp 480x320; qemus3_50: Panel_Double 320x240), TAPS.TXT
+                           "shot <name>", run_qemu.py --shots dir (PNG); Home -> Curse -> Play -> save A (with an NPC)
+                           -> Game -> Quick (open, Spells tapped, the NPC, Bandage First, "?"), Settings, Cheats.
+                           QEMU=qemu-system-xtensa (Espressif esp-develop-9.2.2-20250817; apt: dosfstools mtools),
+                           SIM=a playsim. The PNGs show game screens: scratch only.

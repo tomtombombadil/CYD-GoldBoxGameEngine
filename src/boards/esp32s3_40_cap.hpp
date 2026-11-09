@@ -21,6 +21,9 @@
 
 #define LGFX_USE_V1
 #include <LovyanGFX.hpp>
+#if defined(CYD_QEMU)
+#include "qemu_fb.hpp"
+#endif
 
 #define BOARD_TOUCH_RESISTIVE   0    // capacitive: factory-calibrated
 #define BOARD_PIN_BOOT_BTN      0
@@ -46,7 +49,11 @@
 
 class LGFX_S3_40_Cap : public lgfx::LGFX_Device
 {
+#if defined(CYD_QEMU)
+    Panel_QemuFB        _panel;     // (the emulator: a frame buffer in PSRAM - TAPS.TXT's shots)
+#else
     lgfx::Panel_ST7796  _panel;
+#endif
     lgfx::Bus_SPI       _bus;
     lgfx::Light_PWM     _light;
     lgfx::Touch_FT5x06  _touch;
@@ -82,7 +89,11 @@ public:
             cfg.offset_x         = 0;
             cfg.offset_y         = 0;
             cfg.offset_rotation  = 0;
+#if defined(CYD_QEMU)
+            cfg.readable         = true;   // (the emulator's frame buffer)
+#else
             cfg.readable         = false;  // no MISO
+#endif
             cfg.invert           = true;
             cfg.rgb_order        = false;  // false = BGR in LovyanGFX
             cfg.dlen_16bit       = false;

@@ -188,12 +188,16 @@ void on_act(const combat::Battle& b, int i, combat::TestAct a, int t, int extra)
     if (own && f.fleeing && ((a == TestAct::Attack && f.moves > 0 && !in_bite) || a == TestAct::Special))
         bad("R5", std::string(act_name(a)) + " on its own turn while fleeing (moves left " + std::to_string(f.moves) + "): " + who(b, i));
     // R13 Quick Actions (Tom, 2026-11-09): one of the player's own characters
-    // played by Quick does on its own turn nothing its switches untick -
+    // played by Quick - or one of the party's NPCs (the computer's; their
+    // switches too since Tom's 2026-11-09 addition) - does on its own turn
+    // nothing its switches untick -
     // Melee: no blow at one next to it; Missile: no shot; Move: no step
     // (fleeing aside); Spells: no spell (one it began itself before - the
     // player's - aside); Items: no item; Turn Undead: no turn; Guard: no
     // guard. (Its free attacks and guard blows are the game's, not checked.)
-    if (own && f.quick && !f.team() && f.member >= 0 && f.rec[0xF7] < 0x80 && f.status() != party::Animated && play::qa_on()) {
+    const bool qa_npc = !f.team() && play::qa_npc(f.member) && f.status() != party::Animated;
+    if (own && play::qa_on() &&
+        (qa_npc || (f.quick && !f.team() && f.member >= 0 && f.rec[0xF7] < 0x80 && f.status() != party::Animated))) {
         using namespace quickacts;
         const uint8_t q = f.qa;
         if ((q | quickacts::kBandage | quickacts::kSpells) != quickacts::kAll) ++qa_seen;

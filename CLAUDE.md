@@ -486,9 +486,16 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   unchanged; level-ups only, not creation.
 - Quick Actions (Tom, 2026-11-09; `CYD_QUICK_ACTIONS`, Settings key,
   `comforts_off2` bit 8, on by default; SPEC 11): the Game menu's Quick
-  tab - one page on the game screen in the game's look, the party's own
-  characters (no NPCs) x Mel Mis Spl Itm Bnd Mov Trn Grd boxes, a "?"
-  help page, cursor keys take part; kept BY NAME in `_CYD/QUICK.TXT`.
+  tab - an ENGINE page (Tom: "the game/settings menu of the engine ...
+  smaller fonts ... more descriptive ... the whole screen"; never on the
+  game canvas): the whole party down the left (NPCs marked), the chosen
+  one's 8 switches as keys with boxes and full words (Melee, Missile,
+  Spells, Items, Bandage First, Move, Turn Undead, Guard), a strip saying
+  what the last tapped does, Back to Game + "?"; viewer.cpp draws, the
+  logic is play::quick_begin / quick_toggle ... (play_quick.inc); kept BY
+  NAME in `_CYD/QUICK.TXT`. NPCs (Tom, 2026-11-09): their own switches,
+  starting at kComputer (all but Bandage First, Spells ticked = the
+  originals' AI); monsters always the game's.
   Defaults: all ticked but Bandage First (Tom: unticked = the game's own
   bandage order; ticked = at the turn's start) and Spells - the
   original's Quick. Spells = the originals' Magic On (Alt-M in a fight,
@@ -659,6 +666,12 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   from the Project's zips are all it needs (GOG's Linux builds are the
   same DOS games in DOSBox). Screenshots stay in scratch. Don't kill
   processes with `pkill -f` patterns that match the shell's own command.
+- **Screenshots of engine screens** (2026-11-09): the S3 QEMU builds draw
+  into frame buffers (the 5.0"'s Panel_Double 320x240; the 4.0" qemus3's
+  `boards/qemu_fb.hpp` 480x320 under CYD_QEMU only) and TAPS.TXT's `shot
+  <name>` dumps the real pixels over serial; `run_qemu.py --shots <dir>`
+  writes PNGs; `tools/devkit/qemu_shots.sh` (Home -> Curse -> Play -> the
+  Game menu's tabs, both sizes). The PNGs show game screens: scratch only.
 - `tools/qemu/` (Tom, 2026-10-11: "if worth it"): the REAL firmware in
   Espressif's QEMU (qemu-system-xtensa, esp-develop-9.2.2; downloads from
   GitHub work here) - `pio run -c tools/qemu/qemu.ini -e qemu28` (the 2.8"

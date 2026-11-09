@@ -27,14 +27,18 @@ namespace {
 bool mounted = false;
 // The script: "x y wait_ms" a line (# comments); "mem" prints the heap;
 // "journal J 4 [wait_ms]" opens journal entry J 4 (the viewer's memory
-// and stack without playing to a mention)
+// and stack without playing to a mention); "shot <name> [wait_ms]" the
+// screen's pixels on the serial line (S3 builds: their frame buffer -
+// run_qemu.py --shots <dir> writes <dir>/<name>.png)
 struct Step {
-    int16_t  x, y;                  // x < 0: a heap line only (-3: a journal entry, kind, number y)
+    int16_t  x, y;                  // x < 0: a heap line only (-3: a journal entry, kind, number y; -4: shot y)
     uint32_t wait;
     char     kind;
 };
 char     journal_kind = 0;
 int      journal_number = 0;
+char     shot_names[32][24];
+int      n_shots = 0, shot_due = -1;
 Step     steps[256];
 int      n_steps = -1, at = 0, phase = 0;
 uint32_t next = 0;
@@ -70,6 +74,12 @@ void load()
             int num = 0;
             if (sscanf(line + 7, " %c %d %u", &k, &num, &w) >= 2)
                 steps[n_steps++] = Step{-3, static_cast<int16_t>(num), w, k};
+        } else if (!strncmp(line, "shot", 4)) {
+            char nm[24] = {};
+            if (n_shots < 32 && sscanf(line + 4, " %23s %u", nm, &w) >= 1) {
+                strlcpy(shot_names[n_shots], nm, sizeof shot_names[0]);
+                steps[n_steps++] = Step{-4, static_cast<int16_t>(n_shots++), w, 0};
+            }
         } else if (!strncmp(line, "mem", 3)) {
             sscanf(line + 3, "%u", &w);
             steps[n_steps++] = Step{-1, -1, w, 0};
@@ -150,6 +160,12 @@ bool touch(int32_t* x, int32_t* y)
         next = now + s.wait;
         return false;
     }
+    if (s.x == -4) {
+        shot_due = s.y;                 // (taken by the viewer once its screen is drawn: qemu::shot)
+        ++at;
+        next = now + s.wait;
+        return false;
+    }
     if (s.x < 0) {
         mem("mem");
         ++at;
@@ -184,5 +200,13 @@ bool journal(char* kind, int* number)
 }
 
 void mem_now(const char* why) { mem(why); }
+
+bool shot(char* name, size_t cap)
+{
+    if (shot_due < 0) return false;
+    strlcpy(name, shot_names[shot_due], cap);
+    shot_due = -1;
+    return true;
+}
 
 } // namespace qemu
