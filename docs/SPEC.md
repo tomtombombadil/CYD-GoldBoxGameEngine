@@ -2403,6 +2403,31 @@ moon new -1 / full +1 to its saves (0x8576) and caster level (full past
 8th) can't use magic-user spells (0x5A402) - Secret's, Darkness's,
 Treasures' and Death Knights' can-learn the same. Darkness's and
 Treasures' computer uses no items (their item routine is empty).
+Round 8 (2026-11-09): Death Knights' and the Dark Queen's computer uses
+no items either (Death Knights' 0xA4D3 walks them but never keeps one;
+the Dark Queen's DQK.EXE 0x2E105 is empty), and in those four games the
+computer's spell begun earlier goes off after its morale test (one fleeing
+says so first) and its items - their turn routine sends a computer
+fighter straight to its AI (Death Knights GAME.OVR 0x9384 -> 0xA21B +0x141;
+the Dark Queen 0x2DF74). The Dark Queen's Turn Undead (DQK.EXE 0x25E77,
+menu 0x22DC7, computer 0x2E078, finder 0x260BE): plain levels (its
+0xBE14), max(cleric, paladin - 2), Majere's (record word 0x19B = 2) + 2,
+9-13 -> 9, 14+ -> 10, less game byte 0x0F; Darkness's walk of the table;
+its computer turns when not fleeing (`turn_rule` 4). Its fight pages:
+after a hit (0x25020: the attacker 10, "Attacks" 11, the target 12, the
+words from 13) or a damage text (res 0x8F04) a fall goes on at the row
+after the words' last - "goes down" / "and is Dying" / "is killed" after
+a hit, "Goes Down" / "Goes Down and is Dying" / "is killed" after a damage
+text; a box with words left past row 21 waits for a key (res 0xCEEA,
+"Press button or enter to continue" - `FSt::More`), is cleared and goes
+on at its top; the weapon's name ends with a space (res 0x9FDC). The
+moon's extra spells: a magic-user spell of any level, slots or none
+(0x45519). Champions: its computer turns only with an undead of type 1-4
+in sight (its finder's limit is a stack leftover, the AI's last dice's
+side count: 4 - 2 after a d8 of 8, not kept); its can-learn has the
+armoured human magic-user's fight clause too (GAME.OVR 0x2DD6B: a ranger
+past 8th, or a passed dual class with a former ranger past 8th and a
+magic-user level, may).
 Treasures' own items (GAME.OVR 0x2E15B, 2026-11-08): byte 0x3E 0x11 puts
 effect 0x3D on the user (already there: "is already affected", nothing
 used; the Potion of Spell Enhancing's 0x9F lasts 1d4 x 10 + 40, "Is

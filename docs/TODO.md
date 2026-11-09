@@ -1206,6 +1206,42 @@ the Project as claude/TODO.md.
       clause: Secret 0x2C76B, Darkness 0x29DED, Treasures 0x32CCE, Death
       Knights 0x29D23, the Dark Queen 0x5A402; a ranger past 8th may) -
       rules4 canuse.
+- [x] Round 8 (2026-11-09, facts: the Project's claude/rules_round8_facts.md):
+      Death Knights' computer item routine (GAME.OVR 0xA4D3) rolls its d7
+      rounds and walks the items but its chosen-item pointer is only ever 0 -
+      it never uses one (as Darkness's / Treasures'; the Dark Queen's
+      DQK.EXE 0x2E105 is an empty body too); in those four games the
+      computer's pending spell goes off after its morale test and items
+      (the turn routine sends computer fighters straight to the AI: Death
+      Knights 0x9384, the AI's order +0x1260 morale, +0x2B8 items, +0x141
+      pending) - rules4 aiorder / use. The Dark Queen's Turn Undead found:
+      0x25E77 (menu 0x22DC7, computer 0x2E078 - not fleeing, turns under
+      the undead loaded [0xC2ED], the class test; finder 0x260BE: highest
+      type up to the limit, the limit made that type): plain levels
+      (0xBE14), Majere's + 2 (record word 0x19B = 2 - the engine's f.god
+      was Champions / Death Knights only), game byte 0x0F less - rules4 turn
+      66 cases, former, aiturn. Its fight pages: the fall after a hit
+      (0x25020) / a damage text (res 0x8F04) goes on at the row after the
+      words (it started at row 10 here), "Goes Down" (0x19B) and "%s and is
+      Dying" (0x1A5) for the damage text's (here "goes down" / "and is
+      Dying"); the box's page-full wait (0xCEEA) - FSt::More; the weapon
+      name's trailing space (0x9FDC) - rules4 qpages, wrap (448 full boxes
+      against a model of 0xCD31). The moon's extras: any level, slots or
+      none (0x45519; list mode 1 0x5AF2D has no level test) - rules4 moons.
+      Champions: its computer's finder limit (0xC772 [bp-6]) holds the AI's
+      last dice call's side count (the dice routine's pushed argument at
+      that stack place: 4, 2 after a d8 of 8) - types 1-4 here; its
+      can-learn has the fight clause (0x2DD6B) - rules4 aiturn, canuse.
+- [ ] Round 8 left: the Dark Queen's "lost a spell" at the hit (B14E row
+      12 with a wait, 0x816B / 0x9106 / 0x2522F) - here only at the turn's
+      start; its other fixed / computed rows ("reflects it!" at 12, "is %s",
+      "breathes %s", "engulfs %s" ...: not followed); an undead target's
+      fall (record 0xC8 & 8: "goes down" / "Goes Down" only, never "is
+      killed") not done; the page-full prompt's place / colour (res 0xD400:
+      D35F(0, 0xB) - row 24 colour 11 here). Champions' d8-of-8 limit 2
+      (its AI's per-fighter roll 0x15 not kept). Death Knights' AI: where
+      its bandaging comes (0x151D, after the spells; here a Quick member
+      bandages first) not compared.
 - [ ] Round 7 left: Treasures' effect 0x3B's handler (none of its items
       has it). The Dark Queen: its weapon name's trailing space (0x9FDC not
       read); its fight pages' rows after a hit (each page from row 10 here:
@@ -1215,17 +1251,14 @@ the Project as claude/TODO.md.
       here); turning (menu and computer: taken as Darkness's - its routine
       not found yet; its turn table at DS 0x5A6A, 11 a row, 99 first); its
       0xFF-class spells' caster level (uninitialised in res 0xB4E0: 12
-      here); the moon's extra spells - whether a mage spell of a level it
-      has no slots for can take them (0x4551D tests no level; the engine
-      asks for slots at that level). Death Knights' computer tries its
-      items before a pending spell (the engine's pending spells go off at
-      the turn's start in every game). Champions' finder's type limit is
-      uninitialised (0xC772 passes [bp-6] unset: any type here); Champions'
-      can-learn in fights not read. When each original shows the training
+      here). (Round 8 did the weapon space, the pages' rows and full box,
+      turning, the moon's extras, Death Knights' items, Champions' finder
+      limit and can-learn.) When each original shows the training
       spell list at all - not compared. Gateway's rules4 / behave runs need
       its test saves (lost with the machine: the SAVE folder is empty).
-- [ ] Tom: Darkness's and Treasures' computer never uses an item (their
-      item routine is compiled out - kept as the originals; a Game Fix to
+- [ ] Tom: Darkness's, Treasures', Death Knights' and the Dark Queen's
+      computer never uses an item (their item routine is compiled out or
+      never keeps one - round 8 - kept as the originals; a Game Fix to
       give monsters their wands back? not added: not an AD&D mistake).
 - [ ] Pool's story beyond the nomads' camp: targeted differ runs only
       (scripted places), fights judged by the rule checks. 2026-11-07

@@ -226,6 +226,9 @@ enum FightWord {
     kDuelLost, kDuelWon, kDuelistReceives,
     // Pool: an NPC's " takes and hides his share." (duel_word too; ovr6 +0x12E8)
     kNpcShare,
+    // The Dark Queen's fall after a damage text (DQK.EXE res 0x8F04): "%s and
+    // is Dying" round its "Goes Down" (kGoesDownS)
+    kGoesDownDyingQ,
     kFightWords
 };
 

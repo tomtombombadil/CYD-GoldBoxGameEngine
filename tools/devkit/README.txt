@@ -104,3 +104,11 @@ Round 10 (2026-11-08) - the last oracles, behave levels' oracle, the DOSBox diff
   script, quiet / shot / poke, AUTODOS_MEM, AUTODOS_FRAMES) -> /tmp/claude-0/differ/bin/dosbox-auto.
   Still NOT rebuilt: Curse's oracle_events.txt (needs the Project's ecl_stub_facts.md - Curse's opcodes and
   operand counts - for an independent reader); lv rows past Curse's / Darkness's hit points.
+
+Round 8 (2026-11-09) - the Dark Queen's code read from DQK.EXE itself (no EXEPACK):
+  ndisasm -b16 -e 0x2400 -o 0x2400 DQK.EXE > /tmp/claude-0/ag8/dqk_all.lst   (addresses = file offsets)
+  tools/dqk_addr.py <DQK.EXE> seg:off ...   a far call -> file offset (resident, or a stub -> its RTLink overlay)
+  tools/lst_win.py <listing> <addr> <before> <after>   the lines round an address
+  tools/lst_callers.py <listing> "<call text>" [n]     every call site with the n lines before it (the pushed rows)
+  rules4 checks added: aiorder, aiturn, qpages (+ turn's rule-4 / penalty cases, moons' queen_moon_room, wrap's full
+  boxes, canuse's Champions clause). Binaries this round: bin/r4w, bin/simw (built from the worktree).

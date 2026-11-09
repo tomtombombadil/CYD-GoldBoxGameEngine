@@ -66,13 +66,20 @@ void set_fight_check(const items::Names* names, bool (*fighting)())
 // Darkness (0x29DED), Treasures (0x32CCE), Death Knights (0x29D23) and the
 // Dark Queen (DQK.EXE 0x5A402): in a fight a human (their own race numbers
 // 6 / 5 / 5 / 6 / 6) with armour readied can't use magic-user spells -
-// unless a ranger past 8th (Secret / Darkness / Treasures: skill levels)
+// unless a ranger past 8th (Secret / Darkness / Treasures: skill levels).
+// Champions' (GAME.OVR 0x2DD6B: race 6, the armour pointer 0x14F, fight
+// state 0x4B49 = 5) the same, its way out: a ranger past 8th, or one whose
+// new class has passed his old (0xF7:0x48) with a former ranger past 8th
+// and a magic-user level, now or former
 static bool armoured_in_fight(const party::Character& c, const classes::Tables& t)
 {
-    if (!g_fight_names || !g_fighting || !(t.lay.secret || t.lay.dkk || t.lay.queen) || c.race() != 7 || !g_fighting())
+    if (!g_fight_names || !g_fighting || !(t.lay.secret || t.lay.dkk || t.lay.queen || t.lay.krynn) || c.race() != 7 || !g_fighting())
         return false;
-    const int ranger = t.lay.dkk || t.lay.queen ? c.level(classes::Ranger) : classes::skill_level(c, classes::Ranger);
+    const int ranger = t.lay.dkk || t.lay.queen || t.lay.krynn ? c.level(classes::Ranger) : classes::skill_level(c, classes::Ranger);
     if (ranger > 8) return false;
+    if (t.lay.krynn && !t.lay.dkk && !t.lay.queen && classes::skill_level(c, classes::Ranger) != c.level(classes::Ranger) &&
+        c.old_level(classes::Ranger) > 8 && (c.level(classes::MagicUser) > 0 || c.old_level(classes::MagicUser) > 0))
+        return false;
     for (int k = 0; k < c.n_items; ++k)
         if (c.items[k][0x34] && g_fight_names->type(c.items[k][0x2E]).slot == items::kSlotArmour) return true;
     return false;
@@ -121,7 +128,8 @@ bool can_use(const party::Character& c, const classes::Tables& t, int s)
         case MagicUser:
             // (Death Knights' 0x29D16: also a magic-user or a ranger past 8th
             // - a human magic-user in armour, ranger to 8th, not in fights:
-            // armoured_in_fight; Champions' asks Intelligence alone outside fights)
+            // armoured_in_fight; Champions' asks Intelligence alone outside
+            // fights, its human magic-users in armour not in them: the same)
             if (t.lay.dkk)
                 return c.rec[kInt] > 8 && (c.level(classes::MagicUser) > 0 || c.level(classes::Ranger) > 8);
             return c.rec[kInt] > 8;
@@ -199,7 +207,11 @@ int room(const party::Character& c, const classes::Tables& t, int cls, int level
 {
     int r = cast_count(c, t, cls, level) - held(c, t, cls, level);
     if (r < 0) r = 0;
-    if (cls == MagicUser && level <= moon_levels(t) && cast_count(c, t, cls, level) > 0) r += moon_bonus(c, t);
+    // (the extras: Champions' at levels with slots; the Dark Queen's at any
+    // level - its memorize, DQK.EXE 0x45519: no room there (0x44AD8, slots
+    // less memorized) and a magic-user spell with extras left - no level or
+    // slot asked; its list, mode 1 0x5AF2D, is every known spell it may use)
+    if (cls == MagicUser && level <= moon_levels(t) && (t.lay.queen || cast_count(c, t, cls, level) > 0)) r += moon_bonus(c, t);
     return r;
 }
 

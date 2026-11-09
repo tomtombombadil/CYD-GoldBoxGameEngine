@@ -2273,8 +2273,12 @@ constexpr spells::CampSpell kQueenCamp[] = {
 };
 constexpr auto kQueenFight = [] {
     decltype(Profile::fight) f{};
-    f.tables = {0x6197, 0x5D0B, 0x5D1B, 0x5D2B, 0x5D2F, 0x5D37, 0x5D3F, 0x5D7B, 0x5A5F, 0, 11, 0};
+    f.tables = {0x6197, 0x5D0B, 0x5D1B, 0x5D2B, 0x5D2F, 0x5D37, 0x5D3F, 0x5D7B, 0x5A5F, 0, 11, 0, 4};   // (turning: its own, rule 4)
     for (int i = 0; i < kFightWords; ++i) f.words[i] = kQueenFightWords[i];
+    // (a damage text's fall, res 0x8F04: "Goes Down" 0x19B - the hit's own
+    // "goes down" is 0x5B8B - and "%s and is Dying" 0x1A5)
+    f.words[kGoesDownS] = qw(0x19B);
+    f.words[kGoesDownDyingQ] = qw(0x1A5);
     // (the effects a fight's end takes away: Death Knights' list)
     const uint8_t ends[16] = {0x03, 0x06, 0x0B, 0x15, 0x17, 0x1B, 0x1E, 0x1F, 0x23, 0x34, 0x35, 0x4D, 0x6A, 0x6B, 0x6F, 0x76};
     for (int i = 0; i < 16; ++i) f.ends[i] = ends[i];

@@ -5496,11 +5496,12 @@ Morale morale(Battle& b, const Tables& t, int i)
 // Pools of Darkness's / Treasures' skill level (Darkness GAME.OVR 0x392EE,
 // Treasures 0x4392C): a human whose first class has passed its former
 // level - the larger of the class's level and its former one; else the
-// level (Death Knights' turning reads the levels: rule 3)
+// level (Death Knights' turning reads the levels: rule 3; the Dark Queen's
+// too, DQK.EXE 0xBE14 - a class's level, at least 0: rule 4)
 static int dk_skill(const Rec& r, const Tables& t, int cls)
 {
     const int lv = r[kLevels + cls];
-    if (t.turn_rule == 3 || r[0x74] != 7) return lv;
+    if (t.turn_rule >= 3 || r[0x74] != 7) return lv;
     int k = 0;
     while (k < 6 && r[kLevels + k] == 0) ++k;
     const int old = r[kLevels + k] > r[0xE6] ? r[0x111 + cls] : 0;
@@ -5513,7 +5514,7 @@ static int turn_undead_dk(Battle& b, const Tables& t, int cleric, create::Dice& 
     ++me.undead_turns;
     const int cl = dk_skill(me.rec, t, 0), pa = dk_skill(me.rec, t, 3) - 2;
     int lv = cl > pa ? cl : pa;
-    if (t.turn_rule == 3 && me.god == 2) lv += 2;     // (Death Knights: Majere's)
+    if (t.turn_rule >= 3 && me.god == 2) lv += 2;     // (Death Knights, the Dark Queen: Majere's)
     int col = lv <= 8 ? lv : lv < 14 ? 9 : 10;
     col = b.turn_minus > col ? 0 : col - b.turn_minus;
     const int roll = d.roll(20, 1);

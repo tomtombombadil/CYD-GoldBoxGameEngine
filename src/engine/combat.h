@@ -71,7 +71,9 @@ struct Tables {
     // columns: the skill level itself, Majere's + 2; the highest type first,
     // a weaker one after a roll too low; as many as the undead loaded), 3
     // Death Knights' (11 columns: Darkness's, Majere's clerics + 2 - its
-    // GAME.OVR 0x1FF25, record 0x23)
+    // GAME.OVR 0x1FF25, record 0x23), 4 the Dark Queen's (DQK.EXE 0x25E77:
+    // Darkness's walk, the plain levels - no former class - and Majere's
+    // clerics + 2, record 0x19B)
     uint8_t turn_rule;
     // Darkness's Monster Summoning reserve (R10): MON block / CPIC by the
     // frame style 0-4 (none: 0)
