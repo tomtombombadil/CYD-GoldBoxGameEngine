@@ -173,7 +173,7 @@ bool fight(int k)
         fc::tick();
         if (!d) return false;
         if (!fg) break;
-        if (fg->b.round > fc::fight_cap + 5) return false;
+        if (fg->b.round > fc::fight_cap + 5 && fc::endless_told) return false;
         if (input_mode != Input::None) {
             play::input_key('1', C);
             play::input_key('\n', C);

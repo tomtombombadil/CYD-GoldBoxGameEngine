@@ -40,7 +40,10 @@
 //  R9  a charmed one (Charm Person's data 0x20 set) is on its charmer's side
 //      (the data's top bit; facts 2.6 / spell_facts)
 //  R10 a fight ends: 15 rounds without an attack end it (1.5.7); past
-//      FIGHTCAP rounds (default 120) it is reported as endless
+//      FIGHTCAP rounds (default 120) with no fighter's hit points changed
+//      in the last 60 rounds (or past 4 x FIGHTCAP) it is reported as
+//      endless - a slow fight that still wears its fighters down (only a
+//      20 hitting, the Dark Queen's AC -10 heads) is not a stall
 //  R11 a blow's target stands when the blow begins (no blows at the fallen)
 //  R12 the attacks left never below 0; moves never below 0
 
@@ -70,9 +73,9 @@ std::string who(const combat::Battle& b, int i)
     const combat::Fighter& f = b.f[i];
     char nm[24], t[200];
     play::fighter_name(f, nm, sizeof nm);
-    snprintf(t, sizeof t, "#%d %s (team %d hp %d/%d status %d up %d size %d delay %d moves %d atk %d/%d%s%s%s fx", i, nm, f.team(), f.hp(),
-             f.hp_max(), f.status(), (int)f.up(), f.size, f.delay, f.moves, f.attacks[0], f.attacks[1], f.fleeing ? " fleeing" : "",
-             f.guarding ? " guarding" : "", f.quick ? " quick" : "");
+    snprintf(t, sizeof t, "#%d %s (team %d hp %d/%d status %d up %d size %d delay %d moves %d atk %d/%d ac %d%s%s%s fx", i, nm, f.team(), f.hp(),
+             f.hp_max(), f.status(), (int)f.up(), f.size, f.delay, f.moves, f.attacks[0], f.attacks[1], 60 - f.rec[0x19A],
+             f.fleeing ? " fleeing" : "", f.guarding ? " guarding" : "", f.quick ? " quick" : "");
     std::string s = t;
     for (int k = 0; f.n_aff && k < *f.n_aff; ++k) {
         snprintf(t, sizeof t, " %02X:%02X", f.aff[k][0], f.aff[k][3]);
@@ -114,6 +117,8 @@ bool in_bite = false;               // (a hold's bite: Bite, then its Attack)
 const void* last_fg = nullptr;
 int last_round = -1;
 bool endless_told = false;
+long hp_seen = -1;                  // (R10: the fighters' hit points, the round they last changed)
+int  hp_round = 0;
 
 void on_act(const combat::Battle& b, int i, combat::TestAct a, int t, int extra)
 {
@@ -125,8 +130,20 @@ void on_act(const combat::Battle& b, int i, combat::TestAct a, int t, int extra)
     }
     const combat::Fighter& f = b.f[i];
     const bool own = play::fg && play::fg->cur == i;
-    if (getenv("FCACTLOG") && acts >= atol(getenv("FCACTLOG")) && acts < atol(getenv("FCACTLOG")) + 200)
+    // (FCACTLOG=n: 200 actions from the n-th traced - FCACTN=m: m of them)
+    if (getenv("FCACTLOG") && acts >= atol(getenv("FCACTLOG")) && acts < atol(getenv("FCACTLOG")) + (getenv("FCACTN") ? atol(getenv("FCACTN")) : 200)) {
         printf("  [act %ld] round %d %s -> %d (%d): %s\n", acts, b.round, act_name(a), t, extra, who(b, i).c_str());
+        // (FCROLLS=1: each blow's rolls too - the Show Rolls log, kept here)
+        static combat::RollLog rolls;
+        if (getenv("FCROLLS")) {
+            if (a == TestAct::AttackEnd)
+                for (int k = 0; k < rolls.n; ++k)
+                    printf("      roll: on %d kind %d blow %d need %d nat %d mod %d\n", rolls.r[k].who, (int)rolls.r[k].kind,
+                           rolls.r[k].blow, rolls.r[k].need, rolls.r[k].nat, rolls.r[k].mod);
+            rolls.n = 0;
+            combat::g_rolls = &rolls;
+        }
+    }
     switch (a) {
     case TestAct::AttackEnd:
         in_bite = false;
@@ -226,6 +243,8 @@ void tick()
         last_fg = fg;
         last_round = -1;
         endless_told = false;
+        hp_seen = -1;
+        hp_round = 0;
         turn_round.assign(b.n, -1);
         pending.assign(b.n, 0);
         start_hp.assign(combat::kMaxFighters, -1);
@@ -259,10 +278,15 @@ void tick()
         if (!f.up() || !f.size) bad("R1", "a menu for one who can't act: " + who(b, fg->cur));
         else if (held(b, f)) bad("R2", "a menu for a held / stunned one: " + who(b, fg->cur));
     }
-    if (b.round > fight_cap && !endless_told) {
+    {
+        long hp = 0;
+        for (int i = 0; i < b.n; ++i) hp = hp * 7 + b.f[i].hp() + (b.f[i].up() ? 1000 : 0);
+        if (hp != hp_seen) hp_seen = hp, hp_round = b.round;
+    }
+    if (b.round > fight_cap && (b.round - hp_round > 60 || b.round > 4 * fight_cap) && !endless_told) {
         endless_told = true;
         std::string s = "the fight goes on past round " + std::to_string(fight_cap) + " (no action until " +
-                        std::to_string(b.no_action) + "):";
+                        std::to_string(b.no_action) + ", hit points last changed in round " + std::to_string(hp_round) + "):";
         for (int i = 0; i < b.n; ++i)
             if (b.f[i].up() && b.f[i].size) s += " " + who(b, i);
         bad("R10", s);
