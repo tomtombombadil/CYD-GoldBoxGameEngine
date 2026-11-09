@@ -3251,7 +3251,7 @@ void tap_sounds(const ui::Tap& t)
 // One set for all games (settings.h comforts_off), on the one Settings
 // screen (below); a comfort compiled out (app/features.h) isn't listed.
 enum Comfort { kCFont, kCGallery, kCBigIcon, kCJournal, kCDemoTap, kCMoreGuys, kCPortrait, kCItemFixes, kCRolls,
-               kCCampFix, kCCheats, kCCompanion, kCMaxHp, kComforts };
+               kCCampFix, kCCheats, kCCompanion, kCMaxHp, kCQuickBandage, kComforts };
 
 bool comfort_built(int c)
 {
@@ -3269,6 +3269,7 @@ bool comfort_built(int c)
     case kCCheats: return CYD_CHEATS;
     case kCCompanion: return CYD_COMPANION_VIEWS;
     case kCMaxHp: return CYD_MAX_HP;
+    case kCQuickBandage: return CYD_QUICK_BANDAGE;
     default: return true;
     }
 }
@@ -3277,7 +3278,7 @@ uint16_t comfort_bit(int c)
 {
     static const uint16_t kBits[kComforts] = {0, kOffGallery, kOffBigIcon, kOffJournal, kOffDemoTap, kOffMoreGuys,
                                               kOffPortrait, kOffItemFixes, kOffRolls, kOff2CampFix << 8,
-                                              kOff2Cheats << 8, kOff2Companion << 8, 0};
+                                              kOff2Cheats << 8, kOff2Companion << 8, 0, 0};
     return kBits[c];
 }
 uint16_t comforts_off() { return static_cast<uint16_t>(cfg->comforts_off | cfg->comforts_off2 << 8); }
@@ -3292,6 +3293,7 @@ bool comfort_on(int c)
     if (c == kCBigIcon && !ui::large()) return cfg->large_icons != 0;      // (320x240: off unless chosen - it covers the editor)
     if (c == kCFont) return cfg->game_font != kFontGame;                   // (the game's own unless chosen - Tom)
     if (c == kCMaxHp) return cfg->max_hp != 0;                             // (a cheat: off unless chosen - Tom)
+    if (c == kCQuickBandage) return cfg->quick_bandage != kQuickBandageOriginal;    // (as each game unless chosen)
     return !(comforts_off() & comfort_bit(c));
 }
 
@@ -3309,6 +3311,7 @@ void apply_options()
     o.camp_fix = comfort_on(kCCampFix);
     o.cheats = comfort_on(kCCheats);
     o.max_hp = comfort_on(kCMaxHp);
+    o.quick_bandage = comfort_on(kCQuickBandage) ? cfg->quick_bandage : kQuickBandageOriginal;
     o.font = comfort_on(kCFont) ? cfg->game_font : kFontGame;
     play::set_options(o);
 }
@@ -3341,12 +3344,20 @@ ui::Rect comfort_qmark(const ui::Rect& cell)
 const char* const kComfortNames[kComforts] = {"Game Font",        "Icon Gallery",    "Large Icon",    "Journal Pop-Up",
                                               "Tap to Stop Demo", "More Characters", "Icon Portrait", "Game Fixes",
                                               "Show Rolls",       "Camp Fix",        "Cheats Tab",      "Companion Views",
-                                              "Max Hit Points"};
+                                              "Max Hit Points",   "Quick Bandage"};
 
 // What each option does (sentence case; Tom, v0.84.0)
 const char* comfort_help_text(int c)
 {
     switch (c) {
+    case kCQuickBandage:
+        return "When a character on Quick bandages a dying friend in a fight. As Original: as each game does - "
+               "Pool of Radiance, Curse, Silver Blades, Pools of Darkness and the Savage Frontier games first "
+               "thing in the turn, the Krynn games only after their spells and weapon. First: every Quick "
+               "character first thing in its turn, in every game. Healers First: clerics, druids, magic-users "
+               "and thieves first thing; fighters, paladins, rangers and knights (a multi-class with any of "
+               "them too) fight first, and bandage only on a turn with nobody to attack or walk to. Party NPCs "
+               "always act as their game has them.";
     case kCFont:
         return "The letters the game's text is printed in. Original: the game's own. Clear: the engine's upright, "
                "bold letters with real lower case, easier to read on a small screen. Clear Caps: the same letters, "
@@ -3574,6 +3585,9 @@ void toggle_comfort(int c)
         cfg->comforts_off2 ^= kOff2Companion;
     } else if (c == kCMaxHp) {
         cfg->max_hp = !cfg->max_hp;
+    } else if (c == kCQuickBandage) {
+        // As Original -> First -> Healers First -> As Original
+        cfg->quick_bandage = static_cast<uint8_t>((cfg->quick_bandage + 1) % (kQuickBandageHealers + 1));
     } else {
         set_comforts_off(comforts_off() ^ comfort_bit(c));
     }
@@ -3598,6 +3612,7 @@ void toggle_original()
     set_comforts_off(on ? 0 : all);
     if (!on) cfg->large_icons = 0;
     cfg->max_hp = 0;                    // (a cheat: As Original turns it off, All On leaves it to the player)
+    if (!on) cfg->quick_bandage = kQuickBandageOriginal;   // (As Original: each game's own; All On leaves the choice)
     cfg->game_font = on ? kFontClear : kFontGame;
     settings_save(*cfg);
     apply_options();
@@ -5736,6 +5751,10 @@ void draw_set_entry(const ui::Rect& cell, const SetEntry& e)
                 : cfg->game_font == kFontClearCaps ? "Clear Caps"
                 : cfg->game_font == kFontDarkness  ? "Darkness"
                                                    : "Original";
+        if (c == kCQuickBandage)
+            sub = cfg->quick_bandage == kQuickBandageFirst     ? "First"
+                : cfg->quick_bandage == kQuickBandageHealers ? "Healers First"
+                                                             : "As Original";
         ui::key2(r, kComfortNames[c], sub, lit(on));
     } else {
         const PanelPrefs& pp = panel_prefs_get();

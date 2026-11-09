@@ -4501,6 +4501,15 @@ void champ_ai_dice(combat::Fighter& f)
     }
 }
 
+// Quick Bandage's front line (Tom, 2026-11-09): a fighter, paladin, ranger
+// or knight - any of them, a multi-class too (the fighter's record: levels
+// 0x109 + 2 / 3 / 4, the knight in the monk's place 7 in the Krynn games)
+bool quick_front_line(const combat::Fighter& f)
+{
+    auto lv = [&](int k) { return static_cast<int>(f.rec[0x109 + k]) > 0; };
+    return lv(2) || lv(3) || lv(4) || ((krynn() || dkk() || hl()) && lv(7));
+}
+
 void ai_step(pic::Canvas& c)
 {
     combat::Battle& b = fg->b;
@@ -4529,7 +4538,15 @@ void ai_step(pic::Canvas& c)
     // (Champions too: its AI's move step 0xD270 bandages first - GAME.OVR
     // 0xD2A9, after the weapon at 0xC706; round 11)
     const bool late_bandage = dkk() || hl() || d->prof->game == games::Game::ChampionsOfKrynn;
-    if (!late_bandage && !f.team() && !fg->ai_checked && !fg->flee_told && !f.spell && combat::anyone_dying(b) && bandage_now())
+    // Quick Bandage (Tom, 2026-11-09; features.h CYD_QUICK_BANDAGE): the
+    // player's Quick members only - First: at the turn's start in every
+    // game; Healers First: so for the rest, the front line (fighter,
+    // paladin, ranger, knight - any of them in a multi-class) bandaging only
+    // on a turn with no attack or step to make (below, after the plan)
+    const int qb = CYD_QUICK_BANDAGE && !f.team() && f.quick && f.member >= 0 ? opts.quick_bandage : 0;
+    const bool front = qb == 2 && quick_front_line(f);
+    const bool early = qb == 0 ? !late_bandage : !front;
+    if (early && !f.team() && !fg->ai_checked && !fg->flee_told && !f.spell && combat::anyone_dying(b) && bandage_now())
         return;
     // Morale (monsters, NPCs), once a turn (flee_told: done)
     if (!fg->ai_checked && !fg->flee_told) {
@@ -4724,11 +4741,18 @@ void ai_step(pic::Canvas& c)
     // (Death Knights / the Dark Queen: a party member with moves left and a
     // foe to go for bandages a dying friend - its moves then 0, the turn over;
     // GAME.OVR 0xAEE7 +0x3C, DQK.EXE 0x2E94D +0x3B - each step it takes)
-    if (late_bandage && !f.team() && f.moves > 0 && combat::anyone_dying(b) && combat::standing(b, 1) && bandage_now()) {
+    if (late_bandage && !front && !f.team() && f.moves > 0 && combat::anyone_dying(b) && combat::standing(b, 1) && bandage_now()) {
         f.moves = 0;
         return;
     }
     const combat::Plan p = combat::think(b, fg->t, i, rng);
+    // (Quick Bandage's Healers First: the front line, nothing to attack or
+    // step towards - a dying friend bandaged now)
+    if (front && p.act != combat::Act::Attack && p.act != combat::Act::Step && p.act != combat::Act::Flee &&
+        combat::anyone_dying(b) && bandage_now()) {
+        f.moves = 0;
+        return;
+    }
     switch (p.act) {
     case combat::Act::Attack:
         if (p.missile) spend_ammo(i, p.ammo, do_attack(c, i, p.target, false, true, p.ammo));

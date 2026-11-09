@@ -1309,6 +1309,82 @@ void ai_bandage_order()
            t1 && d1 && !t0 && !d0, "game %d: undead - turned %d, friend still dying %d; none - turned %d, still dying %d", g, t1, d1, t0, d0);
 }
 
+// Quick Bandage (Tom, 2026-11-09; features.h CYD_QUICK_BANDAGE) - our own
+// option, checked against what Tom asked for: a Quick party member next to a
+// foe (no undead), a friend dying. As Original: every game bandages (the
+// DAX games at the turn's start, the Krynn games in their move step, before
+// the attack); First: anyone bandages; Healers First: a cleric / thief
+// bandages, a fighter or a cleric/fighter attacks (the friend left dying),
+// and a fighter with no foe standing bandages
+void quick_bandage()
+{
+    if (!fight()) return;
+    combat::Battle& b0 = fg->b;
+    if (b0.party_size < 2) {
+        expect(P, "Quick Bandage (two party members)", false);
+        return;
+    }
+    const uint8_t keep = play::opts.quick_bandage;
+    auto run = [&](int mode, std::initializer_list<std::pair<int, int>> lv, bool foe) {
+        play::opts.quick_bandage = static_cast<uint8_t>(mode);
+        fight();
+        combat::Battle& b = fg->b;
+        mx::put(0, 0, 10, 10, 60);
+        mx::put(1, 0, 9, 10, 60);
+        mx::put(B, 1, 11, 10, 60);
+        for (int k = B + 1; k < b.n; ++k) b.f[k].size = 0;
+        for (int k = 2; k < b.party_size; ++k) b.f[k].size = 0;
+        if (!foe) b.f[B].rec[0x195] = party::Dead;
+        combat::occupancy(b);
+        levels(0, lv);
+        combat::Fighter& f = b.f[0];
+        f.rec[0x15] = f.rec[0x14] = 16;
+        f.quick = true;
+        f.n_items = 0;
+        f.spell = 0;
+        f.can_cast = false;
+        f.fleeing = false;
+        f.moves = 12;
+        b.f[1].rec[0x195] = party::Dying;
+        b.f[B].rec[0xE9] = 0;
+        b.undead_loaded = 0;
+        fg->cur = 0;
+        fg->ai_checked = false;
+        fg->ai_diced = false;
+        fg->flee_told = false;
+        fg->use_item = -1;
+        fg->pages = fg->at = 0;
+        fg->ptext_used = 0;
+        ai_step(C);
+        const bool bandaged = b.f[1].rec[0x195] != party::Dying;
+        if (getenv("QBDEBUG")) {
+            printf("  qb mode %d foe %d: bandaged %d st %d fleeing %d moves %d pages %d:", mode, foe, bandaged, (int)fg->st, f.fleeing, f.moves, fg->pages);
+            for (int p = 0; p < fg->pages; ++p)
+                for (int l = 0; l < fg->page[p].lines; ++l) printf(" |%s", fg->ptext + fg->page[p].line_at[l]);
+            printf("\n");
+        }
+        b.f[1].rec[0x195] = party::Okay;
+        fg->pages = fg->at = 0;
+        fg->ptext_used = 0;
+        fg->st = FSt::Turn;
+        return bandaged;
+    };
+    const bool o_f = run(0, {{2, 5}}, true);
+    const bool f_f = run(1, {{2, 5}}, true), f_t = run(1, {{6, 5}}, true);
+    const bool h_c = run(2, {{0, 5}}, true), h_t = run(2, {{6, 5}}, true), h_m = run(2, {{5, 5}}, true);
+    const bool h_f = run(2, {{2, 5}}, true), h_cf = run(2, {{0, 5}, {2, 5}}, true), h_p = run(2, {{3, 5}}, true);
+    const bool h_r = run(2, {{4, 5}}, true), h_none = run(2, {{2, 5}}, false);
+    play::opts.quick_bandage = keep;
+    expect(P, "Quick Bandage, As Original: a Quick fighter next to a foe bandages the dying friend (every game's own order)",
+           o_f, "game %d: bandaged %d", game(), o_f);
+    expect(P, "Quick Bandage, First: a Quick fighter / thief bandages first", f_f && f_t, "fighter %d thief %d", f_f, f_t);
+    expect(P, "Quick Bandage, Healers First: cleric, thief, magic-user bandage first", h_c && h_t && h_m,
+           "cleric %d thief %d magic-user %d", h_c, h_t, h_m);
+    expect(P, "Quick Bandage, Healers First: fighter, paladin, ranger, cleric/fighter attack the foe instead",
+           !h_f && !h_p && !h_r && !h_cf, "bandaged: fighter %d paladin %d ranger %d cleric/fighter %d", h_f, h_p, h_r, h_cf);
+    expect(P, "Quick Bandage, Healers First: a fighter with no foe standing bandages", h_none, "bandaged %d", h_none);
+}
+
 void treasures_fight_items()
 {
     std::vector<uint8_t> ovr;
@@ -2449,6 +2525,7 @@ void run()
     if (want("use")) using_items();
     if (want("aiorder")) ai_pending();
     if (want("bandorder")) ai_bandage_order();
+    if (want("quickband")) quick_bandage();
     if (want("aiturn")) ai_turn_types();
     if (want("trainspell")) train_spell_offer();
     if (want("tohit")) to_hit_sides();

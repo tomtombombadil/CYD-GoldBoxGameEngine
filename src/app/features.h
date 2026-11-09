@@ -234,6 +234,21 @@
 #define CYD_MAX_HP 1
 #endif
 
+// Quick Bandage (Tom, 2026-11-09): when a Quick party member bandages a
+// dying friend. As Original (the default; As Original sets it back): as
+// each game does - PoolRad, Curse, Secret, Darkness, Gateway, Treasures at
+// the turn's start, Champions / Death Knights / the Dark Queen late in it
+// (after spells and the weapon, with moves left). First: every Quick member
+// at the turn's start, in every game. Healers First: clerics, druids,
+// magic-users and thieves at the turn's start; fighters, paladins, rangers
+// and knights (a multi-class with any of them too) fight first - they
+// bandage only on a turn with no attack or step to make. Party NPCs keep
+// their game's own. The Settings key Quick Bandage (settings.h
+// quick_bandage). 0: no such switch. Where: play_fight.inc ai_step.
+#ifndef CYD_QUICK_BANDAGE
+#define CYD_QUICK_BANDAGE 1
+#endif
+
 // Each comfort compiled in can also be switched off by the player: the
 // game's Settings page (Tom, 2026-10-11, v0.72.0; one set for all games,
 // settings.h comforts_off), the one Settings screen (Home, a game's page, the
