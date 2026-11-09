@@ -1295,6 +1295,17 @@ the Project as claude/TODO.md.
       last member's bow hits the AC -10 white heads only on a 20 and wins
       near round 150; R10 now reports only fights whose hit points stand
       still 60 rounds past FIGHTCAP (or past 4 x FIGHTCAP).
+- [x] Save / load round trips, every game (2026-11-09, v0.182.1): sweep
+      saveload 0 problems on all nine. Found: the check planted Curse's
+      script places (0x4C05 / 0x7E10) in Darkness-type games, which don't
+      have them (their script memory is the 1 KB game block at 1-0x400) -
+      now 0x3F0 / 0x3F8 there; the Dark Queen's loaded effects kept the
+      original's next-effect pointers (bytes 5-8) while its save writes the
+      engine's marks - now cleared on load, as an effect the engine makes;
+      the bytes a camp's own script changes (the check saves from camp, a
+      load runs the area's start again) are left out; PoolRad's wall-set
+      words 0x4CFA-0x4CFF (written at each save for the original's load,
+      not read back by the engine's) excepted. The check prints the values.
 - [ ] Round 10 left: the Dark Queen's to-hit (a 20 always hits, a 1
       always misses here, every game's rule) not found in DQK.EXE yet; its
       stinking cloud's coughing is given 1d4 + 1 (the value pushed at

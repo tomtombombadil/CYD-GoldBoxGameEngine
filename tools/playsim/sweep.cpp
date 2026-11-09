@@ -1118,6 +1118,12 @@ static void ticks(int n)
     }
 }
 
+// (the game as save_to wrote it: the Encamp before it runs the area's camp
+// entry - Treasures' sets game byte 0x50 there - so a load is compared with
+// this, not with the game before the Encamp)
+static ecl::GameState g_at_save;
+static party::Party p_at_save;
+
 static bool save_to(char slot)
 {
     using namespace play;
@@ -1130,6 +1136,8 @@ static bool save_to(char slot)
     tap_word('S');                      // Save
     ticks(20);
     printf("  save menu [%s%s] screen %d\n", menu.prompt, menu.s, (int)screen);
+    g_at_save = d->gs;
+    p_at_save = *pt;
     if (!tap_word(slot)) return false;
     ticks(20);
     if (screen == Screen::YesNo) tap_word('Y');
@@ -1212,8 +1220,13 @@ static void sweep_saveload()
     // (Death Knights: a byte an address, 0x7C00 on the characters' fields -
     // a byte in the area block and one in the table instead)
     const bool bytes = d->prof->variant.dkk;
-    const uint16_t aw = pool ? 0x4EF0 : bytes ? 0x4EF0 : 0x4C05, bw = bytes ? 0x7A10 : 0x7E10;
-    const uint16_t av = bytes ? 0x34 : 0x1234, bv = bytes ? 0x56 : 0x5678;
+    // (Darkness, Treasures, the Dark Queen - byte_map: the script's memory
+    // is the 1 KB game block at 1-0x400, the one part their saves keep; the
+    // Curse places above don't exist there - until 2026-11-09 the check
+    // planted them anyway and reported every load as losing them)
+    const bool dkmap = d->prof->ecl_ops && d->prof->ecl_ops->byte_map && !d->prof->ecl_ops->curse_bytes;
+    const uint16_t aw = dkmap ? 0x3F0 : pool ? 0x4EF0 : bytes ? 0x4EF0 : 0x4C05, bw = dkmap ? 0x3F8 : bytes ? 0x7A10 : 0x7E10;
+    const uint16_t av = bytes || dkmap ? 0x34 : 0x1234, bv = bytes || dkmap ? 0x56 : 0x5678;
     vm->set(aw, av);
     vm->set(bw, bv);
     static ecl::GameState g1;
@@ -1222,6 +1235,16 @@ static void sweep_saveload()
     p1 = *pt;
     const int x = d->gs.x, y = d->gs.y, dr = d->gs.dir;
     if (!save_to('C')) problem("couldn't save C");
+    // (the bytes the Encamp's own script changed - Treasures' camp entry sets
+    // game byte 0x50, Darkness's the rest encounter's, the Krynn games'
+    // their camp words - are left out: a load runs the area's start again,
+    // as the originals do, so those come back as the start sets them; every
+    // other byte must come back as it was before the Encamp)
+    static bool camp_set1[sizeof g1.area1], camp_set2[sizeof g1.area2];
+    int camp_n = 0;
+    for (size_t o = 0; o < sizeof g1.area1; ++o) camp_n += camp_set1[o] = g1.area1[o] != g_at_save.area1[o];
+    for (size_t o = 0; o < sizeof g1.area2; ++o) camp_n += camp_set2[o] = g1.area2[o] != g_at_save.area2[o];
+    if (camp_n) printf("  the camp's script changed %d bytes (left out of the comparison)\n", camp_n);
     printf("  saved C at %d,%d dir %d area %d script %d\n", x, y, dr, d->gs.game_area, d->gs.script);
     {
         // (a save's files are written under temporary names, then renamed:
@@ -1242,7 +1265,10 @@ static void sweep_saveload()
     }
     printf("  loaded C at %d,%d dir %d area %d script %d\n", d->gs.x, d->gs.y, d->gs.dir, d->gs.game_area, d->gs.script);
     if (d->gs.x != x || d->gs.y != y || d->gs.dir != dr) problem("position not the same after load");
-    if (vm->get(aw) != av || vm->get(bw) != bv) problem("script memory not the same after load");
+    if (vm->get(aw) != av || vm->get(bw) != bv) {
+        printf("  script memory: %04X = %X (saved %X), %04X = %X (saved %X)\n", aw, vm->get(aw), av, bw, vm->get(bw), bv);
+        problem("script memory not the same after load");
+    }
     if (pt->count != p1.count) problem("party size differs");
     for (int i = 0; i < pt->count && i < p1.count; ++i) {
         const party::Character& a = p1.m[i];
@@ -1254,20 +1280,33 @@ static void sweep_saveload()
                 problem(t);
             }
         if (a.n_items != b.n_items || memcmp(a.items, b.items, sizeof a.items[0] * a.n_items)) problem("items differ");
-        if (a.n_affects != b.n_affects || memcmp(a.affects, b.affects, sizeof a.affects[0] * a.n_affects)) problem("effects differ");
+        if (a.n_affects != b.n_affects || memcmp(a.affects, b.affects, sizeof a.affects[0] * a.n_affects)) {
+            printf("  member %d effects: %d saved, %d loaded\n", i, a.n_affects, b.n_affects);
+            for (int k = 0; k < a.n_affects || k < b.n_affects; ++k) {
+                printf("   %d:", k);
+                for (size_t j = 0; j < sizeof a.affects[0]; ++j) printf(" %02X", k < a.n_affects ? ((const uint8_t*)&a.affects[k])[j] : 0);
+                printf("  |");
+                for (size_t j = 0; j < sizeof b.affects[0]; ++j) printf(" %02X", k < b.n_affects ? ((const uint8_t*)&b.affects[k])[j] : 0);
+                printf("\n");
+            }
+            problem("effects differ");
+        }
     }
     for (size_t o = 0; o < sizeof g1.area1; ++o)
         // (Death Knights' block 36 sets 0x4C00 in its first entry - SAVE 1 at
         // 0x8014 - which a load runs again)
-        if (g1.area1[o] != d->gs.area1[o] && !(pool && (o == 0x20A || o == 0x20B)) && !(bytes && o == 0x100)) {
+        // (Pool: 0x3F4-0x3FF = area words 0x4CFA-0x4CFF, the wall sets every
+        // save writes there for the original's load - save_game_now; the
+        // engine's load takes them from the header, the words not read)
+        if (g1.area1[o] != d->gs.area1[o] && !camp_set1[o] && !(pool && (o == 0x20A || o == 0x20B || o >= 0x3F4)) && !(bytes && o == 0x100)) {
             char t[64];
-            snprintf(t, sizeof t, "area1 byte %03zX differs", o);
+            snprintf(t, sizeof t, "area1 byte %03zX differs (%02X saved, %02X loaded)", o, g1.area1[o], d->gs.area1[o]);
             problem(t);
         }
     for (size_t o = 0; o < sizeof g1.area2; ++o)
-        if (g1.area2[o] != d->gs.area2[o] && o != 0x58E && !(pool && o >= 0x6F2 && o <= 0x6FB)) {
+        if (g1.area2[o] != d->gs.area2[o] && !camp_set2[o] && o != 0x58E && !(pool && o >= 0x6F2 && o <= 0x6FB)) {
             char t[64];
-            snprintf(t, sizeof t, "area2 byte %03zX differs", o);
+            snprintf(t, sizeof t, "area2 byte %03zX differs (%02X saved, %02X loaded)", o, g1.area2[o], d->gs.area2[o]);
             problem(t);
         }
     // Saved again as D straight away: the same file

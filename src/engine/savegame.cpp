@@ -167,6 +167,11 @@ static bool queen_member_in(dax::ByteSource& src, const uint8_t* rec, uint32_t& 
         if (!ok) break;
         at += kQueenEffect;
         more = e[5] || e[6] || e[7] || e[8];
+        // (bytes 5-8: the original's pointer to the next one, meaningful only
+        // as zero or not - kept as an effect the engine makes has it, 0;
+        // queen_member_out writes the chain's marks. Until 2026-11-09 the
+        // loaded pointer stayed, so a game saved and loaded again differed)
+        memset(e + 5, 0, 4);
         if (c.n_affects < party::kMaxAffects) memcpy(c.affects[c.n_affects++], e, party::kAffectSize);
     }
     return ok && at <= src.size();
