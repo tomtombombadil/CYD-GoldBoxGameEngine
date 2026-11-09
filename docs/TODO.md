@@ -106,10 +106,12 @@ the Project as claude/TODO.md.
       original; after a script moves the party the position line shows
       the new square at once (the original shows the old one). SPEC 12.
 - [ ] Try Quick Actions (2026-11-09, not pushed yet; SPEC 11): the Game
-      menu's Quick tab (Exit Game is a narrow two-line key now). Check the
-      page fits and reads well on both sizes and the 5.0"; tick / untick
-      boxes with the stylus (each lights as it touches) and with the
-      cursor keys (Up / Down, Left / Right, Select); the "?" help page; a
+      menu's Quick tab (Exit Game is a narrow two-line key now) - since
+      Tom's note the same day an engine page on the whole screen (names
+      down the left, NPCs marked; the chosen one's switches as keys with
+      boxes and full words; what the last tapped does under them; "?").
+      Check it reads well on both sizes and the 5.0"; tap a name, flip
+      switches with the stylus (each lights as it touches); the "?"; a
       fight: set a fighter to Melee off (it guards beside a foe), Move off
       (it holds its square), Guard off (its turn just ends), a cleric to
       Turn Undead off, someone to Bandage First (a dying friend bandaged
@@ -127,6 +129,12 @@ the Project as claude/TODO.md.
 - [ ] Tom: Spells starts UNTICKED (the originals start every fight with
       Magic Off), unlike the rest of the row. Tick it per character to
       have Quick cast; say if you want it ticked by default instead.
+- [x] Quick Actions for the party's NPCs (Tom, 2026-11-09): every party
+      member on the tab, NPCs marked; theirs start at the originals' AI
+      (all but Bandage First, Spells ticked) - unticking limits them.
+- [ ] Tom: the Quick tab shows one character's switches at a time (the
+      grid of 8 x 8 didn't fit big, worded keys on 320x240). Say if you
+      want an "All Characters" key (set a switch for everyone at once).
 
 ## Claude
 

@@ -325,6 +325,46 @@ bool touch_point(int& x, int& y)
     return down;
 }
 
+#if defined(CYD_QEMU)
+// The emulator's "shot <name>": the screen as the display holds it, a row
+// a line of hex RGB on the serial line ("[shot] y rrggbb..."), between
+// "[shot] begin <name> <w> <h>" and "[shot] end" - run_qemu.py --shots
+// makes the PNG. Only where the display can be read back: the S3 builds'
+// frame buffers (boards/qemu_fb.hpp, the 5.0"'s Panel_Double)
+void qemu_shot(const char* name)
+{
+#if defined(CYD_QEMU_FLASHCARD)
+    const int w = width(), h = height();
+    lgfx::rgb888_t* row = static_cast<lgfx::rgb888_t*>(malloc(w * sizeof(lgfx::rgb888_t)));
+    char* line = static_cast<char*>(malloc(w * 6 + 1));
+    if (!row || !line) {
+        Serial.printf("[shot] %s: no memory\n", name);
+    } else {
+        static const char kHex[] = "0123456789abcdef";
+        Serial.printf("[shot] begin %s %d %d\n", name, w, h);
+        for (int y = 0; y < h; ++y) {
+            g->readRect(0, y, w, 1, row);
+            for (int x = 0; x < w; ++x) {
+                const uint8_t c[3] = {row[x].R8(), row[x].G8(), row[x].B8()};
+                for (int k = 0; k < 3; ++k) {
+                    line[x * 6 + k * 2] = kHex[c[k] >> 4];
+                    line[x * 6 + k * 2 + 1] = kHex[c[k] & 15];
+                }
+            }
+            line[w * 6] = 0;
+            Serial.printf("[shot] %d %s\n", y, line);
+        }
+        Serial.printf("[shot] end %s\n", name);
+        Serial.flush();
+    }
+    free(row);
+    free(line);
+#else
+    Serial.printf("[shot] %s: this build's display can't be read back (S3 builds only)\n", name);
+#endif
+}
+#endif
+
 void clear()
 {
     g->fillScreen(style::kBackground);

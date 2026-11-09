@@ -310,6 +310,16 @@ static void sweep_fightfuzz(unsigned seed, int fights)
         ++run;
         // Quick Actions (Tom, 2026-11-09): QAOFF=1 the switch off; QAFUZZ=1
         // each party member's eight switches at random this fight (R13 checks them)
+        // QANPC=1 (Tom, 2026-11-09: the party's NPCs on the Quick tab too):
+        // the party's last member made an NPC (control byte 0x80 on) for the
+        // fights - its switches kComputer as it starts, at random under QAFUZZ
+        if (getenv("QANPC") && play::fg && play::pt && play::pt->count > 1) {
+            const int last = play::pt->count - 1;
+            play::pt->m[last].rec[0xF7] = static_cast<uint8_t>(0x80 | 50);
+            for (int i = 0; i < play::fg->b.party_size; ++i)
+                if (play::fg->b.f[i].member == last) play::fg->b.f[i].rec[0xF7] = static_cast<uint8_t>(0x80 | 50);
+            play::qa_mask[last] = quickacts::kComputer;
+        }
         play::opts.quick_acts = !getenv("QAOFF");
         if (getenv("QAFUZZ")) {
             std::string g = " grid";

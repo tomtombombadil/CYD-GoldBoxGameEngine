@@ -23,6 +23,7 @@
 #include "engine/pdf.h"
 #include "engine/picture.h"
 #include "engine/profile.h"
+#include "engine/quickacts.h"
 #include "engine/text.h"
 #include "frame.h"
 #include "platform/memlog.h"
@@ -3464,13 +3465,13 @@ const char* comfort_help_text(int c)
                "city watch); Trainer - the game's own training hall for every class it has, free, with "
                "Modify Character for anyone there. Off: no Cheats tab.";
     case kCQuick:
-        return "Choose what each of your own characters may do when Quick plays it in a fight: melee, "
-               "missiles, spells, items, bandaging first, moving, turning undead, guarding. The choices are "
-               "on the Game menu's Quick tab, kept by the character's name for every saved game and the "
-               "later games. As they start, everything but Bandage First and Spells is ticked - Quick as "
-               "the game's own. Spells ticked is the original's Magic On (its Alt-M in a fight): Quick "
-               "casts that character's memorized spells. Off: Quick as the original (Magic Off), no Quick "
-               "tab.";
+        return "Choose what each party member may do when Quick (an NPC: the computer) plays it in a "
+               "fight: melee, missiles, spells, items, bandaging first, moving, turning undead, guarding. "
+               "The choices are on the Game menu's Quick tab, kept by the character's name for every saved "
+               "game and the later games. Your own characters start with everything but Bandage First and "
+               "Spells ticked - Quick as the game's own; Spells ticked is the original's Magic On (its "
+               "Alt-M): Quick casts that character's spells. NPCs start with all but Bandage First ticked - "
+               "the game's own AI. Off: as the original, no Quick tab.";
     case kCMaxHp:
         return "A cheat: a new character's hit points and each level gained by training (a training hall "
                "or the Cheats tab's Trainer) get the most their hit dice can give - 10 a fighter, 8 a "
@@ -3710,8 +3711,265 @@ void tap_cheats(const ui::Tap& t)
     }
 }
 
+
+// ---- The Quick tab (Tom, 2026-11-09; features.h CYD_QUICK_ACTIONS) -----------
+// Quick Actions in the engine's own look, the whole screen under the tab bar
+// (Tom: "I intended it for the game/settings menu of the engine where you
+// could use smaller fonts and be more descriptive"): the party down the
+// left - every member, its NPCs marked "NPC" - and the chosen one's eight
+// switches on the right as keys with a box (ticked: a lit key, the box
+// filled and checked), the full words; under them what the switch last
+// tapped does (or a line about the chosen character); bottom: Back to Game
+// and the "?" (the whole story). A tap on a name chooses it; a tap on a
+// switch flips it and QUICK.TXT is written at once (play::quick_toggle - the
+// switches' logic and file are the game's, src/game). Nothing of the game
+// screen is touched: no canvas parked (the tab's own memory: none past the
+// file's read, a moment).
+int  qt_rows = 0;               // the party's members (play::quick_begin)
+int  qt_sel = 0;                // the one shown
+int  qt_col = -1;               // the switch last tapped (-1: none yet)
+bool qt_help = false;           // the "?" page up
+bool qt_failed = false;         // the last toggle wasn't written
+
+ui::Rect qt_back_rect()
+{
+    const ui::Rect b = ui::bottom_key(0, 1);
+    return {b.x, b.y, b.w - b.h - ui::gap(), b.h};
+}
+ui::Rect qt_help_rect()
+{
+    const ui::Rect b = ui::bottom_key(0, 1);
+    return {b.x + b.w - b.h, b.y, b.h, b.h};
+}
+// The names' column and the switches' (the switches' keys, then the strip)
+int qt_list_w() { return ui::width() * 3 / 8; }
+ui::Rect qt_name_rect(int r)
+{
+    const ui::Rect a = journal_area();
+    const int gp = ui::gap(), n = qt_rows > 0 ? qt_rows : 1;
+    int h = (a.h - gp * (n + 1)) / n;
+    if (h > ui::key_h()) h = ui::key_h();
+    return {gp, a.y + gp + r * (h + gp), qt_list_w() - gp, h};
+}
+int qt_key_h()
+{
+    const ui::Rect a = journal_area();
+    // (the strip under the keys: 4 lines of the small text - 5 on 320x240,
+    // whose small font is narrow: a switch's words and the card's note)
+    const int gp = ui::gap(), strip = ui::line_h(ui::Font::Small) * (ui::large() ? 4 : 5) + gp;
+    int h = (a.h - strip - gp * 5) / 4;
+    if (h > ui::key_h()) h = ui::key_h();
+    return h;
+}
+ui::Rect qt_key_rect(int k)
+{
+    const ui::Rect a = journal_area();
+    const int gp = ui::gap(), x0 = qt_list_w() + gp, w = (ui::width() - x0 - gp * 2) / 2, h = qt_key_h();
+    return {x0 + (k % 2) * (w + gp), a.y + gp + (k / 2) * (h + gp), w, h};
+}
+ui::Rect qt_strip_rect()
+{
+    const ui::Rect a = journal_area();
+    const ui::Rect last = qt_key_rect(quickacts::kCols - 1);
+    const int x0 = qt_key_rect(0).x, y = last.y + last.h + ui::gap();
+    return {x0, y, last.x + last.w - x0, a.y + a.h - y};
+}
+
+// A name key: the name at its left, "NPC" at its right for the computer's
+void qt_draw_name(int r)
+{
+    const ui::Rect k = qt_name_rect(r);
+    const bool lit = r == qt_sel;
+    ui::key(k, "", lit ? ui::KeyStyle::Lit : ui::KeyStyle::Normal);
+#if defined(CYD_QEMU)
+    Serial.printf("[qemu] name %d at %d,%d\n", r, k.x + k.w / 2, k.y + k.h / 2);
+#endif
+    char nm[24];
+    if (!play::quick_name(r, nm, sizeof nm)) nm[0] = 0;
+    const int pad = ui::gap() + 1, lh = ui::line_h(ui::Font::Small), y = k.y + (k.h - lh) / 2;
+    int right = k.x + k.w - pad;
+    if (play::quick_npc(r)) {
+        const int w = ui::text_width("NPC", ui::Font::Small);
+        right -= w;
+        ui::text(right, y, "NPC", lit ? style::kText : style::kGold, ui::Font::Small);
+        right -= ui::gap();
+    }
+    // (a name too long for the room: cut, never over the NPC mark)
+    while (nm[0] && k.x + pad + ui::text_width(nm, ui::Font::Small) > right) nm[strlen(nm) - 1] = 0;
+    ui::text(k.x + pad, y, nm, style::kText, ui::Font::Small);
+}
+
+// A switch's key: a box at its left (ticked: filled and checked) and the
+// column's full name (two lines when it doesn't fit one: "Bandage" /
+// "First")
+void qt_draw_key(int k)
+{
+    const ui::Rect r = qt_key_rect(k);
+    const bool on = (play::quick_get(qt_sel) >> k & 1) != 0;
+    ui::key(r, "", on ? ui::KeyStyle::Lit : ui::KeyStyle::Normal);
+#if defined(CYD_QEMU)
+    Serial.printf("[qemu] switch '%s' at %d,%d\n", quickacts::kName[k], r.x + r.w / 2, r.y + r.h / 2);
+#endif
+    LGFX& g = ui::gfx();
+    const int gp = ui::gap(), bs = ui::large() ? 18 : 12;
+    const int bx = r.x + gp + 1, by = r.y + (r.h - bs) / 2;
+    g.fillRect(bx, by, bs, bs, on ? style::kText : style::kBackground);
+    g.drawRect(bx, by, bs, bs, style::kText);
+    if (on) {
+        // a check mark, 2 px thick (3 on 480x320)
+        const int t = ui::large() ? 3 : 2;
+        for (int i = 0; i < t; ++i) {
+            g.drawLine(bx + bs / 5, by + bs / 2 + i - 1, bx + bs * 2 / 5, by + bs * 3 / 4 + i - 1, style::kBackground);
+            g.drawLine(bx + bs * 2 / 5, by + bs * 3 / 4 + i - 1, bx + bs * 4 / 5, by + bs / 4 + i - 1, style::kBackground);
+        }
+    }
+    const char* name = quickacts::kName[k];
+    const int tx = bx + bs + gp + 1, room = r.x + r.w - gp - tx;
+    // (one font for all eight: the normal one when every name fits a line
+    // in it, else the small one - a name that still doesn't fit on two lines)
+    ui::Font f = ui::Font::Normal;
+    for (int i = 0; i < quickacts::kCols; ++i)
+        if (ui::text_width(quickacts::kName[i], ui::Font::Normal) > room) f = ui::Font::Small;
+    const int lh = ui::line_h(f);
+    const char* sp = strchr(name, ' ');
+    if (ui::text_width(name, f) <= room || !sp) {
+        ui::text(tx, r.y + (r.h - lh) / 2, name, style::kText, f);
+        return;
+    }
+    char first[16];
+    const size_t n = static_cast<size_t>(sp - name) < sizeof first - 1 ? static_cast<size_t>(sp - name) : sizeof first - 1;
+    memcpy(first, name, n);
+    first[n] = 0;
+    const int top = r.y + (r.h - lh * 2 - 1) / 2;
+    ui::text(tx, top, first, style::kText, f);
+    ui::text(tx, top + lh + 1, sp + 1, style::kText, f);
+}
+
+void qt_draw_strip()
+{
+    const ui::Rect s = qt_strip_rect();
+    ui::gfx().fillRect(s.x, s.y, s.w, s.h, style::kBackground);
+    const int lh = ui::line_h(ui::Font::Small);
+    int lines = s.h / lh;
+    if (qt_failed && lines > 1) {
+        // (the card didn't take the file: said on the strip's last line, the
+        // switch's words above it)
+        --lines;
+        ui::text(s.x + 2, s.y + lines * lh, "Not kept on the card.", style::kGold, ui::Font::Small);
+    }
+    char line[200];
+    const char* text = line;
+    if (qt_col >= 0) {
+        text = quickacts::kDesc[qt_col];
+    } else {
+        char nm[24];
+        if (!play::quick_name(qt_sel, nm, sizeof nm)) nm[0] = 0;
+        if (play::quick_npc(qt_sel))
+            snprintf(line, sizeof line, "%s is an NPC, the computer's: as it starts all is ticked but Bandage First - the "
+                     "game's own AI. Tap a switch to see what it does.", nm);
+        else
+            snprintf(line, sizeof line, "What Quick may do for %s in a fight. Tap a switch to flip it and see what it does; "
+                     "tap a name for another.", nm);
+    }
+    wrap_text(s.x + 2, s.y, s.w - 4, text, ui::Font::Small, qt_col >= 0 ? style::kText : style::kTextMuted, true, lines);
+}
+
+// The "?": the whole story, the screen's own (a tap closes it)
+const char* const kQuickHelp[] = {
+    "Quick plays a character in a fight. Here you choose, for each member of the party, what Quick may do "
+    "with it: tap a name, then tick or untick its switches. Each change is kept at once, by the character's "
+    "name, for every saved game and the later games.",
+    "Your own characters start with everything ticked but Bandage First and Spells - the game's own Quick. "
+    "Spells is the original's Magic On (its Alt-M in a fight), a character at a time. Bandage First "
+    "unticked: the game's own order.",
+    "NPCs (marked NPC) are the computer's: they start with everything ticked but Bandage First - Spells too, "
+    "the game's own AI for them, so nothing changes. Unticking limits them (the originals had no way to).",
+    "Settings - Quick Actions off: every character as the original.",
+};
+
+void draw_quick_help()
+{
+    ui::clear();
+    const int gp = ui::gap(), m = gp * 2;
+    LGFX& g = ui::gfx();
+    const ui::Rect box{m, m, ui::width() - m * 2, ui::height() - m * 2};
+    g.drawRoundRect(box.x, box.y, box.w, box.h, ui::large() ? 8 : 6, style::kGold);
+    const int x = box.x + gp * 2, w = box.w - gp * 4;
+    int y = box.y + gp * 2;
+    ui::text(x, y, "Quick Actions", style::kGold);
+    y += ui::line_h() + gp;
+    for (const char* p : kQuickHelp) y = wrap_text(x, y, w, p, ui::Font::Small, style::kText, true) + gp;
+    const int lh = ui::line_h(ui::Font::Small);
+    ui::text(x, box.y + box.h - gp - lh, "Tap to close.", style::kTextMuted, ui::Font::Small);
+}
+
+void draw_quick()
+{
+    ui::key(qt_back_rect(), "Back to Game");
+    ui::key_help(qt_help_rect());
+#if defined(CYD_QEMU)
+    Serial.printf("[qemu] key '?' at %d,%d\n", qt_help_rect().x + qt_help_rect().w / 2, qt_help_rect().y + qt_help_rect().h / 2);
+#endif
+    for (int r = 0; r < qt_rows; ++r) qt_draw_name(r);
+    for (int k = 0; k < quickacts::kCols; ++k) qt_draw_key(k);
+    qt_draw_strip();
+}
+
+// The tab chosen: the party's rows from the game (a note when it can't be)
+void open_quick()
+{
+    menu_tab = kTabQuick;
+    menu_note[0] = 0;
+    qt_help = false;
+    qt_failed = false;
+    qt_col = -1;
+    qt_rows = play::quick_ready() ? play::quick_begin() : 0;
+    if (qt_rows <= 0)
+        strlcpy(menu_note, "Quick Actions: not while the game asks for typing, or with no party.", sizeof menu_note);
+    if (qt_sel >= qt_rows) qt_sel = 0;
+    dirty = true;
+}
+
+void tap_quick(const ui::Tap& t)
+{
+    if (qt_back_rect().contains(t.x, t.y)) {
+        leave_menu();
+        return;
+    }
+    if (qt_help_rect().contains(t.x, t.y)) {
+        qt_help = true;
+        dirty = true;
+        return;
+    }
+    for (int r = 0; r < qt_rows; ++r)
+        if (qt_name_rect(r).contains(t.x, t.y)) {
+            if (r == qt_sel) return;
+            const int was = qt_sel;
+            qt_sel = r;
+            qt_col = -1;
+            qt_failed = false;
+            qt_draw_name(was);
+            qt_draw_name(r);
+            for (int k = 0; k < quickacts::kCols; ++k) qt_draw_key(k);
+            qt_draw_strip();
+            return;
+        }
+    for (int k = 0; k < quickacts::kCols; ++k)
+        if (qt_key_rect(k).contains(t.x, t.y)) {
+            qt_failed = !play::quick_toggle(qt_sel, k);
+            qt_col = k;
+            qt_draw_key(k);                 // (drawn again: the ring goes with the old look)
+            qt_draw_strip();
+            return;
+        }
+}
+
 void draw_game_menu()
 {
+    if (menu_tab == kTabQuick && qt_help) {
+        draw_quick_help();
+        return;
+    }
     ui::clear();
     draw_tabs(menu_tab);
     const ui::Rect a = journal_area();
@@ -3730,6 +3988,10 @@ void draw_game_menu()
     }
     if (menu_tab == kTabCheats) {
         draw_cheats();
+        return;
+    }
+    if (menu_tab == kTabQuick && !menu_note[0]) {
+        draw_quick();
         return;
     }
     const int pages = menu_tab == kTabPdf || menu_note[0] ? 1 : menu_pages();   // (a note: no list pages)
@@ -3784,6 +4046,11 @@ void tap_game_menu(const ui::Tap& t)
         dirty = true;
         return;
     }
+    if (menu_tab == kTabQuick && qt_help) {     // (the "?" page: a tap closes it)
+        qt_help = false;
+        dirty = true;
+        return;
+    }
     if (menu_esc_hit(t)) {
         menu_esc();
         return;
@@ -3802,24 +4069,7 @@ void tap_game_menu(const ui::Tap& t)
         return;
     }
     if (tab == kTabQuick) {
-        // Quick Actions (Tom, 2026-11-09): the page on the game screen at
-        // once (play_quick.inc) - back to it when it's up already
-        if (play::quick_page()) {
-            leave_menu();
-            return;
-        }
-        if (play::quick_ready()) {
-            leave_menu();
-            if (screen == Screen::Play && play::quick_open(frame::canvas())) return;
-            go(Screen::GameMenu);           // (the game screen couldn't wait on the card)
-            strlcpy(menu_note, "Quick Actions can't open just now: no room on the card for the game screen.",
-                    sizeof menu_note);
-        } else {
-            strlcpy(menu_note, "Quick Actions: not while the game asks for typing, or with no characters of your own "
-                               "in the party.", sizeof menu_note);
-        }
-        menu_tab = kTabQuick;
-        dirty = true;
+        open_quick();
         return;
     }
     if (tab == kTabJournal || tab == kTabSounds || tab == kTabSettings || tab == kTabCheats) {
@@ -3839,6 +4089,10 @@ void tap_game_menu(const ui::Tap& t)
     }
     if (menu_tab == kTabSettings) {
         tap_settings_body(t);
+        return;
+    }
+    if (menu_tab == kTabQuick && !menu_note[0]) {
+        tap_quick(t);
         return;
     }
     const int pages = menu_tab == kTabPdf || menu_note[0] ? 1 : menu_pages();
@@ -6167,6 +6421,13 @@ void tick()
         show_flash(index, colour);
     }
     if (screen != Screen::Look && screen != Screen::Play) show_flash(0, -1, false);
+#if defined(CYD_QEMU)
+    {
+        // (the emulator's script: the screen's pixels, once it's drawn)
+        char shot_name[24];
+        if (!dirty && qemu::shot(shot_name, sizeof shot_name)) ui::qemu_shot(shot_name);
+    }
+#endif
     if (!dirty) return;
     dirty = false;
     switch (screen) {

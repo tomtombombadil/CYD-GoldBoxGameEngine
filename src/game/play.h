@@ -109,15 +109,20 @@ bool walk_pending();
 bool cheats_ready();
 bool cheat_open(int which, pic::Canvas& c);
 // The Quick tab (Tom, 2026-11-09; features.h CYD_QUICK_ACTIONS,
-// Options::quick_acts): quick_ready - a game open with a character of the
-// player's own in the party and no typing (in a fight too); quick_open puts
-// the Quick Actions page on the game screen (the screen waits on the card,
-// _CYD/QUICK.TMP, and comes back when it's left) - false when not ready.
-// While it's up (quick_page) the play functions (tap, nav, act, tick ...)
-// work it and the game waits
+// Options::quick_acts) - the engine's Game menu draws it (viewer.cpp), the
+// switches and their file live here: quick_ready - a game open with a
+// party and no typing (in a fight too); quick_begin - QUICK.TXT read for
+// the party, the tab's rows (the whole party - its own characters and its
+// NPCs, Tom 2026-11-09 - in party order; 0: not ready); quick_name /
+// quick_npc / quick_get - row r's character's name, whether it's an NPC
+// (the computer's: kComputer as it starts) and its switches (quickacts' bits); quick_toggle - row r's column k flipped and QUICK.TXT
+// written at once (false: not written, or no such row)
 bool quick_ready();
-bool quick_open(pic::Canvas& c);
-bool quick_page();
+int quick_begin();
+bool quick_name(int r, char* out, size_t cap);
+bool quick_npc(int r);
+uint8_t quick_get(int r);
+bool quick_toggle(int r, int k);
 // A fight wants the direction keys (Tom, 2026-10-10: a fight's own keys -
 // the 8 ways and Select): a fighter moving or aiming by hand
 bool fight_pad();

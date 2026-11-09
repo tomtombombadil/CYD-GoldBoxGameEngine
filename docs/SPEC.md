@@ -151,8 +151,7 @@ The games draw a 320x200 screen. The canvas is presented:
     the game, then Esc (at the game's top level that leaves the Play Test,
     as the key did; later Exit Game - with the Quick tab on, 2026-11-09,
     a narrow key with its two words on two lines, both sizes, so seven
-    tabs fit; the Quick Actions page is on the game screen and takes the
-    cursor keys: section 11). Its slot went to **Map** (Claude's pick, Tom to
+    tabs fit; the Quick tab is an engine page like Settings: section 11). Its slot went to **Map** (Claude's pick, Tom to
     confirm; SPEC's old plan of a Companion key): the Companion's map
     (walls, gold doors, red locked doors, the party's arrow, the area /
     script / map lines) drawn over the game screen until the next tap; the
@@ -2752,23 +2751,30 @@ a PC, PortMaster handhelds):
     Treasures F/MU/T Con 18 (MU) 4/3 + 2/3 = +1; Champions knight Con 18
     +14.
   - `CYD_QUICK_ACTIONS` (Tom, 2026-11-09): **Quick Actions** - what each
-    of the player's own characters may do when Quick plays it in a fight.
-    The Game menu's **Quick** tab (between Logs and Cheats; with it on,
-    Exit Game is a narrow two-line key so seven tabs fit) opens one page
-    ON the game screen in the game's own look (its text-screen border and
-    font; the screen waits in `_CYD/QUICK.TMP` and comes back byte for
-    byte; a fight's colour swap off meanwhile; the game - a fight too -
-    waits): QUICK ACTIONS and a circled "?" at the top, the column
-    headings Mel Mis Spl Itm Bnd Mov Trn Grd staggered over rows 2 / 3,
-    then a row a character (its name, eight 7 x 7 boxes - a dot when
-    ticked; up to 8 rows 16 px apart), two help lines for the column
-    under the cursor, Exit on the menu line. Party NPCs aren't listed (they
-    act as their game makes them). A tap on a box lights it (the cursor
-    moves there as the stylus touches) and ticks / unticks it on release;
-    a heading or name moves the cursor; the "?" opens a help page (how it
-    works, a line a column; any tap / key closes it); Exit, or Back,
-    closes the page. Cursor keys: Up / Down through "?", the characters,
-    Exit (round), Left / Right through the columns, Select = a tap there.
+    party member may do when Quick (an NPC: the computer) plays it in a
+    fight. The Game menu's **Quick** tab (between Logs and Cheats; with it
+    on, Exit Game is a narrow two-line key so seven tabs fit) - an ENGINE
+    page like Settings / Cheats (Tom, 2026-11-09: "I intended it for the
+    game/settings menu of the engine where you could use smaller fonts and
+    be more descriptive ... the whole screen"; v0.185.0's page drawn into
+    the game canvas, `_CYD/QUICK.TMP`, is gone): the whole screen under the
+    tab bar, both sizes (layout from the panel; the 5.0" sees 320x240). Down
+    the left the whole party - every member, its full name, NPCs marked
+    "NPC" at the key's right - one lit (the one shown; a tap chooses
+    another); on the right that member's eight switches as keys, two
+    columns of four, each with a box (ticked: a lit key, the box filled and
+    checked) and the column's full name (Melee, Missile, Spells, Items,
+    Bandage First, Move, Turn Undead, Guard - "Move", never "Advance";
+    two lines when one doesn't fit); under them a strip saying what the
+    switch last tapped does, ticked and unticked (`quickacts::kDesc` -
+    Spells: the Magic On note; Bandage First: unticked = the game's own
+    order), or a line about the member shown (an NPC: the computer's, all
+    ticked but Bandage First as it starts); bottom: Back to Game and a
+    circled "?" (the whole story; a tap closes it). A tap on a switch
+    flips it and writes QUICK.TXT at once (a failed write says so in the
+    strip). The keys are engine keys: lit as the stylus touches (the tap
+    highlight). No typing / no party: a note instead. The game screen is
+    untouched (nothing parked; the game waits while the menu is up).
     Unticked: **Melee** - no blow at a foe next to it (a thrown weapon can
     still be thrown at it, Missile ticked); **Missile** - no shot or throw,
     and no missile weapon readied (the melee one); **Spells** - casts
@@ -2801,24 +2807,36 @@ a PC, PortMaster handhelds):
     order (below, section 12). Free attacks and guard blows stay the
     game's. Defaults: everything ticked but Bandage First and Spells -
     each game's own Quick exactly (Magic Off) (checked: the fight fuzzer's action logs with the
-    defaults and with the switch off identical in all nine games). Kept
+    defaults and with the switch off identical in all nine games). The
+    party's **NPCs** (Tom, 2026-11-09) have switches too: they start at
+    everything ticked but Bandage First - Spells TICKED - which is exactly
+    the originals' AI for them (their spell step casts for a control byte
+    over 0x7F, Magic On or not), so with the defaults nothing changes;
+    unticking limits an NPC's AI the same way (our comfort, section 12);
+    with the switch off, or charmed onto the other side, an NPC is the
+    game's. Monsters (charmed ones too) always the game's AI. Kept
     by NAME in `/GOLDBOX/_CYD/QUICK.TXT` (a comment line "# Quick
     Actions 2: ..." - v0.184.0's "# Quick Actions:" files, whose Spl did
     nothing, are read with Spl unticked and rewritten so -, then a line a
     name: the eight switches as 1 / 0 in the columns' order, a space, the
     name; names compared without case and trailing spaces; an unknown name
-    has the defaults), so the switches follow a character across save
+    has the defaults of its kind at the time - own or NPC; once its line is
+    written the line decides, whatever kind it is later), so the switches follow a character across save
     slots and into the later games; read at each fight's start and when
-    the page opens (a byte a party member kept, `play::qa_mask`), written
+    the tab opens (a byte a party member kept, `play::qa_mask`), written
     (QUICK.NEW, then renamed) at each change. The Settings key **Quick
     Actions** (with its "?" help; `comforts_off2` bit 8; on by default -
     the defaults are the originals'; As Original turns it off): off,
     Quick is each original's and the tab is hidden. Where:
     `engine/quickacts.*` (the file's lines), `combat::Fighter::qa`,
     `combat::think` / `choose_weapon`, play_fight.inc `ai_step`,
-    `game/play_quick.inc` (the page), viewer.cpp (the tab, the key).
-    Checks: rules4 ONLY=quickacts / quickpage, fight_check R13 with
-    QAFUZZ=1, tools/devkit/qa_verify.sh.
+    `game/play_quick.inc` (the masks, the file, the tab's model
+    `play::quick_begin / quick_name / quick_npc / quick_get / quick_toggle`),
+    viewer.cpp (the tab's drawing and taps, the Settings key).
+    Checks: rules4 ONLY=quickacts (NPC cases too) / quickpage (the tab's
+    model), fight_check R13 with QAFUZZ=1 (NPCs too; QANPC=1 makes the
+    party's last member an NPC), tools/devkit/qa_verify.sh; the tab's
+    pictures from the real firmware in QEMU: tools/devkit/qemu_shots.sh.
 
 ## 12. Where the engine differs from the original games (Tom, 2026-10-10: keep this list up to date)
 
@@ -2875,7 +2893,11 @@ the game's Settings (As Original: all of them).
   Magic On (Alt-M) for that character alone, the originals' flag is the
   whole party's for one fight. With its defaults (all but Bandage First
   and Spells) Quick is the original's (Magic Off, as every fight
-  starts); with the switch off there is no Magic On (no Alt-M key). (Not a difference - a fix of
+  starts); with the switch off there is no Magic On (no Alt-M key). The
+  party's NPCs get switches too (the originals' NPCs are always the
+  computer's, spells and all): with their defaults (all but Bandage
+  First) they act as the originals'; unticking limits them - a thing the
+  originals had no way to do. (Not a difference - a fix of
   the engine, round 12, 2026-11-09: the computer bandages in its
   move-and-attack step in every game, after morale, items, the pending
   spell, Turn Undead, spells and the weapon - Curse GAME.OVR 0xC829 in

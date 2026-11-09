@@ -299,17 +299,13 @@ static void run_ops(const char* q)
         else if (*q == '-') { ++q; play::pt->m[*q - '0'].rec[0x1A4] = 1; }
         else if (*q == '!') { for (int i = 0; i < play::pt->count; ++i) { const party::Character& ch = play::pt->m[i]; char nm[20]; ch.name(nm, 20); printf("  %s HP %d/%d st %d fx:", nm, ch.hp(), ch.hp_max(), ch.health()); for (int k = 0; k < ch.n_affects; ++k) printf(" %02X/%d/%d", ch.affects[k][0], ch.affects[k][1] | ch.affects[k][2] << 8, ch.affects[k][3]); printf("\n"); } }
         else if (*q == '~') { for (int k = 0; k < 600; ++k) { g_now += 100; play::tick(g_now, C); } }
-        // (Quick Actions' page: '|' opens it, '<' / '>' the cursor keys Left / Right,
-        // ',' Select - nav_point, the tap highlight, the tap - each a snapshot qa<n>)
-        else if (*q == '|' || *q == '<' || *q == '>' || *q == ',') {
-            static int qa_n = 0;
-            if (*q == '|') printf("  quick page: %s\n", play::quick_open(C) ? "open" : "not ready");
-            else if (*q != ',') play::nav(*q == '<' ? play::Nav::Left : play::Nav::Right, C);
-            else { int x, y, y0, y1; if (play::nav_point(&x, &y)) { play::tap_highlight(x, y, C, &y0, &y1); play::tap(x, y, C); play::tap_highlight_end(C); } }
-            printf("  quick page %s: row %d col %d help %d masks", play::quick_page() ? "up" : "closed", play::qp.row, play::qp.col, play::qp.help);
-            for (int i = 0; i < play::pt->count; ++i) printf(" %02X", play::qa_mask[i]);
-            printf("\n");
-            char t[16]; snprintf(t, 16, "qa%d", qa_n++); shot(t);
+        // (the Quick tab's model: '|' quick_begin and each row's switches, ','
+        // toggles row 0's next column - the tab itself is the engine's Game menu)
+        else if (*q == '|' || *q == ',') {
+            static int qa_k = 0;
+            if (*q == '|') printf("  quick tab: %d rows\n", play::quick_begin());
+            else printf("  quick toggle 0,%d: %s\n", qa_k, play::quick_toggle(0, qa_k++ % quickacts::kCols) ? "written" : "not written");
+            for (int r = 0; r < play::qa_rows; ++r) { char nm[24]; play::quick_name(r, nm, sizeof nm); printf("    %-16s %s %02X\n", nm, play::quick_npc(r) ? "NPC" : "   ", play::quick_get(r)); }
             continue;
         }
         else if (*q == '"' && q[1]) { ++q; const bool ok = play::cheat_open(*q - '0', C); printf("  cheat %c: %s, screen %d, %d goods\n", *q, ok ? "open" : "not ready", (int)play::screen, play::ground ? play::goods_count() : -1); }     // ("n: the Cheats tab's 0 Healer, 1 Merchant, 2 Sanctuary)
@@ -1981,6 +1977,14 @@ int main(int argc, char** argv)
         if (play::ground)
             printf("  counter %d %d %d %d %d\n", play::ground->money[0], play::ground->money[1], play::ground->money[2],
                    play::ground->money[3], play::ground->money[4]);
+    }
+    if (getenv("MAKENPC") && play::pt) {
+        // MAKENPC=k: party member k made an NPC (control byte 0x80 on, morale
+        // 50) - with SAVENOW a test save with an NPC (the Quick tab's
+        // pictures: tools/devkit/qemu_shots.sh); scratch only
+        const int k = atoi(getenv("MAKENPC"));
+        if (k >= 0 && k < play::pt->count) play::pt->m[k].rec[0xF7] = static_cast<uint8_t>(0x80 | 50);
+        printf("  member %d made an NPC\n", k);
     }
     if (getenv("SAVENOW")) {
         // SAVENOW=slot: saved as it stands, without the camp (a save for the original to load)

@@ -4,16 +4,18 @@
 
 namespace quickacts {
 
-const char* const kHead[kCols] = {"Mel", "Mis", "Spl", "Itm", "Bnd", "Mov", "Trn", "Grd"};
-const char* const kHelp[kCols][2] = {
-    {"Melee: attacks foes next to it.", "Unticked: no melee attacks."},
-    {"Missile: shoots and throws.", "Unticked: no missile attacks."},
-    {"Spells: Magic On, casts its spells.", "Unticked: Magic Off, as fights start."},
-    {"Items: potions, wands, magic items.", "Unticked: uses no items."},
-    {"Bandage First: the dying, first thing.", "Unticked: the game's own order."},
-    {"Move: steps toward enemies.", "Unticked: holds its square."},
-    {"Turn: turns undead.", "Unticked: never turns undead."},
-    {"Guard: guards with nothing to do.", "Unticked: just ends its turn."},
+// (the Game menu's Quick tab: the columns' names and what each does - Tom,
+// 2026-11-09: full words, descriptive; "Move", never "Advance")
+const char* const kName[kCols] = {"Melee", "Missile", "Spells", "Items", "Bandage First", "Move", "Turn Undead", "Guard"};
+const char* const kDesc[kCols] = {
+    "Melee: attacks a foe next to it. Unticked: no melee blows (with nothing to shoot, it stays put and guards).",
+    "Missile: shoots bows and slings, throws darts and spears. Unticked: no missile attacks.",
+    "Spells: the game's Magic On (Alt-M) for this character - it casts its memorized spells. Unticked: no spells.",
+    "Items: uses potions, wands and other magic items where the game's Quick does. Unticked: uses no items.",
+    "Bandage First: bandages a dying friend first thing in its turn. Unticked: the game's own order.",
+    "Move: steps toward the enemy. Unticked: holds its square, and guards when no foe is in reach.",
+    "Turn Undead: turns undead when the game's Quick would. Unticked: never turns undead.",
+    "Guard: guards when it has nothing else to do. Unticked: its turn just ends.",
 };
 
 namespace {
@@ -82,12 +84,12 @@ void clean_name(const char* name, char* out)
     out[n] = 0;
 }
 
-uint8_t find(const char* text, size_t n, const char* name)
+uint8_t find(const char* text, size_t n, const char* name, uint8_t dflt)
 {
     char nm[kNameMax + 1];
     clean_name(name, nm);
-    uint8_t found = kDefault;
-    if (!text || !nm[0]) return kDefault;
+    uint8_t found = dflt;
+    if (!text || !nm[0]) return dflt;
     const bool old = !new_file(text, n);
     lines(text, n, [&](size_t at, size_t len) {
         uint8_t m;

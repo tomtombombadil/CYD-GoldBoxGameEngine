@@ -177,7 +177,7 @@ Quick Actions + round 12 bandaging (2026-11-09):
                            forbids; QAOFF=1: the switch off
   qa_verify.sh <bin> [games]   the fuzz (3 seeds x 40) + the defaults-vs-off action-log comparison (2 seeds x 25)
   saveload.sh <bin> [games]    sweep saveload on each game
-  playsim CAMPRUN ops: '|' open the page, '<' '>' Left / Right, ',' Select (each a snapshot qa<n>), 'v' '^' Up / Down
+  playsim CAMPRUN ops: '|' the Quick tab's rows (quick_begin), ',' toggle row 0's next column; 'v' '^' Up / Down
   fuzz.sh TAGP=x, budgetx.sh LOGS= / TAGP=, host_tests.sh HTOUT= (parallel agents); host_tests.sh now pipefail
   Baselines: rules4 full PoolRad 30/0, Curse 33/0, Secret 27/0, Darkness 29/0, Gateway 28/0, Treasures 31/0,
   Champions 41/0, Knights 33/0, Queen 51/0; budgets (bytes) Curse 133679, PoolRad 135330, Darkness 149976,

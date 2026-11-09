@@ -11,7 +11,10 @@
 // "# Quick Actions:", its Spl doing nothing) is read with Spl unticked and
 // rewritten so at the next set. A name not in the
 // file has kDefault: everything ticked but Bandage First and Spells (each
-// game's own Quick: its Magic Off - below). Names are compared without case
+// game's own Quick: its Magic Off - below) - or, for the party's NPCs (the
+// computer's members; Tom, 2026-11-09: the whole party on the Quick tab),
+// kComputer: the originals' AI for them, Spells ticked (their spell step
+// casts for a control byte over 0x7F whatever the Magic flag says). Names are compared without case
 // and without trailing spaces.
 //
 // Spells (2026-11-09, checked in DOSBox and in every game's code): the
@@ -54,13 +57,15 @@ constexpr int kCols = 8;
 constexpr int kNameMax = 31;                // (a name's characters kept; the games' are 15 at most)
 constexpr size_t kFileMax = 8192;           // (a longer file is read up to here)
 
-// Each column's short heading ("Mel" ...) and its two lines of help (38
-// characters at most each: the game screen's text width)
-extern const char* const kHead[kCols];
-extern const char* const kHelp[kCols][2];
+// Each column's name in full ("Bandage First") and what it does, ticked
+// and unticked (110 characters at most: the Quick tab's strip, 4 lines)
+extern const char* const kName[kCols];
+extern const char* const kDesc[kCols];
 
-// The switches the file text gives `name` (kDefault: not there)
-uint8_t find(const char* text, size_t n, const char* name);
+// The switches the file text gives `name` (dflt when it isn't there: kDefault
+// for one of the player's own characters, kComputer for an NPC - the kind it
+// has when it's looked up; once its line is written the line decides)
+uint8_t find(const char* text, size_t n, const char* name, uint8_t dflt = kDefault);
 // The file text with `name`'s line set to `mask` (replaced, or added at the
 // end; the comment line put first when the text has none), into out; its
 // length, or 0 when out is too small

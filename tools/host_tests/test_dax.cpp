@@ -1920,11 +1920,15 @@ static void test_quickacts()
     const char* odd = "# Quick Actions 2: c\n1101 SHORT\n11111110 LAST";
     CHECK(find(odd, strlen(odd), "SHORT") == kDefault);
     CHECK(find(odd, strlen(odd), "LAST") == 0x7F);
-    // The page's text fits the game screen's 38 cells
+    // The Quick tab's words (Tom, 2026-11-09): full names, each description
+    // starting with its column's name and saying what unticked does; "Move",
+    // never "Advance"
     for (int k = 0; k < kCols; ++k) {
-        CHECK(strlen(kHead[k]) == 3);
-        CHECK(strlen(kHelp[k][0]) <= 38 && strlen(kHelp[k][1]) <= 38);
+        const size_t n = strlen(kName[k]);
+        CHECK(n >= 4 && !strncmp(kDesc[k], kName[k], n) && kDesc[k][n] == ':');
+        CHECK(strstr(kDesc[k], "Unticked") != nullptr && !strstr(kDesc[k], "Advance") && strlen(kDesc[k]) <= 110);
     }
+    CHECK(!strcmp(kName[5], "Move") && !strcmp(kName[4], "Bandage First") && !strcmp(kName[6], "Turn Undead"));
     CHECK(kComputer == (kAll & ~kBandage));
     CHECK(kDefault == (kAll & ~kBandage & ~kSpells));
     // A first version's file (v0.184.0: Spl did nothing): read with Spl

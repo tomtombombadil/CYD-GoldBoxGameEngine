@@ -123,6 +123,11 @@ int line_h(Font f = Font::Normal);
 int  tap_flash(const Tap& t);
 void tap_unflash();
 
+#if defined(CYD_QEMU)
+// The emulator's TAPS.TXT "shot <name>": the screen's pixels on the serial line
+void qemu_shot(const char* name);
+#endif
+
 // The bottom key row: n equal keys across the screen; returns key i's rect.
 Rect bottom_key(int i, int n);
 // A grid of keys filling the area between the header and the bottom row.
