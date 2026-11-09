@@ -8302,7 +8302,7 @@ void appraise_key(char k, pic::Canvas& c)
         add_coins(ch, appraised_jewel ? 6 : 5, -1);
         const int r = rng.roll(100, 1);
         const int div = d->prof->variant.appraise_div;
-        appraised = appraised_jewel ? rules::jewel_value(r, rng, div) : rules::gem_value(r, div);
+        appraised = appraised_jewel ? rules::jewel_value(r, rng, div, d->prof->variant.jewel41_span) : rules::gem_value(r, div);
         if (appraised <= 0) appraised = 1;
         rules::recalc(ch, *names, d->facts);
         draw_appraise(c);

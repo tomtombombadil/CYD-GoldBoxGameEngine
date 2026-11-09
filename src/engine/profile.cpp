@@ -3311,7 +3311,10 @@ const Profile kProfiles[] = {
      .clips = {},
      .door = {},
      .won = {},
-     .variant = {.program_words = true, .bigpic_from = 0x70, .fight_unswapped = true,
+     .variant = {.program_words = true, .bigpic_from = 0x70,
+                 // (its Appraise, GAME.OVR 0x295A7 / 0x297FD: gems 5 25 50 250
+                 // 500 2500 steel, jewels Curse's halved - Champions')
+                 .appraise_div = 2, .fight_unswapped = true,
                  .darkness_files = true, .party_menu_col = 9, .marker_file = "8X8D1.DAX", .marker_block = 204,
                  .order_words = {0x23CB1, 0x23CBF, 0x23CCD}, .yell_words = {0, kP | 0xD8D1},
                  // (Knight Change Order, GAME.OVR 061:4F31: the order's name
@@ -4157,6 +4160,10 @@ const Profile kProfiles[] = {
      .variant = {.bigpic_from = 0xF0,                // (Play on since darkqueen5)
                  // (the camp: PIC 128 in the view - its picture routine's mode 2, 0xB6F6)
                  .camp_pic = 128,
+                 // (its Appraise, DQK.EXE 0x49D87 / 0x4A03C - their case tables:
+                 // gems 5 25 50 250 500 2500 steel, jewels Curse's halved but
+                 // 41-50 250 + random(1500))
+                 .appraise_div = 2, .jewel41_span = 1500,
                  // ("Press        to continue." with the button "Return" in its gap)
                  .fight_unswapped = true, .press_words = {qw(0x1D19), qw(0x1D33)},
                  // (Knight New Order, DQK 0x487F2: its messages 64-70, "Exit"

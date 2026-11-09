@@ -684,6 +684,10 @@ struct Profile {
         // Appraise: gems and jewels worth Curse's divided by this (0: 1;
         // Secret 2 - secret_facts_2.md 17)
         uint8_t  appraise_div = 0;
+        // The Dark Queen (DQK.EXE 0x4A03C's case table, round 10): its
+        // 41-50 jewel 250 + random(1500), not Curse's halved 1250 (0: the
+        // division's)
+        uint16_t jewel41_span = 0;
         // Secret: its fight pictures already have dark grey where Curse's
         // have black (DUNGCOM's floor), so its fights don't swap colours
         // 0 and 8 (Curse's palette while fighting) and the field's empty

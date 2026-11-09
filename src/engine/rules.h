@@ -277,7 +277,7 @@ bool heal(party::Character& c, int amount);
 // are Curse's halved (div 2: its gems 5 ... 2500, its jewels' ranges and
 // bases halved - secret_facts_2.md 17)
 int gem_value(int d100, int div = 1);
-int jewel_value(int d100, create::Dice& d, int div = 1);
+int jewel_value(int d100, create::Dice& d, int div = 1, int span41 = 0);   // span41: 41-50's random span (0: 2500 / div)
 
 // A shop's price for an item: its value moved by the shop's price factor
 // (script word 0x7F6D: 1 = 1/16 ... 0x10 normal ... 0x80 = x8)

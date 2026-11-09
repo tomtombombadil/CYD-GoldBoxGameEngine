@@ -28,6 +28,10 @@
 //      coins left only when nobody has room; NPCs none
 //   T2 Take: never more than lies there; too heavy: nothing moves
 //   G1 Appraise: a gem / jewel less, its value paid or kept as an item
+//   G2 (the Krynn games) Appraise's value for every d100 against the
+//      original's code (oracle_appraise_<game>.txt: tools/devkit/oracles/
+//      appraise.py - Champions / Death Knights' GAME.OVR chains, the Dark
+//      Queen's DQK.EXE case tables)
 //   H1 the Cheats tab: the Healer's cures free, the Merchant's prices at
 //      a shop's factor (never above the value)
 //   R1 items worn and put away: the record and effects as before
@@ -665,6 +669,58 @@ void appraise()
     summary("G1 Appraise: one less, its value paid or kept", cases, f0);
 }
 
+// ---- G2 (Krynn: the values by the roll, from oracle_appraise_<game>.txt -
+// tools/devkit/oracles/appraise.py reads them from each original's code)
+int g2_r = 1, g2_top = 0;
+int g2_hook(int n) { return n == 100 ? g2_r - 1 : g2_top ? n - 1 : 0; }
+void appraise_values()
+{
+    const games::Game g = d->prof->game;
+    const char* nm = g == games::Game::ChampionsOfKrynn ? "champions" : g == games::Game::DeathKnightsOfKrynn ? "knights"
+                   : g == games::Game::DarkQueenOfKrynn ? "queen" : nullptr;
+    if (!nm) return;
+    char path[300];
+    snprintf(path, sizeof path, "%s/oracle_appraise_%s.txt", getenv("ORACLE_DIR") ? getenv("ORACLE_DIR") : "/tmp/claude-0/bt", nm);
+    FILE* f = fopen(path, "r");
+    if (!f) {
+        expect(P, "G2 the oracle (tools/devkit/oracles/appraise.py)", false, "%s", path);
+        return;
+    }
+    int gem[101] = {}, base[101] = {}, span[101] = {};
+    char kind[8];
+    int r, a, b;
+    while (fscanf(f, "%7s %d %d", kind, &r, &a) == 3 && r >= 1 && r <= 100) {
+        if (!strcmp(kind, "gem")) gem[r] = a;
+        else if (fscanf(f, "%d", &b) == 1) base[r] = a, span[r] = b;
+    }
+    fclose(f);
+    const int f0 = fails;
+    int cases = 0;
+    create::g_die_hook = g2_hook;
+    for (g2_r = 1; g2_r <= 100; ++g2_r)
+        for (int jewel = 0; jewel < 2; ++jewel)
+            for (g2_top = 0; g2_top < 1 + jewel; ++g2_top) {
+                party::Character& c = bare();
+                ground->clear();
+                set_money(c, 5 + jewel, 1);
+                rules::recalc(c, *names, d->facts);
+                screen = Screen::Appraise;
+                appraised = 0;
+                appraise_key(jewel ? 'J' : 'G', C);
+                const int want = jewel ? base[g2_r] + (g2_top ? span[g2_r] - 1 : 0) : gem[g2_r];
+                ++cases;
+                if (appraised != want)
+                    bad("G2 Appraise's value by the roll", "%s d100 %d%s: %d, the program's %d", jewel ? "jewel" : "gem", g2_r,
+                        jewel ? (g2_top ? " (random at its top)" : " (random 0)") : "", appraised, want);
+                appraised = 0;
+            }
+    create::g_die_hook = nullptr;
+    back();
+    ground->clear();
+    screen = Screen::Game;
+    summary("G2 Appraise's gem / jewel values by the d100 (the original's code)", cases, f0);
+}
+
 // ---- H1
 void cheats()
 {
@@ -907,6 +963,7 @@ void run()
     if (want("buy")) buy_check();
     if (want("share") || want("take")) share();
     if (want("appraise")) appraise();
+    if (want("appraise")) appraise_values();
     if (want("cheats")) cheats();
     if (want("wear")) wear();
     if (want("rest")) rest_check();
