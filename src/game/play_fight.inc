@@ -876,6 +876,7 @@ struct Fight {
     struct Blast { int8_t caster = -1; uint8_t x = 0, y = 0, area = 0, rounds = 0, pw = 0; };
     Blast    blast[4];
     bool     ai_checked = false;        // this turn's morale and spell choice done
+    bool     ai_diced = false;          // (Champions) this turn's first dice rolled - champ_ai_dice
     bool     flee_told = false;         // this turn's morale part done (a page said: its items and spells after it)
     bool     fx_done = false;           // this turn's start effects (turn_effects) done
     bool     continuing = false;        // "Continue Battle": Yes - the party's turns with no enemies left
@@ -3527,6 +3528,7 @@ void start_turn(pic::Canvas& c)
     f.received = f.turns = 0;
     f.guarding = false;
     fg->ai_checked = false;
+    fg->ai_diced = false;
     fg->flee_told = false;
     fg->use_item = -1;
     fg->spell = 0;
@@ -4444,11 +4446,37 @@ bool ai_ready_weapon(int i)
 }
 
 void fight_turn_undead(pic::Canvas& c);
+// Champions' computer turn's first dice (GAME.OVR 0xC5B0-0xC614): combat
+// byte 0x15 at 1-4 stays unless a d4 comes up 1; otherwise (and then) a d8:
+// 8 makes it a d2 + 4, else a d4. The last die's sides are kept - its Turn
+// Undead's type limit (0xC772's [bp-6], the stack word that die's side
+// count was pushed at)
+void champ_ai_dice(combat::Fighter& f)
+{
+    const int v = f.ai_mood;
+    if (v >= 1 && v <= 4 && rng.roll(4, 1) != 1) {
+        f.ai_sides = 4;
+        return;
+    }
+    if (rng.roll(8, 1) == 8) {
+        f.ai_mood = static_cast<uint8_t>(rng.roll(2, 1) + 4);
+        f.ai_sides = 2;
+    } else {
+        f.ai_mood = static_cast<uint8_t>(rng.roll(4, 1));
+        f.ai_sides = 4;
+    }
+}
+
 void ai_step(pic::Canvas& c)
 {
     combat::Battle& b = fg->b;
     const int i = fg->cur;
     combat::Fighter& f = b.f[i];
+    // (Champions: its dice first, once a turn - before the morale test)
+    if (d->prof->game == games::Game::ChampionsOfKrynn && !fg->ai_checked && !fg->flee_told && !fg->ai_diced) {
+        fg->ai_diced = true;
+        champ_ai_dice(f);
+    }
     // Quick party members bandage a dying friend first (at the turn's start)
     // (a spell begun earlier goes first, as it did at the turn's start).
     // Death Knights and the Dark Queen: later - in the move-and-attack step,
@@ -4572,7 +4600,7 @@ void ai_step(pic::Canvas& c)
         // ([bp-6]): it holds what the AI's last dice call left on the stack
         // at that place - the dice routine's pushed side count (the AI's
         // d4 / d8 / d2 at its start, GAME.OVR 0xC5C3-0xC601): 4, or 2 when its
-        // d8 came up 8 (that roll not kept here: 4) - undead types 1-4 only.
+        // d8 came up 8 (champ_ai_dice: f.ai_sides) - undead types up to it.
         // Darkness's (GAME.OVR 0x9D14) / Treasures' (0xAB2C): not fleeing,
         // the menu's test (skill levels, turns under the undead loaded);
         // Death Knights' (0xA46C) the menu's test; all three after a pending
@@ -4591,7 +4619,7 @@ void ai_step(pic::Canvas& c)
                 const combat::Fighter& o = b.f[e];
                 if (o.up() && o.size && !(o.fleeing && !o.panic) && (o.team() ? 1 : 0) != (f.team() ? 1 : 0) && o.rec[0xE9] &&
                     (!gateway() || o.rec[0xE9] < 13) &&
-                    (d->prof->game != games::Game::ChampionsOfKrynn || static_cast<int8_t>(o.rec[0xE9]) <= 4) &&
+                    (d->prof->game != games::Game::ChampionsOfKrynn || static_cast<int8_t>(o.rec[0xE9]) <= f.ai_sides) &&
                     combat::range(b, fg->t, i, e, false, nullptr)) {
                     fg->cur = i;
                     fight_turn_undead(c);

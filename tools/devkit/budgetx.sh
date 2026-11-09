@@ -2,7 +2,7 @@
 # The fight budgets (CLAUDE.md memory rule 7): the playsim with heapprof linked
 # (bin/sim), BUDGET=150 KB (153600 bytes), no out/ folder, a _CYD beside the game.
 L=/tmp/claude-0/ag7/logs; mkdir -p $L
-R=$(cd "$(dirname "$0")" && pwd)/run.sh; S=/tmp/claude-0/ag7/bin/simx
+R=$(cd "$(dirname "$0")" && pwd)/run.sh; S=${SIMBIN:-/tmp/claude-0/ag7/bin/simx}   # (SIMBIN=...: another build)
 one() {  # name short env...
   n=$1; s=$2; shift 2
   env "$@" HEAPPROF=1 BUDGET=150 TAG=budx timeout 900 bash $R $s $S > $L/budx_$n.log 2>&1

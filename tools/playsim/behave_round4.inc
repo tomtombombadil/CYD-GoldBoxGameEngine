@@ -1170,6 +1170,86 @@ void ai_turn_types()
     }
     expect(P, "the computer's Turn Undead by type (Champions 1-4 - its finder's unset limit; the Dark Queen / Death Knights any)",
            bad == 0 && turned_n > 0, "game %d: %d of %d wrong (%s)", g, bad, n, first);
+    if (g != 5) return;
+    // Champions' first dice (GAME.OVR 0xC5B0-0xC614) for every mood 0-6 and
+    // every die face: 1-4 kept unless the d4 is 1; else a d8 - 8: d2 + 4 and
+    // the limit 2, otherwise a d4 and the limit 4 (champ_ai_dice)
+    {
+        static int faces[3], at;
+        // (the hook gives the faces in turn, each under the die's sides)
+        create::g_die_hook = [](int sides) { return at < 3 ? faces[at++] % sides : 0; };
+        int wrong = 0, cases = 0;
+        char why[120] = "";
+        for (int mood = 0; mood <= 6; ++mood)
+            for (int a = 0; a < 8; ++a)
+                for (int b2 = 0; b2 < 8; ++b2)
+                    for (int c2 = 0; c2 < 8; ++c2) {
+                        faces[0] = a, faces[1] = b2, faces[2] = c2;
+                        // the original's chain on the same faces
+                        int k = 0, wm, ws;
+                        auto die = [&](int sides) { return faces[k++] % sides + 1; };
+                        if (mood >= 1 && mood <= 4 && die(4) != 1) wm = mood, ws = 4;
+                        else if (die(8) == 8) wm = die(2) + 4, ws = 2;
+                        else wm = die(4), ws = 4;
+                        combat::Fighter t{};
+                        t.ai_mood = static_cast<uint8_t>(mood);
+                        at = 0;
+                        champ_ai_dice(t);
+                        ++cases;
+                        if ((t.ai_mood != wm || t.ai_sides != ws || at != k) && !wrong++)
+                            snprintf(why, sizeof why, "mood %d faces %d %d %d: %d / %d (%d dice), want %d / %d (%d)", mood, a, b2, c2,
+                                     t.ai_mood, t.ai_sides, at, wm, ws, k);
+                    }
+        create::g_die_hook = nullptr;
+        expect(P, "Champions' computer: its turn's first dice (0xC5B0-0xC614) - the mood kept or rolled, the last die's sides",
+               wrong == 0, "%d of %d wrong (%s)", wrong, cases, why);
+    }
+    // ... and a d8 of 8 makes the limit 2: types 1-2 turned, 3-13 not
+    {
+        int bad2 = 0, n2 = 0, turned2 = 0;
+        char first2[120] = "";
+        for (int type = 1; type <= 13; ++type) {
+            fight();
+            combat::Battle& b = fg->b;
+            mx::put(0, 0, 10, 10, 60);
+            mx::put(B, 1, 11, 10, 60);
+            for (int k = B + 1; k < b.n; ++k) b.f[k].size = 0;
+            for (int k = 1; k < b.party_size; ++k) b.f[k].size = 0;
+            combat::occupancy(b);
+            levels(B, {{0, 5}});
+            combat::Fighter& f = b.f[B];
+            f.rec[0x15] = f.rec[0x14] = 16;
+            f.n_items = 0;
+            f.spell = 0;
+            f.can_cast = false;
+            f.fleeing = false;
+            f.ai_mood = 0;
+            b.f[0].rec[0xE9] = static_cast<uint8_t>(type);
+            b.undead_loaded = 2;
+            fg->cur = B;
+            fg->ai_checked = false;
+            fg->ai_diced = false;
+            fg->flee_told = false;
+            fg->use_item = -1;
+            fg->pages = 0;
+            // (the d8 an 8, the d2 a 1; the morale test's dice stay low: it fights)
+            create::g_die_hook = [](int sides) { return sides == 8 ? 7 : sides == 2 ? 0 : 0; };
+            for (int step = 0; step < 4 && fg->cur == B && !f.undead_turns && fg->st != FSt::Pages; ++step) ai_step(C);
+            create::g_die_hook = nullptr;
+            const bool turned = f.undead_turns > 0;
+            const bool diced = f.ai_sides == 2 && f.ai_mood == 5;
+            b.f[0].rec[0xE9] = 0;
+            fg->pages = fg->at = 0;
+            fg->ptext_used = 0;
+            fg->st = FSt::Turn;
+            ++n2;
+            turned2 += turned;
+            if ((turned != (type <= 2) || !diced) && !bad2++)
+                snprintf(first2, sizeof first2, "type %d: turned %d, want %d (sides %d mood %d)", type, turned, type <= 2, f.ai_sides, f.ai_mood);
+        }
+        expect(P, "Champions' computer: after a d8 of 8 its Turn Undead limit is 2 (the d2's sides - 0xC5E6 / 0xC772)",
+               bad2 == 0 && turned2 > 0, "%d of %d wrong (%s)", bad2, n2, first2);
+    }
 }
 
 // Death Knights' / the Dark Queen's bandaging comes late in the computer's

@@ -599,6 +599,12 @@ struct Fighter {
     // Champions / Death Knights: a mage's robe (1 White, 2 Red, 3 Black - its
     // moon), 0 none; Champions: a cleric's god (Majere 2 turns undead better)
     uint8_t robe = 0, god = 0;
+    // Champions' computer (GAME.OVR 0xC5B0-0xC614): its combat byte 0x15,
+    // rolled at each of its turns' start - 1-4 kept unless a d4 gives 1,
+    // else a d8 (8: a d2 + 4, otherwise a d4) - and the side count of that
+    // last die (4, 2 after a d8 of 8): its Turn Undead's finder limit
+    // (0xC772's unset [bp-6] holds it - the undead types up to it)
+    uint8_t ai_mood = 0, ai_sides = 4;
     uint8_t spell_t[24] = {};
     int     team() const { return rec[0x197]; }
     bool    up() const { return rec[0x196] != 0; }          // able to fight
