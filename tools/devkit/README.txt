@@ -146,3 +146,4 @@ Round 10 rules (2026-11-09):
                rounds (or past 4 x FIGHTCAP) - the fuzzer gives up at that point
   budgetx.sh: SIMBIN=<binary> for another build.
   Header changes (combat.h's Fighter): REBUILD=1 for every binary, or the objects disagree (a crash in place()).
+  verify10.sh: round 10's whole verification batch (rebuilds with REBUILD=1, rules4 / economy / fuzz / budgets / saveload); tools/refs.py <listing> <text> [before] [after]: a listing grep.
