@@ -11288,11 +11288,14 @@ bool open_learn(pic::Canvas& c);
 
 // Training's new spell offered (the spell list, when it has any): a
 // magic-user's new level, or any training of a ranger past 8th (the
-// original asks whichever class went up; Champions GAME.OVR 0x2566D the
-// same); the Dark Queen (ovl 5 +0x563B) and Death Knights (GAME.OVR
-// 0x199E5, ovl 0x61 +0x49E5): a ranger's own new level past 8th
+// original asks whichever class went up; GAME.OVR: Curse 0x25534, Secret
+// 0x22837, Gateway 0x2BEFC, Darkness 0x18DF6, Treasures 0x1E6E7, Champions
+// 0x2566D the same); PoolRad (0x1C8DE): a magic-user's new level only; the
+// Dark Queen (ovl 5 +0x563B) and Death Knights (GAME.OVR 0x199E5, ovl 0x61
+// +0x49E5): a ranger's own new level past 8th
 bool train_offers_spell(const party::Character& ch, int mu_before, int ranger_before)
 {
+    if (pool_files()) return ch.level(classes::MagicUser) > mu_before;
     const int rg = ch.level(classes::Ranger);
     const bool ranger = hl() || dkk() ? rg > 8 && rg > ranger_before : rg > 8;
     return ch.level(classes::MagicUser) > mu_before || ranger;

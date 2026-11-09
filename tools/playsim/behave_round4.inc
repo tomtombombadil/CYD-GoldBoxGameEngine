@@ -1813,8 +1813,10 @@ void queen_pages()
 // of levels before / after for magic-user and ranger 7-11
 void train_spell_offer()
 {
+    // (the others, read 2026-11-09 - GAME.OVR: Curse 0x25534, Secret 0x22837,
+    // Gateway 0x2BEFC, Darkness 0x18DF6, Treasures 0x1E6E7: Champions' rule;
+    // PoolRad 0x1C8DE: a magic-user's new level only)
     const int g = game();
-    if (g != 5 && g != 6 && g != 7) return;
     int bad = 0, n = 0;
     char first[120] = "";
     party::Character c = pt->m[0];
@@ -1826,12 +1828,12 @@ void train_spell_offer()
                     c.rec[0x109 + 5] = static_cast<uint8_t>(ma);
                     c.rec[0x109 + 4] = static_cast<uint8_t>(ra);
                     const bool got = play::train_offers_spell(c, mb, rb);
-                    const bool want = ma > mb || (g == 5 ? ra > 8 : ra > 8 && ra > rb);
+                    const bool want = ma > mb || (g == 1 ? false : g == 6 || g == 7 ? ra > 8 && ra > rb : ra > 8);
                     ++n;
                     if (got != want && !bad++)
                         snprintf(first, sizeof first, "mu %d->%d ranger %d->%d: offered %d, want %d", mb, ma, rb, ra, got, want);
                 }
-    expect(P, "training's spell list offered (a magic-user's level; Champions any ranger past 8th, Death Knights / the Dark Queen a ranger's new level past 8th)",
+    expect(P, "training's spell list offered (a magic-user's level; PoolRad nothing more, Death Knights / the Dark Queen a ranger's new level past 8th, the others any ranger past 8th)",
            bad == 0, "game %d: %d of %d wrong (%s)", g, bad, n, first);
 }
 
