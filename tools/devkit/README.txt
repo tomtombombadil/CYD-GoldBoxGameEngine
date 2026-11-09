@@ -182,3 +182,8 @@ Quick Actions + round 12 bandaging (2026-11-09):
   Baselines: rules4 full PoolRad 30/0, Curse 33/0, Secret 27/0, Darkness 29/0, Gateway 28/0, Treasures 31/0,
   Champions 41/0, Knights 33/0, Queen 51/0; budgets (bytes) Curse 133679, PoolRad 135330, Darkness 149976,
   Champions 135886, Knights 135896, Queen 143202, Treasures 151876.
+
+Quick's spells = the originals' Magic On (2026-11-09): tools/devkit/quickmagic/ (README.txt there) - each game's
+Alt-M flag, AI gate and fight-start reset (magic_find.py), the DOSBox runs that showed it (dosrun.py, mkscr.py,
+mkfight.py, memchk.py; Curse's bar fight, PoolRad's goblin guards), rwalk.sh. rules4 ONLY=quickacts now has
+qa_spells (all nine). QUICK.TXT "# Quick Actions 2:" (v0.184.0 files read with Spl unticked).

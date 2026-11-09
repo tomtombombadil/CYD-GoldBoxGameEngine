@@ -6,9 +6,22 @@
 //
 // The file: a comment line or two ('#'), then a line a character - the
 // eight switches as '1' (ticked) / '0' in the columns' order, a space, the
-// name to the line's end ("11101111 ALIAS THE BOLD"). A name not in the
-// file has kDefault: everything ticked but Bandage First (each game's own
-// Quick). Names are compared without case and without trailing spaces.
+// name to the line's end ("11101111 ALIAS THE BOLD"). The first comment
+// line starts "# Quick Actions 2:"; a first version's file (v0.184.0,
+// "# Quick Actions:", its Spl doing nothing) is read with Spl unticked and
+// rewritten so at the next set. A name not in the
+// file has kDefault: everything ticked but Bandage First and Spells (each
+// game's own Quick: its Magic Off - below). Names are compared without case
+// and without trailing spaces.
+//
+// Spells (2026-11-09, checked in DOSBox and in every game's code): the
+// originals' Quick casts a party member's memorized spells only while the
+// fight's "Magic On" is set - Alt-M in the fight menu or during Quick
+// play toggles it ("Magic On" / "Magic Off"), every fight starts with it
+// off (Curse GAME.OVR 0xF3C8 after "A battle begins..."), and the AI's
+// spell step tests it beside the control byte (Curse 0xC0C8: control over
+// 0x7F - NPCs, monsters - or the flag). The Spells column is that switch,
+// a character at a time: ticked = Magic On for them.
 //
 // Plain C++ (no Arduino), host-tested in tools/host_tests/test_dax.cpp.
 #pragma once
@@ -29,9 +42,13 @@ enum : uint8_t {
     kTurn = 64,         // Turn Undead
     kGuard = 128,       // guards when it has nothing else to do
     kAll = 0xFF,
-    // The start (Tom, 2026-11-09): everything ticked but Bandage First -
-    // each game's own Quick (a dying friend bandaged in its own order)
-    kDefault = kAll & ~kBandage,
+    // The computer's own fighters (monsters, NPCs): the games' AI unchanged
+    // (a dying friend bandaged in its own order, spells always)
+    kComputer = kAll & ~kBandage,
+    // The start for the player's own characters: each game's own Quick -
+    // Bandage First unticked (the game's own order) and Spells unticked
+    // (the games' Magic Off, as every fight starts)
+    kDefault = kComputer & ~kSpells,
 };
 constexpr int kCols = 8;
 constexpr int kNameMax = 31;                // (a name's characters kept; the games' are 15 at most)

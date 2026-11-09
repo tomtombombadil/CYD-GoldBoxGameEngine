@@ -2772,8 +2772,25 @@ a PC, PortMaster handhelds):
     Unticked: **Melee** - no blow at a foe next to it (a thrown weapon can
     still be thrown at it, Missile ticked); **Missile** - no shot or throw,
     and no missile weapon readied (the melee one); **Spells** - casts
-    nothing (the games' Quick never casts for a character of the player's
-    own - only monsters and NPCs - so this stops nothing there today);
+    nothing; ticked it casts its memorized spells as the games' AI does
+    (the same choice as monsters' and NPCs': d7 rounds by priority, its
+    targets, the spell out of memory). That is each original's **Magic
+    On** (2026-11-09; Tom: "I could have sworn that Quick casted spells"):
+    every game's AI spell step casts for one of the player's own only
+    while the fight's Magic flag is on - control byte over 0x7F (NPCs,
+    monsters) or the flag (Curse GAME.OVR 0xC0C8 [DS 0x75F4], PoolRad
+    0xB187 [0x6E30], Secret 0xD58F [0x8E14], Gateway 0xD6FD [0x8901],
+    Champions 0xCBBC [0x7198], Darkness 0x9FEA [0xAEDA], Treasures 0xAE2C
+    [0xA5CB], Death Knights 0xA830 [0xC4BE], DQK.EXE 0x2E15B [0xB1CB];
+    Darkness / Treasures / the Krynn sequels count 0x7F as the computer's
+    too); Alt-M in the fight menu or during Quick play toggles it ("Magic
+    On" / "Magic Off"), and every fight starts with it off (Curse 0xF3C8
+    after "A battle begins..."). Checked in DOSBox: Curse's bar fight and
+    PoolRad's goblin guards on Quick - Magic Off, no spell of the party's
+    used; the flag on, the magic-users "Casts a Spell", their Magic
+    Missiles gone from memory. So Spells starts unticked (the games'
+    start) and with the switch off no character of the player's own casts
+    on Quick (no Alt-M here);
     **Items** - no potion, wand or other item; **Move** - never steps
     toward enemies (holds its square: guards when it can't reach), and with
     Melee unticked and no missile to use it never steps either; **Turn
@@ -2782,10 +2799,12 @@ a PC, PortMaster handhelds):
     turn's start (before items, Turn, spells, the blow) in every game -
     PoolRad too, whose computer never bandages; unticked: the game's own
     order (below, section 12). Free attacks and guard blows stay the
-    game's. Defaults: everything ticked but Bandage First - each game's own
-    Quick exactly (checked: the fight fuzzer's action logs with the
+    game's. Defaults: everything ticked but Bandage First and Spells -
+    each game's own Quick exactly (Magic Off) (checked: the fight fuzzer's action logs with the
     defaults and with the switch off identical in all nine games). Kept
-    by NAME in `/GOLDBOX/_CYD/QUICK.TXT` (a comment line, then a line a
+    by NAME in `/GOLDBOX/_CYD/QUICK.TXT` (a comment line "# Quick
+    Actions 2: ..." - v0.184.0's "# Quick Actions:" files, whose Spl did
+    nothing, are read with Spl unticked and rewritten so -, then a line a
     name: the eight switches as 1 / 0 in the columns' order, a space, the
     name; names compared without case and trailing spaces; an unknown name
     has the defaults), so the switches follow a character across save
@@ -2852,8 +2871,11 @@ the game's Settings (As Original: all of them).
 - **Quick Actions** (Tom, 2026-11-09; switch `CYD_QUICK_ACTIONS` -
   section 11): the player may stop a Quick character's melee, missiles,
   spells, items, moving, Turn Undead or guarding, and have it bandage a
-  dying friend first thing in its turn. With its defaults (all but
-  Bandage First) Quick is the original's. (Not a difference - a fix of
+  dying friend first thing in its turn; Spells ticked is the originals'
+  Magic On (Alt-M) for that character alone, the originals' flag is the
+  whole party's for one fight. With its defaults (all but Bandage First
+  and Spells) Quick is the original's (Magic Off, as every fight
+  starts); with the switch off there is no Magic On (no Alt-M key). (Not a difference - a fix of
   the engine, round 12, 2026-11-09: the computer bandages in its
   move-and-attack step in every game, after morale, items, the pending
   spell, Turn Undead, spells and the weapon - Curse GAME.OVR 0xC829 in

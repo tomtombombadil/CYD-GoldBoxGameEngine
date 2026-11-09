@@ -242,14 +242,15 @@
 // Undead, Guard; a tap (or the cursor keys and Select) ticks / unticks a
 // box, the "?" explains it all. Unticked: Melee - no melee attacks;
 // Missile - no shots or throws (no missile weapon readied); Spells - casts
-// nothing; Items - uses no items; Move - never steps toward enemies (holds
+// nothing (ticked: casts its memorized spells - the originals' Magic On,
+// Alt-M in a fight, off as each fight starts); Items - uses no items; Move - never steps toward enemies (holds
 // its square, fights what is in reach or range; with Melee unticked and no
 // missile to use it never steps either); Turn Undead - never turns; Guard
 // - ends its turn instead of guarding. Bandage First ticked: a dying
 // friend is bandaged at the turn's start in every game (PoolRad too);
 // unticked: the game's own order (the move step; PoolRad's computer never
-// bandages). Default: all ticked but Bandage First - each original's Quick
-// (Tom, 2026-11-09). Kept by the character's NAME in /GOLDBOX/_CYD/QUICK.TXT (a line
+// bandages). Default: all ticked but Bandage First and Spells - each
+// original's Quick, Magic Off (Tom, 2026-11-09). Kept by the character's NAME in /GOLDBOX/_CYD/QUICK.TXT (a line
 // a name: the eight switches, the name), so it follows the character
 // across save slots and into the later games; read at each fight's start
 // and when the page opens. The Settings key Quick Actions (on by default;

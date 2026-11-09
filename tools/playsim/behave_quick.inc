@@ -19,7 +19,8 @@
 // step; Turn Undead - no turn; Guard - no guard, the turn ends; Items - no
 // item; Spells - no spell), Bandage First ticked bandages at the turn's
 // start in every game (before Turn Undead), the defaults (all but Bandage
-// First) and the switch off are the game's own, party NPCs ignore the grid,
+// First and Spells) and the switch off are the game's own, Spells ticked is
+// the games' Magic On (qa_spells), party NPCs ignore the grid,
 // and QUICK.TXT keeps the switches by name.
 
 std::vector<std::pair<combat::TestAct, int>> qa_acts;     // fighter 0's actions: (act, target)
@@ -41,8 +42,9 @@ bool qa_did(combat::TestAct a)
 struct QaOut {
     bool bandaged = false, turned = false, attacked = false, missile = false, stepped = false, guarded = false;
     bool cast = false, item = false;
+    bool forgot = false;                // (the memorized spell gone: cast, or begun)
 };
-QaOut qa_scene(int mask, int dist, bool dying, int undead, int cls = 0, bool thrown = false, bool npc = false)
+QaOut qa_scene(int mask, int dist, bool dying, int undead, int cls = 0, bool thrown = false, bool npc = false, int spell = 0)
 {
     QaOut o;
     if (!fight()) return o;
@@ -58,7 +60,13 @@ QaOut qa_scene(int mask, int dist, bool dying, int undead, int cls = 0, bool thr
     f.rec[0x15] = f.rec[0x14] = 16;
     f.quick = true;
     f.spell = 0;
-    f.can_cast = false;
+    f.can_cast = spell != 0;
+    // (`spell`: the only one in memory)
+    uint8_t keep_list[magic::kListSize];
+    for (int k = 0; k < magic::kListSize; ++k) {
+        keep_list[k] = f.rec[magic::kListAt + k];
+        f.rec[magic::kListAt + k] = static_cast<uint8_t>(k == 0 ? spell : 0);
+    }
     f.fleeing = false;
     f.moves = 12;
     if (npc) f.rec[0xF7] = 0x80 | 50;
@@ -135,12 +143,67 @@ QaOut qa_scene(int mask, int dist, bool dying, int undead, int cls = 0, bool thr
     o.guarded = qa_did(combat::TestAct::Guard);
     o.cast = qa_did(combat::TestAct::Cast);
     o.item = qa_did(combat::TestAct::UseItem);
+    o.forgot = spell && f.rec[magic::kListAt] != spell;
+    for (int k = 0; k < magic::kListSize; ++k) f.rec[magic::kListAt + k] = keep_list[k];
+    f.spell = 0;
+    f.spell_n = 0;
+    f.can_cast = false;
     b.f[B].rec[0xE9] = 0;
     b.f[1].rec[0x195] = party::Okay;
     fg->pages = fg->at = 0;
     fg->ptext_used = 0;
     fg->st = FSt::Turn;
     return o;
+}
+
+// Spells (2026-11-09, Tom: "I could have sworn that Quick casted spells"):
+// every game's AI spell step casts for one of the player's own characters
+// only while the fight's Magic flag is on - its control byte over 0x7F
+// (NPCs, monsters) or the flag (Curse GAME.OVR 0xC0C8 [0x75F4], PoolRad
+// 0xB187 [0x6E30], Secret 0xD58F [0x8E14], Gateway 0xD6FD [0x8901],
+// Champions 0xCBBC [0x7198], Darkness 0x9FEA [0xAEDA], Treasures 0xAE2C
+// [0xA5CB], Death Knights 0xA830 [0xC4BE], DQK.EXE 0x2E15B [0xB1CB]); Alt-M
+// in the fight menu or during Quick play toggles it, each fight's start
+// clears it (DOSBox, Curse's bar fight: Magic Off - no spell of the party's
+// used in the whole fight; poked on - PHILIPPE "Casts a Spell", the party's
+// Magic Missiles and Hold Person gone from memory). So: the column ticked -
+// a Quick magic-user with Magic Missile memorized casts it (on some of 40
+// turns: the AI's d7 rounds against the spell's priority) and it leaves
+// memory; unticked, the start (kDefault) and Quick Actions off (the game's
+// start: Magic Off) - never; a party NPC (control 0x80 on) casts whatever
+// the grid says
+void qa_spells()
+{
+    using namespace quickacts;
+    // the game's missile spell: its fight table's (level + 1) / 2 missiles
+    int mm = 0;
+    for (int k = 0; k < d->prof->fight.n_spells && !mm; ++k)
+        if (d->prof->fight.spells[k].does == combat::SpellDoes::Damage && d->prof->fight.spells[k].per == 2)
+            mm = d->prof->fight.spells[k].spell;
+    if (!mm) {
+        expect(P, "Quick Actions, Spells: the game's Magic Missile in its fight table", false);
+        return;
+    }
+    const int D = kDefault;
+    auto tries = [&](int mask, bool npc, int* forgot) {
+        int cast = 0;
+        *forgot = 0;
+        for (int k = 0; k < 40; ++k) {
+            const QaOut o = qa_scene(mask, 3, false, 0, 5, false, npc, mm);
+            cast += o.cast || o.forgot;
+            *forgot += o.forgot;
+        }
+        return cast;
+    };
+    int f_on, f_def, f_off, f_npc;
+    const int on = tries(D | kSpells, false, &f_on), def = tries(D, false, &f_def), off = tries(-1, false, &f_off);
+    const int npc = tries(0, true, &f_npc);
+    expect(P, "Quick Actions, Spells (the games' Magic On): ticked - a Quick magic-user casts its memorized Magic Missile "
+              "and it leaves memory; unticked (the start, as each fight's Magic Off) and Quick Actions off - never; a party "
+              "NPC casts whatever the grid says (every game's spell step: control over 0x7F or the flag)",
+           on > 0 && f_on == on && def == 0 && off == 0 && npc > 0,
+           "spell %02X of 40 turns: ticked cast %d (left memory %d), unticked %d, switch off %d, NPC %d", mm, on, f_on, def, off,
+           npc);
 }
 
 void ai_bandage_order()
@@ -280,11 +343,11 @@ void quick_actions()
     expect(P, "Quick Actions, Bandage First unticked (the start): the game's own order - as the switch off",
            b_def.bandaged == b_off.bandaged && b_def.attacked == b_off.attacked, "default bandaged %d attacked %d; off bandaged %d "
            "attacked %d", b_def.bandaged, b_def.attacked, b_off.bandaged, b_off.attacked);
-    // Items / Spells unticked: none (a Quick character of the player's own
-    // never casts in the games' Quick - the column has nothing to stop there)
+    // Items / Spells unticked: none
     const QaOut i_off = qa_scene(D & ~kItems & ~kSpells, 1, false, 0);
     expect(P, "Quick Actions, Items / Spells unticked: no item used, no spell cast", !i_off.item && !i_off.cast,
            "item %d cast %d", i_off.item, i_off.cast);
+    qa_spells();
     // The switch off, and party NPCs: the grid not followed
     const QaOut o_off = qa_scene(-1, 1, false, 0, 2), o_npc = qa_scene(0, 1, false, 0, 2, false, true);
     const QaOut o_none = qa_scene(0, 1, false, 0, 2);

@@ -3402,7 +3402,7 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
     const int my = f.team() ? 1 : 0;
     auto enemy = [&](int c) { return seen_enemy(b, i, c); };
     // Quick Actions (Tom, 2026-11-09): the player's switches for one of its
-    // own Quick characters (kDefault for everyone else: as the games)
+    // own Quick characters (kComputer for everyone else: as the games)
     const bool melee_ok = (f.qa & quickacts::kMelee) != 0, missile_ok = (f.qa & quickacts::kMissile) != 0;
     if (f.fleeing && f.moves == 1) {
         // (half a square left: it guards - coab's moralFailureEscape, its
@@ -3554,7 +3554,7 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
     // Quick Actions: Move unticked - it holds its square (it guards); no step
     // either with nothing to go forward for: Melee unticked and no missile
     // it may use now
-    if ((f.qa | quickacts::kBandage) != quickacts::kAll) {
+    if ((f.qa | quickacts::kBandage | quickacts::kSpells) != quickacts::kAll) {
         int ammo = -1;
         if (!(f.qa & quickacts::kMove) || (!melee_ok && !(missile_ok && missile(b, f, &ammo) > 0))) {
             p.act = Act::Guard;

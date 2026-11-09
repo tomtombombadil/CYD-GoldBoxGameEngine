@@ -119,11 +119,14 @@ the Project as claude/TODO.md.
       Quick as the originals. Also new (a fix, round 12): the computer
       (Quick members, NPCs) bandages in its move step as the originals,
       not first thing; PoolRad's never bandages.
-- [ ] Quick Actions' Spells column (Claude, 2026-11-09): the games' own
-      Quick never casts for a character of the player's own (the engine's
-      AI casts only for monsters and NPCs), so Spells unticked stops
-      nothing there yet - Tom: should ticked Spells let Quick cast (a
-      change from the originals, behind the column)? Not asked before.
+- [x] Quick Actions' Spells column (2026-11-09, Tom: "I could have sworn
+      that Quick casted spells"): it does - with the fight's Magic On
+      (Alt-M; off at every fight's start), in all nine games (each AI's
+      spell gate; DOSBox: Curse, PoolRad). Spells ticked = Magic On for
+      that character: Quick casts its memorized spells (not pushed yet).
+- [ ] Tom: Spells starts UNTICKED (the originals start every fight with
+      Magic Off), unlike the rest of the row. Tick it per character to
+      have Quick cast; say if you want it ticked by default instead.
 
 ## Claude
 

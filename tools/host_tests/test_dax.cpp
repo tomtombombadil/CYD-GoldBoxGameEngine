@@ -1917,7 +1917,7 @@ static void test_quickacts()
     clean_name("A\tB\nC   ", nm);
     CHECK(std::string(nm) == "A B C");
     // A bad line (not 8 switches) is passed over, a line without its newline read
-    const char* odd = "# c\n1101 SHORT\n11111110 LAST";
+    const char* odd = "# Quick Actions 2: c\n1101 SHORT\n11111110 LAST";
     CHECK(find(odd, strlen(odd), "SHORT") == kDefault);
     CHECK(find(odd, strlen(odd), "LAST") == 0x7F);
     // The page's text fits the game screen's 38 cells
@@ -1925,7 +1925,22 @@ static void test_quickacts()
         CHECK(strlen(kHead[k]) == 3);
         CHECK(strlen(kHelp[k][0]) <= 38 && strlen(kHelp[k][1]) <= 38);
     }
-    CHECK(kDefault == (kAll & ~kBandage));
+    CHECK(kComputer == (kAll & ~kBandage));
+    CHECK(kDefault == (kAll & ~kBandage & ~kSpells));
+    // A first version's file (v0.184.0: Spl did nothing): read with Spl
+    // unticked, rewritten as this version's at the next set
+    const char* v1 = "# Quick Actions: Mel Mis Spl Itm Bnd Mov Trn Grd (1 ticked, 0 not), then the character's name\n"
+                     "11101111 ALIAS\n00100000 DRAGONBAIT\n";
+    CHECK(find(v1, strlen(v1), "ALIAS") == 0xF3);
+    CHECK(find(v1, strlen(v1), "DRAGONBAIT") == 0x00);
+    n = set(v1, strlen(v1), "AKABAR", 0x04, out, sizeof out);
+    t.assign(out, n);
+    CHECK(t.rfind("# Quick Actions 2:", 0) == 0);
+    CHECK(t.find("# Quick Actions:") == std::string::npos);
+    CHECK(find(t.data(), t.size(), "ALIAS") == 0xF3);
+    CHECK(find(t.data(), t.size(), "DRAGONBAIT") == 0x00);
+    CHECK(find(t.data(), t.size(), "AKABAR") == 0x04);       // (this version's: Spl as set)
+    CHECK(t.find("\n11001111 ALIAS\n") != std::string::npos);
 }
 
 static void test_inflate()

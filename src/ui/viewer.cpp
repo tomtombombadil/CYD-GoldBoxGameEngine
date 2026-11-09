@@ -3467,8 +3467,10 @@ const char* comfort_help_text(int c)
         return "Choose what each of your own characters may do when Quick plays it in a fight: melee, "
                "missiles, spells, items, bandaging first, moving, turning undead, guarding. The choices are "
                "on the Game menu's Quick tab, kept by the character's name for every saved game and the "
-               "later games. As they start, everything but Bandage First is ticked - Quick as the game's "
-               "own. Off: Quick as the original, no Quick tab.";
+               "later games. As they start, everything but Bandage First and Spells is ticked - Quick as "
+               "the game's own. Spells ticked is the original's Magic On (its Alt-M in a fight): Quick "
+               "casts that character's memorized spells. Off: Quick as the original (Magic Off), no Quick "
+               "tab.";
     case kCMaxHp:
         return "A cheat: a new character's hit points and each level gained by training (a training hall "
                "or the Cheats tab's Trainer) get the most their hit dice can give - 10 a fighter, 8 a "

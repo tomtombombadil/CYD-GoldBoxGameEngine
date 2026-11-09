@@ -4513,7 +4513,8 @@ void ai_step(pic::Canvas& c)
     }
     // Quick Actions (Tom, 2026-11-09; features.h CYD_QUICK_ACTIONS): the
     // player's switches for one of its own Quick characters - kDefault (all
-    // but Bandage First) for everyone else and with the switch off: as the game
+    // but Bandage First and Spells: the game's start) with the switch off,
+    // kComputer for monsters and NPCs: as the game
     f.qa = quick_mask(f);
     // The computer bandages a dying friend in its move-and-attack step -
     // after morale, items, the pending spell, Turn, spells and the weapon,
@@ -4682,10 +4683,14 @@ void ai_step(pic::Canvas& c)
         if ((d->prof->game == games::Game::CurseOfTheAzureBonds || gateway() ||
              d->prof->game == games::Game::ChampionsOfKrynn || dk_ai) && ai_turns())
             return;
-        // (the computer's own spells: monsters and NPCs - the games' Quick
-        // never casts for a character of the player's own; Quick Actions'
-        // Spells unticked: none either)
-        if ((f.team() || f.rec[0xF7] >= 0x80) && (f.qa & quickacts::kSpells) && f.can_cast && !no_magic_area() &&
+        // (the computer's spells: monsters and NPCs always; one of the
+        // player's own on Quick only with the fight's Magic On - every game's
+        // spell step: Curse GAME.OVR 0xC0C8, PoolRad 0xB187, Secret 0xD58F,
+        // Gateway 0xD6FD, Champions 0xCBBC, Darkness 0x9FEA, Treasures
+        // 0xAE2C, Death Knights 0xA830, DQK.EXE 0x2E15B: the control byte
+        // over 0x7F or the flag; Alt-M toggles it, each fight starts it off.
+        // Here: Quick Actions' Spells, a character at a time - quick_mask)
+        if ((f.qa & quickacts::kSpells) && f.can_cast && !no_magic_area() &&
             load_magic()) {
             int tg[combat::kMaxFighters], nt = 0;
             const int sp = combat::choose_spell(b, fg->t, mrules->tables, i, d->prof->fight.spells,

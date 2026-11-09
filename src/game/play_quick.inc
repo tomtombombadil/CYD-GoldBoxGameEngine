@@ -116,10 +116,18 @@ bool qa_write(int m)
 
 uint8_t quick_mask(const combat::Fighter& f)
 {
-    if (!qa_on() || f.team() || !f.quick || f.member < 0 || f.member >= party::kMaxParty || !qa_member(f.member) ||
-        f.rec[0xF7] >= 0x80 || f.status() == party::Animated)
-        return quickacts::kDefault;
-    return qa_mask[f.member];
+    // Monsters, NPCs (control byte 0x80 on), the animated dead: the game's
+    // own AI (spells always - every game's spell step: control over 0x7F)
+    if (f.member < 0 || f.member >= party::kMaxParty || f.rec[0xF7] >= 0x80 || f.status() == party::Animated)
+        return quickacts::kComputer;
+    // The player's own characters: the switches, or the game's start (Magic
+    // Off: no spells - the originals' Alt-M has no key here) with Quick
+    // Actions off; one charmed onto the other side keeps only its Spells
+    // (the games' Magic flag reaches the charmed too: the gate tests only
+    // the control byte and the flag)
+    const uint8_t m = qa_on() && qa_member(f.member) ? qa_mask[f.member] : quickacts::kDefault;
+    if (f.team() || !f.quick) return static_cast<uint8_t>(quickacts::kComputer & ~quickacts::kSpells) | (m & quickacts::kSpells);
+    return m;
 }
 
 // ---- The page
@@ -261,15 +269,15 @@ void qa_draw_help(pic::Canvas& c)
     static const char* const kLines[] = {
         "Quick plays a character in a fight:",
         "tick what each of your own characters",
-        "may do then. All but Bnd ticked, as",
+        "may do then. All but Spl and Bnd, as",
         "they start, is the game's own Quick.",
         "Kept by name for every saved game and",
         "the later games. Settings: Quick",
         "Actions switches it all off.",
-        "",
         "Mel  Melee: attack foes next to it",
         "Mis  Missile: shoot and throw",
-        "Spl  Spells: cast spells",
+        "Spl  Spells: Magic On (the game's",
+        "     Alt-M): cast memorized spells",
         "Itm  Items: potions, wands and such",
         "Bnd  Bandage First: the dying first",
         "Mov  Move: step toward enemies",

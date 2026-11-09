@@ -196,7 +196,7 @@ void on_act(const combat::Battle& b, int i, combat::TestAct a, int t, int extra)
     if (own && f.quick && !f.team() && f.member >= 0 && f.rec[0xF7] < 0x80 && f.status() != party::Animated && play::qa_on()) {
         using namespace quickacts;
         const uint8_t q = f.qa;
-        if ((q | quickacts::kBandage) != quickacts::kAll) ++qa_seen;
+        if ((q | quickacts::kBandage | quickacts::kSpells) != quickacts::kAll) ++qa_seen;
         const char* broke = nullptr;
         if (a == TestAct::Attack && !in_bite && t >= 0 && t < b.n) {
             const bool next = combat::adjacent(b, i, t);

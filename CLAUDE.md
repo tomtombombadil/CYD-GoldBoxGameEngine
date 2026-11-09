@@ -490,7 +490,10 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   characters (no NPCs) x Mel Mis Spl Itm Bnd Mov Trn Grd boxes, a "?"
   help page, cursor keys take part; kept BY NAME in `_CYD/QUICK.TXT`.
   Defaults: all ticked but Bandage First (Tom: unticked = the game's own
-  bandage order; ticked = at the turn's start) - the original's Quick.
+  bandage order; ticked = at the turn's start) and Spells - the
+  original's Quick. Spells = the originals' Magic On (Alt-M in a fight,
+  off at every fight's start; checked in DOSBox and each game's AI gate,
+  2026-11-09): ticked, Quick casts that character's memorized spells.
   The column is "Move" (Tom), never "Advance". Engine: `Fighter::qa`,
   `think` / `choose_weapon`, `ai_step`, `play_quick.inc`.
 - The computer's bandaging (round 12, 2026-11-09, from the originals'
