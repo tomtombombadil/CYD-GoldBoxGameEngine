@@ -1305,6 +1305,9 @@ the Project as claude/TODO.md.
       set to 3 there (7 here, recalculated to 3); Champions' combat byte
       0x15 (the "mood") read only for the Turn limit - its other readers
       not looked for. The 0xFF-class spells' caster level (round 9) stays.
+      The Dark Queen's sweep saveload: 4 problems (script memory not the
+      same after a load, effects differ x3) - the same at v0.181.0
+      (ac91c45) before this round; not looked into.
 - [ ] Round 7 left: Treasures' effect 0x3B's handler (none of its items
       has it - round 10 left it: nothing in the game carries it). The Dark Queen: its weapon name's trailing space (0x9FDC not
       read); its fight pages' rows after a hit (each page from row 10 here:
