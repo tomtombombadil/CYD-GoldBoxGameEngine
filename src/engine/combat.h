@@ -409,6 +409,10 @@ struct Facts {
     // taunts the other side - this effect on each that fails its save
     // against spells (Intelligence over 3): their target is the kender
     uint8_t taunted = 0;
+    // The Dark Queen's (DQK.EXE 0x53EA6, round 10): Feeblemind leaves the
+    // spell under way to the fight's pages - "lost a spell" at once, as a
+    // hurt caster's (the others drop it unsaid)
+    bool feeble_lost = false;
     // Gateway to the Savage Frontier's (its effect handlers DS 0x826A on, the
     // check lists of its work_on_00 - SPEC 6e; 0: none). `ways`: the deadly
     // poison (0x40) after attack 1's hit, not attack 2's, the paralysing bite

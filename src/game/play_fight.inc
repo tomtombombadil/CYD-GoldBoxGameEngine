@@ -2582,6 +2582,12 @@ void cloud_breath(int i)
             char t[48];
             ow(r == combat::Did::Word ? fs.spells[k].word : fs.spells[k].word2, t, sizeof t);
             add_page(i, t);
+            // (the Dark Queen, DQK.EXE 0x816B: one coughing - the save made -
+            // loses the spell under way, "lost a spell" at row 12)
+            if (r == combat::Did::Word2 && hl() && b.f[i].spell) {
+                b.f[i].can_cast = false;
+                q_lost_spell(i, false);
+            }
             return;
         }
 }
@@ -6060,8 +6066,10 @@ void spell_pages(int caster, const combat::SpellLine* l, int n, const combat::Fi
                 fg->page[before].fx[0] = e;
             }
         }
-        // (the Dark Queen: a caster hurt loses the spell under way - res 0x8F04)
+        // (the Dark Queen: a caster hurt loses the spell under way - res 0x8F04;
+        // Feeblemind's "loses intellect" too, DQK.EXE 0x53F17)
         if (l[k].did == combat::Did::Damage && fg->pages > before) q_lost_spell(l[k].who, false);
+        if (l[k].did == combat::Did::Word && fs.does == combat::SpellDoes::Feeble) q_lost_spell(l[k].who, false);
     }
 }
 

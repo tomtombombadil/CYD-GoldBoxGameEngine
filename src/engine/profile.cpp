@@ -2047,7 +2047,7 @@ constexpr combat::Facts kQueenFightFacts = {.held = {0x33, 0x34, 0x35, 0x1F}, .b
                        .stun = 0x6A},
                 .race = {0x5E, 0x12, 0x1A, 0x07, 0x2F, 0x30, 0x69, true},
                 .items = {.displace = 0x59, .ring_invisible = 0x38, .fire_ring = 0x3D},
-                .berserk = 0x6B, .taunted = 0x5B};
+                .berserk = 0x6B, .taunted = 0x5B, .feeble_lost = true};
 // The Dark Queen's spells (queen_facts_4.md 8): Darkness's numbers 1-126 and
 // their workings (its handler table DS 0xAF45 + 4 x spell shares handlers as
 // Darkness's), its words found again among its C strings; "is " + an effect's
@@ -2126,7 +2126,7 @@ constexpr combat::FightSpell kQueenFightSpells[] = {
     {0x4D, SpellDoes::Affect, 0, 0, 0, 0, 0, qw(0x879E)},
     {0x56, SpellDoes::Fumble, 0, 0, 0, 0, 0, qw(0x8A17), qw(0x8A21), qw(0x8A17)},   // Fumble: "is clumsy" / "is slowed"
     {0x57, SpellDoes::Damage, 3, 10, 0, 0, 0x0A, 0},   // Ice Storm: 3d10 cold
-    {0x5D, SpellDoes::Feeble, 0, 0, 0, 0, 0, 0},   // Feeblemind
+    {0x5D, SpellDoes::Feeble, 0, 0, 0, 0, 0, qw(0x86F2)},   // Feeblemind: "loses intellect" (row 10, a wait - DQK.EXE 0x53EDE)
     {0x0C, SpellDoes::Enlarge, 0, 0, 0, 0, 0, qw(0x8801)},   // Enlarge: "is stronger"
     {0x0D, SpellDoes::Reduce, 0, 0, 0, 0, 0, qw(0x880D)},   // Reduce: "has been reduced"
     {0x2B, SpellDoes::RemoveCurse, 0, 0, 0, 0, 0, qw(0x8906), 0, qw(0x8913)},   // Remove Curse: "is un-cursed",

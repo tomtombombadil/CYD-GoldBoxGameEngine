@@ -2020,6 +2020,64 @@ void queen_lost()
         for (int x = 0; x < pic::kScreenW; ++x) z[y * pic::kScreenW + x] = C.get(x, text::kMenuRow * 8 + y);
     expect(P, "the Dark Queen: a full box's key is the prompt box \"Press [Return] to continue.\" (res 0xD400 -> 0xE645)",
            more && a == z && d->w_press[0][0], "full %d, same %d, prompt words %d", more, a == z, d->w_press[0][0] != 0);
+    // 7. Feeblemind (round 10, DQK.EXE 0x53EA6): "loses intellect" (row 10,
+    // a wait - 0x53EDE), then with a spell under way "lost a spell" at row
+    // 12 (0x53F17), the spell gone; the save failed (a d20 of 1)
+    {
+        reset();
+        b.f[B].spell = 0x0E;
+        b.f[B].spell_n = 0;
+        b.f[B].can_cast = true;
+        const combat::FightSpell* fs = nullptr;
+        for (int k = 0; k < d->prof->fight.n_spells; ++k)
+            if (d->prof->fight.spells[k].does == combat::SpellDoes::Feeble) fs = &d->prof->fight.spells[k];
+        bool ok = false;
+        std::string w1, w2;
+        int n = 0, row2 = -1;
+        if (fs && !mrules) load_magic();
+        if (fs && mrules) {
+            create::g_die_hook = [](int sides) { return sides == 20 ? 0 : -1; };
+            combat::SpellLine lines[8];
+            const int tg[1] = {B};
+            n = combat::cast(b, mrules->tables, 0, fs->spell, *fs, tg, 1, rng, lines, 8, 9);
+            create::g_die_hook = nullptr;
+            spell_pages(0, lines, n, *fs, false);
+            if (fg->pages >= 2) {
+                w1 = page_line(fg->page[fg->pages - 2], fg->page[fg->pages - 2].lines - 1);
+                w2 = page_line(fg->page[fg->pages - 1], 1);
+                row2 = fg->page[fg->pages - 1].row;
+            }
+            char want1[48];
+            ow(fs->word, want1, sizeof want1);
+            ok = w1 == want1 && w2 == fw(profile::kLostSpell) && row2 == 12 && b.f[B].spell == 0;
+        }
+        expect(P, "the Dark Queen: Feeblemind - \"loses intellect\", then \"lost a spell\" at row 12 (0x53EDE / 0x53F17), the spell gone",
+               ok, "spell found %d, %d lines, pages %d: \"%s\" / \"%s\" row %d, spell %d (fighters %d, B up %d status %d)", fs != nullptr, n,
+               fg->pages, w1.c_str(), w2.c_str(), row2, b.f[B].spell, b.n, b.f[B].up(), b.f[B].status());
+    }
+    // 8. a stinking cloud (DQK.EXE 0x80B0-0x8199): its save made, "starts to
+    // cough" (effect 0x1E) and with a spell under way "lost a spell" at row
+    // 12 (0x816B); the save failed (nausea, 0x1F): nothing about the spell
+    for (int saved = 1; saved >= 0; --saved) {
+        reset();
+        b.f[B].spell = 0x0E;
+        b.f[B].spell_n = 0;
+        b.f[B].can_cast = true;
+        const bool laid = combat::lay_cloud(b, fg->t, b.f[B].x, b.f[B].y, 3);
+        static int want_save;
+        want_save = saved;
+        create::g_die_hook = [](int sides) { return sides == 20 ? (want_save ? 19 : 0) : -1; };
+        cloud_breath(B);
+        create::g_die_hook = nullptr;
+        const std::string last = fg->pages ? page_line(fg->page[fg->pages - 1], 1) : "";
+        const bool lost = fg->pages >= 2 && last == fw(profile::kLostSpell) && fg->page[fg->pages - 1].row == 12;
+        const bool ok = laid && (saved ? lost && b.f[B].spell == 0 : !lost && fg->pages == 1 && b.f[B].spell == 0x0E);
+        expect(P, saved ? "the Dark Queen: one coughing in a stinking cloud loses the spell under way - \"lost a spell\" at row 12 (0x816B)"
+                        : "the Dark Queen: nausea in a stinking cloud (its save failed, 0x819B) says nothing of the spell",
+               ok, "cloud %d, pages %d, last \"%s\", spell %d", laid, fg->pages, last.c_str(), b.f[B].spell);
+        while (b.n_clouds) combat::clouds_round(b);
+        b.f[B].spell = 0;
+    }
     reset();
 }
 
