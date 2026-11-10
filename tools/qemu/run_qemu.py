@@ -103,8 +103,15 @@ for attempt in range(8):
     t0 = time.time()
     while p.poll() is None and time.time() - t0 < a.seconds:
         time.sleep(1)
-        if not a.keep_going and os.path.exists(log) and b"script done" in open(log, "rb").read():
+        if not os.path.exists(log):
+            continue
+        sofar = open(log, "rb").read()
+        if not a.keep_going and b"script done" in sofar:
             time.sleep(3)
+            break
+        # (the boot's cache-error panic: tried again at once, not after --seconds)
+        if b"Guru Meditation" in sofar and b"CYD BYOG" not in sofar:
+            time.sleep(1)
             break
     if p.poll() is None:
         p.kill()

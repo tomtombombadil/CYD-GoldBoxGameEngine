@@ -280,3 +280,20 @@ Round 18 (2026-11-10): the computer at moves 0, its guard, the Dark Queen's find
   Baselines: rules4 full PoolRad 42/0, Curse 45/0, Secret 40/0, Darkness 44/0, Gateway 40/0, Treasures 46/0,
   Champions 51/0, Knights 48/0, Queen 59/0; budgets (bytes) Curse 133721, PoolRad 135372, Darkness 149829,
   Champions 135928, Knights 135938, Queen 143244, Treasures 151918.
+
+Screenshots (2026-11-10, Tom: real firmware pictures for the README - he picks them; the PNGs show game
+graphics and GOG / publisher art: scratch only, never the repo):
+  shots_scan.sh qemu28:box qemu35:box qemu28:icon qemu35:icon
+                         the card scan on a WRITABLE card (the classic QEMU builds; env qemu35 = the 3.5" 480x320)
+                         with all nine games (+ Launcher for box art, + Curse's journal PDF) -> $SCAN/<env>-<style>/_CYD
+  shots_saves.sh         slot D in every game, made by the playsim (bin/simshots: build.sh simshots "-DCYD_TEST_HOOKS"
+                         tools/playsim/sim.cpp) - placed for a nice 3D view (shots_viewscan.py <short>: every square
+                         and facing, a contact sheet to pick from) and in the block of the fight's LOAD MONSTER
+  shots_all.py [games|engine|queen_a|mapkey:<game>|panelcheck] [--size 480|320] [--only explore,camp,fight]
+                         the S3 QEMU builds (qemus3 480x320, qemus3_50 320x240) on a read-only card made of one game
+                         folder + the scan's _CYD (LIBRARY.BIN cut to it): Load D, explore / Companion views / camp /
+                         "runat <LOAD MONSTER>" (TAPS.TXT, CYD_QEMU only) for the fight; engine = Home (box art and
+                         icons), the scan's log, a game's page, Settings, a journal entry (JOURNAL.DAT's first 2.6 MB:
+                         the card is 13.5 MB), the Game menu's tabs. Shot names are cut at 23 characters by the
+                         firmware's buffer. Not possible there: the Journal PDF book (the PDF + game past the card),
+                         anything that saves.
