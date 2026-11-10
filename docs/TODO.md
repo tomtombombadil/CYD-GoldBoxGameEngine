@@ -1459,7 +1459,44 @@ the Project as claude/TODO.md.
       Gas Spore (MONCHA.GLB 6) alone, 0x83 by item type 67 (Dawnshine's,
       ITEM.DAT 45 / 214 / 215). rules4 guard0, qhooks; oracles guard.py,
       carriers.py, qhooks.py.
-- [ ] Round 19 left (2026-11-10): the Dark Queen's ground 0x46 (laid by
+- [x] Round 20 (2026-11-10, v0.195.0; facts: the Project's
+      claude/rules_round20_facts.md): the computer's spell choice and
+      targets from each original's code - the d7 games' judge (Curse
+      GAME.OVR 0xBDEC: heal fall-through, every candidate's area by row
+      byte 15, PoolRad's friends, byte 8 = 1, place 0, being-memorized
+      places), the by-priority games' chooser and use tests (Darkness
+      0x9DAD / 0x2249A, Treasures 0x2A74B, Death Knights 0xA787 / 0x22CE4,
+      DQK.EXE 0x2F92E / 0x2902C), the finder at the spell's reach,
+      "Spell Aborted" with no target; Secret / Gateway / Champions now
+      follow row byte 14 as Curse / PoolRad did. Checks: rules4 aicast
+      (the four games' use tests against their routines run in Unicorn -
+      tools/devkit/oracles/aicast.py, emu16.py - 18-22 k states each,
+      their spell rows, the chooser; the d7 games' judge), verify20.sh.
+      The items' chooser (round 8) re-read: Curse's 0xBEE5 as the engine's.
+      Round 19 left closed: the step routine's "moves / 2" is combat +6
+      (the moves in half squares) / 2 > 0 = the engine's f.moves >= 2 -
+      the same; the Dark Queen's morale figure now kept across fights.
+- [ ] Round 20 left (2026-11-10): the by-priority games' area finder
+      (Darkness GAME.OVR 0x22976, 550 lines - where an area spell is
+      centred; the engine centres on the finder's pick); the Dark Queen's
+      spells 138-140 (class 4, 8th level rows past the engine's 138) and
+      whether any monster / item casts them; the computer's weapon choice
+      per game (Curse GAME.OVR 0xD0AE's ready routine read only in part -
+      the engine's choose_weapon is coab's 5.3; the other eight not
+      compared); the Dark Queen's ground 0x46 - laid by effect 0x9A's
+      handler (DQK.EXE 0x50A77) as a cloud record of 1d6 at the holder's
+      square; MONCHA.GLB's carrier: the Bozak Draconian (78) - when it
+      runs (its death?) and what the square does besides stopping steps
+      (under 7 Hit Dice) not read, so not laid; Gateway's magic-user's
+      distance for multi-square fighters (its area list's distance /
+      2 - the list builder's for big fighters not read); a computer spell
+      with a casting time aborts at its start, not as it goes off; Darkness
+      / Treasures memorized places 84-140 (the engine's fighters hold 84);
+      Secret's chooser gate on effect 0x44 (feeblemind - the engine's
+      own can_cast assumed the same).
+- [x] Round 19 left (round 20, 2026-11-10: "moves / 2" the same test;
+      the Queen's morale figure kept; ground 0x46 and Gateway's distance
+      moved on to Round 20 left): the Dark Queen's ground 0x46 (laid by
       DQK.EXE 0x50A77 - effect 0x9A's handler; its try 0x2E479: under 7
       Hit Dice and not driven, no step) - the engine lays no such ground,
       that ability not followed; the Queen's morale figure [0xC2DE] is

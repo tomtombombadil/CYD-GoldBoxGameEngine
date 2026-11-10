@@ -70,6 +70,7 @@ Entry entry(const classes::Tables& t, int s)
     e.delay = b(12);
     e.priority = b(13);
     e.foe = b(14);
+    e.area = b(15);
     return e;
 }
 

@@ -1232,6 +1232,7 @@ bool load_fight_tables()
                   },
                   &ctx);
     f.close();
+    fg->t.ai = profile::ai_cast(d->prof->game);       // (round 20: the computer's spell choice)
     return ok;
 }
 
@@ -4642,6 +4643,15 @@ void ai_step(pic::Canvas& c)
             int tg[combat::kMaxFighters], nt = 0;
             const int k = combat::choose_item(b, fg->t, mrules->tables, i, *names, d->prof->fight.spells,
                                               d->prof->fight.n_spells, rng, tg, &nt);
+            if (k >= 0 && nt == 0) {
+                // (round 20: no target for it - the originals' "Spell Aborted",
+                // the charge gone, the turn over)
+                spend_item(i, magic::item_spell(f.items[k], pool_files()));
+                add_page(i, fw(profile::kSpellAborted));
+                draw_fight(c);
+                say(c, FSt::Next);
+                return;
+            }
             if (k >= 0) {
                 fg->use_item = k;
                 fg->use_scroll = false;
@@ -4718,6 +4728,15 @@ void ai_step(pic::Canvas& c)
             int tg[combat::kMaxFighters], nt = 0;
             const int sp = combat::choose_spell(b, fg->t, mrules->tables, i, d->prof->fight.spells,
                                                 d->prof->fight.n_spells, rng, tg, &nt);
+            if (sp && nt == 0) {
+                // (round 20: the spell chosen, no target for it - Curse GAME.OVR
+                // 0x2F5A3 "Spell Aborted", the spell lost, the turn over)
+                forget_spell(f, sp);
+                add_page(i, fw(profile::kSpellAborted));
+                draw_fight(c);
+                say(c, FSt::Next);
+                return;
+            }
             if (sp) {
                 const int delay = spells::entry(mrules->tables, sp).delay / 3;
                 if (delay == 0 && fight_miscast(c, sp)) return;
@@ -5104,7 +5123,10 @@ void fight_start(pic::Canvas& c)
     // first round's initiative, so it counts for this fight only
     b.surprise = vm->get(0x7ECB) & 3;
     vm->set(0x7ECB, 0);
-    b.morale_fig = 100;                      // (each fighter's set-up leaves it 100: Curse GAME.OVR 0x10245)
+    // (each fighter's set-up leaves it 100: Curse GAME.OVR 0x10245; the Dark
+    // Queen's [0xC2DE] is never set but by the morale routine - BSS, 0 as
+    // the program starts, the last fight's after: round 20)
+    b.morale_fig = hl() ? queen_morale_fig : 100;
     side_bonuses(b);
     if (pool_files()) {
         combat::place_pool(b, fg->t, d->gs.dir & 6, vm->fight_distance(), b.indoors ? &d->map : nullptr, d->gs.x, d->gs.y);
@@ -5372,6 +5394,7 @@ void end_fight(pic::Canvas& c)
         age_check = false;
         if (old_age_begin(c)) return;
     }
+    if (hl()) queen_morale_fig = b.morale_fig;     // (kept for the next fight - round 20)
     fg->out = combat::finish(b, ml ? ml->m : nullptr);
     combat::Result r = fg->out.result;
     // (Pool: a member's attacks left this round live in its record, 0x113 /

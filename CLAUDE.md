@@ -524,6 +524,15 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   (Tables::mage_rule: per game, Gateway keeps its distance, Secret's dual
   class), the morale 102 test only where the original has it
   (Tables::morale_cap); the Krynn Yells skip the held (oracles/yell.py).
+- The computer's spells (round 20, from each original's code; facts the
+  Project's claude/rules_round20_facts.md): profile::ai_cast (combat::
+  AiCast) - the d7 games' judge `combat::ai_judge`, the by-priority games'
+  (Darkness, Treasures, Death Knights, Queen) sorted chooser and per-spell
+  use tests `combat::ai_use` (AiUse rows, checked against the originals'
+  routines RUN in Unicorn: tools/devkit/oracles/emu16.py + aicast.py,
+  python with unicorn in /tmp/claude-0/uvenv; rules4 aicast), targets by
+  `ai_targets` / `finder_reach`; no target = "Spell Aborted" (spell lost,
+  turn over).
 - The Dark Queen's effect hooks (round 16): DQK.EXE's hook switch 0x7202
   calls the handlers at DS 0xBEE8 + 4 x effect (overlay w9: segment 0x2B3A
   at file 0x4DE90, 0x30CC after it) - Facts::q (`queen_roll_hooks`,

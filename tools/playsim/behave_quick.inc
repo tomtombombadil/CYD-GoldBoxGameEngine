@@ -45,6 +45,8 @@ struct QaOut {
     bool cast = false, item = false;
     bool forgot = false;                // (the memorized spell gone: cast, or begun)
 };
+// The first memorized place the game's computer looks at (AiCast::list_from)
+int qa_place() { return play::fg && play::fg->t.ai ? play::fg->t.ai->list_from : 0; }
 QaOut qa_scene(int mask, int dist, bool dying, int undead, int cls = 0, bool thrown = false, bool npc = false, int spell = 0)
 {
     QaOut o;
@@ -66,7 +68,8 @@ QaOut qa_scene(int mask, int dist, bool dying, int undead, int cls = 0, bool thr
     uint8_t keep_list[magic::kListSize];
     for (int k = 0; k < magic::kListSize; ++k) {
         keep_list[k] = f.rec[magic::kListAt + k];
-        f.rec[magic::kListAt + k] = static_cast<uint8_t>(k == 0 ? spell : 0);
+        // (in the first place the game's AI looks at - round 20: most skip place 0)
+        f.rec[magic::kListAt + k] = static_cast<uint8_t>(k == qa_place() ? spell : 0);
     }
     f.fleeing = false;
     f.moves = 12;
@@ -147,7 +150,7 @@ QaOut qa_scene(int mask, int dist, bool dying, int undead, int cls = 0, bool thr
     o.guarded = qa_did(combat::TestAct::Guard);
     o.cast = qa_did(combat::TestAct::Cast);
     o.item = qa_did(combat::TestAct::UseItem);
-    o.forgot = spell && f.rec[magic::kListAt] != spell;
+    o.forgot = spell && f.rec[magic::kListAt + qa_place()] != spell;
     for (int k = 0; k < magic::kListSize; ++k) f.rec[magic::kListAt + k] = keep_list[k];
     f.spell = 0;
     f.spell_n = 0;
