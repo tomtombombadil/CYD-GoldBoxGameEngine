@@ -218,3 +218,22 @@ Round 15 (2026-11-10): the computer's step and Feeblemind
   Baselines: rules4 full PoolRad 38/0, Curse 41/0, Secret 35/0, Darkness 39/0, Gateway 36/0, Treasures 41/0,
   Champions 47/0, Knights 43/0, Queen 54/0; budgets (bytes) Curse 133721, PoolRad 135372, Darkness 149721,
   Champions 135928, Knights 135938, Queen 143244, Treasures 151918.
+
+Round 16 (2026-11-10): the Dark Queen's hooks, the stats' effects, the step back's finder, Knights' on-hit
+  oracles/qhooks.py <DQK.EXE>        oracle_qhooks.txt: DQK.EXE's hook switch (0x7202, by shape), its events 0xA
+                                     (the attacker's), 0x10 (the target's), 0xB (the target's AC) - each effect's
+                                     handler (DS table + 4 x effect, from the dispatcher "call far [bx+T]" and the
+                                     setter's mov [T+2],cs|seg / mov [T],off pairs; the overlay base found as the one
+                                     making them function starts) told as a line; and the clock's call at each round's
+                                     start (0x2336C -> 0x61AD -> 0x5EFF)
+  oracles/statfx.py <GAME.OVR> <g>   oracle_statfx_<g>.txt (secret darkness treasures): the stats' recalculation's
+                                     Strength effects, the 18/xx levels, Constitution / Charisma / Int-Wis effects
+  oracles/finder.py <GAME.OVR> <image> <g>   oracle_finder_<g>.txt (the eight DAX games; image = /tmp/claude-0/prog's
+                                     unpacked program): the count-2 call's finder, its tries, scan (Darkness-type),
+                                     the pass-2 sight skip
+  oracles/knights_hit.py <GAME.OVR>  oracle_knights_hit.txt: Death Knights' events 2 / 3 lists and the damage test
+  rules4 ONLY=qhooks (the Dark Queen: every hook line as a blow's smallest hitting d20, Game Fixes off; the roll
+                      under 0, Shield + coughing, 0x45 with the fixes, the dragon fear, the clock at the round's start)
+         ONLY=statfx (Secret / Darkness / Treasures)   ONLY=finder (the eight DAX games)   ONLY=khit (Knights)
+  host test test_queen_target_hooks (DAMAGE's attack roll)
+  Run the four oracles before rules4 (ORACLE_DIR, default /tmp/claude-0/bt).

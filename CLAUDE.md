@@ -509,6 +509,14 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   run's way from the party's facing; tools/devkit/oracles/aistep.py reads
   each GAME.OVR's try / step, rules4 aimood checks it. Feeblemind by each
   game's handler (rules4 feeble; Death Knights' drain-2 behind Game Fixes).
+  Round 16: the step back's second finder skips the sight test in its
+  second pass (`combat::finder_any`, Tables::finder_scan for Darkness-type).
+- The Dark Queen's effect hooks (round 16): DQK.EXE's hook switch 0x7202
+  calls the handlers at DS 0xBEE8 + 4 x effect (overlay w9: segment 0x2B3A
+  at file 0x4DE90, 0x30CC after it) - Facts::q (`queen_roll_hooks`,
+  `queen_ac`: the hooked roll under 0 misses; the target's AC as event
+  0xB leaves it), its clock steps effects at each round's START
+  (`q.tick_at_start`); oracles/qhooks.py, rules4 qhooks.
 - The computer's bandaging (round 12, 2026-11-09, from the originals'
   code): in its move-and-attack step in every game (Curse GAME.OVR
   0xC7EC +0x3D ...), never at the turn's start; PoolRad's computer never
