@@ -1411,19 +1411,32 @@ the Project as claude/TODO.md.
       feebleminded drains whoever it hits, as the engine did - but only a
       damaging blow runs the on-hit specials. rules4 qhooks / statfx /
       finder / khit; oracles qhooks.py statfx.py finder.py knights_hit.py.
-- [ ] Round 16 left: the Dark Queen's effect 0x83 (event 0xA, handler
-      0x543D8 - a hoopak-like weapon: the to-hit from record 0x87 + a
-      worked bonus, its damage 1d6+2 / 1d4+1 by distance) not compared;
-      the event 0xA / 0x10 handlers' other side-effects (0x19's [0xAE66],
-      the blind attacker's own AC -4 - undone by the next recalculation)
-      not shown; DAMAGE's cloak reset on a roll of exactly 0 before any
-      fight ([0xAE4C] = 0) not followed. Knights: other games' on-hit
-      specials after a blow of no damage not checked (only Knights' needs
-      damage > 0 now). The same finder (range 0xFF, second argument 1)
-      also picks the computer's target at its turn's start (Curse GAME.OVR
-      0xBC36 ...) - the engine's pick_target there prefers one in weapon
-      range, then the nearest seen - not compared.
-- [ ] Round 7 left: Treasures' effect 0x3B's handler (none of its items
+- [x] Round 16 left (round 17, 2026-11-10): the Dark Queen's effect 0x83
+      (0x543D8: the to-hit in use from record 0x87 + Strength's to-hit next
+      to the target / Dexterity's missile bonus further off; its damage
+      words lost - the blow works them out after the roll); event 0xA / 0x10
+      side-effects (0x19's [0xAE66] a dead store - only the seen test
+      0x25D90 reads it, zeroed before; the blind (-4) / 0xA2 (+2)
+      attacker's own stored AC until a blow on it recalculates it); DAMAGE's
+      cloak made fresh on a roll of exactly 0 before any fight (and its
+      0xCF -1); every other game's on-hit after a blow of no damage (Secret,
+      Darkness, Treasures, Champions, the Dark Queen need damage - the Queen
+      not for a 0xB8 holder; PoolRad, Curse, Gateway don't); the computer's
+      target at its turn as each DAX original's finder (rules4 turnfind,
+      onhit, qhooks).
+- [ ] Round 17 left: the computer at moves 0 - every DAX original guards
+      then (its AI loop: moves > 0 for the move-and-attack step, else the
+      guard), the engine's think still attacks one next to it; the Dark
+      Queen's 0x83 damage (1d6 + 2 / 1d4 + 1) thrown away by the original -
+      a Game Fix? (Tom); 0xB8 (the Dark Queen's on-hit without damage) not
+      named - which monsters / items carry it not looked up; the Dark
+      Queen's turn target still the engine's pick_target (DQK.EXE's AI
+      finder not read).
+- [ ] Round 7 left (round 17, 2026-11-10: Treasures' 0x3B moot - none of
+      its items or monsters carries it, no handler to follow; the training
+      spell list offered - done by round 9's rules4 trainspell, all nine
+      games; still open below: the Dark Queen's 0xFF-class spells' caster
+      level). Treasures' effect 0x3B's handler (none of its items
       has it - round 10 left it: nothing in the game carries it). The Dark Queen: its weapon name's trailing space (0x9FDC not
       read); its fight pages' rows after a hit (each page from row 10 here:
       its print routine 0xB14E takes the row from its 137 callers - the
