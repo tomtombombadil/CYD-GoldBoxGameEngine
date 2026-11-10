@@ -5104,6 +5104,7 @@ void fight_start(pic::Canvas& c)
     // first round's initiative, so it counts for this fight only
     b.surprise = vm->get(0x7ECB) & 3;
     vm->set(0x7ECB, 0);
+    b.morale_fig = 100;                      // (each fighter's set-up leaves it 100: Curse GAME.OVR 0x10245)
     side_bonuses(b);
     if (pool_files()) {
         combat::place_pool(b, fg->t, d->gs.dir & 6, vm->fight_distance(), b.indoors ? &d->map : nullptr, d->gs.x, d->gs.y);

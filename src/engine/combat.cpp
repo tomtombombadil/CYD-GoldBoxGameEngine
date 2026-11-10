@@ -249,8 +249,20 @@ bool read_tables(Tables& t, const TableAt& at, ReadDs read, void* ctx)
     t.finder_scan = at.finder_scan;
     t.finder_first = at.finder_first;
     t.finder_queen = at.finder_queen;
+    t.step_npc = at.step_npc;
+    t.mage_rule = at.mage_rule;
+    t.morale_cap = at.morale_cap;
     for (int k = 0; k < 3; ++k) t.clouds[k] = at.clouds[k];
-    if (t.mood_known && !read(ctx, at.mood_rows, t.mood, sizeof t.mood)) return false;
+    if (t.mood_known && at.mood_stride != 5) {
+        // (rows of mood_stride: row m's columns 1-5 at m x stride + c)
+        uint8_t raw[7 * 8] = {};
+        const int st = at.mood_stride > 8 ? 8 : at.mood_stride;
+        if (!read(ctx, at.mood_rows, raw, static_cast<size_t>(7 * st))) return false;
+        for (int m = 0; m < 7; ++m)
+            for (int c = 1; c <= 5 && c < st; ++c) t.mood[m * 5 + c] = raw[m * st + c];
+    } else if (t.mood_known && !read(ctx, at.mood_rows, t.mood, sizeof t.mood)) {
+        return false;
+    }
     if (at.reserve && !(read(ctx, at.reserve, t.reserve_mon, 5) && read(ctx, static_cast<uint16_t>(at.reserve + 5), t.reserve_pic, 5)))
         return false;
     return read(ctx, at.ground, &t.ground[0][0], sizeof t.ground) &&
@@ -3553,8 +3565,15 @@ int taunt(Battle& b, int kender, create::Dice& d, int* out, int cap)
     const int side = b.f[kender].team() ? 1 : 0;
     for (int c = 0; c < b.n; ++c) {
         Fighter& f = b.f[c];
-        // (okay, Intelligence over 3, the other side, no save against spells)
+        // (okay, Intelligence over 3, the other side, not held, no save
+        // against spells - round 19: the held list (Facts::held) is asked
+        // before the save in all three Yells: Champions GAME.OVR 0x34027
+        // (0xE6:0x3E), Death Knights 0x2FD1D (0xCF:0x48), the Dark Queen
+        // DQK.EXE 0x6D43 (0x77E:0xA19))
         if (!f.size || !f.up() || f.status() != 0 || f.rec[0x13] <= 3 || (f.team() ? 1 : 0) == side) continue;
+        bool held = false;
+        for (uint8_t h : b.fx->held) held = held || (h && h != b.fx->yell_unheld && f.has(h));
+        if (held) continue;
         if (saving_throw(f, 4, 0, d)) continue;
         give_aff(f, b.fx->taunted, 0, 0xFF, false);
         if (n < cap) out[n++] = c;
@@ -3709,6 +3728,47 @@ bool guard_takes(const Battle& b, const Tables& t, int i)
 }
 
 namespace {
+// The step routine's NPC test (Tables::step_npc; round 19): a d100 for one
+// whose control byte has 0x80 - on the party's side, under the party's
+// health figure with the morale routine's last figure added: no step
+bool npc_holds(Battle& b, const Tables& t, int i, create::Dice& d)
+{
+    const Fighter& f = b.f[i];
+    if (!t.step_npc || f.rec[kControl] < 0x80) return false;
+    const int r = d.roll(100, 1);
+    return !f.team() && r + b.morale_fig < b.enemy_health;
+}
+
+// The step routine's magic-user (Tables::mage_rule; round 19): class 5 not
+// running - with no armour readied (rules 1, 3, 4) or always (rule 2).
+// Returns 0 (steps as any), 1 (no step: the guard routine) or 2 (Gateway:
+// the way turned round)
+int mage_holds(const Battle& b, const Tables& t, int i)
+{
+    const Fighter& f = b.f[i];
+    if (t.mage_rule == 0 || f.rec[0x75] != 5) return 0;
+    if (t.mage_rule == 2) return 1;
+    if (b.names && f.items)
+        for (int k = 0; k < f.n_items; ++k)
+            if (f.items[k][0x34] && b.names->type(f.items[k][0x2E]).slot == items::kSlotArmour) return 0;
+    if (t.mage_rule == 4) {
+        // (Secret 0x164:0x57: a human whose first class's level is past
+        // its former one - record 0xEF, here 0xE6 - steps)
+        int k = 0;
+        while (k < 6 && f.rec[0x109 + k] == 0) ++k;
+        const int lv = f.rec[0x74] == 7 && k < 6 ? f.rec[0x109 + k] : 0;
+        return static_cast<int8_t>(lv) > static_cast<int8_t>(f.rec[0xE6]) ? 0 : 1;
+    }
+    if (t.mage_rule == 3) {
+        // (Gateway 0xFE:0xBB: its target's distance, the scan's length / 2
+        // over walls)
+        int sq = 0;
+        if (f.target >= 0) range(b, t, i, f.target, true, &sq);
+        return sq <= 1 ? 1 : sq <= 3 ? 2 : 0;
+    }
+    return 1;
+}
+
 bool mood_step(Battle& b, const Tables& t, int i, int base, create::Dice& d, Plan& p, bool fleeing)
 {
     Fighter& f = b.f[i];
@@ -3765,6 +3825,11 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
     if (f.fleeing && f.moves >= 2 && t.mood_known && b.flee_dir >= 0) {
         // The DAX games (round 15; Curse GAME.OVR 0xC538): a d2 for its mood,
         // the way from the party's facing (+ 4 for the party's own), its row
+        // - after the NPC test (round 19)
+        if (npc_holds(b, t, i, d)) {
+            p.act = Act::Guard;
+            return p;
+        }
         f.ai_mood = static_cast<uint8_t>(d.roll(2, 1));
         const int base = (b.flee_dir + (f.team() ? 0 : 4)) & 7;
         if (mood_step(b, t, i, base, d, p, true)) return p;
@@ -3932,8 +3997,27 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
             return p;
         }
     }
-    // An unarmoured magic-user doesn't go forward: it guards
-    if (f.rec[0x10E] > 0 && b.names && f.items) {
+    // The originals' step routine (round 19): the NPC test, then a
+    // magic-user (class 5) doesn't step - the guard routine
+    int away = 0;
+    if (t.mage_rule) {
+        // (under a square's moves: the step routine's first test - the guard
+        // routine, Curse 0xC482 / the Dark Queen 0x2E58A)
+        if (f.moves < 2) {
+            p.act = Act::Guard;
+            return p;
+        }
+        const int mh = npc_holds(b, t, i, d) ? 1 : mage_holds(b, t, i);
+        if (mh == 1) {
+            p.act = Act::Guard;
+            return p;
+        }
+        if (mh == 2) away = 4;
+    }
+    // An unarmoured magic-user doesn't go forward: it guards (the engine's
+    // own, for a game with no step facts)
+    if (t.mage_rule) {
+    } else if (f.rec[0x10E] > 0 && b.names && f.items) {
         bool armour = false;
         for (int k = 0; k < f.n_items && !armour; ++k)
             armour = f.items[k][0x34] && b.names->type(f.items[k][0x2E]).slot == items::kSlotArmour;
@@ -3948,8 +4032,9 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
     // A step toward it: straight, else a little to either side
     if (f.moves < 2) return p;
     const Fighter& tg = b.f[f.target];
-    const int base = direction(f.x, f.y, tg.x, tg.y);
-    if (base > 7) return p;
+    const int dir0 = direction(f.x, f.y, tg.x, tg.y);
+    if (dir0 > 7) return p;
+    const int base = (dir0 + away) & 7;
     static const int kTry[5] = {0, 1, -1, 2, -2};
     if (t.mood_known) {
         mood_step(b, t, i, base, d, p, false);
@@ -5915,17 +6000,19 @@ Morale morale(Battle& b, const Tables& t, int i)
     // coab's Curse handler; a figure brought to 0 is a failed test)
     auto effects = [&](int m) {
         for (int k = 0; b.fx && f.n_aff && k < *f.n_aff; ++k) {
-            if (b.fx->bless && f.aff[k][0] == b.fx->bless) m += 5;
+            if (b.fx->bless && f.aff[k][0] == b.fx->bless) m = (m + 5) & 0xFF;   // (a byte: "add byte [0x6fbc],5")
             else if (b.fx->curse && f.aff[k][0] == b.fx->curse) m = m < 5 ? 0 : m - 5;
         }
         return m;
     };
     int m = (f.rec[kControl] & 0x7F) * 2;
-    if (m > 102) m = 0;
+    if (t.morale_cap && m > 102) m = 0;        // (not Darkness's, Treasures', the Dark Queen's - round 19)
     m = effects(m);
+    b.morale_fig = m;                           // (the routine's figure, DS 0x6FBC: Tables::step_npc reads it)
     const int lost = f.hp_max() ? 100 - f.hp() * 100 / f.hp_max() : 0;
     if (!(m < lost || m == 0)) return Morale::Fight;
     const int m2 = effects(b.enemy_health);
+    b.morale_fig = m2;
     if (!(m2 < 100 - b.morale_base || m2 == 0 || !f.team())) return Morale::Fight;
     // Its moves against the fastest enemy's, each as the round gives them
     // (coab's CalcMoves / MaxOppositionMoves: movement 1-96, else 1, x 2,

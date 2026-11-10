@@ -2199,6 +2199,151 @@ void train_spell_offer()
            bad == 0, "game %d: %d of %d wrong (%s)", g, bad, n, first);
 }
 
+// Round 19 (tools/devkit/oracles/aistep.py, qstep.py): the step routine's
+// tests before its way - the NPC test (control byte 0x80: a d100, + the
+// morale routine's figure under the party's health figure: no step, the
+// guard routine, unless on the monsters' side; none in PoolRad), the
+// magic-user's (class 5 not running: the guard routine - with no armour or
+// always; Secret: unless a human past its former class; Gateway: by the
+// distance, 0 / 1 the guard, 2 / 3 the way turned round, more on) - and the
+// morale routine's 102 test (Darkness, Treasures, the Dark Queen: none)
+int r19_seq[8], r19_at = 0;
+int r19_die(int n) { return r19_at < 8 && r19_seq[r19_at] > 0 ? (r19_seq[r19_at++] - 1) % n : 0; }
+void step19(const uint8_t* row, int npc_ctrl, int mage_armour, const char* mage_then, int morale_cap)
+{
+    combat::Battle& b = fg->b;
+    const auto& t = fg->t;
+    const items::Names* nm = b.names;
+    int n = 0, bad = 0;
+    char first[220] = "";
+    auto check = [&](const char* what, bool ok) {
+        ++n;
+        if (!ok && !bad++) snprintf(first, sizeof first, "%s", what);
+    };
+    const uint8_t floor = b.ground[3][5];
+    static uint8_t inv[1][items::kRecordSize];
+    int armour_ty = -1;
+    for (int k = 1; nm && k < 256 && armour_ty < 0; ++k)
+        if (nm->type(k).slot == items::kSlotArmour) armour_ty = k;
+    // me (0 the party's, B a monster) at 10,10, its foe dist squares away the way dir
+    auto scene = [&](int me, int dir, int dist) {
+        for (int y = 0; y < combat::kH; ++y)
+            for (int x = 0; x < combat::kW; ++x) b.ground[y][x] = floor;
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        const int foe = me ? 0 : B;
+        mx::put(me, me ? 1 : 0, 10, 10, 60);
+        mx::put(foe, me ? 0 : 1, 10 + dist * combat::dx(dir), 10 + dist * combat::dy(dir), 60);
+        combat::occupancy(b);
+        combat::Fighter& f = b.f[me];
+        f.ai_mood = 1;
+        f.moves = 12;
+        f.target = static_cast<int16_t>(foe);
+        f.rec[0x10E] = 0;
+        f.rec[0x75] = 2;
+        f.items = nullptr;
+        f.n_items = 0;
+        b.morale_fig = 10;
+        b.enemy_health = 60;
+        b.taunter = -1;
+    };
+    auto plan = [&](int me, std::initializer_list<int> rolls) {
+        r19_at = 0;
+        int k = 0;
+        for (int r : rolls) r19_seq[k++] = r;
+        while (k < 8) r19_seq[k++] = 1;
+        create::g_die_hook = r19_die;
+        const combat::Plan p = combat::think(b, t, me, rng);
+        create::g_die_hook = nullptr;
+        return p;
+    };
+    const int toward = (row[1 * 5 + 1] + 2) & 7, away = (row[1 * 5 + 1] + 6) & 7;
+    char w[160];
+    // the NPC test (the party's member 0 stepping toward B, way 2)
+    for (int roll : {40, 55}) {
+        scene(0, 2, 3);
+        b.f[0].rec[0xF7] = 0x80 | 10;
+        const combat::Plan p = plan(0, {roll});
+        const bool held = npc_ctrl >= 0 && roll + 10 < 60;
+        snprintf(w, sizeof w, "NPC (control 0x8A) on the party's side, d100 %d + figure 10 against health 60: %s", roll, held ? "the guard" : "a step");
+        check(w, held ? p.act == combat::Act::Guard : (p.act == combat::Act::Step && p.dir == toward));
+    }
+    scene(0, 2, 3);
+    b.f[0].rec[0xF7] = 0x20;
+    check("not an NPC (control 0x20), d100 1: a step", [&] { const combat::Plan p = plan(0, {1}); return p.act == combat::Act::Step && p.dir == toward; }());
+    scene(B, 2, 3);
+    b.f[B].rec[0xF7] = 0x80 | 10;
+    check("a monster (control 0x8A), d100 1: a step (the monsters' side)",
+          [&] { const combat::Plan p = plan(B, {1}); return p.act == combat::Act::Step && p.dir == toward; }());
+    // the magic-user (B, a monster: its NPC roll 100 first)
+    auto mage = [&](const char* what, int dist, bool armour, int want_dir, std::function<void(combat::Fighter&)> set) {
+        scene(B, 2, dist);
+        combat::Fighter& f = b.f[B];
+        f.rec[0xF7] = 0x80 | 50;
+        f.rec[0x75] = 5;
+        if (armour && armour_ty >= 0) {
+            memset(inv[0], 0, sizeof inv[0]);
+            inv[0][0x2E] = static_cast<uint8_t>(armour_ty);
+            inv[0][0x34] = 1;
+            f.items = inv;
+            f.n_items = 1;
+        }
+        if (set) set(f);
+        const combat::Plan p = plan(B, {100});
+        snprintf(w, sizeof w, "a magic-user, %s (distance %d%s): act %d dir %d, want %s %d", what, dist, armour ? ", armour" : "", (int)p.act, p.dir,
+                 want_dir < 0 ? "the guard" : "a step", want_dir);
+        check(w, want_dir < 0 ? p.act == combat::Act::Guard : (p.act == combat::Act::Step && p.dir == want_dir));
+        f.items = nullptr;
+        f.n_items = 0;
+    };
+    const bool known = mage_armour >= 0;
+    const bool keep = !strcmp(mage_then, "keep"), dual = !strcmp(mage_then, "dual");
+    if (known) {
+        mage("class 5, no armour", 5, false, keep ? toward : -1, nullptr);
+        if (keep) {
+            mage("class 5, no armour", 3, false, away, nullptr);
+            mage("class 5, no armour", 2, false, away, nullptr);
+        }
+        if (armour_ty >= 0) mage("class 5", 3, true, mage_armour ? toward : -1, nullptr);
+        if (dual) {
+            auto human = [](int former) {
+                return [former](combat::Fighter& f) {
+                    for (int k = 0; k < 7; ++k) f.rec[0x109 + k] = 0;
+                    f.rec[0x74] = 7;
+                    f.rec[0x10E] = 6;
+                    f.rec[0xE6] = static_cast<uint8_t>(former);
+                };
+            };
+            mage("a human past its former class's level (6 > 4)", 3, false, toward, human(4));
+            mage("a human not past it (6, former 6)", 3, false, -1, human(6));
+        }
+    }
+    {
+        scene(B, 2, 3);
+        b.f[B].rec[0xF7] = 0x80 | 50;
+        const combat::Plan p = plan(B, {100});
+        check("class 2, no armour: a step", p.act == combat::Act::Step && p.dir == toward);
+    }
+    // the morale figure: control 0xC0 ((0x40) x 2 = 128), unhurt
+    bool mok = morale_cap >= 0;
+    if (mok) {
+        scene(B, 2, 3);
+        b.f[B].rec[0xF7] = 0xC0;
+        b.enemy_health = 60;
+        b.morale_fig = 0;
+        (void)combat::morale(b, t, B);
+        mok = b.morale_fig == (morale_cap ? 60 : 128);
+        snprintf(w, sizeof w, "morale: control 0xC0 unhurt - figure %d, want %d (cap %d)", b.morale_fig, morale_cap ? 60 : 128, morale_cap);
+        check(w, mok);
+    }
+    for (int y = 0; y < combat::kH; ++y)
+        for (int x = 0; x < combat::kW; ++x) b.ground[y][x] = floor;
+    for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+    combat::occupancy(b);
+    expect(P, "the step routine's NPC and magic-user tests and the morale routine's 102 test, as each original's (oracle_aistep: npc / mage / morale)",
+           bad == 0 && known && morale_cap >= 0, "facts npc 0x%X mage armour %d then '%s' morale cap %d; %d of %d wrong (%s)", npc_ctrl, mage_armour,
+           mage_then, morale_cap, bad, n, first);
+}
+
 // Champions' computer steps (round 11): its step try (GAME.OVR 0xCC6A) reads
 // a row by combat byte 0x15 - "mov al,[di+X]" after the mood x 5 + column -
 // found in GAME.OVR by that code, the row read from the program's data
@@ -2215,14 +2360,22 @@ void ai_mood_steps()
     // facing (+ 1), the cost test, the cloud squares' rules
     static const char* kName[] = {"", "poolrad", "curse", "secret", "darkness", "champions", "knights", "queen", "gateway", "treasures"};
     const int g = game();
-    if (g == 7 || g < 1 || g > 9 || !fight()) return;
+    if (g < 1 || g > 9 || !fight()) return;
     char path[256];
     snprintf(path, sizeof path, "%s/oracle_aistep_%s.txt", getenv("ORACLE_DIR") ? getenv("ORACLE_DIR") : "/tmp/claude-0/bt", kName[g]);
     FILE* fo = fopen(path, "r");
     if (!fo) {
-        expect(P, "the computer's step: oracle_aistep (tools/devkit/oracles/aistep.py)", false, "%s missing", path);
+        expect(P, "the computer's step: oracle_aistep (tools/devkit/oracles/aistep.py; the Dark Queen's qstep.py)", false, "%s missing", path);
         return;
     }
+    // (round 19: the Dark Queen's rows are 6 bytes - its oracle gives the
+    // 7 rows' columns 1-5 as rowbytes, read from DQK.EXE)
+    uint8_t qrow[36] = {};
+    int stride = 5, nq = 0;
+    // (round 19: the step routine's NPC and magic-user tests, the morale
+    // routine's 102 test)
+    int npc_ctrl = -1, mage_armour = -1, morale_cap = -1;
+    char mage_then[16] = "";
     struct Cl {
         char kind[16];
         std::vector<int> eff;
@@ -2236,7 +2389,26 @@ void ai_mood_steps()
     while (fgets(line, sizeof line, fo)) {
         unsigned x;
         int v;
-        if (sscanf(line, "rows %x", &x) == 1) at = x;
+        unsigned y1, y2;
+        int v2;
+        char w1[16];
+        if (sscanf(line, "npc %x fig %x health %x side1 %d", &x, &y1, &y2, &v2) == 4) npc_ctrl = static_cast<int>(x);
+        else if (sscanf(line, "mage class %x armour %d then %15s", &x, &v, w1) == 3) mage_armour = v, snprintf(mage_then, sizeof mage_then, "%s", w1);
+        else if (sscanf(line, "morale fig %x cap %d", &x, &v) == 2) morale_cap = v;
+        else if (sscanf(line, "rows %x stride %d", &x, &v) == 2) at = x, stride = v;
+        else if (sscanf(line, "rows %x", &x) == 1) at = x;
+        else if (!strncmp(line, "rowbytes ", 9)) {
+            char* q = line + 9;
+            for (int m = 0; m < 7; ++m)
+                for (int c = 1; c <= 5; ++c) {
+                    char* e;
+                    const long b = strtol(q, &e, 16);
+                    if (e == q) continue;
+                    q = e;
+                    qrow[m * 5 + c] = static_cast<uint8_t>(b);
+                    ++nq;
+                }
+        }
         else if (sscanf(line, "facing %x inc %d", &x, &v) == 2) facing = x, inc = v;
         else if (sscanf(line, "cost %15s", cost) == 1) {
         } else if (!strncmp(line, "cloud ", 6)) {
@@ -2258,13 +2430,15 @@ void ai_mood_steps()
     combat::Battle& b = fg->b;
     const auto& t = fg->t;
     const int base_at = static_cast<int>(d->prof->create.ds_image) + static_cast<int>(at);     // (the fight tables' image - load_fight_tables)
-    if (!at || prog.empty() || base_at + 36 > static_cast<int>(prog.size())) {
-        expect(P, "the computer's step: the rows in the program", false, "rows 0x%X, program %d bytes", at, (int)prog.size());
+    const bool queen_rows = stride == 6;
+    if (queen_rows ? nq != 35 : (!at || prog.empty() || base_at + 36 > static_cast<int>(prog.size()))) {
+        expect(P, "the computer's step: the rows in the program", false, "rows 0x%X stride %d (%d bytes), program %d bytes", at, stride, nq,
+               (int)prog.size());
         return;
     }
-    const uint8_t* row = &prog[base_at];
+    const uint8_t* row = queen_rows ? qrow : &prog[base_at];
     bool same = t.mood_known;
-    for (int k = 0; same && k < 36; ++k) same = t.mood[k] == row[k];
+    for (int k = 0; same && k < 36; ++k) same = (queen_rows && k == 0) || t.mood[k] == row[k];
     const uint8_t floor = b.ground[3][5];
     auto clear = [&]() {
         for (int y = 0; y < combat::kH; ++y)
@@ -2282,6 +2456,7 @@ void ai_mood_steps()
         f.moves = 12;
         f.target = 0;
         f.rec[0x10E] = 0;
+        f.rec[0x75] = 2;                // (not a magic-user: round 19's step tests)
         f.driven = false;
     };
     auto sq = [&](int dir) -> uint8_t& { return b.ground[10 + combat::dy(dir)][10 + combat::dx(dir)]; };
@@ -2421,6 +2596,7 @@ void ai_mood_steps()
         for (int x = 0; x < combat::kW; ++x) b.ground[y][x] = floor;
     expect(P, "the computer's step onto a cloud square: the original's try (its effects, driven, flags 2, Hit Dice, a save) case by case",
            cbad == 0 && !cls.empty(), "%d of %d wrong (%s)", cbad, cn, cb);
+    step19(row, npc_ctrl, mage_armour, mage_then, morale_cap);
 }
 
 // Round 15: Darkness's / Treasures' / Death Knights' Feeblemind, by their
@@ -2986,6 +3162,102 @@ void guard0_check()
     expect(P, "the computer at moves 0 and its guard as the original's (oracle_guard: the AI loop's moves test, the guard routine's held list / missile / moves; the Dark Queen's finder)",
            bad == 0 && qok && moves0 && movetest && missile && ne > 0, "facts moves0 %d movetest %d missile %d effects %d; %d of %d wrong (%s) %s",
            moves0, movetest, missile, ne, bad, n, first, qwhy);
+}
+
+// Round 19 (tools/devkit/oracles/yell.py): the Krynn games' Yell - each of
+// the other side okay, Intelligence over 3, NOT HELD (the guard routine's
+// own list test, the same far call: oracle_guard's effects) and failing a
+// save against spells gets the taunted effect; the held asked before the
+// save (no die for a held one). An effect of Facts::held outside the
+// original's list (Death Knights' 0x33) doesn't keep one from it.
+void yell_check()
+{
+    static const char* kName[] = {"", "poolrad", "curse", "secret", "darkness", "champions", "knights", "queen", "gateway", "treasures"};
+    const int g = game();
+    if (g < 5 || g > 7) return;
+    const char* od = getenv("ORACLE_DIR") ? getenv("ORACLE_DIR") : "/tmp/claude-0/bt";
+    char path[256], yl[300] = "", gl[400] = "";
+    snprintf(path, sizeof path, "%s/oracle_yell_%s.txt", od, kName[g]);
+    FILE* fo = fopen(path, "r");
+    if (fo) {
+        while (fgets(yl, sizeof yl, fo) && yl[0] == '#') {}
+        fclose(fo);
+    }
+    snprintf(path, sizeof path, "%s/oracle_guard_%s.txt", od, kName[g]);
+    fo = fopen(path, "r");
+    if (fo) {
+        while (fgets(gl, sizeof gl, fo) && gl[0] == '#') {}
+        fclose(fo);
+    }
+    if (!yl[0] || !gl[0]) {
+        expect(P, "the Yell: oracle_yell / oracle_guard (tools/devkit/oracles/yell.py, guard.py)", false, "missing for %s", kName[g]);
+        return;
+    }
+    int eff[8], ne = 0;
+    if (const char* q = strstr(gl, "eff ")) {
+        q += 4;
+        while (ne < 8 && q[0] == '0' && q[1] == 'x') {
+            char* e;
+            eff[ne++] = static_cast<int>(strtol(q, &e, 16));
+            q = e;
+            while (*q == ' ') ++q;
+        }
+    }
+    unsigned taunted = 0;
+    if (const char* q = strstr(yl, "taunted ")) taunted = static_cast<unsigned>(strtoul(q + 8, nullptr, 16));
+    const bool same = strstr(yl, "guard_same 1") != nullptr, held_first = strstr(yl, "order held-save") != nullptr;
+    if (!fight() || !fg->b.fx) return;
+    combat::Battle& b = fg->b;
+    int n = 0, bad = 0;
+    char first[200] = "";
+    auto check = [&](const char* what, bool ok) {
+        ++n;
+        if (!ok && !bad++) snprintf(first, sizeof first, "%s", what);
+    };
+    auto scene = [&]() {
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(0, 0, 10, 10, 60);
+        mx::put(B, 1, 14, 10, 60);
+        F(B).rec[0x13] = 10;
+        b.taunter = -1;
+    };
+    auto yell = [&]() {
+        r19_at = 0;
+        for (int k = 0; k < 8; ++k) r19_seq[k] = 1;          // (a d20 of 1: the save failed)
+        create::g_die_hook = r19_die;
+        int out[8];
+        const int got = combat::taunt(b, 0, rng, out, 8);
+        create::g_die_hook = nullptr;
+        return got == 1 && out[0] == B && F(B).has(b.fx->taunted);
+    };
+    char w[120];
+    check("the taunted effect as the original's", b.fx->taunted == taunted);
+    scene();
+    check("not held, the save failed: taunted", yell());
+    for (int k = 0; k < ne; ++k) {
+        scene();
+        mx::add_aff(B, eff[k]);
+        const bool t = yell();
+        snprintf(w, sizeof w, "held (0x%02X of the guard routine's list): not taunted, no save rolled", eff[k]);
+        check(w, !t && (!held_first || r19_at == 0));
+    }
+    for (uint8_t h : b.fx->held) {
+        bool listed = false;
+        for (int k = 0; k < ne; ++k) listed = listed || eff[k] == h;
+        if (!h || listed) continue;
+        scene();
+        mx::add_aff(B, h);
+        snprintf(w, sizeof w, "0x%02X (held here, not in the original's list): taunted", h);
+        check(w, yell());
+    }
+    scene();
+    F(B).rec[0x13] = 3;
+    check("Intelligence 3: not taunted", !yell());
+    for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+    combat::occupancy(b);
+    expect(P, "the Yell as the original's (oracle_yell: the other side, okay, Intelligence over 3, not held - the guard routine's list - then the save)",
+           bad == 0 && same && held_first && ne > 0, "facts guard_same %d held first %d effects %d; %d of %d wrong (%s)", same, held_first, ne, bad, n,
+           first);
 }
 
 void onhit_check()
@@ -3595,6 +3867,7 @@ void run()
     if (want("khit")) knights_hit();
     if (want("onhit")) onhit_check();
     if (want("guard0")) guard0_check();
+    if (want("yell")) yell_check();
     if (want("restore")) restore();
     if (want("rest")) rest();
     rules::set_fixes(true);

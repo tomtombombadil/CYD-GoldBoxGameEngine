@@ -1459,7 +1459,33 @@ the Project as claude/TODO.md.
       Gas Spore (MONCHA.GLB 6) alone, 0x83 by item type 67 (Dawnshine's,
       ITEM.DAT 45 / 214 / 215). rules4 guard0, qhooks; oracles guard.py,
       carriers.py, qhooks.py.
-- [ ] Round 18 left: the Dark Queen's caster level - DQK.EXE res 0xB4E0
+- [ ] Round 19 left (2026-11-10): the Dark Queen's ground 0x46 (laid by
+      DQK.EXE 0x50A77 - effect 0x9A's handler; its try 0x2E479: under 7
+      Hit Dice and not driven, no step) - the engine lays no such ground,
+      that ability not followed; the Queen's morale figure [0xC2DE] is
+      never set to 100 (BSS, kept across fights) - the engine's 100 at each
+      fight's start, Curse-type (0x10245); whether the step routine's
+      "moves / 2" test is the engine's f.moves < 2 (now the guard there, as
+      its routine's end) - not compared in DOSBox; Gateway's magic-user's
+      distance is its scan list's length / 2 - range()'s here (multi-square
+      fighters may differ by a square); the Dark Queen's packed caster
+      levels' cap of 31 (charms 10 / 63 / 81 / 96 / 120, clouds, Prayer,
+      Mirror Image, Power Word Stun, Otto's) not in the engine - moot while
+      no caster past 31 casts them (MONCHA.GLB: Sir Discore's knight 34
+      casts Heal / Cure Critical only); its 0xFF-class garbage level.
+- [x] Round 18 left (round 19, v0.193.0): the Dark Queen's caster level is
+      res 0xB4E0 for EVERY spell (29 call sites with the overlays' - the
+      effect setter 0x5B3D9 / its duration 0x5B2FB, the damage handlers;
+      round 18 saw the resident three) - queen_power already is it; its Yell
+      skips the held (taunt, all three Krynn games); ITEM.DAT 218's 0x8C and
+      0x5FDB0's (a once-a-day marker: "feels better", 0xB9 gone, 0x8C for
+      1440 minutes) - moot: 0x8C's only fight reader is the finder's taunt
+      test (the yelling kender is never in its own side's list, no monster
+      carries 218, the computer never yells); its step by its mood rows
+      (qstep.py, rules4 aimood). Also found: the Queen's clouds laid ground
+      0x1E (Stinking Cloud) and 0 (Blade Barrier - off the field!) - now
+      Darkness's 0x1D / 0x1C / 0x1B and the knives' 8d8.
+- [x] Round 18 left: the Dark Queen's caster level - DQK.EXE res 0xB4E0
       is called only by the magic resistance roll (0x6FDD), spells 9 / 64
       (0x558A6) and 79 (0x26D93): where its other spells' levels come from
       (0x2FFC:0x10F9?) not read - the engine uses queen_power for all; its

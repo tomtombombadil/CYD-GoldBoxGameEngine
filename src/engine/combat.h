@@ -119,6 +119,28 @@ struct Tables {
     // its turn's first (0x2DE39) - Curse-type but as many tries as the list
     // holds, a roll first, the taunted kender moved to the list's front
     bool    finder_queen;
+    // Round 19 (every original's step routine, before its way: Curse
+    // GAME.OVR 0xC49C, Secret 0xD8E8, Gateway 0xDAE8, Champions 0xCF11,
+    // Death Knights 0xAB71, Darkness 0xA33C, Treasures 0xB18E, the Dark
+    // Queen DQK.EXE 0x2E5A3 - not PoolRad's): one whose control byte has
+    // 0x80 rolls a d100; on the party's side, the roll + the morale routine's
+    // last figure (Battle::morale_fig) under the party's health figure
+    // (Battle::enemy_health) - no step, the guard routine
+    bool    step_npc;
+    // A magic-user (class 5) not running doesn't step (the guard routine):
+    // 1 - with no armour readied (Curse 0xC4FF, Champions 0xCF74, Death
+    // Knights 0xABD2: the record's armour pointer, Curse +0x159), 2 - armour
+    // or not (PoolRad 0xB44E, Darkness 0xA390, Treasures 0xB1E2, the Dark
+    // Queen 0x2E5F0), 3 - Gateway's (0xDB70: with no armour, by the
+    // distance to its target, 0xFE:0xBB - 0 / 1 the guard, 2 / 3 the way
+    // turned round, more: on), 4 - Secret's (0xD94B: with no armour, unless
+    // a human past its former class's level, 0x164:0x57); 0 - the engine's
+    // own (any magic-user's level, no armour)
+    uint8_t mage_rule;
+    // The morale figure (control & 0x7F) x 2 over 102 counts as 0 (Curse
+    // 0xCE3A ...); Darkness 0xAD1E, Treasures and the Dark Queen 0x2EF8A
+    // have no such test (a byte: up to 254)
+    bool    morale_cap;
     StepCloud clouds[3];
     uint8_t foe_names[20][16];
     uint8_t dodge_names[2][16];
@@ -143,6 +165,14 @@ struct TableAt {
     bool     finder_scan = false;       // Tables::finder_scan
     bool     finder_first = false;      // Tables::finder_first
     bool     finder_queen = false;      // Tables::finder_queen
+    // The row table's stride (round 19: the Dark Queen's rows DS 0x5DB4 are
+    // 6 bytes, mood x 6 + column - DQK.EXE 0x2E248; the DAX games' 5)
+    uint8_t  mood_stride = 5;
+    // Round 19 - each original's step routine (Curse GAME.OVR 0xC40C ...;
+    // the Dark Queen DQK.EXE 0x2E4C0) and morale routine (Curse 0xCE2C):
+    bool     step_npc = true;           // Tables::step_npc
+    uint8_t  mage_rule = 1;             // Tables::mage_rule
+    bool     morale_cap = true;         // Tables::morale_cap
 };
 // Reads them: read(ctx, ds offset, out, n) gives the data segment's bytes
 using ReadDs = bool (*)(void* ctx, uint16_t ds, uint8_t* out, size_t n);
@@ -564,6 +594,9 @@ struct Facts {
         uint8_t fights_on = 0, falls_dead = 0;
         bool    mirror = false;
     } gw{};
+    // An effect of held that the Yell's held routine doesn't list (round 19:
+    // Death Knights' 0xCF:0x48 has 0x1F 0x34 0x35 - not the snake charm 0x33)
+    uint8_t yell_unheld = 0;
 };
 
 // ---- Monsters (LOAD MONSTER): a group per load (the record its copies
@@ -761,6 +794,10 @@ struct Battle {
     int     to_hit_party = 0, to_hit_monsters = 0;  // the scripts' bonuses
     const Facts* fx = nullptr;
     int     morale_base = 0;            // the script's morale word (0x7EC6)
+    // The morale routine's last figure (Curse DS 0x6FBC, Darkness 0xA7E1,
+    // the Dark Queen 0xC2DE - round 19): 100 as a fighter is set up (Curse
+    // GAME.OVR 0x10245), then each morale test's; read by Tables::step_npc
+    int     morale_fig = 100;
     int     taunter = -1;               // Champions: the kender who yelled (-1: none - Yell offered)
     // Darkness's Turn Undead (R13): the undead loaded for the fight (each
     // cleric may turn that many times), the script's penalty (block +0x0E)
@@ -1349,8 +1386,8 @@ bool baaz_keeps_weapon(const Fighter& slayer, create::Dice& d);
 bool saving_throw(const Fighter& f, int type, int bonus, create::Dice& d);
 // Champions' Yell (its GAME.OVR ovl 0xDB +0x28): `kender` becomes the
 // taunter; each fighter of the other side that is okay, has Intelligence
-// over 3 and fails a save against spells gets Facts::taunted (into out, up
-// to cap: how many)
+// over 3, isn't held (the game's held list - round 19) and fails a save
+// against spells gets Facts::taunted (into out, up to cap: how many)
 int taunt(Battle& b, int kender, create::Dice& d, int* out, int cap);
 // The fighter whose turn it is and the damage's kind (saving throws look at
 // them: protection from evil / good, resist fire / cold)
