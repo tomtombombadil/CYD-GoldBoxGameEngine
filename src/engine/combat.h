@@ -456,6 +456,31 @@ struct Facts {
     // keeps one from breathing it (with the undead, the nauseous, flags 2 &
     // 0x18); coughing and nausea 1d4 + 1 each, data 0xFF. 0: the others' rule
     uint8_t q_cloud_proof = 0;
+    // The Dark Queen's to-hit hooks (round 16; DQK.EXE's hook switch 0x7202,
+    // its handlers DS 0xBEE8 + 4 x effect, overlay segment 0x2B3A at file
+    // 0x4DE90): the roll (d20, 20 = 100) changed by the attacker's effects
+    // (event 0xA) and the target's (0x10) is a miss under 0 - then + to-hit
+    // + side >= AC. Attacker: bless +1, curse -1, prayer +-1, `race_plus`
+    // +1 against flags & 0x80, blind -4, accursed -4, terrified -2. Target:
+    // invisible -4 (not to one seeing it), `animals` -4 when the TARGET'S
+    // own flags & 0x45 and it doesn't see invisible (an original's mistake:
+    // the attacker's with the Game Fixes), blinking / the cloak a miss,
+    // `giants` -4 against an attacker of flags & 4 (always). No gnome +1,
+    // no gnomes' dodge (0x30's handler is empty: with the Game Fixes),
+    // Dispel Evil's -7 lost (event 0xB, before the d20). The target's AC
+    // (event 0xB, after its recalculation): Shield 3 at worst - the front
+    // only, undone by coughing's recalculation (kept with the Game Fixes),
+    // coughing 2 worse front and rear, blind 4 worse, `dance` 4 worse,
+    // `highlight` 2 worse, `iron_skin` 4 better. Its dragon fear (0x64):
+    // no save - the other side's okay ones under 7 Hit Dice not immune
+    // (mon.no_fear) are terrified
+    struct QueenFx {
+        bool    hooks = false;
+        uint8_t race_plus = 0, giants = 0, animals = 0, dance = 0, highlight = 0, iron_skin = 0;
+        // (unnamed ones: the attacker's +2 (0x50F39) and -2 (0x5039B), the
+        // target's -1 (0x528F8))
+        uint8_t plus2 = 0, minus2 = 0, tgt_minus1 = 0;
+    } q{};
     // Gateway to the Savage Frontier's (its effect handlers DS 0x826A on, the
     // check lists of its work_on_00 - SPEC 6e; 0: none). `ways`: the deadly
     // poison (0x40) after attack 1's hit, not attack 2's, the paralysing bite

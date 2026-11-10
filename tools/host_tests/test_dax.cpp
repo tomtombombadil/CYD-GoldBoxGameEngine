@@ -2712,6 +2712,44 @@ static void test_queen_damage()
         }
 }
 
+// The Dark Queen's DAMAGE attack roll's target hooks (DQK.EXE 0x83D0 /
+// event 0x10, round 16): invisible -4 unless the selected one sees it,
+// Invisible to Animals -4 on the holder's own flags & 0x45 (the selected
+// one's with the Game Fixes), 0x2F -4 against a selected one of flags & 4,
+// the Magical Cloak the first a miss (then marked)
+static void test_queen_target_hooks()
+{
+    static party::Character t, s;
+    auto aff = [](party::Character& c, uint8_t e) { c.affects[c.n_affects][0] = e; c.affects[c.n_affects++][3] = 0; };
+    bool miss = false;
+    t = party::Character{};
+    s = party::Character{};
+    CHECK(ecl::queen_target_hooks(t, s, false, &miss) == 0 && !miss);
+    aff(t, 0x19);
+    CHECK(ecl::queen_target_hooks(t, s, false, &miss) == -4);
+    aff(s, 0x18);
+    CHECK(ecl::queen_target_hooks(t, s, false, &miss) == 0);
+    t = party::Character{};
+    s = party::Character{};
+    aff(t, 0x45);
+    CHECK(ecl::queen_target_hooks(t, s, false, &miss) == 0);
+    t.rec[0x14B] = 0x40;
+    CHECK(ecl::queen_target_hooks(t, s, false, &miss) == -4);
+    CHECK(ecl::queen_target_hooks(t, s, true, &miss) == 0);
+    s.rec[0x14B] = 0x01;
+    CHECK(ecl::queen_target_hooks(t, s, true, &miss) == -4);
+    t = party::Character{};
+    s = party::Character{};
+    aff(t, 0x2F);
+    CHECK(ecl::queen_target_hooks(t, s, false, &miss) == 0);
+    s.rec[0x14B] = 4;
+    CHECK(ecl::queen_target_hooks(t, s, false, &miss) == -4);
+    t = party::Character{};
+    aff(t, 0x59);
+    CHECK(ecl::queen_target_hooks(t, s, false, &miss) == 0 && miss);
+    CHECK(ecl::queen_target_hooks(t, s, false, &miss) == 0 && !miss);
+}
+
 static void test_ecl_party()
 {
     const profile::Profile* pr = profile::find(games::Game::CurseOfTheAzureBonds, 57789, 62432);
@@ -9050,6 +9088,7 @@ int main()
     test_vm_events_facts();
     test_ecl_party();
     test_queen_damage();
+    test_queen_target_hooks();
     test_treasure();
     test_treasure_pool();
     test_sound();

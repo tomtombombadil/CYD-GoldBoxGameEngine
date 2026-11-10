@@ -883,6 +883,31 @@ uint32_t Vm::rnd(uint32_t n)
     return n ? rng_ % n : 0;
 }
 
+int queen_target_hooks(party::Character& tg, const party::Character& sel, bool fixes, bool* miss)
+{
+    // (DQK.EXE's handlers for event 0x10, the effect numbers its own:
+    // Invisible 0x19 - 0x4E3DA; Invisible to Animals 0x45 - 0x4EDC3, the
+    // holder's own flags & 0x45 (the attacker's with the Game Fixes); 0x2F
+    // - 0x4E842, the attacker's flags & 4; the Magical Cloak 0x59 - 0x4F183,
+    // the first a miss, marked in its data (& 0x10); blinking 0x25 needs
+    // the fight's record - nothing here; Sees Invisible 0x18)
+    int h = 0;
+    *miss = false;
+    if (tg.has_affect(0x19) && !sel.has_affect(0x18)) h -= 4;
+    if (tg.has_affect(0x45)) {
+        const party::Character& w = fixes ? sel : tg;
+        if ((w.rec[0x14B] & 0x45) && !w.has_affect(0x18)) h -= 4;
+    }
+    if (tg.has_affect(0x2F) && (sel.rec[0x14B] & 4)) h -= 4;
+    for (int k = 0; k < tg.n_affects; ++k)
+        if (tg.affects[k][0] == 0x59 && !(tg.affects[k][3] & 0x10)) {
+            tg.affects[k][3] |= 0x10;
+            *miss = true;
+            break;
+        }
+    return h;
+}
+
 int queen_damage(bool made, int flags, int dmg, bool swapped, bool fixes)
 {
     if (swapped && !fixes) return made ? ((flags & 0x10) ? dmg : -1) : dmg >> 1;    // (0x42650 / 0x4272A)
@@ -2231,7 +2256,18 @@ Stop Vm::step()
                 const party::Character& c = party_->m[i];
                 int r = roll(20, 1);
                 if (r == 20) r = 100;
-                if (r > 1 && r + t > c.rec[0x19A]) hurt(i, dmg & 0xFF);
+                if (r > 1 && set_.queen_damage) {
+                    // The Dark Queen's roll (DQK.EXE 0x83D0, round 16): the
+                    // target's hooks (event 0x10) change it - under 0 (or
+                    // made 0xFF) a miss -, then roll + bonus over the AC; the
+                    // selected one ([0xAD67]) stands as the attacker
+                    bool miss = false;
+                    const int sel = before >= 0 && before < count ? before : i;
+                    const int q = static_cast<int8_t>(r + queen_target_hooks(party_->m[i], party_->m[sel], rules::fixes(), &miss));
+                    if (!miss && q >= 0 && q + t > c.rec[0x19A]) hurt(i, dmg & 0xFF);
+                } else if (r > 1 && r + t > c.rec[0x19A]) {
+                    hurt(i, dmg & 0xFF);
+                }
                 dmg = roll(sd, n) + p;
             }
         }

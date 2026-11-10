@@ -182,6 +182,10 @@ public:
 // taken (-1: none) - made or not, the flags (0x10), the whole dice,
 // `swapped` the whole party's / a random one's branch, `fixes` the Game Fixes
 int queen_damage(bool made, int flags, int dmg, bool swapped, bool fixes);
+// ... and its DAMAGE's one-target roll (0x83D0): what the target's hooks
+// (event 0x10) add, `sel` the selected one standing as the attacker; *miss
+// when the Magical Cloak takes the blow (marked used)
+int queen_target_hooks(party::Character& tg, const party::Character& sel, bool fixes, bool* miss);
 
 class Vm {
 public:
