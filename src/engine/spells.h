@@ -35,6 +35,7 @@ struct Entry {
     int delay = 0;                      // casting time (fights: / 3 = rounds' delay)
     int priority = 0;
     int foe = 0;                        // fights (byte 14): whom the computer casts it at (0 itself / its side)
+    int area = 0;                       // fights (byte 15): the computer's judge's area round each enemy (0: none - round 20)
 };
 Entry entry(const classes::Tables& t, int spell);
 

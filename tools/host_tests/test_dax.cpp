@@ -7436,8 +7436,9 @@ static void test_combat()
         fx.fumbling = fx.entangle = fx.sticks = fx.silence = 0;
         fresh(1); fresh(2);
     }
-    // The computer's spells: missiles (priority 7, reach 6) at the party member in reach
-    sds[1 * 16 + 13] = 7; sds[1 * 16 + 2] = 6;
+    // The computer's spells: missiles (priority 7, reach 6, row byte 14 the
+    // enemy - round 20: the originals' judge asks that byte) at the party member in reach
+    sds[1 * 16 + 13] = 7; sds[1 * 16 + 2] = 6; sds[1 * 16 + 14] = 1;
     CHECK(st.set(sl, sds, sizeof sds));
     mrec[1][0x1E] = 1; mrec[1][0x10E] = 3;
     const combat::FightSpell table[2] = {mm, cure};

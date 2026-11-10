@@ -142,6 +142,9 @@ struct Tables {
     // have no such test (a byte: up to 254)
     bool    morale_cap;
     StepCloud clouds[3];
+    // Round 20: the computer's spell choice by its original (profile::ai_cast;
+    // null: the d7 rounds with Curse's judge)
+    const struct AiCast* ai;            // (set after read_tables: play.cpp load_fight_tables)
     uint8_t foe_names[20][16];
     uint8_t dodge_names[2][16];
 };
@@ -174,6 +177,43 @@ struct TableAt {
     uint8_t  mage_rule = 1;             // Tables::mage_rule
     bool     morale_cap = true;         // Tables::morale_cap
 };
+// ---- The computer's spells (rules round 20; the Project's
+// claude/rules_round20_facts.md, tools/devkit/oracles/aicast.py)
+// The by-priority games' per-target use test (Darkness GAME.OVR 0x2249A,
+// Treasures 0x2A74B, Death Knights 0x22CE4, DQK.EXE 0x2902C): the spells a
+// rule is for and its tests on the target (all of them, any of them, or -
+// Death Knights' 0x2F / 0x40 / 0x4A / 0x6C - the wrong side when all hold,
+// else a use); a spell with no rule: a use when its row's effect is 0 or
+// the target lacks it
+enum AiOp : uint8_t {
+    kAiEnd, kAiLacks, kAiHas, kAiCasterLacks, kAiNoFoeNear, kAiHurt, kAiPerson, kAiFlag, kAiFlag2, kAiNoFlag2,
+    kAiSize, kAiHdBelow
+};
+struct AiUse {
+    uint8_t spells[5];                  // (0 ends)
+    uint8_t mode;                       // 0 all, 1 any, 2 the wrong side when all
+    uint8_t op[4], arg[4];              // (kAiEnd ends)
+};
+struct AiCast {
+    // 0: the d7 rounds of three picks from priority 7 down (PoolRad, Curse,
+    // Secret, Gateway, Champions - Curse GAME.OVR 0xBC46, the judge
+    // 0xBDEC); 1: by priority, the first with a use, then the fighters'
+    // chance (Darkness 0x9FA9 / 0x9F36, Treasures 0xADE4, Death Knights
+    // 0xA7F2 / 0xA787, DQK.EXE 0x2E116 / 0x2F92E)
+    uint8_t kind = 0;
+    uint8_t list_from = 1, list_to = 83;    // the memorized places looked at (the engine holds 0-83)
+    bool    high_too = true;            // places with bit 7 (being memorized) in the d7 list - never a use
+    bool    pool_area = false;          // PoolRad: an area catching a friend is no use (no save)
+    uint8_t heal[3] = {3, 0, 0};        // judged by a hurt one near first (Gateway 3, 58, 71)
+    uint8_t fight_cls[4] = {2, 3, 4, 0xFF};     // kind 1: classes lowering the chance (0xFF ends)
+    bool    raw_levels = false;         // Death Knights: the recorded levels (others the skill levels)
+    uint8_t globe5 = 0, globe4 = 0;     // effects stopping spells under the 5th / 4th level
+    uint8_t mr_cap = 0x32;              // magic resistance over this: no use
+    bool    queen_mr = false;           // the Queen: over 40 its tiers decide (over 130 none), the globes forgotten
+    const AiUse* use = nullptr;
+    uint8_t n_use = 0;
+};
+
 // Reads them: read(ctx, ds offset, out, n) gives the data segment's bytes
 using ReadDs = bool (*)(void* ctx, uint16_t ds, uint8_t* out, size_t n);
 bool read_tables(Tables& t, const TableAt& at, ReadDs read, void* ctx);
@@ -1460,6 +1500,28 @@ bool picks_done(const Battle& b, const int* picked, int n, int budget, bool by_s
 // The spell (0: none) and its targets.
 int choose_spell(Battle& b, const Tables& t, const classes::Tables& st, int i, const FightSpell* table, int n_table,
                  create::Dice& d, int* targets, int* n_targets);
+// Round 20 - the judge of the d7 games (Curse GAME.OVR 0xBDEC; spell `jd`
+// at the round's level): its priority reaching it; a heal spell (AiCast::
+// heal) with a hurt one near (heal_target) a use, else judged as one at
+// the enemy; one for itself (row byte 14 = 0) a use; else an enemy within
+// its reach (seen or not) and - row byte 15 an area - no candidate's area
+// catching a friend who fails a save (byte 8 = 1: friends not asked;
+// PoolRad: any friend there no use)
+// One of the d7 games' heal spells (AiCast::heal; null: Curse's 3)
+bool ai_heal_spell(const AiCast* ai, int sp);
+bool ai_judge(Battle& b, const Tables& t, const classes::Tables& st, int i, int jd, int level, create::Dice& d);
+// The by-priority games' use test for target c (AiCast::use): -10 (the Queen
+// -40) not on the side asked, 0 none, more a use
+int ai_use(const Battle& b, const Tables& t, const classes::Tables& st, int i, int sp, int c, bool own);
+// The targets of a spell the computer has chosen (the originals' computer
+// aim - Curse GAME.OVR 0x15599 / 0x15384, Darkness 0x20480): none - the
+// spell aborted
+int ai_targets(Battle& b, const Tables& t, const classes::Tables& st, int i, const FightSpell& fs, int sp, int pw,
+               create::Dice& d, int* targets, int judge = 0);
+// The computer's spell-target finder (Curse GAME.OVR 0x171AC with its reach
+// and no target kept; Darkness / Treasures 0x22191 scanning from a random
+// place, own side or the enemy): -1 none
+int finder_reach(Battle& b, const Tables& t, int i, int reach, bool own, create::Dice& d);
 const FightSpell* fight_spell(const FightSpell* table, int n, int spell);
 // The targets for a spell the computer thinks of casting (as choose_spell):
 // false when it has no use now

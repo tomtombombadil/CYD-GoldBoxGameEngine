@@ -3816,6 +3816,8 @@ void to_hit_sides()
            bad == 0, "game %d: %d of %d wrong (%s)", g, bad, n, first);
 }
 
+#include "behave_aicast.inc"
+
 void run()
 {
     if (!monkey_boot() || !play::load_rules(m) || !m) {
@@ -3868,6 +3870,7 @@ void run()
     if (want("onhit")) onhit_check();
     if (want("guard0")) guard0_check();
     if (want("yell")) yell_check();
+    if (want("aicast")) aicast::run();
     if (want("restore")) restore();
     if (want("rest")) rest();
     rules::set_fixes(true);

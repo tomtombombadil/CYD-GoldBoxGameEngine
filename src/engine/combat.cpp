@@ -5923,30 +5923,346 @@ bool picks_done(const Battle& b, const int* picked, int n, int budget, bool by_s
     return n >= 2 && total > budget;
 }
 
+bool ai_heal_spell(const AiCast* ai, int sp)
+{
+    const uint8_t* h = ai ? ai->heal : nullptr;
+    if (!h) return sp == 3;
+    for (int k = 0; k < 3; ++k)
+        if (h[k] && h[k] == sp) return true;
+    return false;
+}
+
+namespace {
+// Effect `type` is in the held list (Facts::held)
+bool held_effect(const Battle& b, int type)
+{
+    if (!b.fx || !type) return false;
+    for (uint8_t h : b.fx->held)
+        if (h && h == type) return true;
+    return false;
+}
+
+bool held_now(const Battle& b, const Fighter& o)
+{
+    if (!b.fx) return false;
+    for (uint8_t h : b.fx->held)
+        if (h && o.has(h)) return true;
+    return false;
+}
+
+int ai_level(const Fighter& f, const AiCast& ai, int cls)
+{
+    return ai.raw_levels ? static_cast<int8_t>(f.rec[0x109 + cls]) : skill_level(f.rec, cls);
+}
+} // namespace
+
+int finder_reach(Battle& b, const Tables& t, int i, int reach, bool own, create::Dice& d)
+{
+    const Fighter& f = b.f[i];
+    const int my = f.team() ? 1 : 0;
+    int list[kMaxFighters], n = 0;
+    for (int c = 0; c < b.n && n < kMaxFighters; ++c) {
+        const Fighter& o = b.f[c];
+        if (!o.up() || !o.size || ((o.team() ? 1 : 0) == my) != own) continue;
+        int sq = 0;
+        if (c != i && (!range(b, t, i, c, false, &sq) || sq > reach)) continue;
+        list[n++] = c;
+    }
+    auto seen = [&](int c) { return own ? !hidden(b, i, c) : seen_enemy(b, i, c); };
+    // (the originals' two passes - the second as the first, its target never kept)
+    for (int pass = 0; pass < 2 && n; ++pass) {
+        int l[kMaxFighters];
+        for (int k = 0; k < n; ++k) l[k] = list[k];
+        if (t.finder_scan) {
+            int k = d.roll(n, 1) - 1;
+            for (int left = n; left > 0; --left, k = (k + 1) % n)
+                if (seen(l[k])) return l[k];
+        } else {
+            int left = n;
+            const int tries0 = t.finder_queen ? n : 20;
+            if (t.finder_queen) (void)d.roll(n, 1);
+            for (int tries = tries0; tries > 0 && left > 0; --tries) {
+                const int k = d.roll(n, 1) - 1;
+                if (l[k] < 0) continue;
+                if (seen(l[k])) return l[k];
+                l[k] = -1;
+                --left;
+            }
+        }
+    }
+    return -1;
+}
+
+bool ai_judge(Battle& b, const Tables& t, const classes::Tables& st, int i, int jd, int level, create::Dice& d)
+{
+    const spells::Entry e = spells::entry(st, jd);
+    if (e.priority < level) return false;
+    Fighter& f = b.f[i];
+    const AiCast* ai = t.ai;
+    const bool heal = ai_heal_spell(ai, jd);
+    if (heal && heal_target(b, i) >= 0) return true;
+    if (!heal && e.foe == 0) return true;
+    // At the enemy: one within its reach, seen or not
+    const int my = f.team() ? 1 : 0;
+    int reach = e.range == -1 ? 1 : e.range + e.range_level * power_of(f, st, jd);
+    if (reach < 1) reach = 1;
+    int cand[kMaxFighters], nc = 0;
+    for (int c = 0; c < b.n; ++c) {
+        const Fighter& o = b.f[c];
+        int sq = 0;
+        if (!o.up() || !o.size || (o.team() ? 1 : 0) == my) continue;
+        if (!range(b, t, i, c, false, &sq) || sq > reach) continue;
+        cand[nc++] = c;
+    }
+    if (!nc) return false;
+    if (!e.area) return true;
+    // Each candidate's area: a friend there failing its save (byte 8 = 1:
+    // friends not asked; PoolRad: a friend there at all) - no use
+    for (int k = 0; k < nc; ++k) {
+        int in[kMaxFighters];
+        const int ni = in_area(b, t, b.f[cand[k]].x, b.f[cand[k]].y, e.area, in, kMaxFighters);
+        bool bad = false;
+        for (int j = 0; j < ni; ++j) {
+            const Fighter& o = b.f[in[j]];
+            if ((o.team() ? 1 : 0) != my) continue;
+            if (ai && ai->pool_area) bad = true;
+            else if (e.on_save != 1 && !saving_throw(o, e.save, my ? 8 : -2, d)) bad = true;
+        }
+        if (bad) return false;
+    }
+    return true;
+}
+
+int ai_use(const Battle& b, const Tables& t, const classes::Tables& st, int i, int sp, int c, bool own)
+{
+    const Fighter& f = b.f[i];
+    const Fighter& o = b.f[c];
+    const AiCast* ai = t.ai;
+    const int want = own ? (f.team() ? 1 : 0) : (f.team() ? 0 : 1);
+    if ((o.team() ? 1 : 0) != want) return ai && ai->queen_mr ? -40 : -10;
+    const spells::Entry e = spells::entry(st, sp);
+    auto test = [&](uint8_t op, uint8_t a) {
+        switch (op) {
+        case kAiLacks: return !o.has(a);
+        case kAiHas: return o.has(a);
+        case kAiCasterLacks: return !f.has(a);
+        case kAiNoFoeNear: {
+            for (int k = 0; k < b.n; ++k) {
+                const Fighter& x = b.f[k];
+                if (k == c || !x.up() || !x.size || (x.team() ? 1 : 0) == (o.team() ? 1 : 0)) continue;
+                const int dx = x.x - o.x, dy = x.y - o.y;
+                if (dx >= -1 && dx <= 1 && dy >= -1 && dy <= 1) return false;
+            }
+            return true;
+        }
+        case kAiHurt: return o.hp_max() > o.hp();
+        case kAiPerson: return o.rec[0x11A] != 0;
+        case kAiFlag: return (o.rec[0x14B] & a) != 0;
+        case kAiFlag2: return (o.flags2 & a) != 0;
+        case kAiNoFlag2: return (o.flags2 & a) == 0;
+        case kAiSize: return o.rec[kSize] == a;
+        case kAiHdBelow: return o.rec[kHd] < a;
+        default: return true;
+        }
+    };
+    int r = -1;
+    for (int k = 0; ai && k < ai->n_use && r < 0; ++k) {
+        const AiUse& u = ai->use[k];
+        bool mine = false;
+        for (uint8_t s : u.spells) mine = mine || (s && s == sp);
+        if (!mine) continue;
+        bool all = true, any = false;
+        for (int j = 0; j < 4 && u.op[j]; ++j) {
+            const bool v = test(u.op[j], u.arg[j]);
+            all = all && v;
+            any = any || v;
+        }
+        r = u.mode == 1 ? any : u.mode == 2 ? (all ? 0 : 1) : all;
+        if (u.mode == 2 && all) return ai->queen_mr ? -40 : -10;
+    }
+    if (r < 0) r = e.affect == 0 || !o.has(static_cast<uint8_t>(e.affect)) ? 1 : 0;
+    if (r <= 0 || !ai) return r;
+    if (ai->globe5 && e.level < 5 && o.has(ai->globe5)) r = 0;
+    if (ai->globe4 && e.level < 4 && o.has(ai->globe4)) r = 0;
+    if (ai->queen_mr) {
+        // (DQK.EXE 0x294A3: over 40 the tiers - over 130 none, else 1-3 - the
+        // globes' 0 forgotten)
+        if (o.magic_res > 0x28) r = o.magic_res > 0x82 ? 0 : 1;
+    } else if (o.magic_res > ai->mr_cap) {
+        r = 0;
+    }
+    return r;
+}
+
+int ai_targets(Battle& b, const Tables& t, const classes::Tables& st, int i, const FightSpell& fs, int sp, int pw,
+               create::Dice& d, int* targets, int judge)
+{
+    int n = 0;
+    Fighter& f = b.f[i];
+    const AiCast* ai = t.ai;
+    const bool pri = ai && ai->kind == 1;
+    if (fs.does == SpellDoes::NotYet || fs.does == SpellDoes::Youth || fs.does == SpellDoes::Unstone) return 0;
+    const spells::Entry e = spells::entry(st, sp);
+    const int jd = judge > 0 ? judge : sp;
+    const spells::Entry je = spells::entry(st, jd);
+    const int my = f.team() ? 1 : 0;
+    int reach = e.range == -1 ? 1 : e.range + e.range_level * pw;
+    if (reach < 1) reach = 1;
+    const int aim = e.aim & 0x0F;
+    const bool own = je.foe == 0;
+    // One pick (Curse 0x15384: the finder at its reach, a held one not for a
+    // hold; Darkness 0x2033A: the finder on the side the row names, then the
+    // use test on it)
+    auto pick = [&]() -> int {
+        if (pri) {
+            const int c = finder_reach(b, t, i, reach, own, d);
+            return c >= 0 && ai_use(b, t, st, i, sp, c, own) > 0 ? c : -1;
+        }
+        const int c = finder_reach(b, t, i, reach, false, d);
+        if (c < 0 || (held_effect(b, je.affect) && held_now(b, b.f[c]))) return -1;
+        return c;
+    };
+    if (own && !(pri && aim != 0 && aim < 8 && e.targets != spells::kParty)) {
+        // At itself / its side
+        if (fs.does == SpellDoes::Teleport) return 0;
+        if (!pri && ai_heal_spell(ai, jd)) {
+            const int c = heal_target(b, i);
+            if (c < 0) return 0;
+            targets[n++] = c;
+            return n;
+        }
+        if (e.targets == spells::kParty && fs.does != SpellDoes::Theirs) {
+            for (int c = 0; c < b.n && n < kMaxFighters; ++c)
+                if (b.f[c].up() && b.f[c].size && (b.f[c].team() ? 1 : 0) == my) targets[n++] = c;
+            return n;
+        }
+        if (aim >= 8 && aim <= 14) return in_area(b, t, f.x, f.y, e.aim & 7, targets, kMaxFighters);
+        targets[n++] = i;
+        return n;
+    }
+    if (aim == 0) {
+        targets[n++] = i;
+        return n;
+    }
+    const int tg = pick();
+    if (tg < 0) return 0;
+    if (fs.does == SpellDoes::Bolt) return bolt_line(b, t, i, b.f[tg].x, b.f[tg].y, 7, targets, kMaxFighters);
+    if ((aim >= 8 && aim <= 14) || fs.does == SpellDoes::Cloud)
+        return fs.does == SpellDoes::Cloud ? cloud_fighters(b, b.f[tg].x, b.f[tg].y, targets, kMaxFighters)
+                                           : in_area(b, t, b.f[tg].x, b.f[tg].y, e.aim & 7, targets, kMaxFighters);
+    if (aim == 15) {                        // (Curse 0x15599 +0x214: the one picked)
+        targets[n++] = tg;
+        return n;
+    }
+    if (aim == 5) {
+        // One by one (repeats lower the budget) until 2+ pass it
+        const bool by_size = fs.does == SpellDoes::Faerie;
+        int budget = by_size ? pw : d.roll(4, 2);
+        targets[n++] = tg;
+        for (int tries = 0; tries < 64 && budget > 0 && n < kMaxFighters && !picks_done(b, targets, n, budget, by_size);
+             ++tries) {
+            const int c = pick();
+            if (c < 0) break;
+            bool again = false;
+            for (int k = 0; k < n; ++k) again = again || targets[k] == c;
+            if (again) --budget;
+            else targets[n++] = c;
+        }
+        return n;
+    }
+    // (aims 1-4, 6, 7: the low nibble's two bits + 1 picks, each the finder's;
+    // a repeat uses a pick up; none found ends them)
+    int picks = (e.aim & 3) + 1;
+    int c = tg;
+    while (picks > 0 && c >= 0) {
+        bool again = false;
+        for (int k = 0; k < n; ++k) again = again || targets[k] == c;
+        if (!again && n < kMaxFighters) targets[n++] = c;
+        if (--picks > 0) c = pick();
+    }
+    return n;
+}
+
 int choose_spell(Battle& b, const Tables& t, const classes::Tables& st, int i, const FightSpell* table, int n_table,
                  create::Dice& d, int* targets, int* n_targets)
 {
     *n_targets = 0;
     Fighter& f = b.f[i];
-    uint8_t list[84];
-    int n = 0;
-    for (int k = 0; k < 84; ++k) {
-        const uint8_t v = f.rec[0x1E + k];
-        if (v && !(v & 0x80)) list[n++] = v;
-    }
-    if (!n) return 0;
-    const int rounds = d.roll(7, 1);
-    for (int r = 0, level = 7; r < rounds; ++r, --level)
-        for (int pick = 0; pick < 3; ++pick) {
-            const int sp = list[d.roll(n, 1) - 1];
+    const AiCast* ai = t.ai;
+    const int from = ai ? ai->list_from : 0, to = ai ? ai->list_to : 83;
+    if (ai && ai->kind == 1) {
+        // By priority (Darkness GAME.OVR 0x9DAD): the memorized places in use
+        // (not being memorized, castable in fights) sorted - each before the
+        // first of no higher priority -, then each in turn (one the same as
+        // the one before passed over) until one has a use (0x22831: at itself
+        // for aim 0, else anyone within its reach on the side its row names)
+        uint8_t list[84];
+        int n = 0;
+        for (int k = from; k <= to && k < 84; ++k) {
+            const uint8_t v = f.rec[0x1E + k];
+            if (!v || v >= 0x80 || !spells::entry(st, v).when) continue;
+            const int pv = spells::entry(st, v).priority;
+            int at = 0;
+            while (at < n && spells::entry(st, list[at]).priority > pv) ++at;
+            for (int j = n; j > at; --j) list[j] = list[j - 1];
+            list[at] = v;
+            ++n;
+        }
+        int chosen = 0, last = 0;
+        for (int k = 0; k < n && !chosen; ++k) {
+            const int sp = list[k];
+            if (sp == last) continue;
+            last = sp;
             const FightSpell* fs = fight_spell(table, n_table, sp);
             if (!fs || fs->does == SpellDoes::NotYet) continue;
             const spells::Entry e = spells::entry(st, sp);
-            if (e.when == 0 || e.priority < level) continue;
-            if (spell_targets(b, t, st, i, *fs, sp, power_of(f, st, sp), d, targets, n_targets)) return sp;
+            const bool own = e.foe == 0;
+            if ((e.aim & 0x0F) == 0) {
+                if (ai_use(b, t, st, i, sp, i, own) > 0) chosen = sp;
+                continue;
+            }
+            int reach = e.range == -1 ? 1 : e.range + e.range_level * power_of(f, st, sp);
+            if (reach < 1) reach = 1;
+            int in[kMaxFighters];
+            const int ni = in_area(b, t, f.x, f.y, reach, in, kMaxFighters);
+            for (int j = 0; j < ni && !chosen; ++j)
+                if (b.f[in[j]].up() && ai_use(b, t, st, i, sp, in[j], own) > 0) chosen = sp;
         }
-    *n_targets = 0;
-    return 0;
+        if (!chosen) return 0;
+        // The fighters' chance (Darkness 0xA00A): a d100 over 4 x their
+        // fighting classes' levels (a byte), then a d5 up to its priority
+        int sum = 0;
+        for (uint8_t cls : ai->fight_cls)
+            if (cls != 0xFF) sum += ai_level(f, *ai, cls);
+        if (d.roll(100, 1) <= ((sum & 0xFF) * 4 & 0xFF)) return 0;
+        if (d.roll(5, 1) > spells::entry(st, chosen).priority) return 0;
+        const FightSpell* fs = fight_spell(table, n_table, chosen);
+        *n_targets = ai_targets(b, t, st, i, *fs, chosen, power_of(f, st, chosen), d, targets);
+        return chosen;
+    }
+    // The d7 rounds (Curse GAME.OVR 0xBC46)
+    uint8_t list[84];
+    int n = 0;
+    for (int k = from; k <= to && k < 84; ++k) {
+        const uint8_t v = f.rec[0x1E + k];
+        if (v && (!ai || ai->high_too || v < 0x80)) list[n++] = v;
+    }
+    if (!n) return 0;
+    const int rounds = d.roll(7, 1);
+    int chosen = 0;
+    for (int r = 0, level = 7; r < rounds && !chosen; ++r, --level)
+        for (int pick = 0; pick < 3 && !chosen; ++pick) {
+            const int sp = list[d.roll(n, 1) - 1];
+            // (being memorized: the original reads a row past its table -
+            // never cast here)
+            if (sp & 0x80) continue;
+            const FightSpell* fs = fight_spell(table, n_table, sp);
+            if (!fs || fs->does == SpellDoes::NotYet) continue;
+            if (ai_judge(b, t, st, i, sp, level, d)) chosen = sp;
+        }
+    if (!chosen) return 0;
+    *n_targets = ai_targets(b, t, st, i, *fight_spell(table, n_table, chosen), chosen, power_of(f, st, chosen), d, targets);
+    return chosen;
 }
 
 int choose_item(Battle& b, const Tables& t, const classes::Tables& st, int i, const items::Names& names,
@@ -5965,16 +6281,15 @@ int choose_item(Battle& b, const Tables& t, const classes::Tables& st, int i, co
                                  (it[0x2E] == b.fx->items.scrolls[0] || it[0x2E] == b.fx->items.scrolls[1]));
             if (!it[0x34] || scroll || it[0x3E] >= 0x80 || !it[0x3D]) continue;
             // (Pool: the spell is the id less 0x17 over 0x38, and judged so - ovr10+04CB;
-            // Curse: the id itself, judged by the row 0x17 back)
+            // Curse: the id itself, judged by the row 0x17 back - GAME.OVR 0xBEE5)
             const int sp = magic::item_spell(it, st.lay.pool);
             const FightSpell* fs = fight_spell(table, n_table, sp);
             if (!fs || fs->does == SpellDoes::NotYet) continue;
             const int judge = sp > 0x38 ? sp - 0x17 : sp;
-            const spells::Entry e = spells::entry(st, judge);
-            if (spells::entry(st, sp).when == 0 || e.priority < level) continue;
-            if (spell_targets(b, t, st, i, *fs, sp, power_of(f, st, sp, true), d, targets, n_targets, judge)) return k;
+            if (!ai_judge(b, t, st, i, judge, level, d)) continue;
+            *n_targets = ai_targets(b, t, st, i, *fs, sp, power_of(f, st, sp, true), d, targets, judge);
+            return k;
         }
-    *n_targets = 0;
     return -1;
 }
 

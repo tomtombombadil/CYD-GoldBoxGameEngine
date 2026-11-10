@@ -8726,6 +8726,10 @@ struct SpellNames {
     char text[1];                       // (malloc'd past its end: every name and its 0)
 };
 SpellNames* spn = nullptr;
+// The Dark Queen's morale figure (DQK.EXE DS 0xC2DE, BSS): only its morale
+// routine sets it - 0 as the program starts, kept from fight to fight
+// (round 20; Battle::morale_fig)
+int queen_morale_fig = 0;
 
 void mw(int i, char* out, size_t cap)
 {

@@ -4376,4 +4376,83 @@ bool has_item_fixes(games::Game g)
     return false;
 }
 
+
+// ---- The computer's spell choice (rules round 20; the Project's
+// claude/rules_round20_facts.md; checked against each original's code run
+// in Unicorn - tools/devkit/oracles/aicast.py, rules4 aicast)
+namespace {
+using combat::AiUse;
+constexpr uint8_t kL = combat::kAiLacks, kH = combat::kAiHas, kCL = combat::kAiCasterLacks, kNF = combat::kAiNoFoeNear,
+                  kHu = combat::kAiHurt, kPe = combat::kAiPerson, kF = combat::kAiFlag, kF2 = combat::kAiFlag2,
+                  kNF2 = combat::kAiNoFlag2, kSz = combat::kAiSize, kHd = combat::kAiHdBelow;
+// Darkness / Treasures (GAME.OVR 0x2249A / 0x2A74B)
+constexpr AiUse kDarknessUse[] = {
+    {{0x01}, 0, {kL, kNF}, {0x01, 0}},           {{0x2A}, 0, {kCL}, {0x31}},
+    {{0x03, 0x3A, 0x47, 0x24}, 0, {kHu}, {0}},   {{0x60}, 1, {kPe, kF}, {0, 2}},
+    {{0x0A}, 0, {kF2, kSz}, {2, 1}},             {{0x41, 0x0F}, 0, {kL}, {0x11}},
+    {{0x15}, 0, {kHd, kL}, {5, 0x35}},           {{0x17, 0x31}, 0, {kPe, kF2, kL}, {0, 2, 0x34}},
+    {{0x25}, 0, {kH}, {0x21}},                   {{0x2B}, 0, {kH}, {0x24}},
+    {{0x2F, 0x40, 0x4A, 0x73}, 0, {kL}, {0x5D}}, {{0x33}, 0, {kL}, {0x06}},
+    {{0x4C, 0x6E}, 0, {kNF2}, {8}},              {{0x3D, 0x52}, 0, {}, {}},
+    {{0x44}, 0, {kNF2}, {0x10}},                 {{0x5E, 0x78, 0x51}, 0, {kF2}, {2}},
+    {{0x54}, 0, {kL}, {0x5C}},                   {{0x5B}, 0, {kHd}, {6}},
+};
+// Death Knights (GAME.OVR 0x22CE4)
+constexpr AiUse kKnightsUse[] = {
+    {{0x01, 0x69}, 0, {kL, kNF}, {0x01, 0}},     {{0x2A}, 0, {kCL}, {0x31}},
+    {{0x03, 0x3A, 0x47, 0x35}, 0, {kHu}, {0}},   {{0x04}, 1, {kPe, kF}, {0, 0x10}},
+    {{0x0A, 0x6A}, 1, {kF, kSz}, {2, 1}},        {{0x41, 0x0F}, 0, {kL}, {0x11}},
+    {{0x15}, 0, {kHd, kL, kL}, {5, 0x60, 0x35}}, {{0x17, 0x31}, 0, {kPe, kL, kL}, {0, 0x61, 0x34}},
+    {{0x25}, 0, {kH}, {0x21}},                   {{0x68, 0x2B}, 0, {kH}, {0x24}},
+    {{0x2F, 0x40, 0x4A, 0x6C}, 2, {kH}, {0x4C}}, {{0x33}, 0, {kL}, {0x41}},
+    {{0x4C, 0x38}, 0, {kNF2}, {8}},              {{0x3D}, 0, {kL}, {0x61}},
+    {{0x44}, 0, {kL}, {0x63}},                   {{0x6F, 0x51}, 0, {kF}, {2}},
+    {{0x52}, 0, {kL}, {0x50}},                   {{0x54}, 0, {kL}, {0x5C}},
+    {{0x5B}, 0, {kHd}, {6}},                     {{0x5E}, 0, {kL}, {0x61}},
+};
+// The Dark Queen (DQK.EXE 0x2902C, its switch's 30 spells)
+constexpr AiUse kQueenUse[] = {
+    {{0x01}, 0, {kL, kNF}, {0x01, 0}},           {{0x2A}, 0, {kCL}, {0x31}},
+    {{0x03, 0x3A, 0x47}, 0, {kHu}, {0}},         {{0x24}, 1, {kHu, kH}, {0, 0xB9}},
+    {{0x60}, 1, {kPe, kF}, {0, 2}},              {{0x0A}, 0, {kF2, kSz}, {2, 1}},
+    {{0x0F, 0x86}, 0, {kL}, {0x11}},             {{0x15}, 0, {kHd, kL, kL}, {5, 0x8D, 0x35}},
+    {{0x17, 0x31}, 0, {kPe, kL, kF2, kL}, {0, 0x8E, 2, 0x34}},
+    {{0x25}, 0, {kH}, {0x21}},                   {{0x2B}, 0, {kH}, {0x24}},
+    {{0x2F, 0x4A, 0x73, 0x85}, 0, {kL}, {0x5D}}, {{0x33}, 0, {kL}, {0x06}},
+    {{0x4C, 0x6E}, 0, {kNF2}, {8}},              {{0x44}, 0, {kNF2, kL}, {0x10, 0x8F}},
+    {{0x5E}, 0, {kF2, kL}, {2, 0x8E}},           {{0x82}, 0, {kL}, {0x8E}},
+    {{0x51, 0x78}, 0, {kF2}, {2}},               {{0x52}, 0, {kL}, {0x8A}},
+    {{0x54}, 0, {kL}, {0x5C}},                   {{0x5B}, 0, {kHd}, {6}},
+};
+constexpr combat::AiCast kAiPool = {.list_from = 0, .list_to = 20, .pool_area = true};
+constexpr combat::AiCast kAiCurse = {.list_from = 1, .list_to = 83};
+constexpr combat::AiCast kAiSecret = {.list_from = 1, .list_to = 74};
+constexpr combat::AiCast kAiGateway = {.list_from = 0, .list_to = 80, .high_too = false, .heal = {3, 58, 71}};
+constexpr combat::AiCast kAiChampions = {.list_from = 1, .list_to = 57};
+constexpr combat::AiCast kAiDarkness = {.kind = 1, .list_from = 1, .list_to = 140, .globe5 = 0x39, .globe4 = 0x3F,
+                                        .use = kDarknessUse, .n_use = sizeof kDarknessUse / sizeof kDarknessUse[0]};
+constexpr combat::AiCast kAiKnights = {.kind = 1, .list_from = 1, .list_to = 73, .fight_cls = {2, 3, 4, 7},
+                                       .raw_levels = true, .globe5 = 0x3B, .globe4 = 0x3F,
+                                       .use = kKnightsUse, .n_use = sizeof kKnightsUse / sizeof kKnightsUse[0]};
+constexpr combat::AiCast kAiQueen = {.kind = 1, .list_from = 0, .list_to = 136, .fight_cls = {2, 3, 4, 7},
+                                     .globe5 = 0x39, .globe4 = 0x3F, .queen_mr = true,
+                                     .use = kQueenUse, .n_use = sizeof kQueenUse / sizeof kQueenUse[0]};
+} // namespace
+
+const combat::AiCast* ai_cast(games::Game g)
+{
+    switch (g) {
+    case games::Game::PoolOfRadiance: return &kAiPool;
+    case games::Game::CurseOfTheAzureBonds: return &kAiCurse;
+    case games::Game::SecretOfTheSilverBlades: return &kAiSecret;
+    case games::Game::GatewayToTheSavageFrontier: return &kAiGateway;
+    case games::Game::ChampionsOfKrynn: return &kAiChampions;
+    case games::Game::PoolsOfDarkness:
+    case games::Game::TreasuresOfTheSavageFrontier: return &kAiDarkness;
+    case games::Game::DeathKnightsOfKrynn: return &kAiKnights;
+    case games::Game::DarkQueenOfKrynn: return &kAiQueen;
+    default: return nullptr;
+    }
+}
+
 } // namespace profile

@@ -316,3 +316,12 @@ graphics and GOG / publisher art: scratch only, never the repo):
                          the card is 13.5 MB), the Game menu's tabs. Shot names are cut at 23 characters by the
                          firmware's buffer. Not possible there: the Journal PDF book (the PDF + game past the card),
                          anything that saves.
+
+Round 20 (2026-11-10) - the computer's spell choice:
+  oracles/emu16.py       runs ONE routine of an original's 16-bit code in Unicorn (helpers stubbed by int 0x30 / retf);
+                         needs a python with unicorn: python3 -m venv /tmp/claude-0/uvenv &&
+                         /tmp/claude-0/uvenv/bin/python -m pip install unicorn
+  oracles/aicast.py      the by-priority games' per-target spell use test (Darkness, Treasures, Death Knights, the Dark
+                         Queen) run for every spell on ~160 states each -> oracle_aicast_<game>.txt (+ their spell rows);
+                         rules4 ONLY=aicast compares the engine (combat::ai_use, the chooser, the d7 games' judge)
+  verify20.sh            round 19's batch + aicast.py (UPY=the unicorn python)

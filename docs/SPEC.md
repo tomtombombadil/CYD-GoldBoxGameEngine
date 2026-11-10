@@ -3547,3 +3547,33 @@ the game's Settings (As Original: all of them).
   its 0xFF-class garbage also sets Protection from Good's and Bestow
   Curse's durations; its packed levels' cap of 31 (charms, clouds,
   Prayer) is moot (no caster past 31 casts them).
+  Round 20's (no new Game Fixes - AI choices, not AD&D rules): the
+  computer's spells are each original's. PoolRad, Curse, Secret,
+  Gateway, Champions: d7 rounds of three random picks judged by the
+  spell's row - priority (byte 13) reaching the round's level; a heal
+  spell (3; Gateway 3 / 58 / 71) with no one hurt near it is judged as
+  one at the enemy and, chosen, finds no target: "Spell Aborted", the
+  spell lost, the turn over (a monster cleric can waste its Cure Light
+  Wounds); a spell for itself (byte 14 = 0) always a use; else any enemy
+  within reach, seen or not, and with an area (byte 15) no friend near
+  ANY candidate failing a save (byte 8 = 1: friends not asked; PoolRad:
+  any friend there, no save); the memorized list skips place 0 in all
+  but PoolRad and Gateway (Secret's / Champions' monsters list a spell
+  there that the computer never casts); places being memorized are
+  picked but never cast (the originals read a row past their tables).
+  Darkness, Treasures, Death Knights, the Dark Queen: the memorized
+  spells sorted by priority, the first with a use (each game's own
+  per-spell tests - checked against the originals' routines run in
+  Unicorn), then a d100 over 4 x the fighting classes' levels (fighter,
+  paladin, ranger; the Krynn games' knight too) and a d5 up to its
+  priority - else no spell this turn; the Dark Queen's magic resistance
+  over 40 decides by tiers (over 130 no use) and forgets the globes'
+  test. The targets: the finder at the spell's reach (not the target
+  kept), twice 20 tries (Darkness / Treasures a scan from a random
+  place, the Queen its own); the by-priority games' single target must
+  pass the use test, else aborted; aim 15 is one target. Ours: a spell
+  with a casting time that finds no target aborts at once (the
+  originals abort as it goes off); the by-priority games' area spells
+  still centre on the finder's pick (their area finder, Darkness
+  GAME.OVR 0x22976, not followed - TODO); the Dark Queen's morale figure
+  is kept from fight to fight (0 at the start, as its BSS) - follows.
