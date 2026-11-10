@@ -3391,10 +3391,11 @@ const Profile kProfiles[] = {
                .title = kP | 0xB5A8, .heading = kP | 0xB5D1, .yes = 0x3430D, .no = 0x34314, .cursed = 0x25099,
                .wrong_class = 0x250A6, .already = 0x250B2, .hands_full = 0x250C1, .plural_s = 0x35ABD,
                // (its stats' recalculation - GAME.OVR Darkness 0x3307E, Treasures
-               // 0x3CD87 - keeps Intelligence / Wisdom at 3 while effect 0x44
-               // lasts; round 15. It checks Secret's other four too - 0x26,
-               // 0x71, 0x0C / 0x3E / 0x0E - not followed yet)
-               .stat_fx = {0, 0, 0, 0, 0x44, 0},
+               // 0x3CD87: Secret's - Strength 0x26 (an 18/xx for current
+               // fighter levels only), giant strength 0x71, Enlarge 0x0C,
+               // Charisma + Friends' 0x0E, Intelligence / Wisdom 3 while 0x44
+               // lasts, Constitution 20+ the healing 0x3E; rounds 15 / 16)
+               .stat_fx = {0x26, 0x71, 0x0C, 0x0E, 0x44, 0x3E},
                // (the treasure's Detect: spell 77, its effect 5 - facts_shops.md 4)
                .detect = {5, 0x4D, 0, 0},
                // (Sell's prices as Secret's - facts_shops.md 2.2)
@@ -3404,7 +3405,7 @@ const Profile kProfiles[] = {
                // ITEM0.DAX block 1; the random scroll's spells by DS 0x651A + 16 s;
                // the temple's 11 cures by spell number (DS 0x08CC)
                .goods_first = 0x0001, .goods_last = 0x000C, .goods_rows = 0x0017, .spell_class = 0x651A,
-               .rows_file = "ITEM0.DAX", .temple_spells = 0x08CC},
+               .rows_file = "ITEM0.DAX", .temple_spells = 0x08CC, .str_fighter_now = true},
      // Character rules (darkness_facts.md 37): the tables in Darkness's
      // shapes (classes::Layout dk, with Secret's rules otherwise - secret):
      // spells 0x6519 (127), THAC0 0x6D18, class flags / masks, last hit die,
@@ -3831,10 +3832,11 @@ const Profile kProfiles[] = {
                .title = kP | 0xDB68, .heading = kP | 0xDB92, .yes = 0x3E18C, .no = 0x3E193, .cursed = 0x2D513,
                .wrong_class = 0x2D520, .already = 0x2D52C, .hands_full = 0x2D53B, .plural_s = 0x3FAB9,
                // (its stats' recalculation - GAME.OVR Darkness 0x3307E, Treasures
-               // 0x3CD87 - keeps Intelligence / Wisdom at 3 while effect 0x44
-               // lasts; round 15. It checks Secret's other four too - 0x26,
-               // 0x71, 0x0C / 0x3E / 0x0E - not followed yet)
-               .stat_fx = {0, 0, 0, 0, 0x44, 0},
+               // 0x3CD87: Secret's - Strength 0x26 (an 18/xx for current
+               // fighter levels only), giant strength 0x71, Enlarge 0x0C,
+               // Charisma + Friends' 0x0E, Intelligence / Wisdom 3 while 0x44
+               // lasts, Constitution 20+ the healing 0x3E; rounds 15 / 16)
+               .stat_fx = {0x26, 0x71, 0x0C, 0x0E, 0x44, 0x3E},
                // (the treasure's Detect: spell 77, its effect 5 - facts_shops.md 4)
                .detect = {5, 0x4D, 0, 0},
                // (Sell's prices as Secret's - facts_shops.md 2.2)
@@ -3844,7 +3846,7 @@ const Profile kProfiles[] = {
                // 0xFF (goods_runs; rows of ITEM0.DAX block 1); the random scroll's
                // spells by DS 0x578A + 16 s; the temple's cures (DS 0x08E0)
                .goods_first = 0, .goods_last = 0, .goods_rows = 0, .spell_class = 0x578A,
-               .rows_file = "ITEM0.DAX", .temple_spells = 0x08E0, .goods_runs = true},
+               .rows_file = "ITEM0.DAX", .temple_spells = 0x08E0, .goods_runs = true, .str_fighter_now = true},
      // Character rules (treasures_facts.md 6): Darkness's tables byte for byte
      // at Treasures' places - spells 0x5789, THAC0 0x5F98, flags 0x6032, masks
      // 0x603A (a 0 for the monk), ... class records 0x6436, saves 0x6C83; the

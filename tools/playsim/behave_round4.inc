@@ -2523,6 +2523,122 @@ void feeblemind()
     }
 }
 
+// The stats' recalculation's effects (round 16): oracle_statfx_<game>.txt
+// from GAME.OVR (tools/devkit/oracles/statfx.py - Secret 0x374A8, Darkness
+// 0x3307E, Treasures 0x3CD87: the Strength effects in order, the levels
+// that make an 18/xx, Constitution's effect, Charisma's, Intelligence /
+// Wisdom's). Each made on a character with rules::stats: Strength 16 + 4 by
+// the first (18/20 for those levels, else 18), giant 21, Enlarge 18/50,
+// Charisma + 3, the healing on at 20 (its minutes) and off under it,
+// Intelligence / Wisdom set
+void stat_effects()
+{
+    const int g = game();
+    if (g != 3 && g != 4 && g != 9) return;
+    static const char* kName[] = {"", "poolrad", "curse", "secret", "darkness", "champions", "knights", "queen", "gateway", "treasures"};
+    char path[256];
+    snprintf(path, sizeof path, "%s/oracle_statfx_%s.txt", getenv("ORACLE_DIR") ? getenv("ORACLE_DIR") : "/tmp/claude-0/bt", kName[g]);
+    FILE* fo = fopen(path, "r");
+    if (!fo) {
+        expect(P, "the stats' effects: oracle_statfx (tools/devkit/oracles/statfx.py)", false, "%s missing", path);
+        return;
+    }
+    unsigned str[3] = {}, con[4] = {}, cha = 0, iw[2] = {};
+    std::vector<unsigned> ftr;
+    bool has_iw = false;
+    char line[200];
+    while (fgets(line, sizeof line, fo)) {
+        if (sscanf(line, "str %x %x %x", &str[0], &str[1], &str[2]) == 3) continue;
+        if (sscanf(line, "con %x %u %u %x", &con[0], &con[1], &con[2], &con[3]) == 4) continue;
+        if (sscanf(line, "cha %x", &cha) == 1) continue;
+        if (sscanf(line, "intwis %x %u", &iw[0], &iw[1]) == 2) {
+            has_iw = true;
+            continue;
+        }
+        if (!strncmp(line, "fighter ", 8)) {
+            char* q = line + 8;
+            unsigned v;
+            int used;
+            while (sscanf(q, "%x%n", &v, &used) == 1) {
+                ftr.push_back(v);
+                q += used;
+            }
+        }
+    }
+    fclose(fo);
+    const rules::ItemFacts& f = d->facts;
+    // the game record's level places: current / former (class k at + k)
+    const unsigned cur0 = g == 3 ? 0x111 : 0x151, old0 = g == 3 ? 0x118 : 0x158;
+    int n = 0, bad = 0;
+    char first[200] = "";
+    auto check = [&](const char* what, int got, int want) {
+        ++n;
+        if (got != want && !bad++) snprintf(first, sizeof first, "%s: %d, want %d", what, got, want);
+    };
+    party::Character c = pt->m[0];
+    auto fresh = [&]() {
+        c.n_items = 0;
+        c.n_affects = 0;
+        for (int k = 0; k < 16; ++k) c.rec[0x109 + k] = 0;
+        c.rec[0x10] = 16;
+        c.rec[0x1D] = 0;
+        c.rec[0x12] = c.rec[0x14] = 15;
+        c.rec[0x18] = 15;
+        c.rec[0x1A] = 10;
+    };
+    char what[96];
+    for (int old = 0; old < 2; ++old)
+        for (int k = 0; k < 8; ++k) {
+            fresh();
+            c.rec[(old ? 0x111 : 0x109) + k] = 5;
+            add_aff(c, str[0], 0, 104);
+            rules::stats(c, f);
+            bool fighter = false;
+            for (unsigned o : ftr) fighter = fighter || o == (old ? old0 : cur0) + static_cast<unsigned>(k);
+            snprintf(what, sizeof what, "Strength 0x%02X +4, %s level of class %d", str[0], old ? "a former" : "a", k);
+            check(what, c.rec[0x11] * 1000 + c.rec[0x1C], fighter ? 18020 : 18000);
+        }
+    fresh();
+    add_aff(c, str[1], 0, 121);
+    rules::stats(c, f);
+    snprintf(what, sizeof what, "giant strength 0x%02X (21)", str[1]);
+    check(what, c.rec[0x11], 21);
+    fresh();
+    add_aff(c, str[2], 0, 51);
+    rules::stats(c, f);
+    snprintf(what, sizeof what, "Enlarge 0x%02X (18/50)", str[2]);
+    check(what, c.rec[0x11] * 1000 + c.rec[0x1C], 18050);
+    fresh();
+    add_aff(c, cha, 0, 3);
+    rules::stats(c, f);
+    snprintf(what, sizeof what, "Charisma 0x%02X + 3", cha);
+    check(what, c.rec[0x1B], 13);
+    fresh();
+    c.rec[0x18] = static_cast<uint8_t>(con[1]);
+    rules::stats(c, f);
+    int k = -1;
+    for (int j = 0; j < c.n_affects; ++j)
+        if (c.affects[j][0] == con[0]) k = j;
+    snprintf(what, sizeof what, "Constitution %u: effect 0x%02X for %u minutes", con[1], con[0], con[2]);
+    check(what, k >= 0 ? c.affects[k][1] | c.affects[k][2] << 8 : -1, static_cast<int>(con[2]));
+    c.rec[0x18] = static_cast<uint8_t>(con[1] - 1);
+    rules::stats(c, f);
+    k = -1;
+    for (int j = 0; j < c.n_affects; ++j)
+        if (c.affects[j][0] == con[0]) k = j;
+    snprintf(what, sizeof what, "Constitution %u: effect 0x%02X gone", con[1] - 1, con[0]);
+    check(what, k, -1);
+    if (has_iw) {
+        fresh();
+        add_aff(c, iw[0], 0, 9);
+        rules::stats(c, f);
+        snprintf(what, sizeof what, "Intelligence / Wisdom while 0x%02X", iw[0]);
+        check(what, c.rec[0x13] * 100 + c.rec[0x15], static_cast<int>(iw[1] * 101));
+    }
+    expect(P, "the stats' recalculation's effects as the original's (oracle_statfx: Strength's three, the 18/xx levels, Constitution, Charisma, Intelligence / Wisdom)",
+           bad == 0 && str[0] && !ftr.empty(), "%d of %d wrong (%s)", bad, n, first);
+}
+
 // The Dark Queen's to-hit hooks (round 16): oracle_qhooks.txt from DQK.EXE
 // (tools/devkit/oracles/qhooks.py - its hook switch 0x7202's events 0xA, the
 // attacker's effects, 0x10, the target's, and 0xB, the target's AC after its
@@ -2856,6 +2972,7 @@ void run()
     if (want("qpages")) queen_pages();
     if (want("qlost")) queen_lost();
     if (want("qhooks")) queen_hooks();
+    if (want("statfx")) stat_effects();
     if (want("restore")) restore();
     if (want("rest")) rest();
     rules::set_fixes(true);

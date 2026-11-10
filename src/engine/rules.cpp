@@ -271,7 +271,8 @@ void stats(party::Character& c, const ItemFacts& f)
                 if (v <= 18 && str00 < 100) {
                     b += v;
                     if (b > 18) {
-                        const bool fighter = r[0x10B] || r[0x113] || r[0x10C] || r[0x114] || r[0x10D] || r[0x115];
+                        const bool fighter = r[0x10B] || r[0x10C] || r[0x10D] ||
+                                             (!f.str_fighter_now && (r[0x113] || r[0x114] || r[0x115]));
                         if (fighter) {
                             // (the original adds to the 18/xx in use, so it grows with each
                             // recalculation; the engine recalculates far more often: from what

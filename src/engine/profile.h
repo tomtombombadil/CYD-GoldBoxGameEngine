@@ -425,6 +425,7 @@ struct Profile {
         // (words.at: the table's word 1, 4 bytes a word; the pointers' offsets
         // in the data segment at data_base; words.stride unused)
         bool        words_far = false;
+        bool        str_fighter_now = false;       // (rules::ItemFacts::str_fighter_now; with stat_fx)
     } items;
 
     // Character rules (making and training characters): the rule tables in
