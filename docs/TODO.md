@@ -138,6 +138,15 @@ the Project as claude/TODO.md.
 
 ## Claude
 
+- [x] Sweeps' order (Tom, 2026-11-10, v0.194.1: "It should proceed like
+      single attacks one after the other"): each blow was already its own
+      attack (attack frame, roll, damage, fall, skull + death sound, the
+      icon gone, then the next - traced in PoolRad and Curse fights), but
+      at a fast Speed the blows' pages went by unseen (PoolRad speed 1:
+      450 ms; speed 0: none). Each blow's last page now stays at least
+      1 s before the next (Readable Messages). Tom: say if what you saw
+      was something else (and your Speed setting).
+
 - [x] Messages too quick to read (Tom, 2026-11-10, PoolRad's training
       "Not Enough Experience"; v0.194.0): Readable Messages (CYD_READ_TIME,
       Settings key, on) - the menu line's notes, camp spell lines, the

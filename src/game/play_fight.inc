@@ -2163,9 +2163,16 @@ void page_fx(pic::Canvas& c)
         if (fx_begin(c, p.fx[fg->fx_at])) return;
         ++fg->fx_at;
     }
-    fg->until = plat::now_ms() + game_delay_ms() * 2;
+    // (a sweep's blow done - its last page, the next blow after it: at
+    // least Readable Messages' second, as a single attack's last page
+    // stays until the next turn; Tom, 2026-11-10: "It should proceed like
+    // single attacks one after the other" - at Speed 0 the blows' pages
+    // went by unseen, the skulls alone showing)
+    const bool blow_end = fg->sweep_by >= 0 && fg->at >= fg->pages;
+    const uint32_t wait = blow_end ? read_ms(2) : game_delay_ms() * 2;
+    fg->until = plat::now_ms() + wait;
     if (!fg->until) fg->until = 1;
-    CYD_TEST_FX(PageWait, game_delay_ms() * 2, 0);
+    CYD_TEST_FX(PageWait, wait, 0);
 }
 
 // The running picture done (or cut short by a tap): the field put back

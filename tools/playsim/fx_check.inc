@@ -59,6 +59,31 @@ bool pause_on = false, wait_on = false;
 void hook(play::FxEv ev, uint32_t wait, int n)
 {
     using namespace play;
+    if (getenv("FXLOG")) {
+        static const char* const kNames[] = {"Page", "Frame", "PageWait", "AttackPause", "FieldBack", "SweepBlow", "Quick", "RollsClear"};
+        std::string line;
+        if (ev == FxEv::Page && fg && n >= 0 && n < fg->pages) {
+            const Page& p = fg->page[n];
+            for (int k = 0; k < p.lines; ++k) line += std::string(fg->ptext + p.line_at[k]) + " / ";
+        }
+        if (const char* dir = getenv("FXSHOT")) {
+            // (the canvas at each event of a sweep and after: FXSHOT=dir)
+            static int shot = 0, left = 0;
+            if (ev == FxEv::SweepBlow && n == 1) left = 400;
+            if (left > 0 && ev != FxEv::RollsClear) {
+                --left;
+                char fn[256];
+                snprintf(fn, sizeof fn, "%s/fx_%04d_%s.pgm", dir, shot++, kNames[static_cast<int>(ev)]);
+                if (FILE* f = fopen(fn, "wb")) {
+                    fprintf(f, "P5 320 200 15\n");
+                    for (int y = 0; y < 200; ++y)
+                        for (int x = 0; x < 320; ++x) fputc(C.get(x, y), f);
+                    fclose(f);
+                }
+            }
+        }
+        printf("  fx %u %s wait %u n %d snd %d %s\n", static_cast<unsigned>(g_now), kNames[static_cast<int>(ev)], static_cast<unsigned>(wait), n, (ev == FxEv::Page && fg && n >= 0 && n < fg->pages) ? fg->page[n].sound : -1, line.c_str());
+    }
     if (!fg || !on) return;
     for (int i = 0; i < fg->b.n && i < combat::kMaxFighters; ++i)
         if (fg->b.f[i].up() && fg->b.f[i].size) last_size[i] = fg->b.f[i].size;

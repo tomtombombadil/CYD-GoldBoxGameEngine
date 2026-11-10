@@ -265,6 +265,9 @@ static void sweep_fightfuzz(unsigned seed, int fights)
         // fighter's blow sweeps them (fx_check F3: a sweep's frames in order)
         if (getenv("FUZZSWEEP"))
             for (int i = b.party_size; i < b.n; ++i) b.f[i].rec[0xE5] = 0;
+        // (FUZZSWEEPLV=n: the party's attack level n - a level 1 party sweeps nothing)
+        if (getenv("FUZZSWEEPLV"))
+            for (int i = 0; i < b.party_size; ++i) b.f[i].rec[0xDD] = static_cast<uint8_t>(atoi(getenv("FUZZSWEEPLV")));
     };
     ff::list_monsters();
     printf("  %zu monsters\n", ff::mons.size());

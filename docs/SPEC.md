@@ -2784,7 +2784,9 @@ a PC, PortMaster handhelds):
     words, a script's pause after its text, PoolRad's treasure Detect
     lines) stays at least 1 s (`play::read_ms`, kReadMs), or until a tap.
     The originals' delay: Speed x 100 ms (PoolRad x 225) - none at speed 0.
-    Fights keep the Speed setting (the player's own choice). Checked by
+    Fights keep the Speed setting (the player's own choice), but a
+    sweep's blow - its last page - stays 1 s before the next blow (Tom,
+    2026-11-10: each blow seen as a single attack is). Checked by
     sweep's `flashcheck` (tools/playsim/flash_check.inc, devkit
     flashcheck.sh: text rows wiped under 1 s with no input; READTIME=0 the
     originals' timing).
