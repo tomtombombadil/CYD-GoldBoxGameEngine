@@ -138,10 +138,15 @@ the Project as claude/TODO.md.
 
 ## Claude
 
-- [ ] Sweeps' order (Tom, 2026-11-10): "It should proceed like single
-      attacks one after the other" - v0.194.1's longer wait was wrong
-      (Tom: the pace is the Speed option's; reverted v0.194.2). Find what
-      differs from single attacks.
+- [ ] Sweeps' order (Tom, 2026-11-10, 5.0", PoolRad, Podol Plaza goblins:
+      one swing, the first skull, then all the swept goblins gone at once,
+      no more sounds or rolls). Not reproduced: Tom's own party (his save
+      G, speed 1) in the playsim's fights (12 sweeps) and in the REAL 5.0"
+      firmware in QEMU (runat 85F9 + "runat FFFF" = all Quick; the
+      emulator build logs each page / event with its time) - every blow
+      its own attack pause, roll, hit page, fall + skull, field put back,
+      then the next. Asked Tom for his firmware version and how he
+      attacks (Aim / Target, a step into the goblin, Quick).
 
 - [x] Messages too quick to read (Tom, 2026-11-10, PoolRad's training
       "Not Enough Experience"; v0.194.0): Readable Messages (CYD_READ_TIME,

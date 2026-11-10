@@ -764,6 +764,10 @@ void (*g_fx_hook)(FxEv ev, uint32_t wait, int n) = nullptr;
     do {                                                                         \
         if (g_fx_hook) g_fx_hook(FxEv::ev, static_cast<uint32_t>(wait), (n));     \
     } while (0)
+#elif defined(CYD_QEMU)
+// (the emulator: the fight's events on the serial log with their times)
+#define CYD_TEST_FX(ev, wait, n) \
+    plat::log("[fx %u] " #ev " %u %d\n", static_cast<unsigned>(plat::now_ms()), static_cast<unsigned>(wait), static_cast<int>(n))
 #else
 #define CYD_TEST_FX(ev, wait, n) \
     do {                         \
@@ -2188,7 +2192,11 @@ void page_over(pic::Canvas& c)
     if (fg->cur >= 0 && fg->b.f[fg->cur].up()) mark(c, fg->cur);
 }
 
+#if defined(CYD_QEMU)
+bool log_pages = true;                   // (the emulator: each page on the serial log, its time)
+#else
 bool log_pages = false;                  // (the playsim's PAGELOG: each page's lines printed)
+#endif
 
 // "To Hit: 17+2=19" (the short label when the long one makes it over the
 // panel's 16 columns)
@@ -2247,7 +2255,7 @@ void show_page(pic::Canvas& c)
     page_over(c);
     CYD_TEST_FX(Page, 0, fg->at);
     const Page& p = fg->page[fg->at++];
-    if (log_pages) plat::log("[page] %s %s %s\n", p.lines > 0 ? page_line(p, 0) : "", p.lines > 1 ? page_line(p, 1) : "",
+    if (log_pages) plat::log("[page %u] %s %s %s\n", static_cast<unsigned>(plat::now_ms()), p.lines > 0 ? page_line(p, 0) : "", p.lines > 1 ? page_line(p, 1) : "",
                                  p.lines > 2 ? page_line(p, 2) : "");
     if (p.sound) sfx(p.sound);
     if (p.weapon) {

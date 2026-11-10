@@ -16482,6 +16482,18 @@ bool cheat_open(int which, pic::Canvas& c)
 #if defined(CYD_QEMU)
 bool qemu_run_at(uint16_t addr, pic::Canvas& c)
 {
+    // ("runat FFFF" in a fight: the whole party on Quick - a fight's sweeps
+    // watched in the emulator)
+    if (addr == 0xFFFF) {
+        if (!fg) return false;
+        for (int i = 0; i < fg->b.party_size; ++i) fg->b.f[i].quick = true;
+        if (fg->st == FSt::Menu) {          // (the one at its menu now: as its Quick word)
+            fg->st = FSt::Ai;
+            fg->until = plat::now_ms() + 200;
+            clear_menu_line(c);
+        }
+        return true;
+    }
     if (!d || !vm || !pt || !cheats_ready_in()) return false;
     cursor_hide();
     anim_stop();

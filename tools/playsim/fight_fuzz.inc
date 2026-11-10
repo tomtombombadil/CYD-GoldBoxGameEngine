@@ -120,6 +120,15 @@ void party_turn()
 {
     using namespace play;
     const int r = fpick(100);
+    if (getenv("FXLOG")) {
+        printf("  menu [%s] at", menu.s);
+        for (int k = 0; k < menu.count; ++k) {
+            int col = 0, row = 0;
+            text::item_cell(menu, k, &col, &row);
+            printf(" %d,%d", col * 8 + 2, row * 8 + 2);
+        }
+        printf("\n");
+    }
     char t[24];
     snprintf(t, sizeof t, " r%d:%d:", fg->b.round, fg->cur);
     steps += t;
@@ -297,6 +306,7 @@ static void sweep_fightfuzz(unsigned seed, int fights)
             problem(t);
             break;
         }
+        if (getenv("FXLOG")) printf("  the save's speed %d\n", vm ? vm->get(0x4BFC) & 0xFF : -1);
         const ff::Mon m = ff::mons[ff::fpick(static_cast<int>(ff::mons.size()))];
         const int copies = 1 + ff::fpick(6);
         play::rng = create::Dice(fs);
@@ -306,7 +316,23 @@ static void sweep_fightfuzz(unsigned seed, int fights)
         fc::ctx = t;
         ff::steps.clear();
         // (FUZZOWN=1: the saved game's own fight, its monsters as they are - Pool's goblins: sweeps)
-        if (getenv("FUZZOWN") ? !start_fight() : !start_fight(m.area, m.id, copies)) {
+        // (FUZZWALK=1: no fight made - the party walks where the save stands
+        // until the game's own encounter starts one: Tom's Podol Plaza goblins)
+        auto walk_to_fight = [&]() {
+            static const play::Act acts[] = {play::Act::Forward, play::Act::Forward, play::Act::Forward,
+                                             play::Act::TurnLeft, play::Act::TurnRight};
+            for (int st = 0; st < 3000 && !play::fg; ++st) {
+                if (play::walking()) play::act(acts[ff::fpick(5)], C);
+                else if (play::menu.count > 0) tap_item(ff::fpick(play::menu.count));
+                else play::tap(2, 2, C);
+                for (int t = 0; t < 10 && !play::fg; ++t) {
+                    g_now += 20;
+                    play::tick(g_now, C);
+                }
+            }
+            return play::fg != nullptr;
+        };
+        if (getenv("FUZZWALK") ? !walk_to_fight() : getenv("FUZZOWN") ? !start_fight() : !start_fight(m.area, m.id, copies)) {
             ++skipped;
             continue;
         }
