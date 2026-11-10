@@ -138,6 +138,11 @@ the Project as claude/TODO.md.
 
 ## Claude
 
+- [ ] Party view class / level line (Tom, 2026-11-10: class + level left,
+      status right; mockup sent, waiting for his approval of the
+      abbreviations C D F P R MU T K M, the fallback order, and how a
+      dual-classed human shows). Not coded until he approves.
+
 - [ ] Screenshot findings (2026-11-10, S3 QEMU shots): (1) Darkness on
       480x320 - a tap on the Companion panel leaves the 3D view drawn
       with the left wall missing (a white wedge) until Area is toggled
