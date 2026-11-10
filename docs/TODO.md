@@ -141,9 +141,11 @@ the Project as claude/TODO.md.
 - [ ] 5.0" Companion strip (Tom, 2026-11-10; mockup sent, waiting for
       his go): a Settings switch (5.0" only) - the 640x480 game against
       the left edge, a 160 x 480 strip at the right drawn 1:1 with the
-      4.0" panel's layout: Party on top (6 members 167 px, 8 219),
-      Map at the bottom (Battle there in a fight; 200 px). Open: what the
-      Map key under the game does then; taps on the strip.
+      4.0" panel's layout: Party on top (y 0-218, room for 8 members),
+      Map from y 220 (Battle there in a fight; 200 px), y 421-479 kept
+      for Companion buttons still to be designed (Tom). Open: the
+      buttons; what the Map key under the game does then; taps on the
+      strip.
 
 - [ ] With the next firmware change (Tom, 2026-11-10, not a release of its
       own): the Party view's short statuses without full stops (Unc, Par,
