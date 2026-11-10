@@ -281,6 +281,25 @@ Round 18 (2026-11-10): the computer at moves 0, its guard, the Dark Queen's find
   Champions 51/0, Knights 48/0, Queen 59/0; budgets (bytes) Curse 133721, PoolRad 135372, Darkness 149829,
   Champions 135928, Knights 135938, Queen 143244, Treasures 151918.
 
+
+Round 19 (2026-11-10): the Dark Queen's step and Yell, every original's step-routine tests
+  oracles/qstep.py [DQK.EXE]  oracle_aistep_queen.txt in aistep.py's format: its rows (DS 0x5DB4, "stride 6",
+                              rowbytes - the 7 rows' columns 1-5), the flee's way (+ 1), the cost test, its
+                              clouds (0x1D / 0x1C / 0x1B: effects, driven, flags 2 - no saves), and the lines below
+  oracles/aistep.py           + npc <control byte> fig <ds> health <ds> side1 (the step routine's NPC d100;
+                              none in PoolRad), mage class <off> armour <0|1> then <guard|dual|keep> (Secret's
+                              dual-class test, Gateway's distance), morale fig <ds> cap <0|1> (the 102 test)
+  oracles/yell.py [games]     oracle_yell_<game>.txt (champions knights queen): the Yell's tests - Intelligence
+                              over 3, the held routine (the guard routine's own: guard_same), the save after it
+                              (run guard.py first)
+  rules4 ONLY=aimood          now the Dark Queen too, + step19 (the NPC test at d100 40 / 55 with figure 10 and
+                              health 60, a monster's, the magic-user's rule per game, the morale figure of a
+                              control 0xC0); ONLY=yell (Champions, Death Knights, the Dark Queen)
+  verify19.sh                 the round's batch (verify18's + qstep.py / yell.py) -> $V/summary.txt
+  Baselines: rules4 full PoolRad 43/0, Curse 46/0, Secret 41/0, Darkness 45/0, Gateway 41/0, Treasures 47/0,
+  Champions 53/0, Knights 50/0, Queen 66/0; budgets (bytes) Curse 133729, PoolRad 135380, Darkness 149747,
+  Champions 135936, Knights 135946, Queen 143252, Treasures 151926.
+
 Screenshots (2026-11-10, Tom: real firmware pictures for the README - he picks them; the PNGs show game
 graphics and GOG / publisher art: scratch only, never the repo):
   shots_scan.sh qemu28:box qemu35:box qemu28:icon qemu35:icon

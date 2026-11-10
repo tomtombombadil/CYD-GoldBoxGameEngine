@@ -2048,7 +2048,14 @@ constexpr combat::Facts kQueenFightFacts = {.held = {0x33, 0x34, 0x35, 0x1F}, .b
                        .stun = 0x6A},
                 .race = {0x5E, 0x12, 0x1A, 0x07, 0x2F, 0x30, 0x69, true},
                 .items = {.displace = 0x59, .ring_invisible = 0x38, .fire_ring = 0x3D},
-                .berserk = 0x6B, .dk = {.dragon_fear = 0x64, .feared = 0x78}, .taunted = 0x8C, .feeble_lost = true, .feeble_direct = true,
+                .berserk = 0x6B,
+                // (its clouds - round 19: Darkness's grounds, Stinking Cloud 0x1D,
+                // Cloudkill 0x1C, Blade Barrier 0x1B - its handler DQK.EXE
+                // 0x56102; the knives' 8d8, 0x8310 - the engine had laid
+                // ground 0x1E for the stinking cloud and 0 (off the field) for
+                // the knives)
+                .cloud_ground = 0x1D, .poison_ground = 0x1C,
+                .dk = {.knives = 0x1B, .knife_n = 8, .knife_sides = 8, .dragon_fear = 0x64, .feared = 0x78}, .taunted = 0x8C, .feeble_lost = true, .feeble_direct = true,
                 // (taunted 0x8C - round 18: its Yell DQK.EXE 0x5FDB0 gives it,
                 // its finder's list 0x24550 and the finder 0x28BF8 ask it;
                 // Death Knights' 0x5B is its lightning breath here)
@@ -2289,6 +2296,20 @@ constexpr auto kQueenFight = [] {
     // first 0x2DE39 with no target, before its dice: round 18)
     f.tables.finder_queen = true;
     f.tables.finder_first = true;
+    // (its step - round 19, DQK.EXE 0x2E4C0 / its try 0x2E248: the mood rows
+    // DS 0x5DB4, 6 bytes a row; a run's way from the party's facing + 1 as
+    // Darkness's; the cost strictly under the moves; its clouds: the
+    // stinking one (0x1D) taken with 0x1E, 0xA0, 0x8F, 0x3F or 0x39, driven
+    // or flags 2 & 0x18, Cloudkill's (0x1C) with 0x39 or 0x8F, driven or
+    // flags 2 & 0x10, the knives (0x1B) driven only - no saves)
+    f.tables.mood_rows = 0x5DB4;
+    f.tables.mood_stride = 6;
+    f.tables.mage_rule = 2;             // (0x2E5F0: class word 5, no armour test)
+    f.tables.morale_cap = false;        // (0x2EF8A: no 102 test)
+    f.tables.flee_inc = 1;
+    f.tables.clouds[0] = {1, {0x1E, 0xA0, 0x8F, 0x3F, 0x39}, 0x18, true, false, false};
+    f.tables.clouds[1] = {2, {0x39, 0x8F}, 0x10, true, false, false};
+    f.tables.clouds[2] = {3, {}, 0, true, false, false};
     for (int i = 0; i < kFightWords; ++i) f.words[i] = kQueenFightWords[i];
     // (a damage text's fall, res 0x8F04: "Goes Down" 0x19B - the hit's own
     // "goes down" is 0x5B8B - and "%s and is Dying" 0x1A5)
@@ -2604,7 +2625,7 @@ const Profile kProfiles[] = {
      // table's place, no terrain table (Pool's outdoor fields are made by
      // code), turn undead at DS 0x0447; the effects Pool has (the same
      // number often means something else in Pool: those are 0 here)
-     .fight = {{0x2744, 0x02D2, 0x02E2, 0x02F2, 0x02F6, 0x02FE, 0x0306, 0, 0x0447, 0x0342, 10, 0, 0, 0x02AE, 0, true, {{1, {0x20, 0x1E, 0x6F, 0x7D}, 0, false, false, false}}},
+     .fight = {{0x2744, 0x02D2, 0x02E2, 0x02F2, 0x02F6, 0x02FE, 0x0306, 0, 0x0447, 0x0342, 10, 0, 0, 0x02AE, 0, true, {{1, {0x20, 0x1E, 0x6F, 0x7D}, 0, false, false, false}}, false, false, false, 5, false, 2, true},
                {0xE3EF, 0x9E00, 0x9E06, 0x9E10, 0x9E15, 0x9E1B, 0x9E21, 0xA1BB, 0xA1D8, 0, 0xA537, 0x15264, 0x15270,
                 0x15278, 0x1528A, 0x15296, 0xA605, 0xA60C, 0xA618, 0xA621, kP | 0x321D, 0xA8D6, 0xA8E2, 0xA8E8, 0xA8F0,
                 0xA8F8, 0x12A2D, 0x12A39, 0x12A48, 0x12A50, 0x12A5F, 0x12A73, 0x12A80, 0x12A88, 0x12A91, 0x12A9B,
@@ -2817,7 +2838,7 @@ const Profile kProfiles[] = {
                {0xE702, 0xE72B, 0xE754, 0xE77D, 0xE7A6},
                {0x21326, 0x2132A, 0x21339, 0x2133D, 0x21343, 0x2135C, 0x21361, 0x21386},
                kP | 0xE272},
-     .fight = {{0x1A9E, 0x0350, 0x0360, 0x0370, 0x0374, 0x037C, 0x0384, 0, 0, 0, 10, 0, 0, 0x032C, 0, false, {{1, {0x1E, 0x3F, 0x39, 0x63}, 0, true, true, false}, {2, {0x63}, 0, true, false, true}}},
+     .fight = {{0x1A9E, 0x0350, 0x0360, 0x0370, 0x0374, 0x037C, 0x0384, 0, 0, 0, 10, 0, 0, 0x032C, 0, false, {{1, {0x1E, 0x3F, 0x39, 0x63}, 0, true, true, false}, {2, {0x63}, 0, true, false, true}}, false, false, false, 5, true, 4, true},
               {               0x10016, 0xC0E5, 0xC0EB, 0xC0F5, 0xC0FA, 0, 0xC100, 0xC54A, 0xC56A, 0xC570, 0xC8EB, 0x17B38, 0x17B44,
                0x17B4C, 0x17B5E, 0x17B6A, 0xC9B8, 0xC9BF, 0xC9CB, 0xC9D4, 0x3AF83, 0xCC50, 0xCC5C, 0xCC62, 0xCC6A, 0xCC72,
                0x150F8, 0x15104, 0x15113, 0x1511B, 0x1512A, 0x1513E, 0x1514B, 0x15153, 0x1515C, 0x15166, 0x15171, 0x1517E, 0x15188,
@@ -3310,7 +3331,7 @@ const Profile kProfiles[] = {
                 .berserk = 0x6B, .taunted = 0x5B,
                 // (its Feeblemind - GAME.OVR 0x2E610: the row's effect 0x44 is its
                 // drain-2, its handler 0x1D3F8 called at once - round 15)
-                .feeble_drain = true, .hit_needs_damage = true},
+                .feeble_drain = true, .hit_needs_damage = true, .yell_unheld = 0x33},
                kDeathKnightsFight, sizeof kDeathKnightsFight / sizeof kDeathKnightsFight[0],
                // COMSPR (22 blocks, + 0x80 the second pictures): 0-2 arrows, 3
                // the axe, 4 the flask, 5 the spell, 6 lightning, 7 a rock, 8 a
@@ -3526,7 +3547,7 @@ const Profile kProfiles[] = {
      // takes away (DS 0x0C6E, 16 - GAME.OVR 0x32DB0); the effects by
      // Darkness's own numbers (its View names, DS 0x4061; its handler table
      // DS 0xA7EA + 4 x (effect - 1), set at GAME.OVR 0x1DD3B)
-     .fight = {{0x3EBA, 0x090C, 0x091C, 0x092C, 0x0930, 0x0938, 0x0940, 0x097C, 0x09FB, 0, 11, 0x08D8, 0, 0x08E8, 1, false, {{1, {0x1E, 0x3F}, 0x18, true, false, false}, {2, {0x39}, 0x10, true, false, false}, {3, {}, 0, true, false, false}}, true, true},
+     .fight = {{0x3EBA, 0x090C, 0x091C, 0x092C, 0x0930, 0x0938, 0x0940, 0x097C, 0x09FB, 0, 11, 0x08D8, 0, 0x08E8, 1, false, {{1, {0x1E, 0x3F}, 0x18, true, false, false}, {2, {0x39}, 0x10, true, false, false}, {3, {}, 0, true, false, false}}, true, true, false, 5, true, 2, false},
               {
                0xD2F1, 0, 0, 0, 0, 0, 0, 0xA290, kP | 0xC0B5, 0, 0x9785, kP | 0xC03A, 0, 0, 0, kP | 0xC88C, 0, 0, 0, 0,
                0x36BDA, kP | 0xC863, 0x9837, 0, 0, kP | 0xCDD3, 0x1E89C, 0x1E8A8, 0x1E8B7, 0x1E8BF, 0x1E8CE, 0x1E8E2, 0x1E8EF,
@@ -3746,7 +3767,7 @@ const Profile kProfiles[] = {
      // Darkness's ("Move Aim Use Cast Turn Guard Quick @Delay Bandage View
      // Speed End", GAME.OVR overlay 0xBA76 +0x812, the words not offered left
      // out); the effects a fight ends (DS 0x037A, 20); Curse's effects
-     .fight = {{0x31AC, 0x03B4, 0x03C4, 0x03D4, 0x03D8, 0x03E0, 0x03E8, 0x042C, 0x0441, 0, 10, 0, 1, 0x0390, 0, false, {{1, {0x20, 0x1E, 0x6F, 0x7D, 0x81, 0x3F}, 0, true, true, false}, {2, {0x81, 0x6F, 0x85, 0x7D}, 0, true, false, true}}},   // (turn undead: Gateway's paladins too - rules_round4_facts.md T2)
+     .fight = {{0x31AC, 0x03B4, 0x03C4, 0x03D4, 0x03D8, 0x03E0, 0x03E8, 0x042C, 0x0441, 0, 10, 0, 1, 0x0390, 0, false, {{1, {0x20, 0x1E, 0x6F, 0x7D, 0x81, 0x3F}, 0, true, true, false}, {2, {0x81, 0x6F, 0x85, 0x7D}, 0, true, false, true}}, false, false, false, 5, true, 3, true},   // (turn undead: Gateway's paladins too - rules_round4_facts.md T2)
               {
                0x10BF2, 0xC1DC, 0xC1E2, 0xC1E7, 0xC20C, 0xC212, 0xC21F, 0xC796, 0xC7B3, 0xC7B9, 0xCBAE, 0x19324,
                0x19330, 0x19338, 0x1934A, 0x19356, 0xC218, 0, 0xC22E, 0, 0x41875, 0xCCA4, 0xCCB0, 0xCCB6, 0xCCBE,
@@ -3932,7 +3953,7 @@ const Profile kProfiles[] = {
                .kept_highlight = true},
      // Fights: the ground table DS 0x43F8, placing 0x0918-0x094C, turn undead
      // 0x0B33 (its code reads them there); no summoning reserve table
-     .fight = {{0x43F8, 0x0918, 0x0928, 0x0938, 0x093C, 0x0944, 0x094C, 0x0988, 0x0B33, 0, 11, 0, 0, 0x08F4, 1, false, {{1, {0x1E, 0x3F}, 0x18, true, false, false}, {2, {0x39}, 0x10, true, false, false}, {3, {}, 0, true, false, false}}, true, true},
+     .fight = {{0x43F8, 0x0918, 0x0928, 0x0938, 0x093C, 0x0944, 0x094C, 0x0988, 0x0B33, 0, 11, 0, 0, 0x08F4, 1, false, {{1, {0x1E, 0x3F}, 0x18, true, false, false}, {2, {0x39}, 0x10, true, false, false}, {3, {}, 0, true, false, false}}, true, true, false, 5, true, 2, false},
               {
                0xE2EF, 0, 0, 0, 0, 0, 0, 0xB0DA, kP | 0xE6BA, 0, 0xA537, kP | 0xE63C, 0, 0, 0, kP | 0xEEC0, 0, 0, 0, 0,
                0x40C65, kP | 0xEE96, 0xA5F1, 0, 0, kP | 0xF426, 0x268AC, 0x268B8, 0x268C7, 0x268CF, 0x268DE, 0x268F2, 0x268FF,

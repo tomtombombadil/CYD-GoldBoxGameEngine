@@ -20,7 +20,15 @@
 #                                +0x10 / Darkness-type +0xF: turned, run in confusion),
 #                                flags2 & the mask, 7+ Hit Dice (hd7: under 7 never),
 #                                or (save 1) a save against poison made; otherwise never
-import os, re, subprocess, sys
+#   npc <ctrl> fig <ds> health <ds> side1 <0|1>   (round 19) the step routine's NPC test: control byte
+#                                with 0x80 - a d100; + the morale figure under the party's health: no
+#                                step unless on side 1 (none in PoolRad)
+#   mage class <off> armour <0|1> then <guard|dual|keep>   (round 19) class 5 not running (armour 1:
+#                                with no armour): the guard routine; dual (Secret): unless a human past its
+#                                former class's level; keep (Gateway): by the distance to its target - 0 / 1
+#                                the guard, 2 / 3 the way turned round, more: on
+#   morale fig <ds> cap <0|1>    (round 19) the morale routine's figure; cap 1: over 102 counts as 0
+import os, re, struct, subprocess, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import x86
@@ -127,6 +135,44 @@ for k, (a, t) in enumerate(lines):
     if t.startswith('call 0x') and k >= 4 and lines[k - 4][1] == 'mov al,0x0' and lines[k - 2][1] == 'mov al,0x0':
         cur[4] = 1
 
+# Round 19: the step routine's own tests before its way (the routine round
+# the step's table read): the NPC test - cmp byte [es:di+C],0x80, a d100
+# (mov al,0x64), the morale figure and the party's health figure (mov al,[M]
+# / mov al,[H]), the side byte against 1 - and the magic-user's (cmp byte
+# [es:di+K],0x5 after the running byte's test, the armour pointer's or-test
+# between them or not); and the morale routine's 102 test (and al,0x7f /
+# xor ah,ah / shl ax,1 / mov [M],al, then cmp byte [M],0x66 or not)
+sr = b.rfind(b'\x55\x89\xe5', 0, step_at)
+SR = x86.Code(path, sr, step_at - sr, base=0).ls
+SR = [(a, t) for a, _, t in SR]
+npc = mage = None
+for k, (a, t) in enumerate(SR):
+    m = re.match(r'cmp byte \[es:di\+0x(\w+)\],0x80$', t)
+    if m and npc is None:
+        seg = [x for _, x in SR[k:k + 30]]
+        if 'mov al,0x64' in seg:
+            pl = [int(re.match(r'mov al,\[0x(\w+)\]$', x).group(1), 16) for x in seg if re.match(r'mov al,\[0x(\w+)\]$', x)]
+            s1 = 1 if any(re.match(r'cmp byte \[es:di\+0x\w+\],0x1$', x) for x in seg) else 0
+            if len(pl) >= 2:
+                npc = (int(m.group(1), 16), pl[0], pl[1], s1)
+    m = re.match(r'cmp byte \[es:di\+0x(\w+)\],0x5$', t)
+    if m and mage is None:
+        back = [x for _, x in SR[max(0, k - 22):k]]
+        if any(re.match(r'cmp byte \[es:di\+0x1[34]\],0x0$', x) for x in back):
+            # what a magic-user does then: the guard routine at once (a jmp),
+            # Secret's dual-class test (a call, then jg: past its old class -
+            # it steps), Gateway's distance (a call, then cmp al,0x2: 0 / 1
+            # the guard, 2 / 3 the way turned round, more - on)
+            nx = [x for _, x in SR[k + 2:k + 14]]
+            then = 'guard' if nx and nx[0].startswith('jmp') else \
+                   'keep' if 'cmp al,0x2' in nx else 'dual' if any(x.startswith('jg ') for x in nx) else 'unknown'
+            mage = (int(m.group(1), 16), 1 if any(x.startswith('or ax,[es:di+') for x in back) else 0, then)
+cap = None
+for m in re.finditer(rb'\x24\x7f\x30\xe4\xd1\xe0\xa2(..)', b, re.S):
+    pl = m.group(1)
+    cap = (struct.unpack_from('<H', pl)[0], 1 if b[m.end():m.end() + 2] == b'\x80\x3e' and b[m.end() + 4] == 0x66 else 0)
+    break
+
 with open(out, 'w') as f:
     f.write('# %s: the computer\'s step (GAME.OVR try 0x%X, step 0x%X)\n' % (game, try_at, step_at))
     f.write('rows %x\n' % rows)
@@ -136,4 +182,10 @@ with open(out, 'w') as f:
     for kind, key, effs, drv, sv, hd, fl2 in clouds:
         f.write('cloud %s %s eff %s driven %d save %d hd7 %d flags2 %x\n' %
                 (kind, key, ' '.join('%x' % e for e in effs) or '-', drv, sv, hd, fl2))
+    if npc:
+        f.write('npc %x fig %x health %x side1 %d\n' % npc)
+    if mage:
+        f.write('mage class %x armour %d then %s\n' % mage)
+    if cap:
+        f.write('morale fig %x cap %d\n' % cap)
 print(open(out).read(), end='')

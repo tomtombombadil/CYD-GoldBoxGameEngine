@@ -518,6 +518,12 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   the original's routine (`combat::guard_takes`: held, a missile weapon
   readied or no moves - no guard, the turn ends); the Dark Queen's own
   finder (`Tables::finder_queen`, DQK.EXE 0x28AFE); oracles/guard.py.
+  Round 19: the Dark Queen steps by its mood rows too (DS 0x5DB4, 6 bytes
+  a row - TableAt::mood_stride; oracles/qstep.py); every step routine's
+  NPC test (Tables::step_npc, Battle::morale_fig) and magic-user rule
+  (Tables::mage_rule: per game, Gateway keeps its distance, Secret's dual
+  class), the morale 102 test only where the original has it
+  (Tables::morale_cap); the Krynn Yells skip the held (oracles/yell.py).
 - The Dark Queen's effect hooks (round 16): DQK.EXE's hook switch 0x7202
   calls the handlers at DS 0xBEE8 + 4 x effect (overlay w9: segment 0x2B3A
   at file 0x4DE90, 0x30CC after it) - Facts::q (`queen_roll_hooks`,

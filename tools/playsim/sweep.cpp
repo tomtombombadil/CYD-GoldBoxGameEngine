@@ -42,6 +42,7 @@
 #include <random>
 #include <string>
 #include <vector>
+#include <functional>
 
 void audio_play(AudioFill fill, void* ctx)
 {

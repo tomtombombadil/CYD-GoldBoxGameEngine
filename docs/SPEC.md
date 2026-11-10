@@ -3514,3 +3514,21 @@ the game's Settings (As Original: all of them).
   spells (2, 4, 7, 38, 40, 44, 56, 66, 68, 72, 76, 103, 104) leave its
   caster level unset (res 0xB4E0) - read only by the magic resistance
   roll (0x6FDD): stack garbage, not reproducible - the engine's 12.
+  Round 19's (no new Game Fixes): an NPC on the party's side (control
+  byte 0x80+) may refuse a step - a d100 plus the morale routine's last
+  figure under the party's health figure, it guards instead (every DAX
+  original but PoolRad's, and the Dark Queen's; the d100 is rolled for
+  monsters too); a magic-user (class 5 - not a multi-class) that isn't
+  running never steps toward its foe: with no armour readied in Curse,
+  Champions, Death Knights, Secret (unless a human past its former
+  class's level) and Gateway (there it guards next to its foe, steps
+  AWAY at 2-3 squares, comes on from further off), armour or not in
+  PoolRad, Darkness, Treasures and the Dark Queen; Darkness's, Treasures'
+  and the Dark Queen's morale figure has no 102 test ((control & 0x7F) x
+  2 up to 254 - a high control never flees), and Bless's +5 wraps past
+  255; the Krynn games' Yell skips the held (each game's own held list -
+  Death Knights' lacks the snake charm 0x33); the Dark Queen's caster
+  level is res 0xB4E0 for every spell (29 calls, the overlays' too) -
+  its 0xFF-class garbage also sets Protection from Good's and Bestow
+  Curse's durations; its packed levels' cap of 31 (charms, clouds,
+  Prayer) is moot (no caster past 31 casts them).
