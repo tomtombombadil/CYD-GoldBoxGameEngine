@@ -110,7 +110,7 @@ struct Tables {
     // The second step back's finder (finder_any): Darkness / Treasures scan
     // the list from one random place (GAME.OVR 0x22191 / 0x2A422), the
     // others pick at random up to 20 times
-    bool    finder_scan = false;
+    bool    finder_scan;                // (set by read_tables)
     StepCloud clouds[3];
     uint8_t foe_names[20][16];
     uint8_t dodge_names[2][16];
