@@ -1424,19 +1424,33 @@ the Project as claude/TODO.md.
       not for a 0xB8 holder; PoolRad, Curse, Gateway don't); the computer's
       target at its turn as each DAX original's finder (rules4 turnfind,
       onhit, qhooks).
-- [ ] Round 17 left: the computer at moves 0 - every DAX original guards
-      then (its AI loop: moves > 0 for the move-and-attack step, else the
-      guard), the engine's think still attacks one next to it; the Dark
-      Queen's 0x83 damage (1d6 + 2 / 1d4 + 1) thrown away by the original -
-      a Game Fix? (Tom); 0xB8 (the Dark Queen's on-hit without damage) not
-      named - which monsters / items carry it not looked up; the Dark
-      Queen's turn target still the engine's pick_target (DQK.EXE's AI
-      finder not read).
-- [ ] Round 7 left (round 17, 2026-11-10: Treasures' 0x3B moot - none of
+- [x] Round 17 left (round 18, 2026-11-10): at moves 0 the computer
+      guards in all nine (each AI loop's moves test - Curse GAME.OVR
+      0xBC50 ..., DQK.EXE 0x2E043), and the guard routine's tests (Curse
+      0xCC32 ..., DQK.EXE 0x2EDFC: held, a readied weapon of range over 1,
+      no moves - the turn just ends, no guard); the Dark Queen's finder
+      (0x28AFE: tries = the list, a roll first, its taunted 0x8C - not
+      0x5B, the lightning breath - moved to the list's front, taken free
+      only from a list of 20; the turn's first 0x2DE27 and its AI dice);
+      0x83's damage behind Game Fixes (SPEC 12); 0xB8 is carried by the
+      Gas Spore (MONCHA.GLB 6) alone, 0x83 by item type 67 (Dawnshine's,
+      ITEM.DAT 45 / 214 / 215). rules4 guard0, qhooks; oracles guard.py,
+      carriers.py, qhooks.py.
+- [ ] Round 18 left: the Dark Queen's caster level - DQK.EXE res 0xB4E0
+      is called only by the magic resistance roll (0x6FDD), spells 9 / 64
+      (0x558A6) and 79 (0x26D93): where its other spells' levels come from
+      (0x2FFC:0x10F9?) not read - the engine uses queen_power for all; its
+      Yell (0x6CF5) skips the held (the guard list) - the engine's taunt
+      doesn't; ITEM.DAT 218 (type 47) carries 0x8C while readied, and
+      0x5FDB0 gives 0x8C for 0x5A0 outside fights - not followed; the
+      Dark Queen's computer step (its move step 0x2E94D's step routine)
+      still the engine's own, its mood rows not read.
+- [x] Round 7 left (round 17, 2026-11-10: Treasures' 0x3B moot - none of
       its items or monsters carries it, no handler to follow; the training
       spell list offered - done by round 9's rules4 trainspell, all nine
-      games; still open below: the Dark Queen's 0xFF-class spells' caster
-      level). Treasures' effect 0x3B's handler (none of its items
+      games; round 18: the Dark Queen's 0xFF-class spells' caster level -
+      res 0xB4E0 leaves it unset (stack garbage, read only by the magic
+      resistance roll 0x6FDD) - not reproducible, the engine's 12 kept). Treasures' effect 0x3B's handler (none of its items
       has it - round 10 left it: nothing in the game carries it). The Dark Queen: its weapon name's trailing space (0x9FDC not
       read); its fight pages' rows after a hit (each page from row 10 here:
       its print routine 0xB14E takes the row from its 137 callers - the

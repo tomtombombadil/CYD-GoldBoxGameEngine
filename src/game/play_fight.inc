@@ -4525,10 +4525,11 @@ void ai_step(pic::Canvas& c)
     // GAME.OVR PoolRad 0xAC14, Curse 0xBACB, Secret 0xCFD6, Gateway 0xD02E,
     // Darkness 0x9B45, Treasures 0xA957, Champions 0xC5B0, Death Knights
     // 0xA28C - round 15: the same code in each)
-    if (fg->t.mood_known && !fg->ai_checked && !fg->flee_told && !fg->ai_diced) {
+    if ((fg->t.mood_known || fg->t.finder_queen) && !fg->ai_checked && !fg->flee_told && !fg->ai_diced) {
         fg->ai_diced = true;
         // (Darkness 0x9AF2, Treasures 0xA904, Death Knights 0xA239: with no
-        // target the finder is asked before the dice - round 17)
+        // target the finder is asked before the dice - round 17; the Dark
+        // Queen DQK.EXE 0x2DE39, its dice 0x2DE9D the same - round 18)
         if (fg->t.finder_first && (f.target < 0 || f.target >= b.n)) combat::finder_any(b, fg->t, i, rng);
         champ_ai_dice(f);
     }
@@ -4815,6 +4816,12 @@ void ai_step(pic::Canvas& c)
     case combat::Act::Guard:
         // (Quick Actions' Guard unticked: the turn just ends)
         if (!(f.qa & quickacts::kGuard)) {
+            end_turn(c);
+            return;
+        }
+        // (the DAX originals' guard routine: held, a missile weapon readied
+        // or no moves left - the turn just ends; round 18)
+        if (!combat::guard_takes(b, fg->t, i)) {
             end_turn(c);
             return;
         }

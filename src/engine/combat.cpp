@@ -248,6 +248,7 @@ bool read_tables(Tables& t, const TableAt& at, ReadDs read, void* ctx)
     t.step_pool = at.step_pool;
     t.finder_scan = at.finder_scan;
     t.finder_first = at.finder_first;
+    t.finder_queen = at.finder_queen;
     for (int k = 0; k < 3; ++k) t.clouds[k] = at.clouds[k];
     if (t.mood_known && !read(ctx, at.mood_rows, t.mood, sizeof t.mood)) return false;
     if (at.reserve && !(read(ctx, at.reserve, t.reserve_mon, 5) && read(ctx, static_cast<uint16_t>(at.reserve + 5), t.reserve_pic, 5)))
@@ -2327,8 +2328,30 @@ static int queen_dex_missile(const Fighter& f)
 // (-4 / +2) until a blow on it recalculates them; 0x83 (0x543D8) makes its
 // to-hit in use the THAC0 base + Strength's to-hit next to the target, else
 // Dexterity's missile bonus
-static void queen_blow_self(Battle& b, int a, int c)
+// (0x77E:0x11F9: Strength's damage by the same group)
+static int queen_str_dmg(const Fighter& f)
 {
+    const int s = f.rec[0x11], e = f.rec[0x1C];
+    const int g = s <= 17 ? s : s == 18 ? (e == 0 ? 18 : e <= 50 ? 19 : e <= 75 ? 20 : e <= 90 ? 21 : e <= 99 ? 22 : 23)
+                : s <= 25 ? s + 5 : 0;
+    if (g == 0) return 0;
+    if (g <= 2) return -2;
+    if (g <= 5) return -1;
+    if (g <= 15) return 0;
+    if (g == 16) return 1;
+    if (g <= 19) return g - 16;
+    if (g <= 29) return g - 17;
+    return g == 30 ? 14 : 0;
+}
+
+// 0x83's handler also rolls the blow's damage words at each roll past a 1 -
+// next to the target 1d6 + Strength's damage + the readied weapon's byte
+// 0x30 (its plus) + 2, further off 1d4 + that byte + 1 - which the blow's
+// damage step writes over (round 17): the die is rolled (the original's
+// dice), its damage returned for the Game Fixes (round 18; -1: none)
+static int queen_blow_self(Battle& b, int a, int c, const items::Names* names, create::Dice& d)
+{
+    int hdmg = -1;
     const Facts& fx = *b.fx;
     Fighter& at = b.f[a];
     const int shift = (hasx(at, fx.blinded) ? -4 : 0) + (hasx(at, fx.q.plus2) ? 2 : 0);
@@ -2340,8 +2363,13 @@ static void queen_blow_self(Battle& b, int a, int c)
     if (hasx(at, fx.q.hoopak) && b.tables) {
         int sq = 0;
         range(b, *b.tables, a, c, true, &sq);
+        const int w = names ? weapon(at, *names) : -1;
+        const int p = w >= 0 ? static_cast<int8_t>(at.items[w][0x32]) : 0;
+        hdmg = sq < 2 ? d.roll(6, 1) + queen_str_dmg(at) + p + 2 : d.roll(4, 1) + p + 1;
+        if (hdmg < 0) hdmg = 0;
         at.rec[kHit] = static_cast<uint8_t>(at.rec[0x73] + (sq < 2 ? queen_str_hit(at) : queen_dex_missile(at)));
     }
+    return hdmg;
 }
 
 int queen_roll_hooks(Battle& b, int a, int c, bool* miss, int* fixes_side)
@@ -2650,7 +2678,8 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
             if (slot == 0) ++out.shots;
             if (at.blows < 255) ++at.blows;
             const int roll = d.roll(20, 1);
-            if (qh && roll > 1) queen_blow_self(b, a, c);     // (a 1 misses before the hooks - 0x8461)
+            // (a 1 misses before the hooks - 0x8461)
+            const int q_hdmg = qh && roll > 1 ? queen_blow_self(b, a, c, names, d) : -1;
             const int extra = roll > 1 ? wbonus + (slayer ? 2 : 0) + (giant ? 1 : 0) : 0;
             bool hit = roll == 20 || (roll != 1 && roll + static_cast<int8_t>(at.rec[kHit]) + side + extra >= ac);
             if (qh) {
@@ -2685,6 +2714,9 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
             const int bo = slot ? static_cast<int8_t>(at.rec[kBonus + 1]) : bonus1;
             int nat = n && s ? d.roll(s, n) : 0;   // (the dice as they came up: the rolls shown)
             int dmg = nat + bo;
+            // The Dark Queen's 0x83 with the Game Fixes (round 18; SPEC 12):
+            // its handler's damage, which the original throws away
+            if (q_hdmg >= 0 && rules::fixes()) dmg = q_hdmg;
             if (b.fx && b.fx->dk.kalistes && hasx(at, b.fx->dk.kalistes)) {
                 dmg = kalistes_blow(at, d, dmg);
                 if (at.blows >= 1 && at.blows <= 6) h.weapon = at.blows;
@@ -3603,6 +3635,38 @@ int finder_any(Battle& b, const Tables& t, int i, create::Dice& d)
         return c;
     };
     const bool taunted = b.fx && b.fx->taunted && f.has(b.fx->taunted) && b.taunter >= 0;
+    if (t.finder_queen) {
+        // The Dark Queen (round 18; DQK.EXE 0x28AFE, its list 0x24550): a
+        // taunted (0x8C) one's list has the kender who yelled moved to its
+        // first place; in each pass a roll before the tries (its first pick,
+        // rolled again at each try), as many tries as the list holds; the
+        // kender first in it taken without a roll only at a try with 0x13
+        // left (a list of 20); a pick already struck spends its try, one
+        // seen is taken, one not struck (none left: the pass over); pass 2
+        // over walls takes its first pick, seen or not
+        for (int pass = 0; pass < 2; ++pass) {
+            build(pass == 1);
+            if (taunted)
+                for (int k = 1; k < n; ++k)
+                    if (list[k] == b.taunter) {
+                        list[k] = list[0];
+                        list[0] = b.taunter;
+                        break;
+                    }
+            if (!n) continue;
+            (void)d.roll(n, 1);
+            int left = n;
+            for (int tries = n; tries > 0 && left > 0;) {
+                --tries;
+                const int k = taunted && tries == 0x13 && list[0] == b.taunter ? 0 : d.roll(n, 1) - 1;
+                if (list[k] < 0) continue;
+                if (pass == 1 || seen_enemy(b, i, list[k])) return take(list[k]);
+                list[k] = -1;
+                --left;
+            }
+        }
+        return -1;
+    }
     build(false);
     if (t.finder_scan) {
         if (n) {
@@ -3624,6 +3688,24 @@ int finder_any(Battle& b, const Tables& t, int i, create::Dice& d)
     if (!n) return -1;
     if (!t.finder_scan && taunted && list[0] == b.taunter) return take(list[0]);
     return take(list[d.roll(n, 1) - 1]);
+}
+
+bool guard_takes(const Battle& b, const Tables& t, int i)
+{
+    const Fighter& f = b.f[i];
+    if (!t.mood_known && !t.finder_queen) return true;
+    // (Curse 0xCC32: 0xED:0x3E - any of DS 0x27CC's four, the held list
+    // (Death Knights' three: not the snake's charm, whose holder has no
+    // turn); 0xED:0xE3 - the readied weapon's type, range byte over 1; the
+    // moves byte 0 - all three: 0xED:0xC0, the turn over; else 0xED:0xC5,
+    // the same and the guard byte set; the Dark Queen's 0x2EDFC: DS 0x6313's
+    // four, 0x2488F the weapon's range over 1, the moves word 0)
+    if (f.moves == 0 || helpless(b, f)) return false;
+    if (b.names && f.items) {
+        const int w = weapon(f, *b.names);
+        if (w >= 0 && b.names->type(f.items[w][0x2E]).range > 1) return false;
+    }
+    return true;
 }
 
 namespace {
@@ -3736,6 +3818,16 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
         f.moves = 0;
         f.target = -1;
     }
+    if (f.fleeing && (t.mood_known || t.finder_queen) && f.moves <= 0) {
+        // The DAX games (round 18; tools/devkit/oracles/guard.py): its run
+        // over, the move step ends and the AI loop asks its finder (Curse-
+        // type) and the moves - none: the guard routine (Curse GAME.OVR
+        // 0xBC55 -> 0xCC32; the Dark Queen DQK.EXE 0x2E043 -> 0x2EDFC), never
+        // a blow (coab's attack here is not theirs)
+        if (!t.finder_scan) finder_any(b, t, i, d);
+        p.act = Act::Guard;
+        return p;
+    }
     if (f.fleeing) {
         // Its run over (moves 0): an enemy next to it or in a missile's
         // reach is attacked, else it guards (coab: no near target ->
@@ -3771,11 +3863,21 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
     // 0xBC36, PoolRad 0xAD7E, Secret 0xD122, Gateway 0xD1A8, Champions
     // 0xC722, Death Knights 0xA419: the finder, then the moves; Darkness
     // 0x9CDB / Treasures 0xAAED: moves left first - none, the finder not
-    // asked: the target kept only while seen). The Dark Queen: kept while it's an enemy in sight
-    // and reach, else one there, else the nearest seen (pick_target)
-    if (!t.mood_known) pick_target(b, t, i, d);
+    // asked: the target kept only while seen). The Dark Queen (round 18):
+    // its own finder, Curse-type (DQK.EXE 0x2E02B, then the moves)
+    if (!t.mood_known && !t.finder_queen) pick_target(b, t, i, d);
     else if (!t.finder_scan || f.moves > 0) finder_any(b, t, i, d);
     else if (!seen_enemy(b, i, f.target)) f.target = -1;
+    // At moves 0 every DAX original guards (round 18; oracles/guard.py): its
+    // AI loop goes to the move-and-attack step only with moves (combat +3)
+    // over 0 - Curse GAME.OVR 0xBC50, PoolRad 0xAD98, Secret 0xD13C, Gateway
+    // 0xD1C2, Champions 0xC73C, Death Knights 0xA436, Darkness 0x9CC3,
+    // Treasures 0xAAD5, the Dark Queen DQK.EXE 0x2E043 - else the guard
+    // routine, even with one next to it
+    if ((t.mood_known || t.finder_queen) && f.moves <= 0) {
+        p.act = Act::Guard;
+        return p;
+    }
     if (f.target < 0) {
         p.act = Act::Guard;
         return p;

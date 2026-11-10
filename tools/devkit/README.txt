@@ -259,3 +259,24 @@ Round 17 (2026-11-10): the computer's turn target, on-hit after no damage, the D
          blind / 0xA2 attacker's stored AC after its blow and once hit); host test test_queen_target_hooks + the DAMAGE
          cloak's roll-0 reset before any fight and 0xCF
   Run turnfind.py / onhit.py / qhooks.py before rules4 (ORACLE_DIR). Binaries: bin/r17r4, bin/r17simx.
+
+Round 18 (2026-11-10): the computer at moves 0, its guard, the Dark Queen's finder and 0x83's damage
+  oracles/guard.py [games]    oracle_guard_<game>.txt (all nine; the Dark Queen's from DQK.EXE): the AI loop's moves
+                              test and where it goes (the guard routine - the same as "not found"), the guard
+                              routine's three tests (the DS held list's effects, the readied weapon's range byte over
+                              1, the moves) and, for the Queen, a qfinder line (its finder 0x28AFE: tries = the list,
+                              a roll before them, the taunted effect and its try 0x13, the list builder's swap of the
+                              kender to the front, the turn's first finder)
+  oracles/carriers.py <eff..> the Dark Queen: monsters (MONCHA.GLB effects / items), ITEM.DAT items and DQK.EXE's
+                              gives that carry an effect - printed facts (0xB8: the Gas Spore; 0x83: item type 67)
+  oracles/qhooks.py           + the 0x83 line's near_strdmg23 (Strength's damage at 18/00, run by x86.run) and wplus
+  oracles/x86.py              run: 'mov <place>,al' and 'add / sub al,<number>' (the other oracles' outputs unchanged)
+  rules4 ONLY=guard0 (all nine: think at moves 0 / fleeing at moves 0 next to a foe plans the guard, guard_takes false
+         at moves 0, for each listed effect, with a missile weapon; the Queen's finder rolls, struck picks, the taunted
+         list's front) ONLY=qhooks (+ 0x83's damage lost / with the Game Fixes, near and far); turnfind: a finder's
+         taunt test in a game with no Yell (Secret) is moot
+  verify18.sh                 the round's batch (oracles, REBUILD=1 builds ${TAG}r4 / ${TAG}simx, r4all, saveload,
+                              budgetx, qa_verify) -> $V/summary.txt
+  Baselines: rules4 full PoolRad 42/0, Curse 45/0, Secret 40/0, Darkness 44/0, Gateway 40/0, Treasures 46/0,
+  Champions 51/0, Knights 48/0, Queen 59/0; budgets (bytes) Curse 133721, PoolRad 135372, Darkness 149829,
+  Champions 135928, Knights 135938, Queen 143244, Treasures 151918.

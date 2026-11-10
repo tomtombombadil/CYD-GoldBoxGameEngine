@@ -2778,9 +2778,12 @@ void turnfind_check()
         mx::add_aff(B, taunt);
         b.taunter = 1;
         check("taunted: the kender second in the list, a roll", run({1}), 0);
-    } else if (taunt) {
+    } else if (taunt && b.fx->taunted) {
         check("taunt effect as the oracle's", b.fx->taunted, taunt);
     }
+    // (a finder with the taunt test in a game with no Yell - Secret: its
+    // taunter word DS 0x8E23 is never written, so the list's first, a
+    // fighter, never matches it - moot; round 18)
     // the moves test's place: think at moves 0 with no target
     scene(false);
     F(B).moves = 0;
@@ -2808,6 +2811,183 @@ void turnfind_check()
 // blow (attack 1's, a d20 of 20) the same
 int oh_n20 = 0, oh_first = 18, oh_next = 1;
 int oh_die(int nn) { return nn == 20 ? (oh_n20++ == 0 ? oh_first : oh_next) - 1 : -1; }
+// The computer at moves 0 and its guard (round 18): oracle_guard_<game>.txt
+// (tools/devkit/oracles/guard.py - each original's AI loop: the move-and-
+// attack step only with moves over 0, else the guard routine; that routine's
+// tests: the held list, a readied weapon of range over 1, the moves - any:
+// the turn just ends, no guard). A cleared field, the monster next to member
+// 0: think at moves 0 (and fleeing at moves 0) plans the guard, not the blow;
+// guard_takes false at moves 0, for each effect of the list, with a readied
+// missile weapon (a type of the game's own ITEMS, range over 1); true with
+// moves and a melee weapon (range 1 or none). The Dark Queen also: its
+// finder's facts (qfinder: as many tries as the list, a roll before them,
+// the taunted kender moved to the front - taken without a roll at a try with
+// 0x13 left only) and the taunted effect the engine gives
+void guard0_check()
+{
+    static const char* kName[] = {"", "poolrad", "curse", "secret", "darkness", "champions", "knights", "queen", "gateway", "treasures"};
+    const int g = game();
+    if (g < 1 || g > 9) return;
+    char path[256];
+    snprintf(path, sizeof path, "%s/oracle_guard_%s.txt", getenv("ORACLE_DIR") ? getenv("ORACLE_DIR") : "/tmp/claude-0/bt", kName[g]);
+    FILE* fo = fopen(path, "r");
+    if (!fo) {
+        expect(P, "the computer at moves 0 / its guard: oracle_guard (tools/devkit/oracles/guard.py)", false, "%s missing", path);
+        return;
+    }
+    char line[400] = "", qline[400] = "";
+    while (fgets(line, sizeof line, fo) && line[0] == '#') {}
+    if (!fgets(qline, sizeof qline, fo)) qline[0] = 0;
+    fclose(fo);
+    const bool moves0 = strstr(line, "moves0 1") != nullptr, movetest = strstr(line, "movetest 1") != nullptr;
+    const bool missile = strstr(line, "missile range") != nullptr;
+    int eff[8], ne = 0;
+    if (const char* q = strstr(line, "eff ")) {
+        q += 4;
+        while (ne < 8 && q[0] == '0' && q[1] == 'x') {
+            char* e;
+            eff[ne++] = static_cast<int>(strtol(q, &e, 16));
+            q = e;
+            while (*q == ' ') ++q;
+        }
+    }
+    if (!fight() || !fg->b.fx || !fg->b.names) return;
+    combat::Battle& b = fg->b;
+    const combat::Tables& t = fg->t;
+    const items::Names& nm = *b.names;
+    int n = 0, bad = 0;
+    char first[200] = "";
+    auto check = [&](const char* what, bool ok) {
+        ++n;
+        if (!ok && !bad++) snprintf(first, sizeof first, "%s", what);
+    };
+    static uint8_t inv[1][items::kRecordSize];
+    auto scene = [&]() {
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(0, 0, 11, 10, 60);
+        mx::put(B, 1, 10, 10, 60);
+        F(B).items = nullptr;
+        F(B).n_items = 0;
+        b.taunter = -1;
+    };
+    auto plan = [&]() {
+        create::g_die_hook = fd_die;
+        fd_at = 0;
+        for (int k = 0; k < 8; ++k) fd_seq[k] = 1;
+        const combat::Plan p = combat::think(b, t, B, rng);
+        create::g_die_hook = nullptr;
+        return p.act;
+    };
+    scene();
+    check("moves left, one next to it: the blow", plan() == combat::Act::Attack);
+    scene();
+    F(B).moves = 0;
+    check("moves 0, one next to it: the guard (no blow)", (plan() == combat::Act::Guard) == moves0);
+    scene();
+    F(B).moves = 0;
+    F(B).fleeing = true;
+    check("fleeing at moves 0, one next to it: the guard", (plan() == combat::Act::Guard) == moves0);
+    scene();
+    F(B).moves = 0;
+    check("the guard routine at moves 0: the turn just ends", combat::guard_takes(b, t, B) == !movetest);
+    scene();
+    check("the guard routine with moves, no weapon: guards", combat::guard_takes(b, t, B));
+    // each effect of the original's list: no guard; Facts::held's others
+    // (Death Knights' snake charm, 0x33): its holder has no turn
+    for (int k = 0; k < ne; ++k) {
+        scene();
+        bool known = false;
+        for (uint8_t h : b.fx->held) known = known || h == eff[k];
+        mx::add_aff(B, eff[k]);
+        char w2[80];
+        snprintf(w2, sizeof w2, "effect 0x%02X of the list: no guard (and in Facts::held)", eff[k]);
+        check(w2, known && !combat::guard_takes(b, t, B));
+    }
+    // a readied missile weapon (range over 1) / a melee one
+    int far_ty = -1, near_ty = -1;
+    for (int k = 1; k < 256; ++k) {
+        const items::TypeInfo& ti = nm.type(k);
+        if (ti.slot != items::kSlotWeapon) continue;
+        if (ti.range > 1 && far_ty < 0) far_ty = k;
+        if (ti.range <= 1 && near_ty < 0) near_ty = k;
+    }
+    for (int pass = 0; pass < 2; ++pass) {
+        const int ty = pass ? near_ty : far_ty;
+        if (ty < 0) continue;
+        scene();
+        memset(inv[0], 0, sizeof inv[0]);
+        inv[0][0x2E] = static_cast<uint8_t>(ty);
+        inv[0][0x34] = 1;
+        F(B).items = inv;
+        F(B).n_items = 1;
+        check(pass ? "a melee weapon readied: guards" : "a missile weapon readied (range over 1): no guard",
+              combat::guard_takes(b, t, B) == (pass ? true : !missile));
+        F(B).items = nullptr;
+        F(B).n_items = 0;
+    }
+    bool qok = true;
+    char qwhy[120] = "";
+    if (g == 7) {
+        // the Dark Queen's finder: oracle facts and the engine's
+        unsigned qt = 0, qat = 0;
+        if (const char* q = strstr(qline, "taunt 0x")) qt = static_cast<unsigned>(strtol(q + 6, nullptr, 16));
+        if (const char* q = strstr(qline, " at 0x")) qat = static_cast<unsigned>(strtol(q + 4, nullptr, 16));
+        qok = strstr(qline, "tries list") && strstr(qline, "firstroll 1") && strstr(qline, "swap 1") && qat == 0x13 &&
+              strstr(qline, "early 0x") && b.fx->taunted == qt && t.finder_queen && t.finder_first;
+        if (!qok) snprintf(qwhy, sizeof qwhy, "qfinder facts: taunted %02X want %02X, finder_queen %d first %d", b.fx->taunted, qt,
+                           t.finder_queen, t.finder_first);
+        // two foes in sight, the first invisible: rolls 1 (the roll before
+        // the tries), then 1 (struck), 2 (taken) - two tries, the list's two
+        auto run = [&](std::initializer_list<int> rolls) {
+            fd_at = 0;
+            int k = 0;
+            for (int r : rolls) fd_seq[k++] = r;
+            while (k < 8) fd_seq[k++] = 1;
+            create::g_die_hook = fd_die;
+            const int got = combat::finder_any(b, t, B, rng);
+            create::g_die_hook = nullptr;
+            return got;
+        };
+        auto two = [&]() {
+            scene();
+            mx::put(1, 0, 16, 10, 60);
+            F(B).target = -1;
+        };
+        two();
+        mx::add_aff(0, b.fx->invisible);
+        const int a1 = run({2, 1, 2});
+        check("the Queen's finder: a roll before the tries, a struck pick, the next taken", a1 == 1);
+        // a struck pick spends a try: list of 2, tries 2 - rolls (first) 1,
+        // 1 (0 struck), 1 (struck again: spent) - pass 2 then (its roll 2,
+        // then 2): member 1... with both unseen pass 2 takes its pick
+        two();
+        mx::add_aff(0, b.fx->invisible);
+        mx::add_aff(1, b.fx->invisible);
+        const int a2 = run({1, 1, 1, 1, 2});
+        check("the Queen's finder: tries as many as the list, pass 2 takes its pick", a2 == 1);
+        // taunted: the kender (member 1) moved to the front - a list of 2,
+        // so no free take: the pick's roll still decides
+        if (b.fx->taunted) {
+            two();
+            mx::add_aff(B, b.fx->taunted);
+            b.taunter = 1;
+            const int a3 = run({1, 2});
+            check("the Queen's taunted finder: the kender first in its list (roll 2 -> member 0)", a3 == 0);
+            two();
+            mx::add_aff(B, b.fx->taunted);
+            b.taunter = 1;
+            const int a4 = run({1, 1});
+            check("the Queen's taunted finder: roll 1 -> the kender", a4 == 1);
+        }
+    }
+    scene();
+    for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+    combat::occupancy(b);
+    expect(P, "the computer at moves 0 and its guard as the original's (oracle_guard: the AI loop's moves test, the guard routine's held list / missile / moves; the Dark Queen's finder)",
+           bad == 0 && qok && moves0 && movetest && missile && ne > 0, "facts moves0 %d movetest %d missile %d effects %d; %d of %d wrong (%s) %s",
+           moves0, movetest, missile, ne, bad, n, first, qwhy);
+}
+
 void onhit_check()
 {
     static const char* kName[] = {"", "poolrad", "curse", "secret", "darkness", "champions", "knights", "queen", "gateway", "treasures"};
@@ -3111,6 +3291,44 @@ void queen_hooks()
             F(A).rec[0x199] = 40;
             (void)thresh(false, true);
             check("0x83 further off: the to-hit in use", F(A).rec[0x199], 30 + far);
+            // (round 18) its damage words: lost (the blow's own damage) -
+            // with the Game Fixes the handler's (oracle: 1dS + Strength's
+            // damage at 18/00 + the weapon's byte + N next to it, 1dS + the
+            // byte + N further off); the dice 20 / 5 on a d6 / 3 on a d4
+            if (const char* dn = strstr(rest, "dmg_near 1d")) {
+                const int ns = atoi(dn + 11), np = atoi(strchr(dn + 11, '+') + 1);
+                const char* dfp = strstr(rest, "dmg_far 1d");
+                const int fs = dfp ? atoi(dfp + 10) : 0, fp = dfp ? atoi(strchr(dfp + 10, '+') + 1) : 0;
+                const char* sdp = strstr(rest, "near_strdmg23 ");
+                const int sdm = sdp ? atoi(sdp + 14) : 0;
+                auto die = [](int k) { return k == 6 ? 5 : k == 4 ? 3 : 1; };
+                auto blow = [&](bool hoop, bool fixes, bool near) {
+                    scene();
+                    if (hoop) q_add(F(A), static_cast<uint8_t>(eff), 0);
+                    F(A).rec[0x73] = 30;
+                    F(A).rec[0x11] = 18;
+                    F(A).rec[0x1C] = 100;
+                    F(A).rec[0x17] = 21;
+                    if (!near) {
+                        F(T).x = static_cast<int16_t>(10 + cut + 2);
+                        combat::occupancy(b);
+                    }
+                    rules::set_fixes(fixes);
+                    create::g_die_hook = [](int k) { return k == 20 ? 19 : k == 6 ? 4 : k == 4 ? 2 : 0; };
+                    F(A).attacks[0] = 1;
+                    F(A).attacks[1] = 0;
+                    F(T).rec[0x1A4] = 60;
+                    const combat::Attack at = combat::attack(b, A, T, nullptr, rng, false);
+                    create::g_die_hook = nullptr;
+                    rules::set_fixes(false);
+                    return at.n > 0 && at.hits[0].hit ? at.hits[0].damage : -1;
+                };
+                const int plain = blow(false, false, true), plain_far = blow(false, false, false);
+                check("0x83's damage lost, next to it (the blow's own)", blow(true, false, true), plain);
+                check("0x83's damage lost, further off (the blow's own)", blow(true, false, false), plain_far);
+                check("0x83's damage with the Game Fixes, next to it", blow(true, true, true), die(ns) + sdm + np);
+                check("0x83's damage with the Game Fixes, further off", blow(true, true, false), die(fs) + fp);
+            }
             continue;
         }
         if (tag == 'A') {
@@ -3376,6 +3594,7 @@ void run()
     if (want("turnfind")) turnfind_check();
     if (want("khit")) knights_hit();
     if (want("onhit")) onhit_check();
+    if (want("guard0")) guard0_check();
     if (want("restore")) restore();
     if (want("rest")) rest();
     rules::set_fixes(true);

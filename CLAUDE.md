@@ -514,6 +514,10 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   Round 17: that finder is also the AI's turn target in every DAX game (kept
   while seen, walls and reach aside; Tables::finder_first; oracles
   turnfind.py / onhit.py - on-hit needs damage per Facts::hit_needs_damage).
+  Round 18: at moves 0 the computer guards (all nine), and its guard is
+  the original's routine (`combat::guard_takes`: held, a missile weapon
+  readied or no moves - no guard, the turn ends); the Dark Queen's own
+  finder (`Tables::finder_queen`, DQK.EXE 0x28AFE); oracles/guard.py.
 - The Dark Queen's effect hooks (round 16): DQK.EXE's hook switch 0x7202
   calls the handlers at DS 0xBEE8 + 4 x effect (overlay w9: segment 0x2B3A
   at file 0x4DE90, 0x30CC after it) - Facts::q (`queen_roll_hooks`,
