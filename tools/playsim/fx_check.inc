@@ -69,7 +69,8 @@ void hook(play::FxEv ev, uint32_t wait, int n)
         if (const char* dir = getenv("FXSHOT")) {
             // (the canvas at each event of a sweep and after: FXSHOT=dir)
             static int shot = 0, left = 0;
-            if (ev == FxEv::SweepBlow && n == 1) left = 400;
+            static int sweeps = 0;
+            if (ev == FxEv::SweepBlow && n == 1 && ++sweeps == (getenv("FXSHOTAT") ? atoi(getenv("FXSHOTAT")) : 1)) left = 400;
             if (left > 0 && ev != FxEv::RollsClear) {
                 --left;
                 char fn[256];

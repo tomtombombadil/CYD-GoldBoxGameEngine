@@ -63,6 +63,9 @@ HAL, CI, flasher and UI rules come from there; copy from it freely.
   never push over his edits (no force pushes; check README.md's changes
   before touching it).
 - Tom plays with a Nintendo DS Lite stylus with firm presses - NOT a finger.
+- Play-test reports (Tom, 2026-11-10): while he play-tests he types each
+  issue as he finds it - every message is its own problem. Never fold two
+  reports into one fix; a fight's pace is the Speed option's alone.
 - Refer to boards by size + display driver + touch type, never vendor codes.
 
 ## Gemini's starting files (reviewed 2026-10-06)

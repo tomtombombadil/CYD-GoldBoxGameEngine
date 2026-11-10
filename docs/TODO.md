@@ -138,14 +138,10 @@ the Project as claude/TODO.md.
 
 ## Claude
 
-- [x] Sweeps' order (Tom, 2026-11-10, v0.194.1: "It should proceed like
-      single attacks one after the other"): each blow was already its own
-      attack (attack frame, roll, damage, fall, skull + death sound, the
-      icon gone, then the next - traced in PoolRad and Curse fights), but
-      at a fast Speed the blows' pages went by unseen (PoolRad speed 1:
-      450 ms; speed 0: none). Each blow's last page now stays at least
-      1 s before the next (Readable Messages). Tom: say if what you saw
-      was something else (and your Speed setting).
+- [ ] Sweeps' order (Tom, 2026-11-10): "It should proceed like single
+      attacks one after the other" - v0.194.1's longer wait was wrong
+      (Tom: the pace is the Speed option's; reverted v0.194.2). Find what
+      differs from single attacks.
 
 - [x] Messages too quick to read (Tom, 2026-11-10, PoolRad's training
       "Not Enough Experience"; v0.194.0): Readable Messages (CYD_READ_TIME,
@@ -155,9 +151,8 @@ the Project as claude/TODO.md.
       flashcheck.sh): originals' timing 88 finds over 2 seeds x 9 games,
       with the comfort 0 over 3 seeds x 9 games. Fights keep the Speed
       setting. Not reached by the monkey: every script's own pauses.
-- [ ] Tom: are fight messages fast enough to read at your Speed setting,
-      or should Readable Messages cover fights too? (They keep the game's
-      Speed now - Speed is the player's own choice there.)
+- [x] Fights and Readable Messages (Tom, 2026-11-10): fights' pace is the
+      Speed option's - Readable Messages stays out of fights.
 
 - [x] 5.0" Companion Strip (Tom, 2026-11-10; v0.192.0): Settings switch
       (on by default), the game against the left edge, the strip 1:1 -
