@@ -143,7 +143,10 @@ the Project as claude/TODO.md.
       the left edge, a 160 x 480 strip at the right drawn 1:1 with the
       4.0" panel's layout: Party on top (y 0-218, room for 8 members),
       Map from y 220 (Battle there in a fight; 200 px), y 421-479 kept
-      for Companion buttons still to be designed (Tom). Open: the
+      for Companion buttons still to be designed (Tom). Map (Tom,
+      2026-11-10): no area / script / map lines, the legend one line
+      "Red: Locked  S: Secret" (no "Gold: door", no "Tap:Party") - 158
+      px tall, so the buttons get y 381-479; on the 4.0" too? Open: the
       buttons; what the Map key under the game does then; taps on the
       strip.
 
