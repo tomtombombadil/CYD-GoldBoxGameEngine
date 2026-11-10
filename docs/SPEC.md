@@ -2670,7 +2670,8 @@ a PC, PortMaster handhelds):
     asleep / paralysed / held / stunned / fleeing and fallen members; the
     turn's fighter ringed white, what Aim points at gold, the game
     screen's 7 x 7 window outlined blue; under it the turn's name and HP,
-    the aim's; the legend on the area's last line - "Party" green,
+    the aim's - the whole display at the area's foot (Tom, 2026-11-10),
+    the legend on its last line - "Party" green,
     "Foes" red, "Blink: no turn" (Tom, 2026-11-10: no round / "x v y"
     line, no colour words). Map view (every board, Tom 2026-11-10): no
     area / script / map lines (the Walk Test keeps them), one legend line

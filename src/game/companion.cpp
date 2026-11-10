@@ -401,7 +401,10 @@ void draw_battle(Painter& p, const Area& a, bool blink_on, bool big, bool tabs)
     geo.bw = bw;
     geo.bh = bh;
     geo.fx = a.x + (a.w - bw * c) / 2;
-    geo.fy = top;
+    // (the whole display at the area's foot - Tom, 2026-11-10: the field,
+    // the turn / aim lines and the legend together, any room left above)
+    geo.fy = a.y + a.h - foot - bh * c;
+    if (geo.fy < top) geo.fy = top;
     geo.ok = true;
     // The ground: a row's runs of one kind as one fill
     for (int y = 0; y < bh; ++y)
