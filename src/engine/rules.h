@@ -25,6 +25,10 @@ struct ItemFacts {
     // Friends, Feeblemind (0: none)
     uint8_t strength_fx = 0, giant_fx = 0, enlarge_fx = 0, friends_fx = 0, feeble_fx = 0;
     uint8_t friends_max = 0;            // Friends' Charisma at most this (Pool 25; 0: no limit)
+    // The Strength effect over 18 makes 18/xx for a fighter by current levels
+    // only (Darkness / Treasures GAME.OVR 0x3318E / 0x3CF1C: 0x153-0x155);
+    // Secret's counts former levels too
+    bool str_fighter_now = false;
     // Spiritual Hammer: its effect, the item's type and name words
     uint8_t hammer_fx = 0, hammer_type = 0, hammer_word = 0, hammer_word2 = 0;
     uint8_t hammer_code = 0;            // its byte 0x3E (Curse 0xA0, Pool 0x89; 0: 0xA0)

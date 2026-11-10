@@ -1394,23 +1394,35 @@ the Project as claude/TODO.md.
       The Dark Queen's DAMAGE (0x4256F): its saves' branches, bonus & 0x0F
       (swapped branch behind Game Fixes); its one-target roll 0x83D0 already
       as the engine's (natural 1 misses, 20 = 100, roll + bonus > AC).
-- [ ] Round 15 left: the Dark Queen's to-hit hooks - event 0xA's effects
-      (the attacker's: 0x01 0x02 0x1A 0x21 0x24 0x31 0x78 0xA2 0x83 0x94)
-      and 0x10's (the target's: 0x19 0x45 0x25 0x2F 0x30 0x59 0xCF) from
-      its hook switch DQK.EXE 0x7202 (table cs:0x52C at 0x721C) - their
-      handlers (DS 0xB029 + 4 x effect, set at 0x59FEx-0x5A2xx) not found
-      (the setup's cs:off, as file 0x50000 + off, is a function start only
-      for 0x44 - the overlay mapping per handler not worked out; six have
-      no setter found), so not compared; nor its DAMAGE's target hook. Its
-      clock's effect step per fight round (0x5F86, at most 10 minutes a
-      call) not read. Darkness's / Treasures' stats recalculation (0x3307E
-      / 0x3CD87) also checks Secret's other stat effects (0x26, 0x71,
-      0x0C, 0x3E, 0x0E) - only 0x44 followed (profile stat_fx). The
-      count-2 finder's second argument (Curse 0x8D:0x89 with 1: the sight
-      test skipped while [0x6EAC]+6) taken as the engine's target pick.
-      Death Knights' feebleminded fighter then drains whoever it hits (the
-      engine's after_hit with mon.drain2) - its hit dispatch for the
-      party's own not traced.
+- [x] Round 15 left (round 16, 2026-11-10): the Dark Queen's to-hit hooks -
+      its handlers are DS 0xBEE8 + 4 x effect (dispatcher 0x53775; overlay
+      w9, segment 0x2B3A at file 0x4DE90, a second segment 0x30CC), filled
+      at 0x52E42-0x5362x: event 0xA / 0x10 / 0xB read and matched (hooked
+      roll under 0 a miss; giants -4 always; no gnome +1; Invisible to
+      Animals on the holder's own flags; no bite for 0x45; unnamed +2 / -2
+      / -1; Shield front only, lost to coughing; coughing / blind / dance /
+      highlight / iron skin AC; the dragons' fear 0x64 without a save);
+      DAMAGE's one-target roll with the target's hooks; its clock steps
+      each round's START (0x2336C -> 0x61AD -> 0x5EFF). Darkness's /
+      Treasures' recalculation is Secret's (stat_fx all six; 18/xx for
+      current fighter levels only). The count-2 finder followed (pass 2
+      without the sight test; Darkness / Treasures scan from a random
+      place) in all eight DAX games. Death Knights: the party's own
+      feebleminded drains whoever it hits, as the engine did - but only a
+      damaging blow runs the on-hit specials. rules4 qhooks / statfx /
+      finder / khit; oracles qhooks.py statfx.py finder.py knights_hit.py.
+- [ ] Round 16 left: the Dark Queen's effect 0x83 (event 0xA, handler
+      0x543D8 - a hoopak-like weapon: the to-hit from record 0x87 + a
+      worked bonus, its damage 1d6+2 / 1d4+1 by distance) not compared;
+      the event 0xA / 0x10 handlers' other side-effects (0x19's [0xAE66],
+      the blind attacker's own AC -4 - undone by the next recalculation)
+      not shown; DAMAGE's cloak reset on a roll of exactly 0 before any
+      fight ([0xAE4C] = 0) not followed. Knights: other games' on-hit
+      specials after a blow of no damage not checked (only Knights' needs
+      damage > 0 now). The same finder (range 0xFF, second argument 1)
+      also picks the computer's target at its turn's start (Curse GAME.OVR
+      0xBC36 ...) - the engine's pick_target there prefers one in weapon
+      range, then the nearest seen - not compared.
 - [ ] Round 7 left: Treasures' effect 0x3B's handler (none of its items
       has it - round 10 left it: nothing in the game carries it). The Dark Queen: its weapon name's trailing space (0x9FDC not
       read); its fight pages' rows after a hit (each page from row 10 here:

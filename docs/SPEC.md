@@ -3449,6 +3449,15 @@ the game's Settings (As Original: all of them).
   none without) - the selected member's branch the other (AD&D) way
   round. With Game Fixes on all three as the selected one's; off: as the
   original.
+- **The Dark Queen's to-hit hooks** (Game Fixes; round 16 - DQK.EXE's hook
+  switch 0x7202, handlers DS 0xBEE8 + 4 x effect): Invisible to Animals
+  (0x45) takes 4 off the roll when its HOLDER's own flags & 0x45 and the
+  holder doesn't see invisible - with Game Fixes on, the attacker's flags
+  and sight; the gnomes' dodge (0x30) has an empty handler - -4 against
+  an attacker of flags & 0x20 only with Game Fixes; Dispel Evil's -7 and
+  the protections' -2 come before the d20 (event 0xB) and are lost - with
+  Game Fixes they count; a coughing target's AC is recalculated, which
+  loses its Shield (AC 3 at worst, the front only) - kept with Game Fixes.
 - Smaller things kept from the originals although they look like bugs are
   NOT differences: they're listed as quirks in the facts docs. Round 15's:
   the computer's step needs its cost strictly under the moves left (all

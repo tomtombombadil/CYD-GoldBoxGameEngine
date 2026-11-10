@@ -3690,11 +3690,22 @@ void next_turn(pic::Canvas& c)
     start_turn(c);
 }
 
+// (the Dark Queen's clock steps as each round starts - round 16)
+bool tick_at_start() { return fg->b.fx && fg->b.fx->q.tick_at_start; }
+
 void begin_round(pic::Canvas& c)
 {
-    combat::Event ev[8];
+    combat::Event ev[16];
     rolls_clear();
-    const int nev = combat::start_round(fg->b, rng, ev, 8);
+    int nev = 0;
+    if (tick_at_start()) {
+        // (the Dark Queen's round start 0x2336C: the time step 0x61AD - the
+        // clock, every effect a minute on - before anything else)
+        vm->advance_clock(1, 1);
+        vm->take_minutes();
+        nev = combat::tick(fg->b, ev, 8);
+    }
+    nev += combat::start_round(fg->b, rng, ev + nev, 8);
     vm->set(0x7ECB, 0);                 // (the surprise word: cleared after the initiative, as the original)
     if (nev > 0) {
         // the hasted "ages" (the first round of their Haste), then the turns
@@ -3712,12 +3723,14 @@ void fight_hammer(int i);
 
 void round_end(pic::Canvas& c)
 {
-    vm->advance_clock(1, 1);                // a round is a minute
-    vm->take_minutes();
-    // Everyone's effects a minute on; regeneration; a troll getting up
-    combat::Event ev[8];
-    const int nev = combat::tick(fg->b, ev, 8);
-    for (int k = 0; k < nev; ++k) event_page(ev[k]);
+    if (!tick_at_start()) {
+        vm->advance_clock(1, 1);            // a round is a minute
+        vm->take_minutes();
+        // Everyone's effects a minute on; regeneration; a troll getting up
+        combat::Event ev[8];
+        const int nev = combat::tick(fg->b, ev, 8);
+        for (int k = 0; k < nev; ++k) event_page(ev[k]);
+    }
     // Spiritual Hammer: back in hand each round while it lasts, gone after
     for (int k = 0; k < fg->b.party_size; ++k) fight_hammer(k);
     // Those standing in a poisonous cloud breathe it again

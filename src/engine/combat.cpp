@@ -246,6 +246,7 @@ bool read_tables(Tables& t, const TableAt& at, ReadDs read, void* ctx)
     t.mood_known = at.mood_rows != 0;
     t.flee_inc = at.flee_inc;
     t.step_pool = at.step_pool;
+    t.finder_scan = at.finder_scan;
     for (int k = 0; k < 3; ++k) t.clouds[k] = at.clouds[k];
     if (t.mood_known && !read(ctx, at.mood_rows, t.mood, sizeof t.mood)) return false;
     if (at.reserve && !(read(ctx, at.reserve, t.reserve_mon, 5) && read(ctx, static_cast<uint16_t>(at.reserve + 5), t.reserve_pic, 5)))
@@ -1888,7 +1889,11 @@ int start_round(Battle& b, create::Dice& d, Event* out, int cap)
                 for (int c = 0; c < b.n; ++c) {
                     Fighter& v = b.f[c];
                     if (!v.size || v.status() != party::Okay || v.team() == f.team()) continue;
-                    if (saving_throw(v, 1, -4, d) || hasx(v, k.feared)) continue;
+                    if (b.fx->q.hooks) {
+                        // (the Dark Queen's 0x4F361 - at the set-up, each round and
+                        // turn: no save; one under 7 Hit Dice, not immune to fear)
+                        if (v.rec[0xE5] >= 7 || hasx(v, k.feared) || hasx(v, b.fx->mon.no_fear)) continue;
+                    } else if (saving_throw(v, 1, -4, d) || hasx(v, k.feared)) continue;
                     give_aff(v, k.feared, 0, 0, false);
                     if (out && n_ev < cap) {
                         out[n_ev] = Event{};
@@ -2251,6 +2256,87 @@ int kalistes_blow(const Fighter& at, create::Dice& d, int dmg)
 }
 } // namespace
 
+// The Dark Queen's target AC (event 0xB of DQK.EXE's hook switch 0x7202,
+// after the blow's recalculation 0x77E:0xBE2 - round 16): Shield (0x4E149)
+// makes the front AC 3 at worst; coughing (0x539AB) recalculates it - the
+// Shield's lost (an original's mistake, kept with the Game Fixes) - and
+// takes 2 off front and rear; blind (0x4E502) 4, `dance` (0x4FEB5) 4,
+// `highlight` (0x4EF36) 2 off both, `iron_skin` (0x4FF59) 4 on; the stored
+// bytes wrap as the original's
+int queen_ac(const Battle& b, const Fighter& tg, bool rear)
+{
+    const Facts& fx = *b.fx;
+    int front = tg.rec[kAc], back = tg.rec[kAcBehind];
+    const bool shield = hasx(tg, fx.sp.shield);
+    if (shield && front < 0x39) front = 0x39;
+    if (hasx(tg, fx.cough)) {
+        front = tg.rec[kAc];
+        back = tg.rec[kAcBehind];
+        if (shield && rules::fixes() && front < 0x39) front = 0x39;
+        front -= 2;
+        back -= 2;
+    }
+    int d = 0;
+    if (hasx(tg, fx.blinded)) d -= 4;
+    if (hasx(tg, fx.q.dance)) d -= 4;
+    if (hasx(tg, fx.q.highlight)) d -= 2;
+    if (hasx(tg, fx.q.iron_skin)) d += 4;
+    return static_cast<uint8_t>((rear ? back : front) + d);
+}
+
+// The Dark Queen's roll hooks (events 0xA - the attacker's effects - and
+// 0x10 - the target's - of 0x7202, each handler at DS 0xBEE8 + 4 x effect;
+// round 16): what they add to the d20 (`*miss` when blinking or the cloak
+// make it 0xFF); `fixes_side` what the Game Fixes add beside the roll
+int queen_roll_hooks(Battle& b, int a, int c, bool* miss, int* fixes_side)
+{
+    const Facts& fx = *b.fx;
+    Fighter& at = b.f[a];
+    Fighter& tg = b.f[c];
+    int h = 0;
+    *miss = false;
+    *fixes_side = 0;
+    // the attacker's: Blessed +1 (0x4DFC2), Cursed -1 (0x4DFD6), `race_plus`
+    // +1 against its target's flags & 0x80 (0x53977), Blind -4 (0x4E502),
+    // Accursed -4 (0x4E563), Prayer +1 for its caster's side, else -1
+    // (0x4E863), terrified -2 (0x4FF3B)
+    if (hasx(at, fx.bless)) ++h;
+    if (hasx(at, fx.curse)) --h;
+    if (hasx(at, fx.q.race_plus) && (tg.rec[0x14B] & 0x80)) ++h;
+    if (hasx(at, fx.blinded)) h -= 4;
+    if (hasx(at, fx.bestow)) h -= 4;
+    for (int i = 0; fx.prayer && i < b.n; ++i) {
+        const int k = find_aff(b.f[i], fx.prayer);
+        if (k < 0 || !prayer_reaches(b, i, a)) continue;
+        h += (b.f[i].aff[k][3] >> 4) == at.team() ? 1 : -1;
+        break;
+    }
+    if (hasx(at, fx.dk.feared)) h -= 2;
+    if (hasx(at, fx.q.plus2)) h += 2;
+    if (hasx(at, fx.q.minus2)) h -= 2;
+    // the target's: invisible -4 to one not seeing it (0x4E3DA); Invisible to
+    // Animals (0x4EDC3) -4 when the holder's OWN flags & 0x45 and it doesn't
+    // see invisible (the attacker's with the Game Fixes); blinking (0x53D3C)
+    // a miss once it has acted; `giants` -4 against an attacker of flags & 4
+    // (0x4E842); 0x30's handler (0x4E85E) does nothing - the gnomes' -4
+    // with the Game Fixes; the cloak (0x4F183): the first blow a miss
+    const bool sees = hasx(at, fx.mon.detect);
+    if (hasx(tg, fx.invisible) && !sees) h -= 4;
+    if (hasx(tg, fx.q.animals)) {
+        const Fighter& w = rules::fixes() ? at : tg;
+        if ((w.rec[0x14B] & 0x45) && !hasx(w, fx.mon.detect)) h -= 4;
+    }
+    if (hasx(tg, fx.blink) && tg.delay == 0) *miss = true;
+    if (hasx(tg, fx.q.giants) && (at.rec[0x14B] & 4)) h -= 4;
+    if (hasx(tg, fx.q.tgt_minus1)) --h;
+    if (rules::fixes()) {
+        if (hasx(tg, fx.race.gnome_extra) && (at.rec[0x14B] & 0x20)) *fixes_side -= 4;
+        // (Dispel Evil's -7 against the evil, 0x4DFF8: event 0xB, before the d20 - lost)
+        if (hasx(tg, fx.sp.evil_ward) && (at.rec[0x14B] & 1)) *fixes_side -= 7;
+    }
+    return h;
+}
+
 Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& d, bool from_behind)
 {
 #ifdef CYD_TEST_HOOKS
@@ -2306,7 +2392,9 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
     // Coughing (a stinking cloud): its rear AC 2 worse (AC 10 at most worse;
     // worse than 10 becomes 10 - the original's), from any side
     const bool coughing = b.fx && hasx(tg, b.fx->cough);
-    if (coughing) ac = tg.rec[kAcBehind] > 0x34 ? tg.rec[kAcBehind] - 2 : 0x32;
+    const bool qh = b.fx && b.fx->q.hooks;
+    if (qh) ac = queen_ac(b, tg, behind);
+    else if (coughing) ac = tg.rec[kAcBehind] > 0x34 ? tg.rec[kAcBehind] - 2 : 0x32;
     if (stab) ac -= 4;
     // A missile weapon readied (its range over 1): beyond a third of its
     // range the target's AC is 2 better, beyond two thirds 5 better (the
@@ -2339,8 +2427,16 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
         }
     }
     int side = at.team() ? b.to_hit_monsters : b.to_hit_party;
+    int q_hook = 0;                             // (the Dark Queen's: the hooks' change to the roll)
+    bool q_miss = false;
+    if (qh) {
+        int fixes_side = 0;
+        q_hook = queen_roll_hooks(b, a, c, &q_miss, &fixes_side);
+        side += fixes_side;
+    }
     if (b.fx) {
         const Facts& fx = *b.fx;
+        if (!qh) {
         if (at.has(fx.bless)) ++side;
         if (at.has(fx.curse)) --side;
         // A prayer helps its caster's side and hinders the other
@@ -2410,6 +2506,8 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
                 if (hasx(tg, fx.race.gnome_extra) && at.rec[0x11A] == 1) side -= 4;
             }
         }
+        }   // (!qh)
+        if (!qh) {
         if (fx.blinded && tg.has(fx.blinded) && !coughing) ac -= 4;     // a blind target: easier (coughing: lost)
         // Darkness (R6, R14): a dancing target's AC 4 worse (0x76, ovr 0x1DB21);
         // a terrified attacker -2 to hit (0x78, ovr 0x1DBDF)
@@ -2423,6 +2521,7 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
             if (fx.secret) ac -= 2;
             else ac = ac < 58 ? ac + 2 : 60;
         }
+        }   // (!qh)
         // (protection from evil / good: the original's -2 to hit comes before
         // the roll and is lost; only the saves count. With the Game Fixes
         // the AD&D spell: an evil / good attacker -2 to hit one warded -
@@ -2490,12 +2589,19 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
             const int roll = d.roll(20, 1);
             const int extra = roll > 1 ? wbonus + (slayer ? 2 : 0) + (giant ? 1 : 0) : 0;
             bool hit = roll == 20 || (roll != 1 && roll + static_cast<int8_t>(at.rec[kHit]) + side + extra >= ac);
+            if (qh) {
+                // (the Dark Queen's 0x8461: a 1 misses; 20 counts 100; the hooks
+                // change the roll - under 0 (or made 0xFF) a miss; then roll +
+                // to-hit + side >= AC)
+                const int r = static_cast<int8_t>((roll == 20 ? 100 : roll) + q_hook);
+                hit = roll > 1 && !q_miss && r >= 0 && r + static_cast<int8_t>(at.rec[kHit]) + side + extra >= ac;
+            }
             // (shown counted from THAC0 20: 60 - the to-hit value is the THAC0, 60 - the stored AC the AC)
-            log_roll(c, RollKind::Hit, out.n, roll, static_cast<int8_t>(at.rec[kHit]) - 40 + side + extra, ac - 40);
+            log_roll(c, RollKind::Hit, out.n, roll, static_cast<int8_t>(at.rec[kHit]) - 40 + side + q_hook + extra, ac - 40);
             // Blinking, once it has acted this round: not there to be hit
             // (Secret's 0x11C9D runs only at the blinker's own turn and for being
             // seen - never at the roll: AD&D's with rules::fixes())
-            if (b.fx && b.fx->blink && tg.has(b.fx->blink) && tg.delay == 0 && (!b.fx->secret || rules::fixes())) hit = false;
+            if (!qh && b.fx && b.fx->blink && tg.has(b.fx->blink) && tg.delay == 0 && (!b.fx->secret || rules::fixes())) hit = false;
             // Displacement: the first attack (past a 1) on it this fight misses, even a 20
             if (b.fx && b.fx->items.displace && roll > 1 && !(b.fx->items.displace_unused && !rules::fixes())) {
                 const int k = find_aff(tg, b.fx->items.displace);
@@ -2697,7 +2803,7 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
                 if (dn) add_event(out, a, Ev::Down);
                 if (!at.up()) break;
             }
-            if (b.fx && tg.up()) after_hit(b, a, c, slot, roll, hits1, d, out);
+            if (b.fx && tg.up() && (!b.fx->hit_needs_damage || dmg > 0)) after_hit(b, a, c, slot, roll, hits1, d, out);
             if (out.rake) {
                 // Pool's tiger (its ovr14 routine): both claws hit - two
                 // rakes of 2d4 at once (the attack made again with them)
@@ -3397,6 +3503,54 @@ bool cloud_ok(const Battle& b, const Tables& t, Fighter& f, int x, int y, create
     return true;
 }
 
+} // namespace
+
+// The second step back's finder (Curse GAME.OVR 0x171AC, the same in every
+// DAX game - its count-2 call with range 0xFF and the second argument 1;
+// round 16): pass 1 - up to 20 random picks among the enemies on the field,
+// one seen (0x144AB) taken, one not struck off, a pick already struck ends
+// the pass (Darkness / Treasures, 0x22191 / 0x2A422: one random place, then
+// the list in order from there, round, as many as it holds); pass 2 - the
+// list made again and its random pick taken, seen or not ([0x6EAC]+6 set
+// skips the sight test)
+int finder_any(Battle& b, const Tables& t, int i, create::Dice& d)
+{
+    Fighter& f = b.f[i];
+    const int my = f.team() ? 1 : 0;
+    int list[kMaxFighters], n = 0;
+    auto build = [&]() {
+        n = 0;
+        for (int c = 0; c < b.n && n < kMaxFighters; ++c)
+            if (b.f[c].up() && b.f[c].size && (b.f[c].team() ? 1 : 0) != my) list[n++] = c;
+    };
+    auto take = [&](int c) {
+        f.target = static_cast<int16_t>(c);
+        return c;
+    };
+    build();
+    if (t.finder_scan) {
+        if (n) {
+            int k = d.roll(n, 1) - 1;
+            for (int left = n; left > 0; --left, k = (k + 1) % n)
+                if (seen_enemy(b, i, list[k])) return take(list[k]);
+        }
+    } else {
+        for (int tries = 20; tries > 0 && n > 0; --tries) {
+            const int k = d.roll(n, 1) - 1;
+            if (list[k] < 0) break;
+            if (seen_enemy(b, i, list[k])) return take(list[k]);
+            list[k] = -1;
+            bool any = false;
+            for (int j = 0; j < n; ++j) any = any || list[j] >= 0;
+            if (!any) break;
+        }
+    }
+    build();
+    if (!n) return -1;
+    return take(list[d.roll(n, 1) - 1]);
+}
+
+namespace {
 bool mood_step(Battle& b, const Tables& t, int i, int base, create::Dice& d, Plan& p, bool fleeing)
 {
     Fighter& f = b.f[i];
@@ -3419,7 +3573,7 @@ bool mood_step(Battle& b, const Tables& t, int i, int base, create::Dice& d, Pla
         ++f.flee_back;
         if (f.flee_back > 1) f.target = -1;
         bool done = dir < 0 || f.flee_back > 2;
-        if (!done && f.flee_back == 2 && pick_target(b, t, i, d) < 0) done = true;     // (none: 0xCC32, it guards)
+        if (!done && f.flee_back == 2 && finder_any(b, t, i, d) < 0) done = true;     // (none: 0xCC32, it guards)
         if (done) {
             f.moves = 0;
             if (fleeing) return false;

@@ -2037,7 +2037,7 @@ constexpr combat::Facts kQueenFightFacts = {.held = {0x33, 0x34, 0x35, 0x1F}, .b
                 .shot_sling = {47, 98, 101},
                 .bestow = 0x24, .blink = 0x25, .fumbling = 0x1B, .silence = 0x15, .entangle = 0x1B, .sticks = 0x03,
                 .faerie = 0, .blinded = 0x21, .animals_blind = 0, .feeble = 0x44,
-                .mon = {.poison = 0x40, .poison_m2 = 0x56, .kreen_bite = 0x45, .need_magic = 0x67, .no_cold = 0x62,
+                .mon = {.poison = 0x40, .poison_m2 = 0x56, .need_magic = 0x67, .no_cold = 0x62,
                         .no_elec = 0, .globe = 0x3F, .elf_sleep = 0x5F, .detect = 0x18, .prot_evil_near = 0x2D,
                         .acid_breath = 0x60, .fire_breath = 0x54,
                         .paralyzed = 0x34, .poisoned = 0x37, .sleep = 0x35, .drain1 = 0x65, .drain2 = 0x66,
@@ -2048,8 +2048,13 @@ constexpr combat::Facts kQueenFightFacts = {.held = {0x33, 0x34, 0x35, 0x1F}, .b
                        .stun = 0x6A},
                 .race = {0x5E, 0x12, 0x1A, 0x07, 0x2F, 0x30, 0x69, true},
                 .items = {.displace = 0x59, .ring_invisible = 0x38, .fire_ring = 0x3D},
-                .berserk = 0x6B, .taunted = 0x5B, .feeble_lost = true, .feeble_direct = true,
-                .q_cloud_proof = 0x8F};
+                .berserk = 0x6B, .dk = {.dragon_fear = 0x64, .feared = 0x78}, .taunted = 0x5B, .feeble_lost = true, .feeble_direct = true,
+                .q_cloud_proof = 0x8F,
+                // (round 16: its to-hit hooks - Invisible to Animals 0x45 is no
+                // bite here, the dragons' fear 0x64 terrifies, 0x78)
+                .q = {.hooks = true, .race_plus = 0x1A, .giants = 0x2F, .animals = 0x45, .dance = 0x76, .highlight = 0x47,
+                      .iron_skin = 0x7A, .plus2 = 0xA2, .minus2 = 0x94, .tgt_minus1 = 0xCF,
+                      .tick_at_start = true}};
 // The Dark Queen's spells (queen_facts_4.md 8): Darkness's numbers 1-126 and
 // their workings (its handler table DS 0xAF45 + 4 x spell shares handlers as
 // Darkness's), its words found again among its C strings; "is " + an effect's
@@ -3298,7 +3303,7 @@ const Profile kProfiles[] = {
                 .berserk = 0x6B, .taunted = 0x5B,
                 // (its Feeblemind - GAME.OVR 0x2E610: the row's effect 0x44 is its
                 // drain-2, its handler 0x1D3F8 called at once - round 15)
-                .feeble_drain = true},
+                .feeble_drain = true, .hit_needs_damage = true},
                kDeathKnightsFight, sizeof kDeathKnightsFight / sizeof kDeathKnightsFight[0],
                // COMSPR (22 blocks, + 0x80 the second pictures): 0-2 arrows, 3
                // the axe, 4 the flask, 5 the spell, 6 lightning, 7 a rock, 8 a
@@ -3386,10 +3391,11 @@ const Profile kProfiles[] = {
                .title = kP | 0xB5A8, .heading = kP | 0xB5D1, .yes = 0x3430D, .no = 0x34314, .cursed = 0x25099,
                .wrong_class = 0x250A6, .already = 0x250B2, .hands_full = 0x250C1, .plural_s = 0x35ABD,
                // (its stats' recalculation - GAME.OVR Darkness 0x3307E, Treasures
-               // 0x3CD87 - keeps Intelligence / Wisdom at 3 while effect 0x44
-               // lasts; round 15. It checks Secret's other four too - 0x26,
-               // 0x71, 0x0C / 0x3E / 0x0E - not followed yet)
-               .stat_fx = {0, 0, 0, 0, 0x44, 0},
+               // 0x3CD87: Secret's - Strength 0x26 (an 18/xx for current
+               // fighter levels only), giant strength 0x71, Enlarge 0x0C,
+               // Charisma + Friends' 0x0E, Intelligence / Wisdom 3 while 0x44
+               // lasts, Constitution 20+ the healing 0x3E; rounds 15 / 16)
+               .stat_fx = {0x26, 0x71, 0x0C, 0x0E, 0x44, 0x3E},
                // (the treasure's Detect: spell 77, its effect 5 - facts_shops.md 4)
                .detect = {5, 0x4D, 0, 0},
                // (Sell's prices as Secret's - facts_shops.md 2.2)
@@ -3399,7 +3405,7 @@ const Profile kProfiles[] = {
                // ITEM0.DAX block 1; the random scroll's spells by DS 0x651A + 16 s;
                // the temple's 11 cures by spell number (DS 0x08CC)
                .goods_first = 0x0001, .goods_last = 0x000C, .goods_rows = 0x0017, .spell_class = 0x651A,
-               .rows_file = "ITEM0.DAX", .temple_spells = 0x08CC},
+               .rows_file = "ITEM0.DAX", .temple_spells = 0x08CC, .str_fighter_now = true},
      // Character rules (darkness_facts.md 37): the tables in Darkness's
      // shapes (classes::Layout dk, with Secret's rules otherwise - secret):
      // spells 0x6519 (127), THAC0 0x6D18, class flags / masks, last hit die,
@@ -3513,7 +3519,7 @@ const Profile kProfiles[] = {
      // takes away (DS 0x0C6E, 16 - GAME.OVR 0x32DB0); the effects by
      // Darkness's own numbers (its View names, DS 0x4061; its handler table
      // DS 0xA7EA + 4 x (effect - 1), set at GAME.OVR 0x1DD3B)
-     .fight = {{0x3EBA, 0x090C, 0x091C, 0x092C, 0x0930, 0x0938, 0x0940, 0x097C, 0x09FB, 0, 11, 0x08D8, 0, 0x08E8, 1, false, {{1, {0x1E, 0x3F}, 0x18, true, false, false}, {2, {0x39}, 0x10, true, false, false}, {3, {}, 0, true, false, false}}},
+     .fight = {{0x3EBA, 0x090C, 0x091C, 0x092C, 0x0930, 0x0938, 0x0940, 0x097C, 0x09FB, 0, 11, 0x08D8, 0, 0x08E8, 1, false, {{1, {0x1E, 0x3F}, 0x18, true, false, false}, {2, {0x39}, 0x10, true, false, false}, {3, {}, 0, true, false, false}}, true},
               {
                0xD2F1, 0, 0, 0, 0, 0, 0, 0xA290, kP | 0xC0B5, 0, 0x9785, kP | 0xC03A, 0, 0, 0, kP | 0xC88C, 0, 0, 0, 0,
                0x36BDA, kP | 0xC863, 0x9837, 0, 0, kP | 0xCDD3, 0x1E89C, 0x1E8A8, 0x1E8B7, 0x1E8BF, 0x1E8CE, 0x1E8E2, 0x1E8EF,
@@ -3826,10 +3832,11 @@ const Profile kProfiles[] = {
                .title = kP | 0xDB68, .heading = kP | 0xDB92, .yes = 0x3E18C, .no = 0x3E193, .cursed = 0x2D513,
                .wrong_class = 0x2D520, .already = 0x2D52C, .hands_full = 0x2D53B, .plural_s = 0x3FAB9,
                // (its stats' recalculation - GAME.OVR Darkness 0x3307E, Treasures
-               // 0x3CD87 - keeps Intelligence / Wisdom at 3 while effect 0x44
-               // lasts; round 15. It checks Secret's other four too - 0x26,
-               // 0x71, 0x0C / 0x3E / 0x0E - not followed yet)
-               .stat_fx = {0, 0, 0, 0, 0x44, 0},
+               // 0x3CD87: Secret's - Strength 0x26 (an 18/xx for current
+               // fighter levels only), giant strength 0x71, Enlarge 0x0C,
+               // Charisma + Friends' 0x0E, Intelligence / Wisdom 3 while 0x44
+               // lasts, Constitution 20+ the healing 0x3E; rounds 15 / 16)
+               .stat_fx = {0x26, 0x71, 0x0C, 0x0E, 0x44, 0x3E},
                // (the treasure's Detect: spell 77, its effect 5 - facts_shops.md 4)
                .detect = {5, 0x4D, 0, 0},
                // (Sell's prices as Secret's - facts_shops.md 2.2)
@@ -3839,7 +3846,7 @@ const Profile kProfiles[] = {
                // 0xFF (goods_runs; rows of ITEM0.DAX block 1); the random scroll's
                // spells by DS 0x578A + 16 s; the temple's cures (DS 0x08E0)
                .goods_first = 0, .goods_last = 0, .goods_rows = 0, .spell_class = 0x578A,
-               .rows_file = "ITEM0.DAX", .temple_spells = 0x08E0, .goods_runs = true},
+               .rows_file = "ITEM0.DAX", .temple_spells = 0x08E0, .goods_runs = true, .str_fighter_now = true},
      // Character rules (treasures_facts.md 6): Darkness's tables byte for byte
      // at Treasures' places - spells 0x5789, THAC0 0x5F98, flags 0x6032, masks
      // 0x603A (a 0 for the monk), ... class records 0x6436, saves 0x6C83; the
@@ -3918,7 +3925,7 @@ const Profile kProfiles[] = {
                .kept_highlight = true},
      // Fights: the ground table DS 0x43F8, placing 0x0918-0x094C, turn undead
      // 0x0B33 (its code reads them there); no summoning reserve table
-     .fight = {{0x43F8, 0x0918, 0x0928, 0x0938, 0x093C, 0x0944, 0x094C, 0x0988, 0x0B33, 0, 11, 0, 0, 0x08F4, 1, false, {{1, {0x1E, 0x3F}, 0x18, true, false, false}, {2, {0x39}, 0x10, true, false, false}, {3, {}, 0, true, false, false}}},
+     .fight = {{0x43F8, 0x0918, 0x0928, 0x0938, 0x093C, 0x0944, 0x094C, 0x0988, 0x0B33, 0, 11, 0, 0, 0x08F4, 1, false, {{1, {0x1E, 0x3F}, 0x18, true, false, false}, {2, {0x39}, 0x10, true, false, false}, {3, {}, 0, true, false, false}}, true},
               {
                0xE2EF, 0, 0, 0, 0, 0, 0, 0xB0DA, kP | 0xE6BA, 0, 0xA537, kP | 0xE63C, 0, 0, 0, kP | 0xEEC0, 0, 0, 0, 0,
                0x40C65, kP | 0xEE96, 0xA5F1, 0, 0, kP | 0xF426, 0x268AC, 0x268B8, 0x268C7, 0x268CF, 0x268DE, 0x268F2, 0x268FF,

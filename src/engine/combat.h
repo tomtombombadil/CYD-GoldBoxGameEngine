@@ -107,6 +107,10 @@ struct Tables {
     // the cloud squares its try takes (StepCloud)
     uint8_t flee_inc;
     bool    step_pool;
+    // The second step back's finder (finder_any): Darkness / Treasures scan
+    // the list from one random place (GAME.OVR 0x22191 / 0x2A422), the
+    // others pick at random up to 20 times
+    bool    finder_scan;                // (set by read_tables)
     StepCloud clouds[3];
     uint8_t foe_names[20][16];
     uint8_t dodge_names[2][16];
@@ -128,6 +132,7 @@ struct TableAt {
     uint8_t  flee_inc = 0;              // Tables::flee_inc
     bool     step_pool = false;         // PoolRad's try: the ground's value < the moves, the cost <= the moves (else cost < moves)
     StepCloud clouds[3] = {};
+    bool     finder_scan = false;       // Tables::finder_scan
 };
 // Reads them: read(ctx, ds offset, out, n) gives the data segment's bytes
 using ReadDs = bool (*)(void* ctx, uint16_t ds, uint8_t* out, size_t n);
@@ -452,10 +457,44 @@ struct Facts {
     // no spell lost. An original's mistake: with the Game Fixes on, the
     // Darkness / Dark Queen Feeblemind (feeble_direct, no effect)
     bool feeble_drain = false;
+    // Death Knights' on-hit specials (its hook events 2 / 3 - attack 1's /
+    // 2's - GAME.OVR 0x204E9, round 16): only when the blow did damage
+    // ([0xBE6C] > 0); any holder's, the party's own too (its feebleminded
+    // one drains whoever it hits)
+    bool hit_needs_damage = false;
     // The Dark Queen's stinking cloud (DQK.EXE 0x805D, round 11): this effect
     // keeps one from breathing it (with the undead, the nauseous, flags 2 &
     // 0x18); coughing and nausea 1d4 + 1 each, data 0xFF. 0: the others' rule
     uint8_t q_cloud_proof = 0;
+    // The Dark Queen's to-hit hooks (round 16; DQK.EXE's hook switch 0x7202,
+    // its handlers DS 0xBEE8 + 4 x effect, overlay segment 0x2B3A at file
+    // 0x4DE90): the roll (d20, 20 = 100) changed by the attacker's effects
+    // (event 0xA) and the target's (0x10) is a miss under 0 - then + to-hit
+    // + side >= AC. Attacker: bless +1, curse -1, prayer +-1, `race_plus`
+    // +1 against flags & 0x80, blind -4, accursed -4, terrified -2. Target:
+    // invisible -4 (not to one seeing it), `animals` -4 when the TARGET'S
+    // own flags & 0x45 and it doesn't see invisible (an original's mistake:
+    // the attacker's with the Game Fixes), blinking / the cloak a miss,
+    // `giants` -4 against an attacker of flags & 4 (always). No gnome +1,
+    // no gnomes' dodge (0x30's handler is empty: with the Game Fixes),
+    // Dispel Evil's -7 lost (event 0xB, before the d20). The target's AC
+    // (event 0xB, after its recalculation): Shield 3 at worst - the front
+    // only, undone by coughing's recalculation (kept with the Game Fixes),
+    // coughing 2 worse front and rear, blind 4 worse, `dance` 4 worse,
+    // `highlight` 2 worse, `iron_skin` 4 better. Its dragon fear (0x64):
+    // no save - the other side's okay ones under 7 Hit Dice not immune
+    // (mon.no_fear) are terrified
+    struct QueenFx {
+        bool    hooks = false;
+        uint8_t race_plus = 0, giants = 0, animals = 0, dance = 0, highlight = 0, iron_skin = 0;
+        // (unnamed ones: the attacker's +2 (0x50F39) and -2 (0x5039B), the
+        // target's -1 (0x528F8))
+        uint8_t plus2 = 0, minus2 = 0, tgt_minus1 = 0;
+        // Its clock (0x5EFF, called by the time step 0x61AD with 1 minute
+        // from the round's start 0x2336C): every effect a minute on as each
+        // round STARTS - the first one too - not as it ends
+        bool tick_at_start = false;
+    } q{};
     // Gateway to the Savage Frontier's (its effect handlers DS 0x826A on, the
     // check lists of its work_on_00 - SPEC 6e; 0: none). `ways`: the deadly
     // poison (0x40) after attack 1's hit, not attack 2's, the paralysing bite
@@ -1100,6 +1139,10 @@ bool flight_step(FlightPath& p);
 // with a missile weapon it shoots at its target in reach and sight (or a
 // random one there); else it steps toward its target; else it guards.
 Plan think(Battle& b, const Tables& t, int i, create::Dice& d);
+// The DAX games' second step back's target finder (range 0xFF, the sight
+// test skipped in its second pass - Curse GAME.OVR 0x171AC; round 16): the
+// target set, or -1
+int finder_any(Battle& b, const Tables& t, int i, create::Dice& d);
 // Leaving the fight: gets away (faster than every enemy able to reach, or
 // even and d2) - status Running, off the field
 bool flee(Battle& b, const Tables& t, int i, create::Dice& d);

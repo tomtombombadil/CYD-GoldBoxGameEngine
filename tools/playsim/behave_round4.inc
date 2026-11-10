@@ -2523,6 +2523,489 @@ void feeblemind()
     }
 }
 
+// Death Knights' on-hit specials (round 16): oracle_knights_hit.txt from its
+// GAME.OVR (tools/devkit/oracles/knights_hit.py - the hook switch's events
+// 2 / 3 and the blow's damage test before them). The party's own holder of
+// its drain-2 effect (0x44 - the feebleminded's) drains whoever it hits,
+// attack 1 or 2 as the lists say; a blow of no damage drains nobody
+void knights_hit()
+{
+    if (game() != 6) return;
+    char path[256];
+    snprintf(path, sizeof path, "%s/oracle_knights_hit.txt", getenv("ORACLE_DIR") ? getenv("ORACLE_DIR") : "/tmp/claude-0/bt");
+    FILE* fo = fopen(path, "r");
+    if (!fo) {
+        expect(P, "Death Knights' on-hit: oracle_knights_hit (tools/devkit/oracles/knights_hit.py)", false, "%s missing", path);
+        return;
+    }
+    bool ev2 = false, ev3 = false;
+    int need = -1;
+    char line[200];
+    while (fgets(line, sizeof line, fo)) {
+        if (!strncmp(line, "event2 ", 7)) ev2 = strstr(line, "0x44") != nullptr;
+        if (!strncmp(line, "event3 ", 7)) ev3 = strstr(line, "0x44") != nullptr;
+        if (sscanf(line, "needs_damage %d", &need) == 1) continue;
+    }
+    fclose(fo);
+    if (!fight() || !fg->b.fx || fg->b.fx->mon.drain2 != 0x44) {
+        expect(P, "Death Knights' on-hit: its drain-2 effect 0x44", false);
+        return;
+    }
+    combat::Battle& b = fg->b;
+    int n = 0, bad = 0;
+    char first[200] = "";
+    auto blow = [&](int slot, int dice) {
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(0, 0, 10, 10, 60);
+        mx::put(B, 1, 11, 10, 200);
+        F(B).rec[0xE5] = 9;
+        q_add(F(0), 0x44, 0);
+        combat::Fighter& at = F(0);
+        at.rec[0x199] = 60;
+        at.attacks[0] = slot == 0 ? 1 : 0;
+        at.attacks[1] = slot == 1 ? 1 : 0;
+        for (int s2 = 0; s2 < 2; ++s2) {
+            at.rec[0x19E + s2] = static_cast<uint8_t>(dice);
+            at.rec[0x1A0 + s2] = 6;
+            at.rec[0x1A2 + s2] = 0;
+        }
+        create::g_die_hook = [](int nn) { return nn == 20 ? 18 : -1; };
+        const combat::Attack r = combat::attack(b, 0, B, nullptr, rng);
+        create::g_die_hook = nullptr;
+        bool drained = false;
+        for (int k = 0; k < r.n_ev; ++k)
+            drained = drained || (r.ev[k].who == B && (r.ev[k].ev == combat::Ev::Drained || r.ev[k].ev == combat::Ev::DkDrained));
+        return drained;
+    };
+    auto check = [&](const char* what, bool got, bool want) {
+        ++n;
+        if (got != want && !bad++) snprintf(first, sizeof first, "%s: drained %d, want %d", what, got, want);
+    };
+    for (int fixes = 0; fixes < 2; ++fixes) {
+        rules::set_fixes(fixes != 0);
+        check("attack 1, damage", blow(0, 1), ev2);
+        check("attack 2, damage", blow(1, 1), ev3);
+        check("attack 1, no damage", blow(0, 0), need == 1 ? false : ev2);
+    }
+    rules::set_fixes(true);
+    expect(P, "Death Knights: a holder of its drain-2 effect (the party's feebleminded too) drains whoever its damaging blow hits (oracle_knights_hit: events 2 / 3, the damage test)",
+           bad == 0 && need >= 0, "%d of %d wrong (%s)", bad, n, first);
+}
+
+// The second step back's finder (round 16): oracle_finder_<game>.txt from
+// GAME.OVR (tools/devkit/oracles/finder.py - the count-2 call's finder and
+// its passes). combat::finder_any with set d-rolls: none in sight - one is
+// still taken (pass 2 skips the sight test); random-pick games: a pick of one
+// already struck ends pass 1 and pass 2 may take an unseen one beside a seen
+// one; scan games (Darkness-type): from any start the seen one is found
+int fd_seq[8], fd_at = 0;
+int fd_die(int n) { return fd_at < 8 && fd_seq[fd_at] > 0 ? (fd_seq[fd_at++] - 1) % n : 0; }
+void finder_check()
+{
+    static const char* kName[] = {"", "poolrad", "curse", "secret", "darkness", "champions", "knights", "queen", "gateway", "treasures"};
+    const int g = game();
+    if (g == 7 || g < 1 || g > 9) return;
+    char path[256];
+    snprintf(path, sizeof path, "%s/oracle_finder_%s.txt", getenv("ORACLE_DIR") ? getenv("ORACLE_DIR") : "/tmp/claude-0/bt", kName[g]);
+    FILE* fo = fopen(path, "r");
+    if (!fo) {
+        expect(P, "the step back's finder: oracle_finder (tools/devkit/oracles/finder.py)", false, "%s missing", path);
+        return;
+    }
+    int tries = -1, scan = -1, skip = -1;
+    char line[240];
+    while (fgets(line, sizeof line, fo)) {
+        const char* q = strstr(line, "tries ");
+        if (q) tries = atoi(q + 6);
+        if ((q = strstr(line, "scan "))) scan = atoi(q + 5);
+        if ((q = strstr(line, "pass2skip "))) skip = atoi(q + 10);
+    }
+    fclose(fo);
+    if (!fight() || !fg->b.fx || !fg->b.fx->invisible) return;
+    combat::Battle& b = fg->b;
+    const uint8_t inv = b.fx->invisible;
+    auto scene = [&]() {
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(B, 1, 10, 10, 60);
+        mx::put(0, 0, 3, 3, 60);
+        mx::put(1, 0, 16, 3, 60);
+        F(B).target = -1;
+    };
+    auto run = [&](std::initializer_list<int> rolls) {
+        fd_at = 0;
+        int k = 0;
+        for (int r : rolls) fd_seq[k++] = r;
+        while (k < 8) fd_seq[k++] = 1;
+        create::g_die_hook = fd_die;
+        const int got = combat::finder_any(b, fg->t, B, rng);
+        create::g_die_hook = nullptr;
+        return got;
+    };
+    int n = 0, bad = 0;
+    char first[200] = "";
+    auto check = [&](const char* what, int got, int want) {
+        ++n;
+        if (got != want && !bad++) snprintf(first, sizeof first, "%s: %d, want %d", what, got, want);
+    };
+    // nobody in sight: pass 2 takes its pick all the same
+    scene();
+    q_add(F(0), inv, 0);
+    q_add(F(1), inv, 0);
+    // (pass 1: a scan takes one roll, the random picks one each - here two, both struck)
+    check("none in sight, pass 2 picks the first", scan == 1 ? run({1, 1}) : run({1, 2, 1}), skip ? 0 : -1);
+    check("none in sight, pass 2 picks the second", scan == 1 ? run({1, 2}) : run({1, 2, 2}), skip ? 1 : -1);
+    if (scan == 1) {
+        // Darkness-type: 0 unseen, 1 seen - from either start the scan finds 1
+        scene();
+        q_add(F(0), inv, 0);
+        check("scan from the unseen one", run({1}), 1);
+        check("scan from the seen one", run({2}), 1);
+    } else {
+        scene();
+        q_add(F(0), inv, 0);
+        check("the seen one picked", run({2}), 1);
+        // the unseen one picked, struck, picked again: pass 1 over - pass 2 takes it unseen
+        check("a struck one picked again: pass 2, its pick unseen", run({1, 1, 1}), skip ? 0 : 1);
+        check("the unseen one struck, then the seen one", run({1, 2}), 1);
+    }
+    expect(P, "the second step back's finder as the original's (oracle_finder: its passes, the second without the sight test)",
+           bad == 0 && tries >= 0 && skip == 1, "tries %d scan %d skip %d; %d of %d wrong (%s)", tries, scan, skip, bad, n, first);
+}
+
+// The stats' recalculation's effects (round 16): oracle_statfx_<game>.txt
+// from GAME.OVR (tools/devkit/oracles/statfx.py - Secret 0x374A8, Darkness
+// 0x3307E, Treasures 0x3CD87: the Strength effects in order, the levels
+// that make an 18/xx, Constitution's effect, Charisma's, Intelligence /
+// Wisdom's). Each made on a character with rules::stats: Strength 16 + 4 by
+// the first (18/20 for those levels, else 18), giant 21, Enlarge 18/50,
+// Charisma + 3, the healing on at 20 (its minutes) and off under it,
+// Intelligence / Wisdom set
+void stat_effects()
+{
+    const int g = game();
+    if (g != 3 && g != 4 && g != 9) return;
+    static const char* kName[] = {"", "poolrad", "curse", "secret", "darkness", "champions", "knights", "queen", "gateway", "treasures"};
+    char path[256];
+    snprintf(path, sizeof path, "%s/oracle_statfx_%s.txt", getenv("ORACLE_DIR") ? getenv("ORACLE_DIR") : "/tmp/claude-0/bt", kName[g]);
+    FILE* fo = fopen(path, "r");
+    if (!fo) {
+        expect(P, "the stats' effects: oracle_statfx (tools/devkit/oracles/statfx.py)", false, "%s missing", path);
+        return;
+    }
+    unsigned str[3] = {}, con[4] = {}, cha = 0, iw[2] = {};
+    std::vector<unsigned> ftr;
+    bool has_iw = false;
+    char line[200];
+    while (fgets(line, sizeof line, fo)) {
+        if (sscanf(line, "str %x %x %x", &str[0], &str[1], &str[2]) == 3) continue;
+        if (sscanf(line, "con %x %u %u %x", &con[0], &con[1], &con[2], &con[3]) == 4) continue;
+        if (sscanf(line, "cha %x", &cha) == 1) continue;
+        if (sscanf(line, "intwis %x %u", &iw[0], &iw[1]) == 2) {
+            has_iw = true;
+            continue;
+        }
+        if (!strncmp(line, "fighter ", 8)) {
+            char* q = line + 8;
+            unsigned v;
+            int used;
+            while (sscanf(q, "%x%n", &v, &used) == 1) {
+                ftr.push_back(v);
+                q += used;
+            }
+        }
+    }
+    fclose(fo);
+    const rules::ItemFacts& f = d->facts;
+    // the game record's level places: current / former (class k at + k)
+    const unsigned cur0 = g == 3 ? 0x111 : 0x151, old0 = g == 3 ? 0x118 : 0x158;
+    int n = 0, bad = 0;
+    char first[200] = "";
+    auto check = [&](const char* what, int got, int want) {
+        ++n;
+        if (got != want && !bad++) snprintf(first, sizeof first, "%s: %d, want %d", what, got, want);
+    };
+    party::Character c = pt->m[0];
+    auto fresh = [&]() {
+        c.n_items = 0;
+        c.n_affects = 0;
+        for (int k = 0; k < 16; ++k) c.rec[0x109 + k] = 0;
+        c.rec[0x10] = 16;
+        c.rec[0x1D] = 0;
+        c.rec[0x12] = c.rec[0x14] = 15;
+        c.rec[0x18] = 15;
+        c.rec[0x1A] = 10;
+    };
+    char what[96];
+    for (int old = 0; old < 2; ++old)
+        for (int k = 0; k < 8; ++k) {
+            fresh();
+            c.rec[(old ? 0x111 : 0x109) + k] = 5;
+            add_aff(c, str[0], 0, 104);
+            rules::stats(c, f);
+            bool fighter = false;
+            for (unsigned o : ftr) fighter = fighter || o == (old ? old0 : cur0) + static_cast<unsigned>(k);
+            snprintf(what, sizeof what, "Strength 0x%02X +4, %s level of class %d", str[0], old ? "a former" : "a", k);
+            check(what, c.rec[0x11] * 1000 + c.rec[0x1C], fighter ? 18020 : 18000);
+        }
+    fresh();
+    add_aff(c, str[1], 0, 121);
+    rules::stats(c, f);
+    snprintf(what, sizeof what, "giant strength 0x%02X (21)", str[1]);
+    check(what, c.rec[0x11], 21);
+    fresh();
+    add_aff(c, str[2], 0, 51);
+    rules::stats(c, f);
+    snprintf(what, sizeof what, "Enlarge 0x%02X (18/50)", str[2]);
+    check(what, c.rec[0x11] * 1000 + c.rec[0x1C], 18050);
+    fresh();
+    add_aff(c, cha, 0, 3);
+    rules::stats(c, f);
+    snprintf(what, sizeof what, "Charisma 0x%02X + 3", cha);
+    check(what, c.rec[0x1B], 13);
+    fresh();
+    c.rec[0x18] = static_cast<uint8_t>(con[1]);
+    rules::stats(c, f);
+    int k = -1;
+    for (int j = 0; j < c.n_affects; ++j)
+        if (c.affects[j][0] == con[0]) k = j;
+    snprintf(what, sizeof what, "Constitution %u: effect 0x%02X for %u minutes", con[1], con[0], con[2]);
+    check(what, k >= 0 ? c.affects[k][1] | c.affects[k][2] << 8 : -1, static_cast<int>(con[2]));
+    c.rec[0x18] = static_cast<uint8_t>(con[1] - 1);
+    rules::stats(c, f);
+    k = -1;
+    for (int j = 0; j < c.n_affects; ++j)
+        if (c.affects[j][0] == con[0]) k = j;
+    snprintf(what, sizeof what, "Constitution %u: effect 0x%02X gone", con[1] - 1, con[0]);
+    check(what, k, -1);
+    if (has_iw) {
+        fresh();
+        add_aff(c, iw[0], 0, 9);
+        rules::stats(c, f);
+        snprintf(what, sizeof what, "Intelligence / Wisdom while 0x%02X", iw[0]);
+        check(what, c.rec[0x13] * 100 + c.rec[0x15], static_cast<int>(iw[1] * 101));
+    }
+    expect(P, "the stats' recalculation's effects as the original's (oracle_statfx: Strength's three, the 18/xx levels, Constitution, Charisma, Intelligence / Wisdom)",
+           bad == 0 && str[0] && !ftr.empty(), "%d of %d wrong (%s)", bad, n, first);
+}
+
+// The Dark Queen's to-hit hooks (round 16): oracle_qhooks.txt from DQK.EXE
+// (tools/devkit/oracles/qhooks.py - its hook switch 0x7202's events 0xA, the
+// attacker's effects, 0x10, the target's, and 0xB, the target's AC after its
+// recalculation; each effect's handler read and told: the roll's change and
+// its condition, a miss, the AC's change). Each line made into a blow: the
+// smallest d20 that hits (to-hit 40 against stored AC 50: 10 with nothing)
+// against the oracle's; Game Fixes off. Also: the hooked roll under 0
+// misses; the dragons' fear (0x4F361) without a save
+int qh_roll = 10;
+int qh_die(int n) { return n == 20 ? qh_roll - 1 : -1; }
+void queen_hooks()
+{
+    if (game() != 7) return;
+    char path[256];
+    snprintf(path, sizeof path, "%s/oracle_qhooks.txt", getenv("ORACLE_DIR") ? getenv("ORACLE_DIR") : "/tmp/claude-0/bt");
+    FILE* fo = fopen(path, "r");
+    if (!fo) {
+        expect(P, "the Dark Queen's hooks: oracle_qhooks (tools/devkit/oracles/qhooks.py)", false, "%s missing", path);
+        return;
+    }
+    if (!fight()) return;
+    combat::Battle& b = fg->b;
+    const int A = 0, T = B;
+    auto scene = [&]() {
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(A, 0, 10, 10, 60);
+        mx::put(T, 1, 11, 10, 60);
+        F(A).target = T;
+        F(T).target = A;
+        F(T).delay = 5;
+        F(A).rec[0x199] = 40;
+        F(T).rec[0x19A] = F(T).rec[0x19B] = 50;
+        b.to_hit_party = b.to_hit_monsters = 0;
+    };
+    // the smallest d20 that hits (21: none, not even 20); `rear`: a blow from behind
+    auto thresh = [&](bool rear, bool keep = false) {
+        create::g_die_hook = qh_die;
+        int got = 21;
+        uint8_t save[4][party::kAffectSize];
+        int n_save = F(T).n_aff ? *F(T).n_aff : 0;
+        for (int k = 0; k < n_save && k < 4; ++k) memcpy(save[k], F(T).aff[k], party::kAffectSize);
+        for (int r = 2; r <= 20; ++r) {
+            qh_roll = r;
+            F(A).attacks[0] = 1;
+            F(A).attacks[1] = 0;
+            F(T).received = 0;
+            F(T).rec[0x1A4] = 60;
+            F(T).rec[0x195] = party::Okay;
+            const combat::Attack at = combat::attack(b, A, T, nullptr, rng, rear);
+            const bool hit = at.n > 0 && at.hits[0].hit;
+            if (!keep)
+                for (int k = 0; k < n_save && k < 4; ++k) memcpy(F(T).aff[k], save[k], party::kAffectSize);
+            if (hit) {
+                got = r;
+                break;
+            }
+            if (keep) break;
+        }
+        create::g_die_hook = nullptr;
+        return got;
+    };
+    rules::set_fixes(false);
+    scene();
+    const int base = thresh(false);
+    int n = 0, bad = 0;
+    char first[200] = "";
+    auto check = [&](const char* what, int got, int want) {
+        ++n;
+        if (got != want && !bad++) snprintf(first, sizeof first, "%s: smallest d20 %d, want %d", what, got, want);
+    };
+    check("nothing", base, 10);
+    char line[240];
+    int lines = 0;
+    bool clock_line = false;
+    while (fgets(line, sizeof line, fo)) {
+        char tag;
+        unsigned eff;
+        char rest[200] = "";
+        if (!strncmp(line, "clock round_start", 17)) {
+            clock_line = true;
+            continue;
+        }
+        if (sscanf(line, "%c 0x%x %199[^#]", &tag, &eff, rest) < 3 || line[0] == '#') continue;
+        ++lines;
+        int roll = 0, front = 0, rear = 0;
+        const char* r = strstr(rest, "roll ");
+        if (r) roll = atoi(r + 5);
+        if ((r = strstr(rest, "acfront "))) front = atoi(r + 8);
+        if ((r = strstr(rest, "acrear "))) rear = atoi(r + 7);
+        const bool miss = strstr(rest, "miss") != nullptr, cloak = strstr(rest, "cloak") != nullptr;
+        char what[64];
+        snprintf(what, sizeof what, "%c 0x%02X", tag, eff);
+        scene();
+        if (strstr(rest, "nohandler")) continue;     // (none set: never on anyone)
+        if (strstr(rest, "sets_tohit")) continue;    // (0x83: its to-hit and damage worked out anew - not compared yet)
+        if (tag == 'A') {
+            if (strstr(rest, "prayer")) {
+                const int same = atoi(strstr(rest, "same ") + 5);
+                q_add(F(A), static_cast<uint8_t>(eff), 0);
+                check(what, thresh(false), 10 - same);
+                scene();
+                q_add(F(T), static_cast<uint8_t>(eff), 0);
+                F(T).aff[q_find(F(T), static_cast<uint8_t>(eff))][3] = 0x10;    // (the engine's: the caster's side, 1)
+                check(what, thresh(false), 10 - atoi(strstr(rest, "other ") + 6));
+                continue;
+            }
+            q_add(F(A), static_cast<uint8_t>(eff), 0);
+            if (strstr(rest, "holder.target_flags&0x80")) {
+                check(what, thresh(false), 10);
+                F(T).rec[0x14B] = 0x80;
+            }
+            // (its own AC's change is undone: the target's AC is recalculated before each blow)
+            check(what, thresh(false), 10 - roll);
+        } else if (tag == 'T') {
+            q_add(F(T), static_cast<uint8_t>(eff), 0);
+            if (cloak) {
+                check(what, thresh(false, true), 21);    // (the first blow: a miss, even a 20)
+                check(what, thresh(false), 10);          // (then marked)
+                continue;
+            }
+            if (strstr(rest, "holder_acted")) {
+                check(what, thresh(false), 10);           // (not acted yet: there)
+                F(T).delay = 0;
+                check(what, thresh(false), 21);
+                continue;
+            }
+            if (strstr(rest, "attacker_lacks 0x18")) {
+                q_add(F(A), 0x18, 0);
+                check(what, thresh(false), 10);
+                combat::lose_aff(F(A), 0x18);
+            }
+            if (strstr(rest, "holder_flags&0x45")) {
+                check(what, thresh(false), 10);
+                F(T).rec[0x14B] = 0x45;
+                if (strstr(rest, "holder_lacks 0x18")) {
+                    q_add(F(T), 0x18, 0);
+                    check(what, thresh(false), 10);
+                    combat::lose_aff(F(T), 0x18);
+                }
+            }
+            if (strstr(rest, "attacker_flags&0x04")) {
+                check(what, thresh(false), 10);
+                F(A).rec[0x14B] = 4;
+            }
+            check(what, thresh(false), miss ? 21 : 10 - roll);
+        } else if (tag == 'B') {
+            q_add(F(T), static_cast<uint8_t>(eff), 0);
+            if (strstr(rest, "attacker_flags&0x01")) F(A).rec[0x14B] = 1;
+            // (the roll's changes are lost: the d20 is rolled after; the AC's count)
+            const char* fl = strstr(rest, "floorfront ");
+            if (fl) {
+                const int floor = static_cast<int>(strtol(fl + 11, nullptr, 16));
+                check(what, thresh(false), 10 + (floor - 50));
+                check(what, thresh(true), 10);
+                continue;
+            }
+            check(what, thresh(false), 10 + front);
+            check(what, thresh(true), 10 + rear);
+        }
+    }
+    fclose(fo);
+    // the roll under 0 misses: an invisible target (-4) and a big to-hit - a 2 misses, a 4 hits
+    scene();
+    q_add(F(T), 0x19, 0);
+    F(A).rec[0x199] = 80;
+    check("invisible, to-hit 80: roll - 4 under 0 misses", thresh(false), 4);
+    // the Shield lost to coughing's recalculation; kept with the Game Fixes
+    scene();
+    q_add(F(T), 0x11, 0);
+    q_add(F(T), 0x1E, 0);
+    check("Shield + coughing (fixes off): the Shield lost, 2 worse", thresh(false), 8);
+    rules::set_fixes(true);
+    check("Shield + coughing (Game Fixes): AC 3 at worst, 2 worse", thresh(false), 15);
+    // Invisible to Animals with the Game Fixes: the attacker's flags / sight
+    scene();
+    q_add(F(T), 0x45, 0);
+    F(T).rec[0x14B] = 0x45;
+    check("0x45 (Game Fixes): the target's own flags no longer count", thresh(false), 10);
+    F(A).rec[0x14B] = 0x45;
+    check("0x45 (Game Fixes): an attacker of flags & 0x45 not seeing invisible -4", thresh(false), 14);
+    rules::set_fixes(false);
+    expect(P, "the Dark Queen's to-hit hooks as DQK.EXE's handlers (oracle_qhooks: events 0xA / 0x10 / 0xB), the hooked roll under 0 a miss",
+           lines > 20 && bad == 0, "%d lines, %d of %d wrong (%s)", lines, bad, n, first);
+    // The dragons' fear (effect 0x64, its handler 0x4F361): no save - the
+    // other side's okay ones under 7 Hit Dice without 0x78 / 0x5C get 0x78
+    scene();
+    mx::put(1, 0, 10, 12, 60);
+    mx::put(2, 0, 10, 13, 60);
+    F(A).rec[0xE5] = 3;
+    F(1).rec[0xE5] = 7;
+    F(2).rec[0xE5] = 1;
+    q_add(F(2), 0x5C, 0);
+    q_add(F(T), 0x64, 0);
+    for (int k = 0; k < 5; ++k) F(A).rec[0xDF + k] = 1;     // (a save made always - none asked)
+    combat::Event ev[16];
+    create::g_die_hook = [](int nn) { return nn == 20 ? 19 : -1; };
+    combat::start_round(b, rng, ev, 16);
+    create::g_die_hook = nullptr;
+    expect(P, "the Dark Queen's dragon fear (0x4F361): no save - under 7 Hit Dice terrified (0x78), 7 and over, immune (0x5C) not",
+           q_find(F(A), 0x78) >= 0 && q_find(F(1), 0x78) < 0 && q_find(F(2), 0x78) < 0, "HD 3 %d, HD 7 %d, immune %d",
+           q_find(F(A), 0x78) >= 0, q_find(F(1), 0x78) >= 0, q_find(F(2), 0x78) >= 0);
+    // Its clock (oracle: the round's start calls the time step with 1 minute):
+    // the effects a minute on as a round begins - one of 1 minute gone before
+    // anyone acts, one of 3 left with 2; nothing at the round's end (the
+    // next start's step only)
+    scene();
+    q_add(F(A), 0x01, 1);
+    q_add(F(A), 0x02, 3);
+    begin_round(C);
+    const bool one_gone = q_find(F(A), 0x01) < 0, two_left = q_find(F(A), 0x02) >= 0 && F(A).aff[q_find(F(A), 0x02)][1] == 2;
+    round_end(C);                           // (on into the next round's start: one step more, not two)
+    const bool end_kept = q_find(F(A), 0x02) >= 0;
+    expect(P, "the Dark Queen's clock (0x5EFF via 0x61AD from the round's start 0x2336C): effects a minute on as each round begins, not at its end",
+           clock_line && one_gone && two_left && end_kept, "oracle %d, 1-minute gone %d, 3-minute at 2 %d, kept past the end %d", clock_line,
+           one_gone, two_left, end_kept);
+    rules::set_fixes(true);
+}
+
 // The sides' to-hit bonuses (round 11): oracle_tohit_<game>.txt from the
 // original's attacker-against-target roll (tools/devkit/oracles/tohit.py -
 // the bonus bytes it loads and its difficulty switch walked for each value
@@ -2637,6 +3120,10 @@ void run()
     if (want("wrap")) queen_wrap();
     if (want("qpages")) queen_pages();
     if (want("qlost")) queen_lost();
+    if (want("qhooks")) queen_hooks();
+    if (want("statfx")) stat_effects();
+    if (want("finder")) finder_check();
+    if (want("khit")) knights_hit();
     if (want("restore")) restore();
     if (want("rest")) rest();
     rules::set_fixes(true);

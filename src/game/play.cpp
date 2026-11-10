@@ -12240,6 +12240,7 @@ __attribute__((noinline)) void load_party_text(dax::ByteSource& exe, const exepa
         d->facts.friends_max = d->prof->variant.pool_files ? 25 : 0;      // (Pool: Charisma 25 at most)
         d->facts.feeble_fx = pi.stat_fx[4];
         d->facts.con_regen_fx = pi.stat_fx[5];
+        d->facts.str_fighter_now = pi.str_fighter_now;
         d->facts.berserk_fx = pi.berserk;
         d->facts.light_magic_armour = pi.light_magic_armour;
         memcpy(d->facts.race_weapon, pi.race_weapon, sizeof d->facts.race_weapon);
