@@ -2798,6 +2798,90 @@ void turnfind_check()
            bad == 0 && facts_ok && walled, "facts %d walled %d; %d of %d wrong (%s)", facts_ok, walled, bad, n, first);
 }
 
+// The on-hit specials after a blow of no damage (round 17): oracle_onhit_
+// <game>.txt (tools/devkit/oracles/onhit.py - each blow's test between the
+// target's in-the-fight test and the hook event slot + 1). A hit (d20 18)
+// with 0 dice and with 1d6 by one holding the game's poison (attack 2's -
+// Gateway's attack 1's), the save a d20 of 1: poisoned after a damaging blow
+// always, after one of none only where the original has no damage test; the
+// Dark Queen's 0xB8 holder poisons with none too; Darkness-type's vorpal
+// blow (attack 1's, a d20 of 20) the same
+int oh_n20 = 0, oh_first = 18, oh_next = 1;
+int oh_die(int nn) { return nn == 20 ? (oh_n20++ == 0 ? oh_first : oh_next) - 1 : -1; }
+void onhit_check()
+{
+    static const char* kName[] = {"", "poolrad", "curse", "secret", "darkness", "champions", "knights", "queen", "gateway", "treasures"};
+    const int g = game();
+    if (g < 1 || g > 9) return;
+    char path[256];
+    snprintf(path, sizeof path, "%s/oracle_onhit_%s.txt", getenv("ORACLE_DIR") ? getenv("ORACLE_DIR") : "/tmp/claude-0/bt", kName[g]);
+    FILE* fo = fopen(path, "r");
+    if (!fo) {
+        expect(P, "the on-hit specials' damage test: oracle_onhit (tools/devkit/oracles/onhit.py)", false, "%s missing", path);
+        return;
+    }
+    char line[240] = "";
+    while (fgets(line, sizeof line, fo) && line[0] == '#') {}
+    fclose(fo);
+    const char* q = strstr(line, "needs_damage ");
+    const int need = q ? atoi(q + 13) : -1;
+    int freefx = 0;
+    if ((q = strstr(line, "free "))) freefx = static_cast<int>(strtol(q + 5, nullptr, 16));
+    if (!fight() || !fg->b.fx) return;
+    combat::Battle& b = fg->b;
+    const combat::MonFx& mf = b.fx->mon;
+    const bool ways = b.fx->gw.ways != 0;
+    auto blow = [&](uint8_t eff, int slot, int dice, bool with_free, int second, combat::Ev want) {
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(0, 0, 10, 10, 60);
+        mx::put(B, 1, 11, 10, 200);
+        mx::add_aff(0, eff);
+        if (with_free && freefx) mx::add_aff(0, freefx);
+        combat::Fighter& at = F(0);
+        at.rec[0x199] = 60;
+        at.attacks[0] = slot == 0 ? 1 : 0;
+        at.attacks[1] = slot == 1 ? 1 : 0;
+        for (int s2 = 0; s2 < 2; ++s2) {
+            at.rec[0x19E + s2] = static_cast<uint8_t>(dice);
+            at.rec[0x1A0 + s2] = 6;
+            at.rec[0x1A2 + s2] = 0;
+        }
+        oh_n20 = 0;
+        oh_next = second;
+        create::g_die_hook = oh_die;
+        const combat::Attack r = combat::attack(b, 0, B, nullptr, rng);
+        create::g_die_hook = nullptr;
+        bool got = false;
+        for (int k = 0; k < r.n_ev; ++k) got = got || (r.ev[k].who == B && r.ev[k].ev == want);
+        return got;
+    };
+    int n = 0, bad = 0;
+    char first[200] = "";
+    auto check = [&](const char* what, bool got, bool want) {
+        ++n;
+        if (got != want && !bad++) snprintf(first, sizeof first, "%s: %d, want %d", what, got, want);
+    };
+    for (int fixes = 0; fixes < 2; ++fixes) {
+        rules::set_fixes(fixes != 0);
+        if (mf.poison) {
+            const int slot = ways ? 0 : 1;
+            check("poison, a damaging blow", blow(mf.poison, slot, 1, false, 1, combat::Ev::Poisoned), true);
+            check("poison, a blow of no damage", blow(mf.poison, slot, 0, false, 1, combat::Ev::Poisoned), need == 0);
+            if (freefx)
+                check("poison, no damage, the 0xB8 holder", blow(mf.poison, slot, 0, true, 1, combat::Ev::Poisoned), true);
+        }
+        if (b.fx->dk.vorpal) {
+            check("vorpal, a damaging blow", blow(b.fx->dk.vorpal, 0, 1, false, 20, combat::Ev::Beheaded), true);
+            check("vorpal, a blow of no damage", blow(b.fx->dk.vorpal, 0, 0, false, 20, combat::Ev::Beheaded), need == 0);
+        }
+    }
+    rules::set_fixes(true);
+    for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+    combat::occupancy(b);
+    expect(P, "the on-hit specials after a blow of no damage as the original's (oracle_onhit: the blow's damage test, the Dark Queen's 0xB8)",
+           bad == 0 && need >= 0 && n > 0, "needs_damage %d free 0x%02X; %d of %d wrong (%s)", need, freefx, bad, n, first);
+}
+
 // The stats' recalculation's effects (round 16): oracle_statfx_<game>.txt
 // from GAME.OVR (tools/devkit/oracles/statfx.py - Secret 0x374A8, Darkness
 // 0x3307E, Treasures 0x3CD87: the Strength effects in order, the levels
@@ -3251,6 +3335,7 @@ void run()
     if (want("finder")) finder_check();
     if (want("turnfind")) turnfind_check();
     if (want("khit")) knights_hit();
+    if (want("onhit")) onhit_check();
     if (want("restore")) restore();
     if (want("rest")) rest();
     rules::set_fixes(true);

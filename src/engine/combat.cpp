@@ -2781,7 +2781,9 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
             if (bolt_bane) add_event(out, c, Ev::SlainBolt);
             // Darkness's vorpal blow (0x73, ovr 0x1D8C0 - after attack 1's hit):
             // a d20 of 17 or more beheads it, but not one with flags 2 & 0x20
-            if (b.fx && slot == 0 && b.fx->dk.vorpal && hasx(at, b.fx->dk.vorpal) && tg.up() && d.roll(20, 1) >= 17 &&
+            // (on-hit: only after damage where the original asks it - round 17)
+            const bool on_hit = b.fx && (!b.fx->hit_needs_damage || dmg > 0 || hasx(at, b.fx->hit_free));
+            if (on_hit && slot == 0 && b.fx->dk.vorpal && hasx(at, b.fx->dk.vorpal) && tg.up() && d.roll(20, 1) >= 17 &&
                 !(tg.flags2 & 0x20)) {
                 tg.rec[kHp] = 0;
                 tg.rec[kHealth] = party::Dead;
@@ -2804,7 +2806,7 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
                 if (dn) add_event(out, a, Ev::Down);
                 if (!at.up()) break;
             }
-            if (b.fx && tg.up() && (!b.fx->hit_needs_damage || dmg > 0)) after_hit(b, a, c, slot, roll, hits1, d, out);
+            if (on_hit && tg.up()) after_hit(b, a, c, slot, roll, hits1, d, out);
             if (out.rake) {
                 // Pool's tiger (its ovr14 routine): both claws hit - two
                 // rakes of 2d4 at once (the attack made again with them)

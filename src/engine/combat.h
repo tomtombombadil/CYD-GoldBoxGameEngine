@@ -462,11 +462,17 @@ struct Facts {
     // no spell lost. An original's mistake: with the Game Fixes on, the
     // Darkness / Dark Queen Feeblemind (feeble_direct, no effect)
     bool feeble_drain = false;
-    // Death Knights' on-hit specials (its hook events 2 / 3 - attack 1's /
-    // 2's - GAME.OVR 0x204E9, round 16): only when the blow did damage
-    // ([0xBE6C] > 0); any holder's, the party's own too (its feebleminded
-    // one drains whoever it hits)
+    // The on-hit specials (hook events 2 / 3 - attack 1's / 2's) only when
+    // the blow did damage (rounds 16 / 17, tools/devkit/oracles/onhit.py):
+    // Death Knights GAME.OVR 0x204E8 ([0xBE6C] > 0; any holder's, the
+    // party's own too - its feebleminded one drains whoever it hits),
+    // Secret 0x16413 ([0x87D4]), Champions 0x1662F ([0x6B30]), Darkness
+    // 0x1FD85 / Treasures 0x27E3C (the word [0xA7D8] / [0x9E20] > 0), the
+    // Dark Queen DQK.EXE 0x2648B ([0xAE55] > 0, or the attacker has
+    // hit_free); PoolRad / Curse / Gateway after any hit (their hook calls
+    // 0x13F3C / 0x14B94 / 0x17A83: the target in the fight only)
     bool hit_needs_damage = false;
+    uint8_t hit_free = 0;               // (the Dark Queen's 0xB8)
     // The Dark Queen's stinking cloud (DQK.EXE 0x805D, round 11): this effect
     // keeps one from breathing it (with the undead, the nauseous, flags 2 &
     // 0x18); coughing and nausea 1d4 + 1 each, data 0xFF. 0: the others' rule
