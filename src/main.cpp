@@ -105,6 +105,9 @@ void setup()
     storage_begin();
     cfg = settings_load();
     apply_rotation(cfg.flipped);
+#if defined(BOARD_SIDE_STRIP)
+    gfx.strip_set(!cfg.no_strip);     // (the 5.0" boards' Companion Strip)
+#endif
     gfx.setBrightness(cfg.brightness);
     panel_prefs_begin(gfx);
     touch_cal_begin(gfx);      // BOOT held at power-up = calibrate again

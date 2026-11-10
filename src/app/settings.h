@@ -33,6 +33,8 @@ struct Settings {
     uint8_t max_hp = 0;           // the Max Hit Points cheat (CYD_MAX_HP): off unless the player turns it on
     uint8_t left_hand = 0;        // the Play Test's keys for a left-handed player (Tom, 2026-11-06; 0 = Right
                                   // Hand, the default and older files'): a board setting, not in As Original
+    uint8_t no_strip = 0;         // the 5.0" boards' Companion Strip switched off (Tom, 2026-11-10; 0 = on,
+                                  // older files too): a board setting, not in As Original
 };
 
 // The Volume key (Tom, 2026-10-24): 0-100% in 5% steps, kept in the 0-255

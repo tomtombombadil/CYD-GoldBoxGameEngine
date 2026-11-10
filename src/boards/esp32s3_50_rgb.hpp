@@ -24,7 +24,11 @@
 //   where INT picks the chip's I2C address - is done here before any sound.
 //
 // The screen: the engine's 320x240 layout drawn at 2x, centred on the
-// 800x480 panel as 640x480 with black bars left and right (Tom, 2026-10-30).
+// 800x480 panel as 640x480 with black bars left and right (Tom, 2026-10-30)
+// - or, with the Companion Strip on (Tom, 2026-11-10; Settings), the
+// 640x480 against the left edge and a 160 x 480 strip at the right drawn
+// 1:1 (the 4.0" Companion panel's pixels: party, map / battlefield): an
+// LGFX_Sprite in PSRAM the viewer draws into and shows with strip_show.
 // The rest of the code sees a 320x240 display (layout from the panel size,
 // as on the 2.8" boards): Panel_Double below is a 320x240 frame buffer
 // panel (LovyanGFX's Panel_FrameBufferBase does all the drawing, rotation
@@ -60,12 +64,14 @@
 #define BOARD_I2C_PORT          0    // the touch's
 #define BOARD_PIN_I2C_SDA       19
 #define BOARD_PIN_I2C_SCL       20
+#define BOARD_SIDE_STRIP        1    // the Companion Strip (Settings): strip(), strip_set(), strip_show()
 
 namespace board5 {
 
 constexpr int kPanelW = 800, kPanelH = 480;   // the RGB panel
 constexpr int kW = 320, kH = 240;             // what the engine sees
 constexpr int kBarX = (kPanelW - kW * 2) / 2; // 80: the black bar's width
+constexpr int kStripW = kPanelW - kW * 2;     // 160: the Companion Strip's width
 
 // ---- The engine's 320x240 screen, shown doubled on the RGB panel ----------
 class Panel_Double : public lgfx::Panel_FrameBufferBase
@@ -121,6 +127,7 @@ public:
     {
         Panel_FrameBufferBase::setRotation(r);
         restyle();
+        relayout();      // (Rotate 180 moves the strip to the panel's other side)
     }
     void setInvert(bool invert) override
     {
@@ -147,6 +154,38 @@ public:
         _range_mod.bottom = 0;
     }
 
+    // The Companion Strip: on, the game against the strip's other side (the
+    // panel's left as the player sees it); the strip's sprite drawn by the
+    // viewer, shown by strip_show. Off: the game centred, bars both sides
+    lgfx::LGFX_Sprite strip;
+    void strip_set(bool on)
+    {
+        if (on && !strip.getBuffer()) {
+            strip.setPsram(true);
+            strip.setColorDepth(16);
+            if (!strip.createSprite(kStripW, kPanelH)) on = false;
+            else strip.fillScreen(0);
+        }
+        strip_on_ = on;
+        relayout();
+    }
+    bool strip_is_on() const { return strip_on_; }
+    void strip_show(int x, int y, int w, int h)
+    {
+        if (strip_on_ && fb_ && strip.getBuffer() && w > 0 && h > 0) copy_strip(x, y, x + w - 1, y + h - 1);
+    }
+    // Where the 640x480 picture starts on the panel (raw touch x minus this: the picture's)
+    int game_x() const { return game_x_; }
+    const int* game_x_ptr() const { return &game_x_; }
+#if defined(CYD_QEMU)
+    // (the emulator's shot of the whole 800x480 panel: a row as RGB565)
+    void panel_row(int y, uint16_t* out) const
+    {
+        const uint16_t* r = reinterpret_cast<const uint16_t*>(fb_ + y * kPanelW * 2);
+        for (int x = 0; x < kPanelW; ++x) out[x] = static_cast<uint16_t>((r[x] >> 8) | (r[x] << 8));
+    }
+#endif
+
     // The slowest copy so far and the whole screen's, in microseconds
     // (printed on the serial line the first time the whole screen goes)
     uint32_t worst_us = 0, full_us = 0;
@@ -154,6 +193,67 @@ public:
 private:
     uint8_t* fb_ = nullptr;
     bool     shown_invert_ = false, shown_swap_ = false;
+    bool     strip_on_ = false, flipped_ = false;   // flipped_: Rotate 180 (the strip at the panel's left)
+    int      game_x_ = kBarX;
+
+    // The strip or the rotation changed: the picture's place, the panel cleared, all again
+    void relayout()
+    {
+        flipped_ = (_internal_rotation & 3) == 2;
+        const int gx = !strip_on_ ? kBarX : flipped_ ? kStripW : 0;
+        if (gx == game_x_ && fb_) {
+            if (strip_on_) strip_show(0, 0, kStripW, kPanelH);
+            return;
+        }
+        game_x_ = gx;
+        if (!fb_ || !_lines_buffer) return;
+        memset(fb_, 0, kPanelW * kPanelH * 2);
+        esp_cache_msync(fb_, kPanelW * kPanelH * 2, ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_TYPE_DATA);
+        grow(0, 0, kW - 1, kH - 1);
+        display(0, 0, 0, 0);
+        if (strip_on_) strip_show(0, 0, kStripW, kPanelH);
+    }
+
+    // A pixel in the panel's colours (Swap Red/Blue, Invert): byte-swapped RGB565 in and out
+    uint16_t styled(uint16_t v) const
+    {
+        if (shown_swap_) {
+            const uint16_t p = static_cast<uint16_t>((v >> 8) | (v << 8));
+            const uint16_t q = static_cast<uint16_t>(((p & 0x1F) << 11) | (p & 0x07E0) | (p >> 11));
+            v = static_cast<uint16_t>((q >> 8) | (q << 8));
+        }
+        return shown_invert_ ? static_cast<uint16_t>(~v) : v;
+    }
+
+    // Strip rectangle l..r, t..b (the player's way up) -> the panel, 1:1:
+    // at the panel's right, or (Rotate 180) its left turned round
+    void copy_strip(int l, int t, int r, int b)
+    {
+        if (l < 0) l = 0;
+        if (t < 0) t = 0;
+        if (r > kStripW - 1) r = kStripW - 1;
+        if (b > kPanelH - 1) b = kPanelH - 1;
+        if (l > r || t > b) return;
+        const uint16_t* src = static_cast<const uint16_t*>(strip.getBuffer());
+        uint16_t* fb = reinterpret_cast<uint16_t*>(fb_);
+        int y0 = kPanelH, y1 = -1, x0 = kPanelW, x1 = -1;
+        for (int y = t; y <= b; ++y) {
+            const uint16_t* s = src + y * kStripW;
+            const int py = flipped_ ? kPanelH - 1 - y : y;
+            for (int x = l; x <= r; ++x) {
+                const int px = flipped_ ? kStripW - 1 - x : kW * 2 + x;
+                fb[py * kPanelW + px] = styled(s[x]);
+            }
+            if (py < y0) y0 = py;
+            if (py > y1) y1 = py;
+        }
+        x0 = flipped_ ? kStripW - 1 - r : kW * 2 + l;
+        x1 = flipped_ ? kStripW - 1 - l : kW * 2 + r;
+        uint8_t* first = fb_ + (y0 * kPanelW + x0) * 2;
+        uint8_t* end = fb_ + (y1 * kPanelW + x1 + 1) * 2;
+        esp_cache_msync(first, end - first,
+                        ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_TYPE_DATA | ESP_CACHE_MSYNC_FLAG_UNALIGNED);
+    }
 
     void grow(int l, int t, int r, int b)
     {
@@ -173,6 +273,7 @@ private:
         if (!fb_ || !_lines_buffer) return;
         grow(0, 0, kW - 1, kH - 1);
         display(0, 0, 0, 0);
+        if (strip_on_) strip_show(0, 0, kStripW, kPanelH);
     }
 
     // Buffer rectangle l..r, t..b (inclusive) -> the panel, each pixel 2 x 2.
@@ -191,7 +292,7 @@ private:
         const uint32_t inv = shown_invert_ ? 0xFFFFFFFFu : 0;
         for (int y = t; y <= b; ++y) {
             const uint16_t* s = reinterpret_cast<const uint16_t*>(_lines_buffer[y]) + l;
-            uint32_t* d0 = reinterpret_cast<uint32_t*>(fb_ + (2 * y) * kStride + (kBarX + 2 * l) * 2);
+            uint32_t* d0 = reinterpret_cast<uint32_t*>(fb_ + (2 * y) * kStride + (game_x_ + 2 * l) * 2);
             uint32_t* d1 = reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(d0) + kStride);
             if (!shown_swap_) {
                 for (int i = 0; i < n; ++i) {
@@ -211,8 +312,8 @@ private:
         }
         // The RGB peripheral reads the PSRAM itself: the changed lines out
         // of the cache
-        uint8_t* first = fb_ + (2 * t) * kStride + (kBarX + 2 * l) * 2;
-        uint8_t* end = fb_ + (2 * b + 1) * kStride + (kBarX + 2 * r + 2) * 2;
+        uint8_t* first = fb_ + (2 * t) * kStride + (game_x_ + 2 * l) * 2;
+        uint8_t* end = fb_ + (2 * b + 1) * kStride + (game_x_ + 2 * r + 2) * 2;
         esp_cache_msync(first, end - first,
                         ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_TYPE_DATA | ESP_CACHE_MSYNC_FLAG_UNALIGNED);
         const uint32_t us = static_cast<uint32_t>(esp_timer_get_time() - t0);
@@ -245,12 +346,13 @@ private:
                     want = static_cast<uint16_t>((q >> 8) | (q << 8));
                 }
                 if (shown_invert_) want = static_cast<uint16_t>(~want);
-                const int px = kBarX + 2 * x, py = 2 * y;
+                const int px = game_x_ + 2 * x, py = 2 * y;
                 const uint16_t* d = fb + py * kStride + px;
                 if (d[0] != want || d[1] != want || d[kStride] != want || d[kStride + 1] != want) ++q_bad_;
             }
-            for (int x = 0; x < kBarX; ++x)
-                if (fb[2 * y * kStride + x] || fb[2 * y * kStride + kPanelW - 1 - x]) ++q_bad_;
+            if (!strip_on_)
+                for (int x = 0; x < kBarX; ++x)
+                    if (fb[2 * y * kStride + x] || fb[2 * y * kStride + kPanelW - 1 - x]) ++q_bad_;
         }
         if (++q_copies_ % 50 == 0 || (r - l == kW - 1 && b - t == kH - 1))
             printf("[qemu] 2x screen: %u copies, %u bad pixels (rotation %u, last %d,%d-%d,%d)\n",
@@ -299,6 +401,8 @@ public:
         return true;
     }
 
+    const int* game_x = nullptr;      // (the panel's: where the 640x480 picture starts)
+
     uint_fast8_t getTouchRaw(lgfx::touch_point_t* tp, uint_fast8_t count) override
     {
         const uint_fast8_t got = Touch_GT911::getTouchRaw(tp, count);
@@ -307,7 +411,9 @@ public:
             lgfx::touch_point_t p = tp[i];
             if (res_x_ != kPanelW) p.x = static_cast<int16_t>(p.x * kPanelW / res_x_);
             if (res_y_ != kPanelH) p.y = static_cast<int16_t>(p.y * kPanelH / res_y_);
-            if (p.x < kBarX || p.x >= kPanelW - kBarX) continue;      // (in a black bar)
+            // (the picture's own x: in a bar or the strip - dropped)
+            p.x = static_cast<int16_t>(p.x - (game_x ? *game_x : kBarX));
+            if (p.x < 0 || p.x >= kW * 2) continue;
             tp[n++] = p;
         }
         return n;
@@ -401,10 +507,10 @@ public:
             _light.config(cfg);
             _panel.setLight(&_light);
         }
-        {   // Raw 80..719 x 0..479 (the 640x480 picture) -> 0..319 x 0..239
+        {   // Raw 0..639 x 0..479 (the 640x480 picture, getTouchRaw's) -> 0..319 x 0..239
             auto cfg = _touch.config();
-            cfg.x_min           = board5::kBarX;
-            cfg.x_max           = board5::kPanelW - board5::kBarX - 1;
+            cfg.x_min           = 0;
+            cfg.x_max           = board5::kW * 2 - 1;
             cfg.y_min           = 0;
             cfg.y_max           = board5::kPanelH - 1;
             cfg.pin_int         = -1;    // (INT is the amplifier's LRCLK: polled instead)
@@ -417,8 +523,18 @@ public:
             cfg.pin_scl         = BOARD_PIN_I2C_SCL;
             cfg.freq            = 400000;
             _touch.config(cfg);
+            _touch.game_x = _panel.game_x_ptr();
             _panel.setTouch(&_touch);
         }
         setPanel(&_panel);
     }
+
+    // The Companion Strip (BOARD_SIDE_STRIP): its sprite (160 x 480, the
+    // player's way up; nullptr while off), on / off, a rectangle shown
+    lgfx::LGFX_Sprite* strip() { return _panel.strip_is_on() ? &_panel.strip : nullptr; }
+    void strip_set(bool on) { _panel.strip_set(on); }
+    void strip_show(int x, int y, int w, int h) { _panel.strip_show(x, y, w, h); }
+#if defined(CYD_QEMU)
+    void panel_row(int y, uint16_t* out) const { _panel.panel_row(y, out); }
+#endif
 };

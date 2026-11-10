@@ -336,13 +336,14 @@ void draw_tabs(Painter& p, int x, int y, View v, bool fight)
     }
 }
 
-void draw_party(Painter& p, const Area& a, bool all)
+void draw_party(Painter& p, const Area& a, bool all, bool tabs)
 {
     const int n = play::panel_members();
     const Rows r = party_rows(a, n);
     if (all) {
         p.fill(a.x, a.y, a.w, a.h, style::kBackground);
-        draw_tabs(p, a.x + 2, a.y + 1, View::Party, play::fighting());
+        if (tabs) draw_tabs(p, a.x + 2, a.y + 1, View::Party, play::fighting());
+        else p.text(a.x + 2, a.y + 1, "Party", style::kGold);
         if (!n) put(p, a.x + 2, r.y0 + 2, "No party yet.", style::kTextMuted);
     }
     for (int i = 0; i < n; ++i) {
@@ -355,7 +356,7 @@ void draw_party(Painter& p, const Area& a, bool all)
     }
 }
 
-void draw_battle(Painter& p, const Area& a, bool blink_on, bool big)
+void draw_battle(Painter& p, const Area& a, bool blink_on, bool big, bool tabs)
 {
     p.fill(a.x, a.y, a.w, a.h, style::kBackground);
     geo.ok = false;
@@ -364,39 +365,23 @@ void draw_battle(Painter& p, const Area& a, bool blink_on, bool big)
     const int cols = (a.w - 4) / kCharW;
     char line[64];
     int ty = a.y + 1;
+    // (Tom, 2026-11-10: no round / "x v y" line - the field right under the heading)
     if (big) {
-        snprintf(line, sizeof line, "Battle - Round %d", f.round + 1);
-        put(p, a.x + 2, ty, line, style::kGold, cols);
+        put(p, a.x + 2, ty, "Battle", style::kGold, cols);
         put(p, a.x + a.w - 2 - 18 * kCharW, ty, "Tap to go back.", style::kTextMuted, 18);
-    } else {
+        ty += kLineH + 1;
+    } else if (tabs) {
         draw_tabs(p, a.x + 2, ty, View::Battle, true);
         ty += kLineH + 1;
     }
-    // Who is still up on each side
-    int ours = 0, theirs = 0;
     int bx0 = combat::kW, by0 = combat::kH, bx1 = -1, by1 = -1;
     for (int i = 0; i < f.n; ++i) {
         play::PanelDot d;
         if (!play::panel_dot(i, d)) continue;
-        if (!d.down) ++(d.enemy ? theirs : ours);
         if (d.x < bx0) bx0 = d.x;
         if (d.y < by0) by0 = d.y;
         if (d.x + d.size - 1 > bx1) bx1 = d.x + d.size - 1;
         if (d.y + d.size - 1 > by1) by1 = d.y + d.size - 1;
-    }
-    if (!big) {
-        snprintf(line, sizeof line, "Round %d", f.round + 1);
-        put(p, a.x + 2, ty, line, style::kTextMuted, cols);
-    }
-    {
-        char us[12], them[12];
-        snprintf(us, sizeof us, "%d", ours);
-        snprintf(them, sizeof them, "%d", theirs);
-        const int w = static_cast<int>(strlen(us) + strlen(them) + 3);
-        const int x = big ? a.x + 2 + 18 * kCharW : a.x + a.w - 2 - w * kCharW;
-        p.text(x, ty, us, kFriend);
-        p.text(x + static_cast<int>(strlen(us) + 1) * kCharW, ty, "v", style::kTextMuted);
-        p.text(x + static_cast<int>(strlen(us) + 3) * kCharW, ty, them, kFoe);
     }
     // The part of the field the fight uses (its ground and fighters)
     for (int y = 0; y < combat::kH; ++y)
@@ -408,8 +393,8 @@ void draw_battle(Painter& p, const Area& a, bool blink_on, bool big)
                 if (y > by1) by1 = y;
             }
     if (bx1 < 0) bx0 = by0 = 0, bx1 = combat::kW - 1, by1 = combat::kH - 1;
-    // (under it: the turn, the aim, the colours - 320x240's page leaves the blinking line out when it doesn't fit)
-    const int top = ty + kLineH + 2, foot = (big ? 3 : 4) * kLineH + 3;
+    // (under it: the turn and the aim; the legend on the area's last line)
+    const int top = ty + 1, foot = 3 * kLineH + 3;
     const int aw = a.w - 4, ah = a.y + a.h - top - foot;
     const int bw = bx1 - bx0 + 1, bh = by1 - by0 + 1;
     int c = aw / bw < ah / bh ? aw / bw : ah / bh;
@@ -469,14 +454,13 @@ void draw_battle(Painter& p, const Area& a, bool blink_on, bool big)
         }
         ly += kLineH;
     }
-    if (ly + kLineH <= a.y + a.h) {
-        p.text(a.x + 2, ly, "Green", kFriend);
-        p.text(a.x + 2 + 6 * kCharW, ly, "party", style::kTextMuted);
-        p.text(a.x + 2 + 12 * kCharW, ly, "Red", kFoe);
-        p.text(a.x + 2 + 16 * kCharW, ly, "foes", style::kTextMuted);
-        ly += kLineH;
+    // The legend (Tom, 2026-11-10): the words in their colours, on the last line
+    const int gy = a.y + a.h - kLineH;
+    if (gy >= ly) {
+        p.text(a.x + 2, gy, "Party", kFriend);
+        p.text(a.x + 2 + 6 * kCharW, gy, "Foes", kFoe);
+        p.text(a.x + 2 + 11 * kCharW, gy, big ? "Blinking: no turn" : "Blink: no turn", style::kTextMuted);
     }
-    if (ly + kLineH <= a.y + a.h) put(p, a.x + 2, ly, big ? "Blinking: asleep, held, stunned, fleeing, down" : "Blink: asleep, held, down", style::kTextMuted, cols);
 }
 
 void blink_battle(Painter& p, bool blink_on)
