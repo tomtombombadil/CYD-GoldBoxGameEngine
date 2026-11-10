@@ -2289,6 +2289,61 @@ int queen_ac(const Battle& b, const Fighter& tg, bool rear)
 // 0x10 - the target's - of 0x7202, each handler at DS 0xBEE8 + 4 x effect;
 // round 16): what they add to the d20 (`*miss` when blinking or the cloak
 // make it 0xFF); `fixes_side` what the Game Fixes add beside the roll
+// (the Dark Queen's DQK.EXE 0x77E:0x1168 / 0x104D: Strength's to-hit by its
+// group - 0xACA4, Strength in use 0x11 and its 18/xx 0x1C, no uses-Strength
+// test - and Dexterity's missile bonus by Dexterity in use 0x17)
+static int queen_str_hit(const Fighter& f)
+{
+    const int s = f.rec[0x11], e = f.rec[0x1C];
+    const int g = s <= 17 ? s : s == 18 ? (e == 0 ? 18 : e <= 50 ? 19 : e <= 75 ? 20 : e <= 90 ? 21 : e <= 99 ? 22 : 23)
+                : s <= 25 ? s + 5 : 0;
+    if (g == 0) return 0;
+    if (g <= 3) return -3;
+    if (g <= 5) return -2;
+    if (g <= 7) return -1;
+    if (g <= 16) return 0;
+    if (g <= 19) return 1;
+    if (g <= 22) return 2;
+    if (g <= 25) return 3;
+    if (g <= 27) return 4;
+    return g - 23;
+}
+static int queen_dex_missile(const Fighter& f)
+{
+    const int x = f.rec[kDexFull];
+    if (x > 25) return 0;
+    if (x <= 2) return -4;
+    if (x <= 5) return x - 6;
+    if (x <= 15) return 0;
+    if (x <= 18) return x - 15;
+    if (x <= 20) return 3;
+    if (x <= 23) return 4;
+    return 5;
+}
+
+// The Dark Queen's attacker hooks' changes to its own record, at each blow
+// (event 0xA's handlers run in every to-hit roll 0x8461; round 17): blind
+// (0x4E502) and 0xA2 (0x50F39) change its stored AC bytes 0x18E / 0x18F
+// (-4 / +2) until a blow on it recalculates them; 0x83 (0x543D8) makes its
+// to-hit in use the THAC0 base + Strength's to-hit next to the target, else
+// Dexterity's missile bonus
+static void queen_blow_self(Battle& b, int a, int c)
+{
+    const Facts& fx = *b.fx;
+    Fighter& at = b.f[a];
+    const int shift = (hasx(at, fx.blinded) ? -4 : 0) + (hasx(at, fx.q.plus2) ? 2 : 0);
+    if (shift) {
+        at.rec[kAc] += shift;
+        at.rec[kAcBehind] += shift;
+        at.q_ac_shift = static_cast<int8_t>(at.q_ac_shift + shift);
+    }
+    if (hasx(at, fx.q.hoopak) && b.tables) {
+        int sq = 0;
+        range(b, *b.tables, a, c, true, &sq);
+        at.rec[kHit] = static_cast<uint8_t>(at.rec[0x73] + (sq < 2 ? queen_str_hit(at) : queen_dex_missile(at)));
+    }
+}
+
 int queen_roll_hooks(Battle& b, int a, int c, bool* miss, int* fixes_side)
 {
     const Facts& fx = *b.fx;
@@ -2394,6 +2449,13 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
     // worse than 10 becomes 10 - the original's), from any side
     const bool coughing = b.fx && hasx(tg, b.fx->cough);
     const bool qh = b.fx && b.fx->q.hooks;
+    if (qh && tg.q_ac_shift) {
+        // (the blow's recalculation 0x77E:0xBE2 of the target's AC: its own
+        // blows' hooks' changes gone)
+        tg.rec[kAc] -= tg.q_ac_shift;
+        tg.rec[kAcBehind] -= tg.q_ac_shift;
+        tg.q_ac_shift = 0;
+    }
     if (qh) ac = queen_ac(b, tg, behind);
     else if (coughing) ac = tg.rec[kAcBehind] > 0x34 ? tg.rec[kAcBehind] - 2 : 0x32;
     if (stab) ac -= 4;
@@ -2588,6 +2650,7 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
             if (slot == 0) ++out.shots;
             if (at.blows < 255) ++at.blows;
             const int roll = d.roll(20, 1);
+            if (qh && roll > 1) queen_blow_self(b, a, c);     // (a 1 misses before the hooks - 0x8461)
             const int extra = roll > 1 ? wbonus + (slayer ? 2 : 0) + (giant ? 1 : 0) : 0;
             bool hit = roll == 20 || (roll != 1 && roll + static_cast<int8_t>(at.rec[kHit]) + side + extra >= ac);
             if (qh) {

@@ -104,11 +104,68 @@ def handler(e):
     return (B if s == 'cs' else SB[s]) + o
 
 
+# 4b. (round 17) a handler that sets the to-hit in use (0x18D - the Dark
+# Queen's 0x83): where from (mov al,[es:bx+R] before it), the distance cut
+# (cmp byte [bp-x],N / jnc - the scan's distance), the near branch's and the
+# far branch's far calls (the bonus added to 0x18D: resident 0x2400 + seg x
+# 16 + off) run by x86.run at Strength group 23 (18/00) and Dexterity 21,
+# and the damage words' dice (mov al,S / push / mov al,1 / push / call) and
+# the incs after - told as "tohit ..." (the damage set there is lost: the
+# blow works it out after the roll)
+sys.path.insert(0, __import__('os').path.dirname(__import__('os').path.abspath(__file__)))
+import x86
+
+
+def bonus_at(seg, off, value):
+    f = 0x2400 + seg * 16 + off
+    c = x86.Code(exe, f, 0x120, 0)
+    st = c.find(r'^mov \[bp-0x1\],al$')
+    first = st[0] if st else None
+    if first is None:
+        # (a byte read straight into [bp-0x1]: mov al,[es:bx+..] / mov [bp-0x1],al)
+        return None
+    end = c.find(r'^mov al,\[bp-0x2\]$')
+    mem = x86.run(c, c.after(first)[0], end[0] if end else None, {'al': 0}, {'[bp-0x1]': value})
+    v = mem.get('[bp-0x2]', 0) & 0xFF
+    return v - 256 if v > 127 else v
+
+
+def tell_tohit(h):
+    code = dis(h, 0x100)
+    txt = [t for _, t in code]
+    base = cut = None
+    calls, dice, incs = [], [], []
+    for i, t in enumerate(txt):
+        if t == 'retf' and i > 4:
+            break
+        m = re.match(r'mov al,\[es:bx\+0x([0-9a-f]+)\]$', t)
+        if m and i + 1 < len(txt) and txt[i + 1] == 'mov [es:bx+0x18d],al':
+            base = int(m.group(1), 16)
+        m = re.match(r'cmp byte \[bp-0x2\],0x([0-9a-f]+)$', t)
+        if m and txt[i + 1].startswith('jnc'):
+            cut = int(m.group(1), 16)
+        m = re.match(r'mov al,0x([0-9a-f]+)$', t)
+        if m and txt[i + 1] == 'push ax' and txt[i + 2] == 'mov al,0x1' and txt[i + 4].startswith('call 0x48f'):
+            dice.append(int(m.group(1), 16))
+        m = re.match(r'call 0x77e:0x([0-9a-f]+)$', t)
+        if m and any('add al,[es:bx+0x18d]' in x for x in txt[i + 1:i + 6]):
+            calls.append(int(m.group(1), 16))
+        if t in ('inc dx', 'inc ax'):
+            incs.append(len(dice))
+    plus = [incs.count(k) for k in (1, 2)]
+    near = bonus_at(0x77E, calls[0], 23) if len(calls) > 0 else None
+    far = bonus_at(0x77E, calls[1], 21) if len(calls) > 1 else None
+    return 'tohit base 0x%X cut %d near_str23 %+d far_dex21 %+d dmg_near 1d%d+%d dmg_far 1d%d+%d dmg_lost' % (
+        base or 0, cut or 0, near or 0, far or 0, dice[0] if dice else 0, plus[0], dice[1] if len(dice) > 1 else 0, plus[1])
+
+
 # 4. each handler told
 def tell(e):
     h = handler(e)
     if h is None:
         return 'nohandler'
+    if b'\x26\x88\x87\x8D\x01' in d[h:h + 0x60]:
+        return tell_tohit(h)
     code = dis(h, 0x200)
     out, subj, cond = [], 'holder', []
     roll = 0

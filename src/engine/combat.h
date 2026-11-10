@@ -501,6 +501,13 @@ struct Facts {
         // (unnamed ones: the attacker's +2 (0x50F39) and -2 (0x5039B), the
         // target's -1 (0x528F8))
         uint8_t plus2 = 0, minus2 = 0, tgt_minus1 = 0;
+        // 0x83 (0x543D8, round 17; a hoopak-like weapon): the holder's to-hit
+        // in use made its THAC0 base (record 0x87) + Strength's to-hit next to
+        // its target (the scan's distance under 2), else + Dexterity's missile
+        // bonus - kept in the record as the original; its damage words
+        // (1d6 + 2 / 1d4 + 1) set there are lost (the blow's damage is worked
+        // out after the roll)
+        uint8_t hoopak = 0;
         // Its clock (0x5EFF, called by the time step 0x61AD with 1 minute
         // from the round's start 0x2336C): every effect a minute on as each
         // round STARTS - the first one too - not as it ends
@@ -688,6 +695,10 @@ struct Fighter {
     // Undead or run away in confusion; the computer's step takes any cloud
     bool    driven = false;
     uint8_t blows = 0;                  // Darkness: its blows in the attack made now (Kalistes' weapons by number - R14)
+    // The Dark Queen (round 17): what its own blow's hooks put on its stored
+    // AC bytes (blind 0x4E502 -4, 0xA2 +2) - taken off when a blow on it
+    // recalculates its AC (0x77E:0xBE2)
+    int8_t  q_ac_shift = 0;
     // Secret's record bytes with no Curse place (secret_facts_2.md 19): flags
     // 2 (0x15E: 8 = unharmed by Slay Living and the Death Spell) and magic
     // resistance (0x1A5, % - by the caster's level as Curse's effects)

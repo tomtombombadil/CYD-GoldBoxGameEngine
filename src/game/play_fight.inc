@@ -3700,7 +3700,9 @@ void begin_round(pic::Canvas& c)
     int nev = 0;
     if (tick_at_start()) {
         // (the Dark Queen's round start 0x2336C: the time step 0x61AD - the
-        // clock, every effect a minute on - before anything else)
+        // clock, every effect a minute on - before anything else; its round
+        // count [0xAE4C] + 1)
+        vm->queen_round();
         vm->advance_clock(1, 1);
         vm->take_minutes();
         nev = combat::tick(fg->b, ev, 8);
@@ -5113,6 +5115,7 @@ void fight_start(pic::Canvas& c)
         }
     }
     combat::battle_start(b, &rng);           // those invisible from the start
+    vm->queen_rounds(0);                     // (the Dark Queen's round count, 0x2DAE1)
     // Their pictures
     fight_party_icons();
     for (int g = 0; g < ml->groups; ++g)

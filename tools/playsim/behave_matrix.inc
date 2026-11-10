@@ -87,6 +87,7 @@ void put(int i, int team, int x, int y, int hp = 60)
     f.flee_last = 8;
     f.flee_back = 0;
     f.driven = false;
+    f.q_ac_shift = 0;
     combat::occupancy(play::fg->b);
 }
 

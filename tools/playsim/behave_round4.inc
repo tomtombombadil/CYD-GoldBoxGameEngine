@@ -3092,7 +3092,27 @@ void queen_hooks()
         snprintf(what, sizeof what, "%c 0x%02X", tag, eff);
         scene();
         if (strstr(rest, "nohandler")) continue;     // (none set: never on anyone)
-        if (strstr(rest, "sets_tohit")) continue;    // (0x83: its to-hit and damage worked out anew - not compared yet)
+        if (strstr(rest, "tohit base")) {
+            // (round 17; 0x83 - 0x543D8): the to-hit in use made the record's
+            // THAC0 base + Strength's to-hit next to the target, + Dexterity's
+            // missile bonus further off (oracle: the bonus routines run at
+            // Strength 18/00 and Dexterity 21); kept in the record
+            const int near = atoi(strstr(rest, "near_str23 ") + 11), far = atoi(strstr(rest, "far_dex21 ") + 10);
+            const int cut = atoi(strstr(rest, "cut ") + 4);
+            q_add(F(A), static_cast<uint8_t>(eff), 0);
+            F(A).rec[0x73] = 30;
+            F(A).rec[0x11] = 18;
+            F(A).rec[0x1C] = 100;
+            F(A).rec[0x17] = 21;
+            (void)thresh(false, true);
+            check("0x83 next to it: the to-hit in use", F(A).rec[0x199], 30 + near);
+            F(T).x = static_cast<int16_t>(10 + cut + 2);
+            combat::occupancy(b);
+            F(A).rec[0x199] = 40;
+            (void)thresh(false, true);
+            check("0x83 further off: the to-hit in use", F(A).rec[0x199], 30 + far);
+            continue;
+        }
         if (tag == 'A') {
             if (strstr(rest, "prayer")) {
                 const int same = atoi(strstr(rest, "same ") + 5);
@@ -3111,6 +3131,26 @@ void queen_hooks()
             }
             // (its own AC's change is undone: the target's AC is recalculated before each blow)
             check(what, thresh(false), 10 - roll);
+            if (strstr(rest, "acfront ")) {
+                // (round 17) the attacker's own stored AC bytes changed by its
+                // blow, back when a blow on it recalculates them
+                const int af = atoi(strstr(rest, "acfront ") + 8), ar = atoi(strstr(rest, "acrear ") + 7);
+                scene();
+                q_add(F(A), static_cast<uint8_t>(eff), 0);
+                (void)thresh(false, true);
+                char w2[80];
+                snprintf(w2, sizeof w2, "%s: its own stored AC after its blow", what);
+                check(w2, F(A).rec[0x19A] * 1000 + F(A).rec[0x19B], (50 + af) * 1000 + 50 + ar);
+                F(T).attacks[0] = 1;
+                F(T).attacks[1] = 0;
+                F(A).received = 0;
+                create::g_die_hook = qh_die;
+                qh_roll = 2;
+                (void)combat::attack(b, T, A, nullptr, rng, false);
+                create::g_die_hook = nullptr;
+                snprintf(w2, sizeof w2, "%s: its stored AC once hit at", what);
+                check(w2, F(A).rec[0x19A] * 1000 + F(A).rec[0x19B], 50 * 1000 + 50);
+            }
         } else if (tag == 'T') {
             q_add(F(T), static_cast<uint8_t>(eff), 0);
             if (cloak) {

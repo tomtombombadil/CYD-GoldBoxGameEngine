@@ -2748,6 +2748,23 @@ static void test_queen_target_hooks()
     aff(t, 0x59);
     CHECK(ecl::queen_target_hooks(t, s, false, &miss) == 0 && miss);
     CHECK(ecl::queen_target_hooks(t, s, false, &miss) == 0 && !miss);
+    // (round 17) before any fight ([0xAE4C] 0) a roll made exactly 0 by the
+    // hooks before the cloak (invisible -4 on a d20 of 4) makes the cloak
+    // fresh again, no miss; a roll of 5 or a fight's round count: as before
+    s = party::Character{};
+    aff(t, 0x19);
+    CHECK(t.affects[0][3] == 0x10);
+    CHECK(ecl::queen_target_hooks(t, s, false, &miss, 4, 0) == -4 && !miss && t.affects[0][3] == 0);
+    CHECK(ecl::queen_target_hooks(t, s, false, &miss, 5, 0) == -4 && miss && t.affects[0][3] == 0x10);
+    t.affects[0][3] = 0;
+    CHECK(ecl::queen_target_hooks(t, s, false, &miss, 4, 3) == -4 && miss);
+    // 0xCF: one off, after the cloak (a roll of 5 with invisible and 0xCF: 0 at the cloak only after it)
+    t = party::Character{};
+    aff(t, 0xCF);
+    CHECK(ecl::queen_target_hooks(t, s, false, &miss) == -1 && !miss);
+    aff(t, 0x59);
+    t.affects[1][3] = 0x10;
+    CHECK(ecl::queen_target_hooks(t, s, false, &miss, 1, 0) == -1 && t.affects[1][3] == 0x10);
 }
 
 static void test_ecl_party()

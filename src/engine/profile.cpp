@@ -2053,7 +2053,7 @@ constexpr combat::Facts kQueenFightFacts = {.held = {0x33, 0x34, 0x35, 0x1F}, .b
                 // (round 16: its to-hit hooks - Invisible to Animals 0x45 is no
                 // bite here, the dragons' fear 0x64 terrifies, 0x78)
                 .q = {.hooks = true, .race_plus = 0x1A, .giants = 0x2F, .animals = 0x45, .dance = 0x76, .highlight = 0x47,
-                      .iron_skin = 0x7A, .plus2 = 0xA2, .minus2 = 0x94, .tgt_minus1 = 0xCF,
+                      .iron_skin = 0x7A, .plus2 = 0xA2, .minus2 = 0x94, .tgt_minus1 = 0xCF, .hoopak = 0x83,
                       .tick_at_start = true}};
 // The Dark Queen's spells (queen_facts_4.md 8): Darkness's numbers 1-126 and
 // their workings (its handler table DS 0xAF45 + 4 x spell shares handlers as
