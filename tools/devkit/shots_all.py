@@ -42,7 +42,7 @@ WORK = os.environ.get("WORK", "/tmp/claude-0/shots/work")
 # address - all from the playsim's TAPLOG=1 and its snapshots
 G = {
     "poolrad":   dict(steps=3, play=None, load=(24, 114), where=None, save=154, begin=(24, 154),
-                      camp=(124, 194), exit=(300, 194), fight="85F9"),
+                      camp=(124, 194), exit=(300, 194), fight="85F9", done_menu=True),
     "curse":     dict(steps=4, play=242, load=(24, 114), where=None, save=154, begin=(24, 154),
                       camp=(124, 194), exit=(300, 194), fight="8AC2"),
     "secret":    dict(steps=5, play=114, load=(24, 114), where=None, save=170, begin=(24, 154),
@@ -54,7 +54,7 @@ G = {
     "treasures": dict(steps=5, play=122, load=(24, 114), where=(138, 194), save=154, begin=(24, 154),
                       camp=(164, 194), exit=(252, 194), fight="9826"),
     "champions": dict(steps=4, play=186, load=(24, 114), where=None, save=170, begin=(24, 154),
-                      camp=(164, 194), exit=(252, 194), fight="8441"),
+                      camp=(164, 194), exit=(252, 194), fight="8441", done_menu=True),
     "knights":   dict(steps=5, play=226, load=(24, 114), where=(138, 194), save=170, begin=(24, 154),
                       camp=(164, 194), exit=(252, 194), fight="815B"),
     # (the Dark Queen: save A stands in Palanthas' town menu - its exploring
@@ -200,9 +200,13 @@ def game_run(s, size, only):
         # (the first fighter's Done / End - the menu line's last word: Left
         # from its first word, then Select - and the field after the turns
         # up to the next one's menu; twice)
+        # (PoolRad's and Champions' Done is a menu of its own - Delay Quit
+        # Speed Exit: its first word, Delay, ends the turn)
         for _ in range(2):
             t.tap(k["left"], 3000)
-            t.tap(k["select"], 12000)
+            t.tap(k["select"], 12000 if not g.get("done_menu") else 4000)
+            if g.get("done_menu"):
+                t.tap(k["select"], 12000)
         t.shot("%s_fight_round" % s)
     return t
 
@@ -344,6 +348,19 @@ if __name__ == "__main__":
                 for x in ("secret", "champions", "knights"):
                     subprocess.run(["cp", "-al", os.path.join(GF, x, folder_of(x)), d], check=True)
                 run(name, size, [os.path.join(d, x) for x in sorted(os.listdir(d))], scan_run(size), 900)
+                continue
+            if s.startswith("mapkey:"):     # (320x240: the Map key over the game screen, exploring and in a fight)
+                g = s.split(":")[1]
+                name = "%d_mapkey_%s" % (size, g)
+                t = Taps(size)
+                to_game(t, g)
+                t.tap((54, 220), 6000)
+                t.shot("%s_explore_map" % g)
+                t.tap((160, 100), 6000)         # (the next tap puts the game screen back)
+                t.l.append("runat %s 20000" % G[g]["fight"])
+                t.tap((54, 220), 6000)
+                t.shot("%s_fight_battle" % g)
+                run(name, size, card(name, size, a.style, [g]), t)
                 continue
             if s == "panelcheck":           # (480: the 3D view after Companion panel taps - Darkness)
                 name = "%d_panelcheck" % size
