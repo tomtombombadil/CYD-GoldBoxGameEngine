@@ -191,5 +191,21 @@ for ev, tag in ((0x0A, 'A'), (0x10, 'T'), (0x0B, 'B')):
     for e in case_effects(ev):
         h = handler(e)
         lines.append('%s 0x%02X %s   # %s' % (tag, e, tell(e), ('0x%X' % h) if h else '-'))
+# 5. the clock's step in a fight: the round's start pushes 1, 1 and calls the
+# time step far, then (within 0x40 bytes) runs hook event 0x13 for everyone;
+# the time step calls the clock near - the clock found by its "at most 10
+# minutes a call" (cmp word [bp-0xe],byte +0xa)
+clock = d.find(bytes.fromhex('837EF20A'))
+for m in re.finditer(re.escape(bytes.fromhex('B8010050B001509A')), d):
+    if d.find(bytes.fromhex('B013509A'), m.end(), m.end() + 0x40) < 0:
+        continue
+    off, seg = struct.unpack_from('<HH', d, m.end())
+    f = 0x2400 + seg * 16 + off
+    body = d[f:f + 0x100]
+    calls = [f + i + 3 + struct.unpack_from('<h', body, i + 1)[0] for i in range(len(body) - 3) if body[i] == 0xE8]
+    starts = [c for c in calls if 0 < clock - c < 0x100 and d[c:c + 3] == b'\x55\x8B\xEC']
+    if starts:
+        lines.append('clock round_start count 1 unit 1   # round 0x%X, time step 0x%X, clock 0x%X' % (m.start(), f, starts[0]))
+        break
 open(out_path, 'w').write('\n'.join(lines) + '\n')
 print('\n'.join(lines))

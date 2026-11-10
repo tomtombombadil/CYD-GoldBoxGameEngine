@@ -2596,10 +2596,15 @@ void queen_hooks()
     check("nothing", base, 10);
     char line[240];
     int lines = 0;
+    bool clock_line = false;
     while (fgets(line, sizeof line, fo)) {
         char tag;
         unsigned eff;
         char rest[200] = "";
+        if (!strncmp(line, "clock round_start", 17)) {
+            clock_line = true;
+            continue;
+        }
         if (sscanf(line, "%c 0x%x %199[^#]", &tag, &eff, rest) < 3 || line[0] == '#') continue;
         ++lines;
         int roll = 0, front = 0, rear = 0;
@@ -2719,6 +2724,20 @@ void queen_hooks()
     expect(P, "the Dark Queen's dragon fear (0x4F361): no save - under 7 Hit Dice terrified (0x78), 7 and over, immune (0x5C) not",
            q_find(F(A), 0x78) >= 0 && q_find(F(1), 0x78) < 0 && q_find(F(2), 0x78) < 0, "HD 3 %d, HD 7 %d, immune %d",
            q_find(F(A), 0x78) >= 0, q_find(F(1), 0x78) >= 0, q_find(F(2), 0x78) >= 0);
+    // Its clock (oracle: the round's start calls the time step with 1 minute):
+    // the effects a minute on as a round begins - one of 1 minute gone before
+    // anyone acts, one of 3 left with 2; nothing at the round's end (the
+    // next start's step only)
+    scene();
+    q_add(F(A), 0x01, 1);
+    q_add(F(A), 0x02, 3);
+    begin_round(C);
+    const bool one_gone = q_find(F(A), 0x01) < 0, two_left = q_find(F(A), 0x02) >= 0 && F(A).aff[q_find(F(A), 0x02)][1] == 2;
+    round_end(C);                           // (on into the next round's start: one step more, not two)
+    const bool end_kept = q_find(F(A), 0x02) >= 0;
+    expect(P, "the Dark Queen's clock (0x5EFF via 0x61AD from the round's start 0x2336C): effects a minute on as each round begins, not at its end",
+           clock_line && one_gone && two_left && end_kept, "oracle %d, 1-minute gone %d, 3-minute at 2 %d, kept past the end %d", clock_line,
+           one_gone, two_left, end_kept);
     rules::set_fixes(true);
 }
 

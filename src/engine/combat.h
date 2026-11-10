@@ -480,6 +480,10 @@ struct Facts {
         // (unnamed ones: the attacker's +2 (0x50F39) and -2 (0x5039B), the
         // target's -1 (0x528F8))
         uint8_t plus2 = 0, minus2 = 0, tgt_minus1 = 0;
+        // Its clock (0x5EFF, called by the time step 0x61AD with 1 minute
+        // from the round's start 0x2336C): every effect a minute on as each
+        // round STARTS - the first one too - not as it ends
+        bool tick_at_start = false;
     } q{};
     // Gateway to the Savage Frontier's (its effect handlers DS 0x826A on, the
     // check lists of its work_on_00 - SPEC 6e; 0: none). `ways`: the deadly
