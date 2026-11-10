@@ -3435,5 +3435,22 @@ the game's Settings (As Original: all of them).
   compares a constant, never the difficulty - nothing is added. With Game
   Fixes on the engine adds it (Secret's Level 0-4, Death Knights' 1-5 -
   area word 0x4CF4); off: as the originals.
+- **Death Knights' Feeblemind** (Game Fixes; round 15): its spell
+  (GAME.OVR 0x2E610) gives the row's effect 0x44 - in Death Knights its
+  monsters' drain-2 (whoever holds it drains 2 levels from those it hits)
+  - and calls that effect's handler (0x1D3F8) at once: the victim's own
+  target loses 2 levels; no Intelligence / Wisdom change, no spell lost.
+  With Game Fixes on: Darkness's Feeblemind (Intelligence / Wisdom in use
+  3 at once, the spells being memorized forgotten, the spell under way
+  lost; no effect); off: as the original.
+- **The Dark Queen's DAMAGE saves** (Game Fixes; round 15): its script
+  DAMAGE (DQK.EXE 0x4256F) on the whole party or a random member takes
+  half on a failed save and the whole on a made one (with flag 0x10;
+  none without) - the selected member's branch the other (AD&D) way
+  round. With Game Fixes on all three as the selected one's; off: as the
+  original.
 - Smaller things kept from the originals although they look like bugs are
-  NOT differences: they're listed as quirks in the facts docs.
+  NOT differences: they're listed as quirks in the facts docs. Round 15's:
+  the computer's step needs its cost strictly under the moves left (all
+  DAX games but PoolRad - a last step that would use the moves up is never
+  taken).

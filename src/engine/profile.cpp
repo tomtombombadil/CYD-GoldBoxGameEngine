@@ -1579,6 +1579,7 @@ constexpr ecl::OpSet kQueenEcl = [] {
     s.krynn_race = true;
     s.camp_resumes = true;          // (PROGRAM 9: its inns' city menu again after the camp - DOSBox)
     s.moons = true;                 // (its clock steps the moons a day at a time: DQK.EXE 0x60C8 -> 0x5E58)
+    s.queen_damage = true;          // (its DAMAGE's saves - DQK.EXE 0x4256F, round 15)
     return s;
 }();
 

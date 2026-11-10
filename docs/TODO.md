@@ -1380,22 +1380,37 @@ the Project as claude/TODO.md.
       0xC699; bandaging in the move step 0xD270) - rules4 aiorder /
       bandorder now on Champions. The Dark Queen's saveload: 0 problems
       since v0.182.1.
-- [ ] Round 11 left: the step rows by mood in the other DAX games - the
-      same AI dice in each (GAME.OVR PoolRad 0xAC14, Curse 0xBACB, Secret
-      0xCFD6, Gateway 0xD02E, Darkness 0x9B45, Treasures 0xA957, Death
-      Knights 0xA28C; Curse's rows DS 0x2B8, read at 0xC1A0 / 0xC637, its
-      flee from the party's facing [0x722B] 0xC54F) while the engine steps
-      straight, then +1 -1 +2 -2, and flees from the nearest enemy (PoolRad
-      by the side's way); Champions' count-2 branch after a step back
-      (0x88:0x84 / 0xD6B5) and its cloud square exceptions (effects 0x20 /
-      0x1E / 0x63 / 0x3F, combat +0x10) not done. The Dark Queen's to-hit
-      effect hooks (events 0xA / 0x10 at 0x84BE / 0x84CD) not compared one
-      by one; its one-target roll 0x83D0 (roll + bonus > the value,
-      strictly; caller 0x427AB) not followed; its clock takes at most 10
-      minutes off an effect a step (0x5F86) - the fight's step per round
-      not read. Darkness's / Treasures' / Death Knights' Feeblemind: 7 in
-      use here and no recalculation to 3 (no stat_fx in their profiles) -
-      their handlers not read.
+- [x] Round 11 left (round 15, 2026-11-10): the step rows by mood in every
+      DAX game (rows PoolRad DS 0x2AE, Curse 0x2B8, Secret 0x32C, Gateway
+      0x390, Darkness 0x8E8, Treasures 0x8F4, Champions 0x396, Death Knights
+      0x312; the same AI dice in each), the flee's way from the party's
+      facing (+1 in Darkness / Treasures / Death Knights), the try's cost
+      test (strict; PoolRad's own) and its cloud squares (effects, driven,
+      flags 2, 7+ HD, a save - per game), the second step back's new target
+      (none: it guards) - tools/devkit/oracles/aistep.py, rules4 aimood on
+      all eight. Feeblemind: Darkness / Treasures as the Dark Queen's (their
+      generic save rule, not Secret's; 3 kept by the recalculation), Death
+      Knights' drain-2 as the original behind Game Fixes - rules4 feeble.
+      The Dark Queen's DAMAGE (0x4256F): its saves' branches, bonus & 0x0F
+      (swapped branch behind Game Fixes); its one-target roll 0x83D0 already
+      as the engine's (natural 1 misses, 20 = 100, roll + bonus > AC).
+- [ ] Round 15 left: the Dark Queen's to-hit hooks - event 0xA's effects
+      (the attacker's: 0x01 0x02 0x1A 0x21 0x24 0x31 0x78 0xA2 0x83 0x94)
+      and 0x10's (the target's: 0x19 0x45 0x25 0x2F 0x30 0x59 0xCF) from
+      its hook switch DQK.EXE 0x7202 (table cs:0x52C at 0x721C) - their
+      handlers (DS 0xB029 + 4 x effect, set at 0x59FEx-0x5A2xx) not found
+      (the setup's cs:off, as file 0x50000 + off, is a function start only
+      for 0x44 - the overlay mapping per handler not worked out; six have
+      no setter found), so not compared; nor its DAMAGE's target hook. Its
+      clock's effect step per fight round (0x5F86, at most 10 minutes a
+      call) not read. Darkness's / Treasures' stats recalculation (0x3307E
+      / 0x3CD87) also checks Secret's other stat effects (0x26, 0x71,
+      0x0C, 0x3E, 0x0E) - only 0x44 followed (profile stat_fx). The
+      count-2 finder's second argument (Curse 0x8D:0x89 with 1: the sight
+      test skipped while [0x6EAC]+6) taken as the engine's target pick.
+      Death Knights' feebleminded fighter then drains whoever it hits (the
+      engine's after_hit with mon.drain2) - its hit dispatch for the
+      party's own not traced.
 - [ ] Round 7 left: Treasures' effect 0x3B's handler (none of its items
       has it - round 10 left it: nothing in the game carries it). The Dark Queen: its weapon name's trailing space (0x9FDC not
       read); its fight pages' rows after a hit (each page from row 10 here:
