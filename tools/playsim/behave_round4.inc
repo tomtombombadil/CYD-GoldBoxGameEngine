@@ -2210,88 +2210,217 @@ void train_spell_offer()
 // same row.
 void ai_mood_steps()
 {
-    if (game() != 5 || !fight()) return;
-    std::vector<uint8_t> ovr;
-    read_file(game_dir + "/GAME.OVR", ovr);
-    static const uint8_t sig[] = {0xD1, 0xE7, 0xD1, 0xE7, 0x01, 0xF7, 0x03, 0xFA, 0x8A, 0x85};
-    auto it = std::search(ovr.begin(), ovr.end(), std::begin(sig), std::end(sig));
-    find_table();
-    if (it == ovr.end() || prog.empty()) {
-        expect(P, "Champions' step rows: the try's table in GAME.OVR", false, "found %d, program %d", it != ovr.end(), !prog.empty());
+    // Round 15: every DAX game. The oracle (tools/devkit/oracles/aistep.py)
+    // reads each GAME.OVR's try and step: the rows' DS place, the flee's
+    // facing (+ 1), the cost test, the cloud squares' rules
+    static const char* kName[] = {"", "poolrad", "curse", "secret", "darkness", "champions", "knights", "queen", "gateway", "treasures"};
+    const int g = game();
+    if (g == 7 || g < 1 || g > 9 || !fight()) return;
+    char path[256];
+    snprintf(path, sizeof path, "%s/oracle_aistep_%s.txt", getenv("ORACLE_DIR") ? getenv("ORACLE_DIR") : "/tmp/claude-0/bt", kName[g]);
+    FILE* fo = fopen(path, "r");
+    if (!fo) {
+        expect(P, "the computer's step: oracle_aistep (tools/devkit/oracles/aistep.py)", false, "%s missing", path);
         return;
     }
-    const int at = it[10] | it[11] << 8;
-    const uint8_t* row = &prog[d->prof->data_base + at];
+    struct Cl {
+        char kind[16];
+        std::vector<int> eff;
+        int driven, save, hd7, flags2;
+    };
+    std::vector<Cl> cls;
+    unsigned at = 0, facing = 0;
+    int inc = -1;
+    char cost[16] = "";
+    char line[240];
+    while (fgets(line, sizeof line, fo)) {
+        unsigned x;
+        int v;
+        if (sscanf(line, "rows %x", &x) == 1) at = x;
+        else if (sscanf(line, "facing %x inc %d", &x, &v) == 2) facing = x, inc = v;
+        else if (sscanf(line, "cost %15s", cost) == 1) {
+        } else if (!strncmp(line, "cloud ", 6)) {
+            Cl c{};
+            char key[16], effs[120] = "";
+            const char* e = strstr(line, " eff ");
+            const char* dr = strstr(line, " driven ");
+            if (!e || !dr || sscanf(line, "cloud %15s %15s", c.kind, key) != 2) continue;
+            snprintf(effs, sizeof effs, "%.*s", static_cast<int>(dr - e - 5), e + 5);
+            for (char* tok = strtok(effs, " "); tok; tok = strtok(nullptr, " "))
+                if (strcmp(tok, "-")) c.eff.push_back(static_cast<int>(strtol(tok, nullptr, 16)));
+            sscanf(dr, " driven %d save %d hd7 %d flags2 %x", &c.driven, &c.save, &c.hd7, &x);
+            c.flags2 = static_cast<int>(x);
+            cls.push_back(c);
+        }
+    }
+    fclose(fo);
+    find_table();
     combat::Battle& b = fg->b;
     const auto& t = fg->t;
+    const int base_at = static_cast<int>(d->prof->create.ds_image) + static_cast<int>(at);     // (the fight tables' image - load_fight_tables)
+    if (!at || prog.empty() || base_at + 36 > static_cast<int>(prog.size())) {
+        expect(P, "the computer's step: the rows in the program", false, "rows 0x%X, program %d bytes", at, (int)prog.size());
+        return;
+    }
+    const uint8_t* row = &prog[base_at];
     bool same = t.mood_known;
     for (int k = 0; same && k < 36; ++k) same = t.mood[k] == row[k];
-    for (int k = B + 1; k < b.n; ++k) b.f[k].size = 0;
-    for (int k = 1; k < b.party_size; ++k) b.f[k].size = 0;
     const uint8_t floor = b.ground[3][5];
-    int bad = 0, n = 0;
-    char first[160] = "";
-    auto setup = [&](int dir, int mood) {
+    auto clear = [&]() {
         for (int y = 0; y < combat::kH; ++y)
             for (int x = 0; x < combat::kW; ++x) b.ground[y][x] = floor;
-        mx::put(0, 0, 5 + 3 * combat::dx(dir), 5 + 3 * combat::dy(dir), 60);
-        mx::put(B, 1, 5, 5, 60);
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+    };
+    // the one stepping: B at 10,10 (a monster), its enemy the party's 0 three squares away the way dir
+    auto setup = [&](int dir, int mood) {
+        clear();
+        mx::put(0, 0, 10 + 3 * combat::dx(dir), 10 + 3 * combat::dy(dir), 60);
+        mx::put(B, 1, 10, 10, 60);
         combat::occupancy(b);
         combat::Fighter& f = b.f[B];
         f.ai_mood = static_cast<uint8_t>(mood);
-        f.flee_last = 8;
-        f.flee_back = 0;
         f.moves = 12;
-        f.attacks[0] = 1;
         f.target = 0;
         f.rec[0x10E] = 0;
+        f.driven = false;
     };
+    auto sq = [&](int dir) -> uint8_t& { return b.ground[10 + combat::dy(dir)][10 + combat::dx(dir)]; };
+    int bad = 0, n = 0;
+    char first[200] = "";
     for (int mood = 1; mood <= 6; ++mood)
         for (int dir = 0; dir < 8; ++dir)
             for (int k = 1; k <= 5; ++k) {
                 setup(dir, mood);
-                for (int j = 1; j < k; ++j) {
-                    const int dd = (row[mood * 5 + j] + dir) & 7;
-                    b.ground[5 + combat::dy(dd)][5 + combat::dx(dd)] = 0;     // (no floor: no step there)
-                }
+                for (int j = 1; j < k; ++j) sq((row[mood * 5 + j] + dir) & 7) = 0;      // (no floor: no step there)
                 const int want = (row[mood * 5 + k] + dir) & 7;
                 const combat::Plan p = combat::think(b, t, B, rng);
                 ++n;
                 if ((p.act != combat::Act::Step || p.dir != want) && !bad++)
                     snprintf(first, sizeof first, "mood %d way %d column %d: act %d dir %d, want a step %d", mood, dir, k, (int)p.act, p.dir, want);
             }
-    // back the way it came: the mood turns, then the target goes, then the moving
+    expect(P, "the computer's step - its mood's row of the program's table, the first it can take", same && bad == 0,
+           "engine's rows the program's %d (table DS 0x%X); %d of %d wrong (%s)", same, at, bad, n, first);
+    // back the way it came: the mood turns, then the target goes (and another
+    // is looked for - none: it guards), then the moving ends
     int rev_bad = 0;
-    char rev[160] = "";
-    setup(2, 3);
-    const int d1 = (row[3 * 5 + 1] + 2) & 7;
-    combat::Fighter& f = b.f[B];
-    for (int time = 1; time <= 3; ++time) {
-        f.flee_last = static_cast<uint8_t>((d1 + 4) & 7);
-        f.target = 0;
-        f.moves = 12;
-        const int m0 = f.ai_mood;
-        const int want_mood = m0 % 6 + 1;
-        const int dir_now = (row[m0 * 5 + 1] + 2) & 7;
-        const bool reverse = ((dir_now + 4) & 7) == f.flee_last;
-        const combat::Plan p = combat::think(b, t, B, rng);
-        bool ok;
-        if (!reverse) ok = p.act == combat::Act::Step;      // (the row turned: not back any more)
-        else if (time == 1) ok = p.act == combat::Act::Step && f.ai_mood == want_mood && f.flee_back == 1 && f.target == 0;
-        else if (time == 2) ok = p.act == combat::Act::Step && f.flee_back == 2 && f.target < 0;
-        else ok = p.act != combat::Act::Step && f.moves == 0;
-        if (!ok && !rev_bad++)
-            snprintf(rev, sizeof rev, "time %d (back %d): act %d mood %d->%d back %d target %d moves %d", time, reverse, (int)p.act, m0,
-                     (int)f.ai_mood, (int)f.flee_back, f.target, f.moves);
-        if (!reverse) break;
-        f.ai_mood = static_cast<uint8_t>(m0);                // (the same row again for the next time)
+    char rev[200] = "";
+    // (the second time's finder finding none - 0xCC32 - can't come about
+    // here: the turn's own target pick just found one in sight)
+    for (int alone = 0; alone < 1; ++alone) {
+        setup(2, 3);
+        combat::Fighter& f = b.f[B];
+        for (int time = 1; time <= 3; ++time) {
+            const int m0 = f.ai_mood;
+            const int dir_now = (row[m0 * 5 + 1] + 2) & 7;
+            f.flee_last = static_cast<uint8_t>((dir_now + 4) & 7);
+            f.target = 0;
+            f.moves = 12;
+            if (alone && time == 2) b.f[0].size = 0;            // (no enemy left to find)
+            const combat::Plan p = combat::think(b, t, B, rng);
+            bool ok;
+            if (time == 1) ok = p.act == combat::Act::Step && f.ai_mood == m0 % 6 + 1 && f.flee_back == 1 && f.target == 0;
+            else if (time == 2 && !alone) ok = p.act == combat::Act::Step && f.flee_back == 2 && f.target == 0;
+            else ok = p.act != combat::Act::Step && f.moves == 0;
+            if (!ok && !rev_bad++)
+                snprintf(rev, sizeof rev, "alone %d time %d: act %d mood %d->%d back %d target %d moves %d", alone, time, (int)p.act, m0,
+                         (int)f.ai_mood, (int)f.flee_back, f.target, f.moves);
+            if (alone && time == 2) break;
+            f.ai_mood = static_cast<uint8_t>(m0);           // (the same row again for the next time)
+        }
+    }
+    expect(P, "a step back the way it came - the next row, the target dropped and looked for again the second time, the moving over the third",
+           rev_bad == 0, "%s", rev);
+    // the cost test: the moves exactly the first column's cost
+    int cost_bad = 0;
+    char cst[200] = "";
+    for (int dir = 0; dir < 8; ++dir) {
+        for (int less = 0; less < 2; ++less) {
+            setup(dir, 1);
+            for (int j = 2; j <= 5; ++j) sq((row[5 + j] + dir) & 7) = 0;
+            const int d1 = (row[6] + dir) & 7;
+            const int c1 = combat::step_cost(b, t, B, d1, nullptr, nullptr);
+            combat::Fighter& f = b.f[B];
+            f.moves = static_cast<int16_t>(c1 - less);
+            const combat::Plan p = combat::think(b, t, B, rng);
+            const bool want = !strcmp(cost, "pool") ? !less : false;
+            if ((p.act == combat::Act::Step) != want && !cost_bad++)
+                snprintf(cst, sizeof cst, "way %d, cost %d, moves %d: act %d (want %s)", dir, c1, f.moves, (int)p.act, want ? "a step" : "none");
+        }
+    }
+    expect(P, "the computer's step: its cost against the moves left as the original's try (strict: cost < moves; PoolRad: the ground < moves, cost <= moves)",
+           cost_bad == 0 && cost[0], "cost rule '%s': %s", cost, cst);
+    // the flee's way: the party's facing at the fight's start
+    {
+        const int fd = d->gs.dir & 6;
+        const int want_way = (fd - ((fd + 2) % 4) / 2 + (inc > 0 ? 1 : 0) + 8) & 7;
+        int fbad = 0;
+        char fl[200] = "";
+        for (int team = 0; team < 2; ++team)
+            for (int k = 0; k < 6; ++k) {
+                clear();
+                const int me = team ? B : 0, foe = team ? 0 : B;
+                mx::put(me, team, 25, 12, 60);
+                mx::put(foe, !team, 25 + 6, 12 + 6, 60);
+                combat::occupancy(b);
+                combat::Fighter& f = b.f[me];
+                f.fleeing = true;
+                f.moves = 12;
+                const combat::Plan p = combat::think(b, t, me, rng);
+                const int r = f.ai_mood;
+                const int want = (row[r * 5 + 1] + want_way + (team ? 0 : 4)) & 7;
+                if ((p.act != combat::Act::Step || p.dir != want || r < 1 || r > 2) && !fbad++)
+                    snprintf(fl, sizeof fl, "side %d facing %d: act %d dir %d mood %d, want %d (way %d)", team, fd, (int)p.act, p.dir, r, want, want_way);
+            }
+        expect(P, "a run's step: a d2 mood, the way from the party's facing (facing DS place, + 1 by the oracle), + 4 for the party",
+               b.flee_dir == want_way && fbad == 0 && inc >= 0, "flee_dir %d want %d (facing DS 0x%X inc %d); %s", b.flee_dir, want_way, facing, inc, fl);
+    }
+    // the cloud squares: the first column a cloud, the others no floor
+    int cbad = 0, cn = 0;
+    char cb[240] = "";
+    for (const Cl& c : cls) {
+        const uint8_t cg = !strcmp(c.kind, "stink") ? (b.fx && b.fx->cloud_ground ? b.fx->cloud_ground : combat::kCloudGround)
+                           : !strcmp(c.kind, "poison") ? (b.fx && b.fx->poison_ground ? b.fx->poison_ground : combat::kPoisonGround)
+                           : (b.fx ? b.fx->dk.knives : 0);
+        // the cases: what, how to set it, stepping wanted
+        for (int cs = 0; cs < 8 + static_cast<int>(c.eff.size()); ++cs) {
+            setup(2, 1);
+            for (int j = 2; j <= 5; ++j) sq((row[5 + j] + 2) & 7) = 0;
+            const int d1 = (row[6] + 2) & 7;
+            sq(d1) = cg;
+            combat::Fighter& f = b.f[B];
+            f.rec[0xE5] = 1;
+            bool want = false;
+            const char* what = "";
+            switch (cs) {
+            case 0: what = "nothing, the save failed"; mx::dice(1); break;
+            case 1: what = "the save made"; mx::dice(20); want = c.save != 0; break;
+            case 2: what = "driven"; f.driven = true; mx::dice(1); want = c.driven != 0; break;
+            case 3: what = "7 Hit Dice"; f.rec[0xE5] = 7; mx::dice(1); want = c.hd7 != 0; break;
+            case 4: what = "6 Hit Dice"; f.rec[0xE5] = 6; mx::dice(1); break;
+            case 5: what = "flags2 0x18"; f.flags2 = 0x18; mx::dice(1); want = (c.flags2 & 0x18) != 0; break;
+            case 6: what = "flags2 0x10"; f.flags2 = 0x10; mx::dice(1); want = (c.flags2 & 0x10) != 0; break;
+            case 7: what = "flags2 0x08"; f.flags2 = 0x08; mx::dice(1); want = (c.flags2 & 0x08) != 0; break;
+            default:
+                what = "an effect";
+                mx::add_aff(B, c.eff[cs - 8]);
+                mx::dice(1);
+                want = true;
+                break;
+            }
+            const combat::Plan p = combat::think(b, t, B, rng);
+            mx::dice_off();
+            ++cn;
+            const bool stepped = p.act == combat::Act::Step && p.dir == d1;
+            if (stepped != want && !cbad++)
+                snprintf(cb, sizeof cb, "%s (ground 0x%X): %s%s - act %d dir %d, want %s", c.kind, cg, what,
+                         cs >= 8 ? "" : "", (int)p.act, p.dir, want ? "the step" : "none");
+            if (cs >= 8 && cbad == 1 && !stepped) snprintf(cb + strlen(cb), sizeof cb - strlen(cb), " (effect 0x%X)", c.eff[cs - 8]);
+        }
     }
     for (int y = 0; y < combat::kH; ++y)
         for (int x = 0; x < combat::kW; ++x) b.ground[y][x] = floor;
-    expect(P, "Champions: the computer's step - its mood's row of the program's table (DS 0x396, read at 0xCC9C), the first it can take",
-           same && bad == 0, "engine's rows the program's %d (table DS 0x%X); %d of %d wrong (%s)", same, at, bad, n, first);
-    expect(P, "Champions: a step back the way it came - the next row (0xD0F0), the target dropped the second time, the moving over the third",
-           rev_bad == 0, "%s", rev);
+    expect(P, "the computer's step onto a cloud square: the original's try (its effects, driven, flags 2, Hit Dice, a save) case by case",
+           cbad == 0 && !cls.empty(), "%d of %d wrong (%s)", cbad, cn, cb);
 }
 
 // The sides' to-hit bonuses (round 11): oracle_tohit_<game>.txt from the

@@ -51,6 +51,18 @@ int dy(int dir);
 struct BoltSeg { uint8_t x0, y0, x1, y1; };
 
 // ---- The program's tables (Curse: START.EXE's data segment)
+// A cloud square the computer's step may take (round 15; each game's try -
+// GAME.OVR PoolRad 0xB235, Curse 0xC176, Secret 0xD63D, Gateway 0xD7B2,
+// Darkness 0xA0A7, Treasures 0xAEE9, Champions 0xCC6A, Death Knights
+// 0xA8E5): one with an effect of eff, flags 2 & flags2, driven (combat
+// +0x10: turned, run away in confusion), 7+ Hit Dice (hd7) - or, with save,
+// a save against poison made; otherwise never
+struct StepCloud {
+    uint8_t kind;                       // 0 none, 1 the stinking cloud's ground, 2 the poison cloud's, 3 Darkness's knives
+    uint8_t eff[6];                     // (0 ends the list)
+    uint8_t flags2;
+    bool    driven, save, hd7;
+};
 struct Tables {
     uint8_t ground[kGroundValues][4];   // move cost (0xFF: can't), eye height, obstacle height, picture
     uint8_t fallback[4][4];             // [team facing][attempt 1-3]: dungeon facing to move the start
@@ -90,6 +102,12 @@ struct Tables {
     // the five directions it tries, each added to the way it goes (8 = straight)
     bool    mood_known;
     uint8_t mood[36];                   // (row m, column c: m x 5 + c - rows 0-6, columns 1-5)
+    // Round 15 (every DAX game - tools/devkit/oracles/aistep.py): the flee's
+    // way + 1 (Darkness, Treasures, Death Knights), PoolRad's cost test, and
+    // the cloud squares its try takes (StepCloud)
+    uint8_t flee_inc;
+    bool    step_pool;
+    StepCloud clouds[3];
     uint8_t foe_names[20][16];
     uint8_t dodge_names[2][16];
 };
@@ -107,6 +125,9 @@ struct TableAt {
     uint16_t reserve = 0;               // Darkness: the summoning reserve's MON blocks (5) and CPIC (5) by frame style
     uint8_t  turn_rule = 0;             // Tables::turn_rule
     uint16_t mood_rows = 0;             // Tables::mood (0: none)
+    uint8_t  flee_inc = 0;              // Tables::flee_inc
+    bool     step_pool = false;         // PoolRad's try: the ground's value < the moves, the cost <= the moves (else cost < moves)
+    StepCloud clouds[3] = {};
 };
 // Reads them: read(ctx, ds offset, out, n) gives the data segment's bytes
 using ReadDs = bool (*)(void* ctx, uint16_t ds, uint8_t* out, size_t n);
@@ -606,6 +627,9 @@ struct Fighter {
     uint8_t was_control = 0;            // its control byte before Animate Dead (back after the fight)
     uint8_t undead_turns = 0;           // Darkness: its Turn Undeads this fight (R13)
     uint8_t flee_last = 8, flee_back = 0;   // fleeing: this turn's last step (8 none), its steps back the way it came
+    // Driven (combat +0x10, Darkness-type +0xF - round 15): turned by Turn
+    // Undead or run away in confusion; the computer's step takes any cloud
+    bool    driven = false;
     uint8_t blows = 0;                  // Darkness: its blows in the attack made now (Kalistes' weapons by number - R14)
     // Secret's record bytes with no Curse place (secret_facts_2.md 19): flags
     // 2 (0x15E: 8 = unharmed by Slay Living and the Death Spell) and magic
