@@ -4409,7 +4409,9 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
             if (!f.up() || resisted(k, b.fx ? b.fx->feeble : 0)) continue;
             // This save only: a cleric -1, a magic-user +4, others +2 on the number needed
             int adj = f.rec[0x75] == 0 ? -1 : f.rec[0x75] == 5 ? 4 : 2;
-            if (b.fx && b.fx->secret) {
+            if (b.fx && b.fx->secret && !b.fx->feeble_direct) {
+                // (Darkness / Treasures - feeble_direct - by the generic rule
+                // above: GAME.OVR 0x2E902 / 0x37E08, round 15)
                 // Secret's (GAME.OVR 0x31B94) by the class byte: clerics (C/F, C/T) -1;
                 // rangers +1 at 8 Hit Dice, +2 from 9; paladins +4 from 9; magic-users
                 // (F/MU, F/MU/T, MU/T) +4 a human, else +2; C/F/MU, C/R, C/MU +2; any
@@ -4437,8 +4439,21 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
                 say(who[k], Did::Unaffected, 0);
                 continue;
             }
+            if (b.fx && b.fx->feeble_drain && !rules::fixes()) {
+                // Death Knights' own (feeble_drain): the drain-2 effect for
+                // ever, then its handler - the target's target drained 2
+                // levels ("gets drained")
+                if (b.fx->mon.drain2) give_aff(f, b.fx->mon.drain2, 0, pw, false);
+                const int tt = f.target;
+                if (tt >= 0 && tt < b.n && tt != who[k] && b.f[tt].up() && b.f[tt].size) {
+                    int nn = 0;
+                    drain(b, tt, 2, nullptr, 0, &nn, -1);
+                    say(tt, Did::Word2, 0);
+                }
+                continue;
+            }
             if (b.fx && b.fx->feeble) give_aff(f, b.fx->feeble, 0, pw, false);
-            if (b.fx && b.fx->feeble_direct) {
+            if (b.fx && (b.fx->feeble_direct || b.fx->feeble_drain)) {
                 // The Dark Queen's (its spell DQK.EXE 0x58108, effect 0x44's
                 // handler 0x53EA6): Intelligence and Wisdom in use 3 at once,
                 // and every spell still being memorized (+ 0x80) forgotten

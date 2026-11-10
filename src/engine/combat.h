@@ -445,6 +445,13 @@ struct Facts {
     // Wisdom in use set to 3 there and then (the others' 7, recalculated),
     // every memorized entry still to be memorized (+ 0x80) cleared
     bool feeble_direct = false;
+    // Death Knights' (GAME.OVR 0x2E610, round 15): its row's effect 0x44 is
+    // its own drain-2 effect (mon.drain2: drains whoever its holder hits),
+    // and the spell calls that effect's handler (0x1D3F8) at once - the
+    // target's own target loses 2 levels; no Intelligence / Wisdom change,
+    // no spell lost. An original's mistake: with the Game Fixes on, the
+    // Darkness / Dark Queen Feeblemind (feeble_direct, no effect)
+    bool feeble_drain = false;
     // The Dark Queen's stinking cloud (DQK.EXE 0x805D, round 11): this effect
     // keeps one from breathing it (with the undead, the nauseous, flags 2 &
     // 0x18); coughing and nausea 1d4 + 1 each, data 0xFF. 0: the others' rule

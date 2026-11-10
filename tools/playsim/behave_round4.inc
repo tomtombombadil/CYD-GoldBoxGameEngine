@@ -2423,6 +2423,106 @@ void ai_mood_steps()
            cbad == 0 && !cls.empty(), "%d of %d wrong (%s)", cbad, cn, cb);
 }
 
+// Round 15: Darkness's / Treasures' / Death Knights' Feeblemind, by their
+// handlers (GAME.OVR Darkness 0x2E902 + effect 0x44's 0x1C2F3, Treasures
+// 0x37E08 + 0x21F6x, Death Knights 0x2E610 + its effect 0x44 = drain-2's
+// 0x1D3F8): the save failed (a d20 of 1) on B with a spell under way, one
+// spell being memorized and one memorized, Intelligence / Wisdom in use 15
+void feeblemind()
+{
+    const int g = game();
+    if ((g != 4 && g != 9 && g != 6) || !fight()) return;
+    combat::Battle& b = fg->b;
+    const combat::FightSpell* fs = nullptr;
+    for (int k = 0; k < d->prof->fight.n_spells; ++k)
+        if (d->prof->fight.spells[k].does == combat::SpellDoes::Feeble) fs = &d->prof->fight.spells[k];
+    if (fs && !mrules) load_magic();
+    if (!fs || !mrules) {
+        expect(P, "Feeblemind: the spell", false, "spell %d rules %d", fs != nullptr, mrules != nullptr);
+        return;
+    }
+    const uint8_t drain2 = b.fx ? b.fx->mon.drain2 : 0;
+    for (int fixes = 0; fixes < 2; ++fixes) {
+        if (g != 6 && fixes) break;               // (Darkness / Treasures: no fix - the same either way)
+        rules::set_fixes(fixes != 0);
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(0, 0, 10, 10, 60);
+        mx::put(B, 1, 11, 10, 60);
+        mx::put(1, 0, 12, 10, 60);                // (B's own target: party member 1)
+        combat::Fighter& f = b.f[B];
+        f.target = 1;
+        f.spell = 0x0E;
+        f.spell_n = 0;
+        f.can_cast = true;
+        f.rec[magic::kListAt + 10] = 0x85;
+        f.rec[magic::kListAt + 11] = 0x07;
+        f.rec[0x13] = f.rec[0x15] = 15;
+        // (party member 1's levels, to see a drain)
+        combat::Fighter& t1 = b.f[1];
+        t1.rec[0xE5] = 5;
+        const int hd_before = t1.rec[0xE5];
+        uint8_t lv_before[8];
+        for (int j = 0; j < 8; ++j) lv_before[j] = t1.rec[0x109 + j];
+        fg->pages = fg->at = 0;
+        fg->ptext_used = 0;
+        create::g_die_hook = [](int sides) { return sides == 20 ? 0 : -1; };
+        combat::SpellLine lines[8];
+        const int tg[1] = {B};
+        const int n = combat::cast(b, mrules->tables, 0, fs->spell, *fs, tg, 1, rng, lines, 8, 9);
+        create::g_die_hook = nullptr;
+        const int fk = q_find(f, 0x44);
+        const bool kept = fk >= 0 && f.aff[fk][1] == 0 && f.aff[fk][2] == 0;
+        bool lv_same = true;
+        for (int j = 0; j < 8; ++j) lv_same = lv_same && t1.rec[0x109 + j] == lv_before[j];
+        const bool drained = t1.rec[0xE5] != hd_before || !lv_same;
+        if (g == 6 && !fixes) {
+            // the original's: effect 0x44 (its drain-2) for ever, the target's
+            // target drained, "gets drained" said of it; Int / Wis, the spell
+            // and the list untouched
+            bool said = false;
+            for (int k = 0; k < n; ++k) said = said || (lines[k].who == 1 && lines[k].did == combat::Did::Word2);
+            expect(P, "Death Knights: Feeblemind as its handler (GAME.OVR 0x2E610 / 0x1D3F8) - its drain-2 effect 0x44 for ever, the target's own target drained 2 levels (\"gets drained\"), nothing else (Game Fixes off)",
+                   drain2 == 0x44 && kept && drained && said && f.rec[0x13] == 15 && f.rec[0x15] == 15 && f.spell == 0x0E &&
+                       f.rec[magic::kListAt + 10] == 0x85,
+                   "drain2 0x%X, effect %d, drained %d (HD %d->%d), said %d, Int %d Wis %d, spell %d, list %02x", drain2, kept, drained,
+                   hd_before, int(t1.rec[0xE5]), said, int(f.rec[0x13]), int(f.rec[0x15]), f.spell, int(f.rec[magic::kListAt + 10]));
+        } else {
+            const bool ints = f.rec[0x13] == 3 && f.rec[0x15] == 3;
+            const bool list = f.rec[magic::kListAt + 10] == 0 && f.rec[magic::kListAt + 11] == 0x07;
+            bool said = false;
+            for (int k = 0; k < n; ++k) said = said || (lines[k].who == B && lines[k].did == combat::Did::Word);
+            char want[48];
+            ow(fs->word, want, sizeof want);
+            const bool eff_ok = g == 6 ? fk < 0 : kept;      // (Death Knights' fix: no effect - its 0x44 is the drain)
+            expect(P, g == 6 ? "Death Knights with the Game Fixes: Feeblemind as Darkness's - Intelligence / Wisdom 3 at once, the spells being memorized forgotten, no effect, no drain"
+                             : "Feeblemind as its handler - effect 0x44 for ever, Intelligence / Wisdom in use 3 at once, the spells being memorized forgotten, the spell under way left for \"lost a spell\", \"loses intellect\"",
+                   eff_ok && ints && list && !drained && (g == 6 || (said && want[0] && f.spell == 0x0E)),
+                   "effect %d (kept %d), Int %d Wis %d, list %02x %02x, drained %d, said %d \"%s\", spell %d; %d lines (first %d did %d)", fk >= 0, kept, int(f.rec[0x13]),
+                   int(f.rec[0x15]), int(f.rec[magic::kListAt + 10]), int(f.rec[magic::kListAt + 11]), drained, said, want, f.spell, n,
+                   n ? lines[0].who : -1, n ? (int)lines[0].did : -1);
+        }
+        combat::lose_aff(f, 0x44);
+        f.rec[magic::kListAt + 11] = 0;
+        f.spell = 0;
+    }
+    rules::set_fixes(true);
+    // Darkness / Treasures: the stats' recalculation (GAME.OVR 0x3307E /
+    // 0x3CD87) keeps Intelligence / Wisdom at 3 while effect 0x44 lasts
+    if (g != 6) {
+        party::Character c = pt->m[0];
+        c.n_affects = 0;
+        c.rec[0x12] = c.rec[0x14] = 15;
+        add_aff(c, 0x44, 0, 9);
+        rules::stats(c, d->facts);
+        const int i3 = c.rec[0x13], w3 = c.rec[0x15];
+        c.n_affects = 0;
+        rules::stats(c, d->facts);
+        expect(P, "Feeblemind: the stats' recalculation keeps Intelligence / Wisdom in use 3 while effect 0x44 lasts (0x3307E / 0x3CD87), back after",
+               i3 == 3 && w3 == 3 && c.rec[0x13] == 15 && c.rec[0x15] == 15, "with %d / %d, without %d / %d", i3, w3, int(c.rec[0x13]),
+               int(c.rec[0x15]));
+    }
+}
+
 // The sides' to-hit bonuses (round 11): oracle_tohit_<game>.txt from the
 // original's attacker-against-target roll (tools/devkit/oracles/tohit.py -
 // the bonus bytes it loads and its difficulty switch walked for each value
@@ -2529,6 +2629,7 @@ void run()
     if (want("trainspell")) train_spell_offer();
     if (want("tohit")) to_hit_sides();
     if (want("aimood")) ai_mood_steps();
+    if (want("feeble")) feeblemind();
     if (want("canuse")) {
         krynn_can();
         armour_can();
