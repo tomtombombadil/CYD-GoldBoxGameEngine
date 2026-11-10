@@ -126,15 +126,15 @@ the Project as claude/TODO.md.
       (Alt-M; off at every fight's start), in all nine games (each AI's
       spell gate; DOSBox: Curse, PoolRad). Spells ticked = Magic On for
       that character: Quick casts its memorized spells (not pushed yet).
-- [ ] Tom: Spells starts UNTICKED (the originals start every fight with
-      Magic Off), unlike the rest of the row. Tick it per character to
-      have Quick cast; say if you want it ticked by default instead.
+- [x] Tom: Spells starts UNTICKED (the originals start every fight with
+      Magic Off) - Tom, 2026-11-09: keep it ("matches the original game's
+      behavior"; players come to the tab to change that).
 - [x] Quick Actions for the party's NPCs (Tom, 2026-11-09): every party
       member on the tab, NPCs marked; theirs start at the originals' AI
       (all but Bandage First, Spells ticked) - unticking limits them.
-- [ ] Tom: the Quick tab shows one character's switches at a time (the
-      grid of 8 x 8 didn't fit big, worded keys on 320x240). Say if you
-      want an "All Characters" key (set a switch for everyone at once).
+- [x] Tom: the Quick tab shows one character's switches at a time - Tom,
+      2026-11-09: no "All Characters" key (the tab is for customizing
+      characters one by one).
 
 ## Claude
 
