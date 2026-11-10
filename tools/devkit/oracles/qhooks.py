@@ -134,7 +134,7 @@ def tell_tohit(h):
     code = dis(h, 0x100)
     txt = [t for _, t in code]
     base = cut = None
-    calls, dice, incs = [], [], []
+    calls, dice, incs, sdmg, wplus = [], [], [], [], []
     for i, t in enumerate(txt):
         if t == 'retf' and i > 4:
             break
@@ -152,11 +152,20 @@ def tell_tohit(h):
             calls.append(int(m.group(1), 16))
         if t in ('inc dx', 'inc ax'):
             incs.append(len(dice))
+        # (round 18) the near damage's Strength call: its result added to the
+        # die (cbw / pop dx / add dx,ax); the weapon's byte ([bp-0x1]) added
+        if m and txt[i + 1:i + 4] == ['pop cx', 'pop cx', 'cbw'] and 'add dx,ax' in txt[i + 4:i + 6]:
+            sdmg.append(int(m.group(1), 16))
+        if t == 'mov al,[bp-0x1]' or t == 'mov dl,[bp-0x1]':
+            wplus.append(len(dice))
     plus = [incs.count(k) for k in (1, 2)]
     near = bonus_at(0x77E, calls[0], 23) if len(calls) > 0 else None
     far = bonus_at(0x77E, calls[1], 21) if len(calls) > 1 else None
-    return 'tohit base 0x%X cut %d near_str23 %+d far_dex21 %+d dmg_near 1d%d+%d dmg_far 1d%d+%d dmg_lost' % (
-        base or 0, cut or 0, near or 0, far or 0, dice[0] if dice else 0, plus[0], dice[1] if len(dice) > 1 else 0, plus[1])
+    sd = bonus_at(0x77E, sdmg[0], 23) if sdmg else None
+    return ('tohit base 0x%X cut %d near_str23 %+d far_dex21 %+d dmg_near 1d%d+%d dmg_far 1d%d+%d dmg_lost'
+            ' near_strdmg23 %+d wplus %d%d') % (
+        base or 0, cut or 0, near or 0, far or 0, dice[0] if dice else 0, plus[0], dice[1] if len(dice) > 1 else 0, plus[1],
+        sd or 0, int(1 in wplus), int(2 in wplus))
 
 
 # 4. each handler told

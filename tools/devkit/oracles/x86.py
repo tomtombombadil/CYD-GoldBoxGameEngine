@@ -54,7 +54,8 @@ def run(code, start, stop, regs, mem, limit=5000):
     jump): al from regs['al'], bytes in mem by their operand text (e.g.
     '[bp-0x15]'). cmp sets the flags; jz/jnz/jc/jnc/jna/ja/jl/jg/jng/jnl
     and jmp short / near follow them; inc / dec / add / sub / mov byte to
-    a place change mem; 'mov al,<place>' loads al. Other lines are passed
+    a place change mem; 'mov al,<place>' loads al, 'mov <place>,al' stores
+    it, add / sub al,<number> change it (round 18). Other lines are passed
     over. Returns mem."""
     a = start
     flags = (0, 0)
@@ -91,6 +92,10 @@ def run(code, start, stop, regs, mem, limit=5000):
             mem[parts[0]] = mem.get(parts[0], 0) + (v if op == 'add' else -v)
         elif op == 'mov' and parts[0].startswith('[') and re.match(r'0x[0-9a-fA-F]+$|\d+$', parts[1]):
             mem[parts[0]] = num(parts[1])
+        elif op == 'mov' and parts[0].startswith('[') and parts[1] == 'al':
+            mem[parts[0]] = regs['al']
+        elif op in ('add', 'sub') and parts[0] == 'al' and re.match(r'0x[0-9a-fA-F]+$|\d+$', parts[1]):
+            regs['al'] = (regs['al'] + (num(parts[1]) if op == 'add' else -num(parts[1]))) & 0xFF
         elif op in ('ret', 'retf') or (op == 'call' and ':' in args):
             return mem
         a = nxt
