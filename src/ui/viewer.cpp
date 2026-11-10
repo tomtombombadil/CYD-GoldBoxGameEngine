@@ -938,6 +938,9 @@ void scan_log_resume()
 // place of the last one ("Looking in CURSE..." -> "Found Curse of ...")
 void scan_say(const char* text, bool replace, void*)
 {
+#if defined(CYD_QEMU)
+    Serial.printf("[scan] %s\n", text);       // (the emulator's log: the scan's lines as they come)
+#endif
     if (!scr) return;
     if (replace && scr->n > 0) {
         scr->n -= scr->last_parts < scr->n ? scr->last_parts : scr->n;
@@ -6384,6 +6387,11 @@ void tick()
             from_menu = false;
             open_journal(jk, jn);
         }
+        // (and run the game's script from an address: a fight for the screenshots)
+        uint16_t ra;
+        if (screen == Screen::Play && qemu::runat(&ra))
+            Serial.printf("[qemu] runat %04X: %s\n", ra, play::qemu_run_at(ra, frame::canvas()) ? "run" : "not at the exploring menu");
+
     }
 #endif
     if (screen == Screen::Journal && !dirty) tick_journal();
