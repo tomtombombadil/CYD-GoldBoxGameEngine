@@ -64,7 +64,7 @@ bool      dirty = true;            // redraw the current screen
 // game; pages with arrows bottom right. (The code: after Dev Tools.)
 enum class SetFrom : uint8_t { Home, Game, InGame };
 SetFrom set_from = SetFrom::Home;
-enum SetItem : uint8_t { kBright, kVolume, kSound, kInvert, kSwap, kRotate, kCalibrate, kScale, kLogs, kHand, kInfo };
+enum SetItem : uint8_t { kBright, kVolume, kSound, kInvert, kSwap, kRotate, kCalibrate, kScale, kLogs, kHand, kStrip, kInfo };
 struct SetEntry {
     bool    comfort = false;    // a Comfort (below), else a SetItem
     uint8_t id = 0;
@@ -161,8 +161,10 @@ void list_files();
 const char* const kScreenNames[] = {"Home", "the game page", "Resource Test", "Resource Test blocks", "Resource Test picture",
                                     "Screen Test", "Walk Test", "Play", "Journal", "Journal PDF", "the Game menu",
                                     "Settings", "Logs", "Game Settings", "Dev Tools"};
+void strip_clear();     // (the 5.0" Companion Strip: below)
 void go(Screen s)
 {
+    if (s != Screen::Play) strip_clear();      // (the strip shows the game's companion only)
     {
         char t[48];
         const int i = static_cast<int>(s);
@@ -938,6 +940,9 @@ void scan_log_resume()
 // place of the last one ("Looking in CURSE..." -> "Found Curse of ...")
 void scan_say(const char* text, bool replace, void*)
 {
+#if defined(CYD_QEMU)
+    Serial.printf("[scan] %s\n", text);       // (the emulator's log: the scan's lines as they come)
+#endif
     if (!scr) return;
     if (replace && scr->n > 0) {
         scr->n -= scr->last_parts < scr->n ? scr->last_parts : scr->n;
@@ -2709,7 +2714,18 @@ ui::Rect walk_key(int k)
 }
 
 // Where the Companion strip draws the map (480x320)
-constexpr int kCompCell = 9, kCompMapY = 30;
+constexpr int kCompCell = 9, kCompMapY = 30, kCompPlayMapY = 2;   // (the Walk Test's map under its two lines)
+
+// The map's one legend line (Tom, 2026-11-10): the colours' words in their colours
+void draw_map_legend(lgfx::LovyanGFX& g, int x, int y)
+{
+    g.setFont(&fonts::Font0);
+    g.setTextDatum(lgfx::textdatum_t::top_left);
+    g.setTextColor(style::kWarn);
+    g.drawString("Red: Locked", x, y);
+    g.setTextColor(style::kGold);
+    g.drawString("S: Secret", x + 13 * 6, y);
+}
 int comp_map_x() { return pic::kScreenW + (ui::width() - pic::kScreenW - kCompCell * geo::kSize) / 2; }
 
 // What the Companion strip shows: the Walk Test's or the Play Test's party
@@ -2749,7 +2765,7 @@ void redraw_side_keys()
     if (walk_key(kWMap).w > 0) side(walk_key(kWMap), "Map", map_shown ? ui::KeyStyle::Lit : ui::KeyStyle::Normal);
 }
 
-void draw_map_grid(const geo::Map& map, const MapSource& ms, int mx, int my, int cell);
+void draw_map_grid(lgfx::LovyanGFX& g, const geo::Map& map, const MapSource& ms, int mx, int my, int cell);
 
 // The Gold Box Companion strip (480x320): the whole map, the party arrow
 void draw_companion(const MapSource& ms = kWalkMap)
@@ -2759,28 +2775,25 @@ void draw_companion(const MapSource& ms = kWalkMap)
     const int x0 = pic::kScreenW, w = ui::width() - x0;
     ui::clear_area({x0, 0, w, ui::height()});
     g.drawFastVLine(x0, 0, ui::height(), style::kKeyEdge);
-    char l1[48], l2[48];
-    ms.describe(l1, l2, sizeof l1);
-    // Where the party is (small: for troubleshooting), then the map
-    ui::text(x0 + 6, 2, l1, style::kTextMuted, ui::Font::Small);
-    ui::text(x0 + 6, 2 + ui::line_h(ui::Font::Small), l2, style::kTextMuted, ui::Font::Small);
+    // The Walk Test (a Dev Tool): where the party is, for troubleshooting.
+    // The game: the map at the top, one legend line (Tom, 2026-11-10: no
+    // area / script / map lines, no "Gold: door" or "Tap:Party")
+    if (ms.teleport) {
+        char l1[48], l2[48];
+        ms.describe(l1, l2, sizeof l1);
+        ui::text(x0 + 6, 2, l1, style::kTextMuted, ui::Font::Small);
+        ui::text(x0 + 6, 2 + ui::line_h(ui::Font::Small), l2, style::kTextMuted, ui::Font::Small);
+    }
     const geo::Map* m = ms.map();
     if (!m) {
         redraw_side_keys();
         return;
     }
-    const int cell = kCompCell, my = kCompMapY;
-    draw_map_grid(*m, ms, comp_map_x(), my, cell);
+    const int cell = kCompCell, my = ms.teleport ? kCompMapY : kCompPlayMapY;
+    draw_map_grid(g, *m, ms, comp_map_x(), my, cell);
     const int ly = my + cell * geo::kSize + 3;
     if (ms.teleport) ui::text(x0 + 6, ly, "Tap a square to go there", style::kTextMuted, ui::Font::Small);
-    else {
-        // (two short lines in the small fixed font: the keys start at 200)
-        ui::text(x0 + 6, ly, "Gold: door", style::kGold, ui::Font::Mono);
-        ui::text(x0 + 6 + 11 * 6, ly, "Red: locked", style::kWarn, ui::Font::Mono);
-        ui::text(x0 + 6, ly + 9, "S: secret door", style::kGold, ui::Font::Mono);
-        // (Companion Views: the tap's clue - the panel's next view)
-        if (comp_on()) ui::text(ui::width() - 4 - 9 * 6, ly + 9, "Tap:Party", style::kTextMuted, ui::Font::Mono);
-    }
+    else draw_map_legend(g, x0 + 6, ly);
     redraw_side_keys();
 }
 
@@ -2813,9 +2826,8 @@ uint16_t plain_walls(const geo::Map& m)
     return bits;
 }
 
-void draw_map_grid(const geo::Map& map, const MapSource& ms, int mx, int my, int cell)
+void draw_map_grid(lgfx::LovyanGFX& g, const geo::Map& map, const MapSource& ms, int mx, int my, int cell)
 {
-    LGFX& g = ui::gfx();
     const geo::Map* m = &map;
     const int span = cell * geo::kSize + 1;
     const uint16_t plain = plain_walls(map);
@@ -2878,18 +2890,13 @@ void draw_map_page()
     g.fillRect(0, 0, pic::kScreenW, pic::kScreenH, style::kBackground);     // (black: the map's)
     const int cell = 12, mx = 4, my = (pic::kScreenH - cell * geo::kSize - 1) / 2;
     const int tx = mx + cell * geo::kSize + 8, tw = pic::kScreenW - tx - 4;
-    char l1[48], l2[48];
-    kPlayMap.describe(l1, l2, sizeof l1);
     const geo::Map* m = kPlayMap.map();
-    if (m) draw_map_grid(*m, kPlayMap, mx, my, cell);
+    if (m) draw_map_grid(g, *m, kPlayMap, mx, my, cell);
     else wrap_text(mx, my, tx - mx - 8, "No map here.", ui::Font::Normal, style::kText, true);
     int y = my;
-    y = wrap_text(tx, y, tw, l1, ui::Font::Small, style::kTextMuted, true) + 2;
-    y = wrap_text(tx, y, tw, l2, ui::Font::Small, style::kTextMuted, true) + 8;
     if (m) {
-        y = wrap_text(tx, y, tw, "Gold: door", ui::Font::Small, style::kGold, true);
-        y = wrap_text(tx, y, tw, "Red: locked", ui::Font::Small, style::kWarn, true);
-        y = wrap_text(tx, y, tw, "S: secret door", ui::Font::Small, style::kGold, true) + 8;
+        y = wrap_text(tx, y, tw, "Red: Locked", ui::Font::Small, style::kWarn, true);
+        y = wrap_text(tx, y, tw, "S: Secret", ui::Font::Small, style::kGold, true) + 8;
     }
     wrap_text(tx, y, tw, "Tap to go back to the game.", ui::Font::Small, style::kText, true);
 }
@@ -5326,6 +5333,117 @@ void comp_blink()
     ui::gfx().endWrite();
 }
 
+// ---- The 5.0" boards' Companion Strip (Tom, 2026-11-10; BOARD_SIDE_STRIP,
+// Settings): 160 x 480 beside the game at 2x, drawn 1:1 with the 4.0"
+// panel's pixels - the Party view at the top (room for 8), the map under
+// it (in a fight the battlefield in the same 158 rows), the rows under
+// that kept for the Companion buttons still to come. Drawn into the
+// board's sprite, shown with strip_show; on the Play screen only.
+#if defined(BOARD_SIDE_STRIP)
+struct StripPainter final : companion::Painter {
+    lgfx::LGFX_Sprite& s;
+    explicit StripPainter(lgfx::LGFX_Sprite& sp) : s(sp) {}
+    void fill(int x, int y, int w, int h, uint16_t c) override { s.fillRect(x, y, w, h, c); }
+    void text(int x, int y, const char* t, uint16_t c) override
+    {
+        s.setFont(&fonts::Font0);
+        s.setTextDatum(lgfx::textdatum_t::top_left);
+        s.setTextColor(c);
+        s.drawString(t, x, y);
+    }
+    uint16_t colour(int v) override { return frame::colour(v); }
+};
+constexpr int kStripPartyH = 219, kStripLowY = 220, kStripLowH = 158;   // (8 rows of 26 + the heading; the map's 145 + legend)
+bool     strip_force = true, strip_fight = false, strip_blink_on = true;
+uint32_t strip_sig = 0, strip_icon_sig = 0, strip_low_sig = 0, strip_looked = 0, strip_blinked = 0;
+const geo::Map* strip_map = nullptr;
+int      strip_x = -1, strip_y = -1, strip_dir = -1;
+
+void strip_clear()
+{
+    lgfx::LGFX_Sprite* sp = ui::gfx().strip();
+    if (!sp) return;
+    sp->fillScreen(style::kBackground);
+    ui::gfx().strip_show(0, 0, sp->width(), sp->height());
+    strip_force = true;
+}
+
+void strip_update()
+{
+    lgfx::LGFX_Sprite* sp = ui::gfx().strip();
+    static bool page_was = false;
+    if (!sp) return;
+    if (map_shown) {                     // (the Map key's page uses the battle view's geometry meanwhile)
+        page_was = true;
+        return;
+    }
+    if (page_was) {
+        page_was = false;
+        strip_force = true;
+    }
+    StripPainter p(*sp);
+    const int w = sp->width() - 1;       // (column 0 the black edge beside the game)
+    const bool fight = play::fighting() && comp_on();
+    if (fight != strip_fight) {
+        strip_fight = fight;
+        strip_force = true;
+    }
+    if (strip_force) {
+        sp->fillScreen(style::kBackground);
+        ui::gfx().strip_show(0, 0, sp->width(), sp->height());
+    }
+    const bool force = strip_force;
+    strip_force = false;
+    // The party (Companion Views), its icons read only when they change
+    if (comp_on() && (force || millis() - strip_looked >= 150)) {
+        strip_looked = millis();
+        const uint32_t is = play::panel_party_sig(true), sg = play::panel_party_sig(false);
+        if (force || is != strip_icon_sig || sg != strip_sig) {
+            companion::draw_party(p, {1, 0, w, kStripPartyH}, force || is != strip_icon_sig, false);
+            ui::gfx().strip_show(0, 0, sp->width(), kStripPartyH);
+        }
+        strip_icon_sig = is;
+        strip_sig = sg;
+    }
+    if (fight) {
+        const uint32_t sg = play::panel_field_sig();
+        if (force || sg != strip_low_sig) {
+            companion::draw_battle(p, {1, kStripLowY, w, kStripLowH}, strip_blink_on, false, false);
+            ui::gfx().strip_show(0, kStripLowY, sp->width(), kStripLowH);
+        }
+        strip_low_sig = sg;
+        if (millis() - strip_blinked >= 400) {
+            strip_blinked = millis();
+            if (companion::battle_blinks()) {
+                strip_blink_on = !strip_blink_on;
+                companion::blink_battle(p, strip_blink_on);
+                ui::gfx().strip_show(0, kStripLowY, sp->width(), kStripLowH);
+            } else {
+                strip_blink_on = true;
+            }
+        }
+        return;
+    }
+    // The map: drawn again when the party moves, turns or the map changes
+    const geo::Map* m = play::map();
+    if (!force && m == strip_map && play::pos_x() == strip_x && play::pos_y() == strip_y && play::dir() == strip_dir) return;
+    strip_map = m;
+    strip_x = play::pos_x();
+    strip_y = play::pos_y();
+    strip_dir = play::dir();
+    sp->fillRect(1, kStripLowY, w, kStripLowH, style::kBackground);
+    if (m) {
+        const int mx = 1 + (w - kCompCell * geo::kSize - 1) / 2;
+        draw_map_grid(*sp, *m, kPlayMap, mx, kStripLowY, kCompCell);
+        draw_map_legend(*sp, 1 + 5, kStripLowY + kCompCell * geo::kSize + 4);
+    }
+    ui::gfx().strip_show(0, kStripLowY, sp->width(), kStripLowH);
+}
+#else
+void strip_clear() {}
+void strip_update() {}
+#endif
+
 // The panel as it should be now (480x320; big: the icon editor's preview has it)
 void comp_update(bool big)
 {
@@ -5471,6 +5589,7 @@ void present_play()
         draw_walk_keys("Look", "Game", true);        // the fight's pad comes and goes
     }
     comp_update(big);
+    strip_update();
 }
 
 void draw_play()
@@ -5496,6 +5615,9 @@ void draw_play()
     play_last_map = nullptr;
     play_last_x = -1;
     comp_force = true;
+#if defined(BOARD_SIDE_STRIP)
+    strip_force = true;
+#endif
     present_play();
 }
 
@@ -5690,6 +5812,9 @@ int set_entries(SetEntry* out)
     add(false, kRotate);
     add(false, kCalibrate);
     add(false, kHand);
+#if defined(BOARD_SIDE_STRIP)
+    add(false, kStrip);
+#endif
     if (ui::large() && set_from != SetFrom::InGame) add(false, kScale);
     add(false, kLogs);
     for (int c = 0; c < kComforts; ++c)
@@ -5742,13 +5867,14 @@ const char* set_name(const SetEntry& e)
     case kScale: return "Asset Viewer";
     case kLogs: return "Logs";
     case kHand: return cfg->left_hand ? "Left Hand" : "Right Hand";
+    case kStrip: return "Companion Strip";
     default: return "";
     }
 }
 bool set_has_help(const SetEntry& e)
 {
     return e.comfort || e.id == kVolume || e.id == kSound || e.id == kInvert || e.id == kSwap || e.id == kRotate ||
-           e.id == kScale || e.id == kHand;
+           e.id == kScale || e.id == kHand || e.id == kStrip;
 }
 const char* set_help_text(const SetEntry& e)
 {
@@ -5773,6 +5899,10 @@ const char* set_help_text(const SetEntry& e)
     case kScale:
         return "Dev Tools' Resource Test: its pictures 1:1 or 1.5 times their size. The game itself is always "
                "shown 1:1, with the Companion panel beside it.";
+    case kStrip:
+        return "On: the game against the screen's left edge and, beside it, the party (classes, hit points, "
+               "what ails them) over the map - in a fight the battlefield - drawn at the screen's full "
+               "sharpness. Off: the game in the middle with black bars at both sides.";
     case kHand:
         return "Which hand taps the keys under the game. The keys move so that hand covers less of the game: "
                "Right Hand puts Game, Map and the key switch at the left end of the row and the arrows at the "
@@ -6055,6 +6185,7 @@ void draw_set_entry(const ui::Rect& cell, const SetEntry& e)
         case kRotate: ui::key2(r, "Rotate 180", cfg->flipped ? "On" : "Off", lit(cfg->flipped)); break;
         case kCalibrate: ui::key(r, "Recalibrate Touch"); break;
         case kHand: ui::key(r, cfg->left_hand ? "Left Hand" : "Right Hand"); break;
+        case kStrip: ui::key2(r, "Companion Strip", cfg->no_strip ? "Off" : "On", lit(!cfg->no_strip)); break;
         case kScale: ui::key2(r, "Asset Viewer", cfg->scale_15x ? "1.5x" : "1:1", lit(cfg->scale_15x)); break;
         case kLogs: ui::key(r, "Logs"); break;
         case kInfo: draw_info(r); break;
@@ -6157,6 +6288,12 @@ bool tap_settings_body(const ui::Tap& t)
             break;
         case kCalibrate: env_.recalibrate(); break;
         case kHand: cfg->left_hand = !cfg->left_hand; break;       // (the game's keys: drawn so on Back to Game)
+#if defined(BOARD_SIDE_STRIP)
+        case kStrip:
+            cfg->no_strip = !cfg->no_strip;
+            g.strip_set(!cfg->no_strip);
+            break;
+#endif
         case kScale:
             cfg->scale_15x = !cfg->scale_15x;
             frame::set_scale(cfg->scale_15x ? frame::Scale::OneAndHalf : frame::Scale::One);
@@ -6384,6 +6521,11 @@ void tick()
             from_menu = false;
             open_journal(jk, jn);
         }
+        // (and run the game's script from an address: a fight for the screenshots)
+        uint16_t ra;
+        if (screen == Screen::Play && qemu::runat(&ra))
+            Serial.printf("[qemu] runat %04X: %s\n", ra, play::qemu_run_at(ra, frame::canvas()) ? "run" : "not at the exploring menu");
+
     }
 #endif
     if (screen == Screen::Journal && !dirty) tick_journal();

@@ -16448,6 +16448,19 @@ bool cheat_open(int which, pic::Canvas& c)
     return true;
 }
 
+#if defined(CYD_QEMU)
+bool qemu_run_at(uint16_t addr, pic::Canvas& c)
+{
+    if (!d || !vm || !pt || !cheats_ready_in()) return false;
+    cursor_hide();
+    anim_stop();
+    then = Then::Idle;
+    handle(vm->run(addr));
+    tick(plat::now_ms(), c);
+    return true;
+}
+#endif
+
 bool available(games::Game g) { return profile::program_name(g) != nullptr; }
 
 bool icon_editing() { return d && screen == Screen::Icon && ie; }

@@ -341,6 +341,37 @@ void qemu_shot(const char* name)
         Serial.printf("[shot] %s: no memory\n", name);
     } else {
         static const char kHex[] = "0123456789abcdef";
+#if defined(BOARD_SIDE_STRIP)
+        // (the 5.0": the whole 800x480 panel - bars or the Companion Strip included)
+        uint16_t* raw = static_cast<uint16_t*>(malloc(800 * 2));
+        lgfx::rgb888_t* wide = static_cast<lgfx::rgb888_t*>(malloc(800 * sizeof(lgfx::rgb888_t)));
+        char* wline = static_cast<char*>(malloc(800 * 6 + 1));
+        if (raw && wide && wline) {
+            Serial.printf("[shot] begin %s %d %d\n", name, 800, 480);
+            for (int y = 0; y < 480; ++y) {
+                g->panel_row(y, raw);
+                for (int x = 0; x < 800; ++x) {
+                    const uint16_t v = raw[x];
+                    const uint8_t c[3] = {static_cast<uint8_t>((v >> 11) << 3), static_cast<uint8_t>(((v >> 5) & 63) << 2),
+                                          static_cast<uint8_t>((v & 31) << 3)};
+                    for (int k = 0; k < 3; ++k) {
+                        wline[x * 6 + k * 2] = kHex[c[k] >> 4];
+                        wline[x * 6 + k * 2 + 1] = kHex[c[k] & 15];
+                    }
+                }
+                wline[800 * 6] = 0;
+                Serial.printf("[shot] %d %s\n", y, wline);
+            }
+            Serial.printf("[shot] end %s\n", name);
+            Serial.flush();
+        }
+        free(raw);
+        free(wide);
+        free(wline);
+        free(row);
+        free(line);
+        return;
+#endif
         Serial.printf("[shot] begin %s %d %d\n", name, w, h);
         for (int y = 0; y < h; ++y) {
             g->readRect(0, y, w, 1, row);

@@ -21,5 +21,9 @@ void     mem_now(const char* why);
 // A "shot <name>" step of the script (once): the viewer dumps the screen
 // (ui::qemu_shot) when it's drawn
 bool     shot(char* name, size_t cap);
+// A "runat <hex address>" step of the script (once): the game's script run
+// from there while the party stands at the exploring menu (the playsim's
+// RUNAT - a LOAD MONSTER's address starts its fight; the screenshots)
+bool     runat(uint16_t* addr);
 }
 #endif

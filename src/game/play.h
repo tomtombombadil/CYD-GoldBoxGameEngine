@@ -108,6 +108,12 @@ bool walk_pending();
 // free, Modify for anyone) on the game screen - false when not ready
 bool cheats_ready();
 bool cheat_open(int which, pic::Canvas& c);
+#if defined(CYD_QEMU)
+// The emulator build's script (TAPS.TXT "runat <hex>"): the game's script
+// run from that address at the exploring menu, as the playsim's RUNAT (a
+// LOAD MONSTER's address starts its fight) - false when not at the menu
+bool qemu_run_at(uint16_t addr, pic::Canvas& c);
+#endif
 // The Quick tab (Tom, 2026-11-09; features.h CYD_QUICK_ACTIONS,
 // Options::quick_acts) - the engine's Game menu draws it (viewer.cpp), the
 // switches and their file live here: quick_ready - a game open with a

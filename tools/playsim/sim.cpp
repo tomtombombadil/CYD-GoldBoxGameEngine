@@ -994,6 +994,7 @@ int main(int argc, char** argv)
         if (play::load_where) {         // (Darkness: "Load from where?" - Pools; LOADFROM=S: Secret's, POOLDIR its folder)
             shot("load_where");
             const int w = getenv("LOADFROM") && *getenv("LOADFROM") == 'S' ? 1 : 0;
+            if (getenv("TAPLOG")) printf("  [taplog] %d %d load from\n", text::word_col(play::menu, w) * 8 + 2, text::kMenuRow * 8 + 2);
             play::tap(text::word_col(play::menu, w) * 8 + 2, text::kMenuRow * 8 + 2, C);
         }
         printf("  saves [%s] menu [%s%s]\n", play::pm_saves, play::menu.prompt, play::menu.s);
@@ -1715,6 +1716,14 @@ int main(int argc, char** argv)
         if (*m == '_') {                // "_": a second of ticks, a snapshot
             for (int t = 0; t < 50; ++t) { g_now += 20; play::tick(g_now, C); }
             shot("after_time");
+            continue;
+        }
+        if (*m == '*') {                // "*x,y;": a tap at canvas pixel x, y (a menu word: the screenshots' saves)
+            int x = 0, y = 0;
+            if (sscanf(m + 1, "%d,%d", &x, &y) == 2) play::tap(x, y, C);
+            while (m[1] && *m != ';') ++m;
+            settle();
+            shot("after_tap");
             continue;
         }
         if (*m == '|' && m[1]) {

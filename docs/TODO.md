@@ -138,27 +138,16 @@ the Project as claude/TODO.md.
 
 ## Claude
 
-- [ ] 5.0" Companion strip (Tom, 2026-11-10; mockup sent, waiting for
-      his go): a Settings switch (5.0" only) - the 640x480 game against
-      the left edge, a 160 x 480 strip at the right drawn 1:1 with the
-      4.0" panel's layout: Party on top (y 0-218, room for 8 members),
-      Map from y 220 (Battle there in a fight; 200 px), y 421-479 kept
-      for Companion buttons still to be designed (Tom). Map (Tom,
-      2026-11-10): no area / script / map lines, the legend one line
-      "Red: Locked  S: Secret" (no "Gold: door", no "Tap:Party") - 158
-      px tall, so the buttons get y 381-479; the same on the 4.0" (Tom:
-      the maps the same on every board where possible). Battle view in
-      the same 158 px (Tom): no "Round n / x v y" line, the legend
-      "Party" green + "Foes" red (no colour words), the selected line
-      kept for now, the blink line "Blinking: can't act" (proposed,
-      static). Open: the
-      buttons; what the Map key under the game does then; taps on the
-      strip.
+- [x] 5.0" Companion Strip (Tom, 2026-11-10; v0.192.0): Settings switch
+      (on by default), the game against the left edge, the strip 1:1 -
+      Party y 0-218, map / battle y 220-377 (map lines and legend cut on
+      every board, battle's round line gone, legend at the bottom).
+- [ ] Companion buttons for the 5.0" strip's y 381-479 (Tom: to design);
+      what the 5.0"'s Map key does with the strip on; taps on the strip
+      (dropped for now). Tom: try the strip on the 5.0" (both Rotate 180
+      settings - the strip stays at the right as you look at it).
 
-- [ ] With the next firmware change (Tom, 2026-11-10, not a release of its
-      own): the Party view's short statuses without full stops (Unc, Par,
-      Prot ...) - drop the abbr's "." and companion.cpp's stops /
-      no-stops step; SPEC 11's list to match.
+- [x] Short statuses without full stops (Tom, 2026-11-10; v0.192.0).
 
 - [x] Party view class / level line (Tom, 2026-11-10, v0.191.0): classes
       left ("Fighter 7" when it fits, else "F7/M9"), the state right,

@@ -423,7 +423,16 @@ can't get the memory says "Not enough memory to show this log."
   drawing) and copies each draw's changed rectangle 2x2 into the panel's
   buffer, centred - 640x480 with 80 px black bars (Tom's choice). Touch
   back: (x - 80) / 2, y / 2, the bars ignored. Invert / Swap Red/Blue
-  are done in the copy; Rotate 180 as everywhere.
+  are done in the copy; Rotate 180 as everywhere. **Companion Strip**
+  (Tom, 2026-11-10; Settings key, on by default, `Settings::no_strip`,
+  `BOARD_SIDE_STRIP`): the 640x480 against the left edge (as the player
+  sees it - Rotate 180 puts it at the panel's right) and a 160 x 480
+  strip beside it, drawn 1:1 into an LGFX_Sprite in PSRAM (`strip()`,
+  shown with `strip_show`; viewer.cpp `strip_update`, Play only): the
+  Party view at the top (y 0-218, room for 8), the map or (in a fight,
+  Companion Views on) the Battle view in y 220-377, the rows under it
+  kept for Companion buttons to come. Touches in the strip are dropped
+  for now (as the bars').
 - Board facts: the Project's claude/board_facts.md, claude/board_5inch_facts.md
   (+ _2); the games' needs: claude/other_games_facts.md.
 
@@ -2644,10 +2653,10 @@ a PC, PortMaster handhelds):
     Paralyzed, Held, Stunned, Fleeing, Charmed, Afraid, Poisoned,
     Diseased, Blind, Cursed, Slowed, Blessed, Hasted, Invisible,
     Protected - from the game's own effect numbers, profile fight.facts);
-    whole words while they fit, then the longest shortened first (Unc.,
-    Par., Prot., Pois., Dis., Invis., Anim., Sleep, Stun, Flee, Charm,
-    Fear, Curse, Slow, Bless, Haste, Stone), then without full stops,
-    then "+" for more. Colours: Dead / Dying red; Fled / Away / Gone
+    whole words while they fit, then the longest shortened first (Unc,
+    Par, Prot, Pois, Dis, Invis, Anim, Sleep, Stun, Flee, Charm, Fear,
+    Curse, Slow, Bless, Haste, Stone - no full stops, Tom), then "+" for
+    more. Colours: Dead / Dying red; Fled / Away / Gone
     grey; OK, Blessed, Invisible, Hasted, Protected green; the rest
     yellow. Battle: the field is 50 x
     25 squares in every game (`combat::kW / kH`); the part it uses (ground
@@ -2661,7 +2670,11 @@ a PC, PortMaster handhelds):
     asleep / paralysed / held / stunned / fleeing and fallen members; the
     turn's fighter ringed white, what Aim points at gold, the game
     screen's 7 x 7 window outlined blue; under it the turn's name and HP,
-    the aim's, the colours. Redrawn when what it shows changes (checked
+    the aim's; the legend on the area's last line - "Party" green,
+    "Foes" red, "Blink: no turn" (Tom, 2026-11-10: no round / "x v y"
+    line, no colour words). Map view (every board, Tom 2026-11-10): no
+    area / script / map lines (the Walk Test keeps them), one legend line
+    "Red: Locked  S: Secret". Redrawn when what it shows changes (checked
     every 150 ms), straight to the display - no memory kept; the
     playsim's COMPANION=1 writes each view beside its snapshots.
     320x240 (and the 5.0" board's 2x view; Tom, 2026-11-01): in a fight

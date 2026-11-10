@@ -30,14 +30,18 @@ enum class View : uint8_t { Map, Party, Battle };
 void draw_tabs(Painter& p, int x, int y, View v, bool fight);
 
 // The Party view: all = the area cleared and the icons drawn (else only
-// the rows' text and bars - hit points or effects changed)
-void draw_party(Painter& p, const Area& a, bool all);
+// the rows' text and bars - hit points or effects changed). tabs: the
+// views' names along the top (the 4.0" panel); else the heading "Party"
+// (the 5.0" Companion Strip, where every view has a place of its own)
+void draw_party(Painter& p, const Area& a, bool all, bool tabs = true);
 
 // The Battle view: the field fitted into the area (as large as fits, the
 // part of the 50 x 25 squares the fight uses), the lines under it.
 // blink_on: the blinking dots shown. big: the 320x240 Map key's page
-// (the whole game screen: a heading line "tap to go back")
-void draw_battle(Painter& p, const Area& a, bool blink_on, bool big = false);
+// (the whole game screen: a heading line "tap to go back"). tabs: the
+// views' names along the top (the 4.0" panel; not on the 5.0" strip).
+// The legend on the area's last line.
+void draw_battle(Painter& p, const Area& a, bool blink_on, bool big = false, bool tabs = true);
 // The blinking dots again (after draw_battle in the same area)
 void blink_battle(Painter& p, bool blink_on);
 // Whether any dot blinks

@@ -29,7 +29,8 @@ bool mounted = false;
 // "journal J 4 [wait_ms]" opens journal entry J 4 (the viewer's memory
 // and stack without playing to a mention); "shot <name> [wait_ms]" the
 // screen's pixels on the serial line (S3 builds: their frame buffer -
-// run_qemu.py --shots <dir> writes <dir>/<name>.png)
+// run_qemu.py --shots <dir> writes <dir>/<name>.png); "runat <hex> [wait_ms]"
+// runs the game's script from that address (play::qemu_run_at)
 struct Step {
     int16_t  x, y;                  // x < 0: a heap line only (-3: a journal entry, kind, number y; -4: shot y)
     uint32_t wait;
@@ -39,6 +40,8 @@ char     journal_kind = 0;
 int      journal_number = 0;
 char     shot_names[32][24];
 int      n_shots = 0, shot_due = -1;
+uint16_t runat_addr = 0;
+bool     runat_due = false;
 Step     steps[256];
 int      n_steps = -1, at = 0, phase = 0;
 uint32_t next = 0;
@@ -79,6 +82,12 @@ void load()
             if (n_shots < 32 && sscanf(line + 4, " %23s %u", nm, &w) >= 1) {
                 strlcpy(shot_names[n_shots], nm, sizeof shot_names[0]);
                 steps[n_steps++] = Step{-4, static_cast<int16_t>(n_shots++), w, 0};
+            }
+        } else if (!strncmp(line, "runat", 5)) {
+            unsigned a = 0;
+            if (sscanf(line + 5, " %x %u", &a, &w) >= 1) {
+                steps[n_steps++] = Step{-5, 0, w, 0};
+                steps[n_steps - 1].y = static_cast<int16_t>(a);
             }
         } else if (!strncmp(line, "mem", 3)) {
             sscanf(line + 3, "%u", &w);
@@ -166,6 +175,14 @@ bool touch(int32_t* x, int32_t* y)
         next = now + s.wait;
         return false;
     }
+    if (s.x == -5) {
+        runat_addr = static_cast<uint16_t>(s.y);
+        runat_due = true;
+        Serial.printf("[qemu] runat %04X\n", runat_addr);
+        ++at;
+        next = now + s.wait;
+        return false;
+    }
     if (s.x < 0) {
         mem("mem");
         ++at;
@@ -206,6 +223,14 @@ bool shot(char* name, size_t cap)
     if (shot_due < 0) return false;
     strlcpy(name, shot_names[shot_due], cap);
     shot_due = -1;
+    return true;
+}
+
+bool runat(uint16_t* addr)
+{
+    if (!runat_due) return false;
+    runat_due = false;
+    *addr = runat_addr;
     return true;
 }
 
