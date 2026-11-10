@@ -237,3 +237,6 @@ Round 16 (2026-11-10): the Dark Queen's hooks, the stats' effects, the step back
          ONLY=statfx (Secret / Darkness / Treasures)   ONLY=finder (the eight DAX games)   ONLY=khit (Knights)
   host test test_queen_target_hooks (DAMAGE's attack roll)
   Run the four oracles before rules4 (ORACLE_DIR, default /tmp/claude-0/bt).
+  Baselines: rules4 full PoolRad 39/0, Curse 42/0, Secret 37/0, Darkness 41/0, Gateway 37/0, Treasures 43/0,
+  Champions 48/0, Knights 45/0, Queen 57/0; budgets (bytes) unchanged from round 15 (Curse 133721, PoolRad 135372,
+  Darkness 149721, Champions 135928, Knights 135938, Queen 143244, Treasures 151918).
