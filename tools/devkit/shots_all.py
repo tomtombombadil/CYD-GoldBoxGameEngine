@@ -210,7 +210,8 @@ def game_run(s, size, only):
 def queen_explore_run(size):
     t = Taps(size)
     to_game(t, "queen", "A")
-    t.tap((2, 2), 6000)
+    for _ in range(3):              # (its arrival's pages, then the town's menu)
+        t.tap((2, 2), 6000)
     t.shot("queen_explore")
     if K[size]["panel"]:
         t.tap(K[size]["panel"], 3000)
@@ -343,6 +344,24 @@ if __name__ == "__main__":
                 for x in ("secret", "champions", "knights"):
                     subprocess.run(["cp", "-al", os.path.join(GF, x, folder_of(x)), d], check=True)
                 run(name, size, [os.path.join(d, x) for x in sorted(os.listdir(d))], scan_run(size), 900)
+                continue
+            if s == "panelcheck":           # (480: the 3D view after Companion panel taps - Darkness)
+                name = "%d_panelcheck" % size
+                t = Taps(size)
+                to_game(t, "darkness")
+                t.shot("pc_explore")
+                t.tap(K[size]["panel"], 8000)
+                t.shot("pc_party")
+                t.tap(K[size]["panel"], 8000)
+                t.shot("pc_map")
+                t.tap((52, 194), 8000)          # (Area and back: the 3D view drawn again)
+                t.tap((52, 194), 8000)
+                t.shot("pc_after")
+                run(name, size, card(name, size, a.style, ["darkness"]), t)
+                continue
+            if s == "queen_a":              # (the Dark Queen's exploring picture alone)
+                name = "%d_queen_a" % size
+                run(name, size, card(name, size, a.style, ["queen"]), queen_explore_run(size))
                 continue
             if s == "discover":
                 name = "%d_discover" % size
