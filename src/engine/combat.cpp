@@ -2803,7 +2803,7 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
                 if (dn) add_event(out, a, Ev::Down);
                 if (!at.up()) break;
             }
-            if (b.fx && tg.up()) after_hit(b, a, c, slot, roll, hits1, d, out);
+            if (b.fx && tg.up() && (!b.fx->hit_needs_damage || dmg > 0)) after_hit(b, a, c, slot, roll, hits1, d, out);
             if (out.rake) {
                 // Pool's tiger (its ovr14 routine): both claws hit - two
                 // rakes of 2d4 at once (the attack made again with them)

@@ -2523,6 +2523,75 @@ void feeblemind()
     }
 }
 
+// Death Knights' on-hit specials (round 16): oracle_knights_hit.txt from its
+// GAME.OVR (tools/devkit/oracles/knights_hit.py - the hook switch's events
+// 2 / 3 and the blow's damage test before them). The party's own holder of
+// its drain-2 effect (0x44 - the feebleminded's) drains whoever it hits,
+// attack 1 or 2 as the lists say; a blow of no damage drains nobody
+void knights_hit()
+{
+    if (game() != 6) return;
+    char path[256];
+    snprintf(path, sizeof path, "%s/oracle_knights_hit.txt", getenv("ORACLE_DIR") ? getenv("ORACLE_DIR") : "/tmp/claude-0/bt");
+    FILE* fo = fopen(path, "r");
+    if (!fo) {
+        expect(P, "Death Knights' on-hit: oracle_knights_hit (tools/devkit/oracles/knights_hit.py)", false, "%s missing", path);
+        return;
+    }
+    bool ev2 = false, ev3 = false;
+    int need = -1;
+    char line[200];
+    while (fgets(line, sizeof line, fo)) {
+        if (!strncmp(line, "event2 ", 7)) ev2 = strstr(line, "0x44") != nullptr;
+        if (!strncmp(line, "event3 ", 7)) ev3 = strstr(line, "0x44") != nullptr;
+        if (sscanf(line, "needs_damage %d", &need) == 1) continue;
+    }
+    fclose(fo);
+    if (!fight() || !fg->b.fx || fg->b.fx->mon.drain2 != 0x44) {
+        expect(P, "Death Knights' on-hit: its drain-2 effect 0x44", false);
+        return;
+    }
+    combat::Battle& b = fg->b;
+    int n = 0, bad = 0;
+    char first[200] = "";
+    auto blow = [&](int slot, int dice) {
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(0, 0, 10, 10, 60);
+        mx::put(B, 1, 11, 10, 200);
+        F(B).rec[0xE5] = 9;
+        q_add(F(0), 0x44, 0);
+        combat::Fighter& at = F(0);
+        at.rec[0x199] = 60;
+        at.attacks[0] = slot == 0 ? 1 : 0;
+        at.attacks[1] = slot == 1 ? 1 : 0;
+        for (int s2 = 0; s2 < 2; ++s2) {
+            at.rec[0x19E + s2] = static_cast<uint8_t>(dice);
+            at.rec[0x1A0 + s2] = 6;
+            at.rec[0x1A2 + s2] = 0;
+        }
+        create::g_die_hook = [](int nn) { return nn == 20 ? 18 : -1; };
+        const combat::Attack r = combat::attack(b, 0, B, nullptr, rng);
+        create::g_die_hook = nullptr;
+        bool drained = false;
+        for (int k = 0; k < r.n_ev; ++k)
+            drained = drained || (r.ev[k].who == B && (r.ev[k].ev == combat::Ev::Drained || r.ev[k].ev == combat::Ev::DkDrained));
+        return drained;
+    };
+    auto check = [&](const char* what, bool got, bool want) {
+        ++n;
+        if (got != want && !bad++) snprintf(first, sizeof first, "%s: drained %d, want %d", what, got, want);
+    };
+    for (int fixes = 0; fixes < 2; ++fixes) {
+        rules::set_fixes(fixes != 0);
+        check("attack 1, damage", blow(0, 1), ev2);
+        check("attack 2, damage", blow(1, 1), ev3);
+        check("attack 1, no damage", blow(0, 0), need == 1 ? false : ev2);
+    }
+    rules::set_fixes(true);
+    expect(P, "Death Knights: a holder of its drain-2 effect (the party's feebleminded too) drains whoever its damaging blow hits (oracle_knights_hit: events 2 / 3, the damage test)",
+           bad == 0 && need >= 0, "%d of %d wrong (%s)", bad, n, first);
+}
+
 // The second step back's finder (round 16): oracle_finder_<game>.txt from
 // GAME.OVR (tools/devkit/oracles/finder.py - the count-2 call's finder and
 // its passes). combat::finder_any with set d-rolls: none in sight - one is
@@ -3054,6 +3123,7 @@ void run()
     if (want("qhooks")) queen_hooks();
     if (want("statfx")) stat_effects();
     if (want("finder")) finder_check();
+    if (want("khit")) knights_hit();
     if (want("restore")) restore();
     if (want("rest")) rest();
     rules::set_fixes(true);

@@ -457,6 +457,11 @@ struct Facts {
     // no spell lost. An original's mistake: with the Game Fixes on, the
     // Darkness / Dark Queen Feeblemind (feeble_direct, no effect)
     bool feeble_drain = false;
+    // Death Knights' on-hit specials (its hook events 2 / 3 - attack 1's /
+    // 2's - GAME.OVR 0x204E9, round 16): only when the blow did damage
+    // ([0xBE6C] > 0); any holder's, the party's own too (its feebleminded
+    // one drains whoever it hits)
+    bool hit_needs_damage = false;
     // The Dark Queen's stinking cloud (DQK.EXE 0x805D, round 11): this effect
     // keeps one from breathing it (with the undead, the nauseous, flags 2 &
     // 0x18); coughing and nausea 1d4 + 1 each, data 0xFF. 0: the others' rule

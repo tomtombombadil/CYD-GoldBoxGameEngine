@@ -3303,7 +3303,7 @@ const Profile kProfiles[] = {
                 .berserk = 0x6B, .taunted = 0x5B,
                 // (its Feeblemind - GAME.OVR 0x2E610: the row's effect 0x44 is its
                 // drain-2, its handler 0x1D3F8 called at once - round 15)
-                .feeble_drain = true},
+                .feeble_drain = true, .hit_needs_damage = true},
                kDeathKnightsFight, sizeof kDeathKnightsFight / sizeof kDeathKnightsFight[0],
                // COMSPR (22 blocks, + 0x80 the second pictures): 0-2 arrows, 3
                // the axe, 4 the flask, 5 the spell, 6 lightning, 7 a rock, 8 a
