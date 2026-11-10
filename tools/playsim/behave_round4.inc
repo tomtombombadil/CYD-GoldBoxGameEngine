@@ -2596,8 +2596,9 @@ void knights_hit()
 // GAME.OVR (tools/devkit/oracles/finder.py - the count-2 call's finder and
 // its passes). combat::finder_any with set d-rolls: none in sight - one is
 // still taken (pass 2 skips the sight test); random-pick games: a pick of one
-// already struck ends pass 1 and pass 2 may take an unseen one beside a seen
-// one; scan games (Darkness-type): from any start the seen one is found
+// already struck spends a try (round 17: not the pass's end - turnfind) and
+// pass 2 may take an unseen one beside a seen one; scan games
+// (Darkness-type): from any start the seen one is found
 int fd_seq[8], fd_at = 0;
 int fd_die(int n) { return fd_at < 8 && fd_seq[fd_at] > 0 ? (fd_seq[fd_at++] - 1) % n : 0; }
 void finder_check()
@@ -2637,6 +2638,7 @@ void finder_check()
         for (int r : rolls) fd_seq[k++] = r;
         while (k < 8) fd_seq[k++] = 1;
         create::g_die_hook = fd_die;
+        F(B).target = -1;                   // (the count-2 call: its target dropped before)
         const int got = combat::finder_any(b, fg->t, B, rng);
         create::g_die_hook = nullptr;
         return got;
@@ -2664,12 +2666,136 @@ void finder_check()
         scene();
         q_add(F(0), inv, 0);
         check("the seen one picked", run({2}), 1);
-        // the unseen one picked, struck, picked again: pass 1 over - pass 2 takes it unseen
+        // the unseen one picked, struck, picked again (each a try) to the
+        // tries' end - pass 2 takes it unseen
         check("a struck one picked again: pass 2, its pick unseen", run({1, 1, 1}), skip ? 0 : 1);
         check("the unseen one struck, then the seen one", run({1, 2}), 1);
     }
     expect(P, "the second step back's finder as the original's (oracle_finder: its passes, the second without the sight test)",
            bad == 0 && tries >= 0 && skip == 1, "tries %d scan %d skip %d; %d of %d wrong (%s)", tries, scan, skip, bad, n, first);
+}
+
+// The computer's target at its turn (round 17): oracle_turnfind_<game>.txt
+// from GAME.OVR (tools/devkit/oracles/turnfind.py - the AI loop's finder
+// call, the turn's first, the finder's keep step, a struck pick's branch,
+// the first pass's walls, Champions' taunt and the moves test's place).
+// combat::finder_any / think with set d-rolls on a cleared field with one
+// wall square: the target kept behind the wall and out of reach; an
+// invisible one dropped; the first pass's list only those in a sight line;
+// a struck pick spending its try; Champions' kender first in the list taken
+// without a roll, not otherwise; Darkness-type: no finder at moves 0; the
+// turn's first finder where the original has one
+void turnfind_check()
+{
+    static const char* kName[] = {"", "poolrad", "curse", "secret", "darkness", "champions", "knights", "queen", "gateway", "treasures"};
+    const int g = game();
+    if (g == 7 || g < 1 || g > 9) return;
+    char path[256];
+    snprintf(path, sizeof path, "%s/oracle_turnfind_%s.txt", getenv("ORACLE_DIR") ? getenv("ORACLE_DIR") : "/tmp/claude-0/bt", kName[g]);
+    FILE* fo = fopen(path, "r");
+    if (!fo) {
+        expect(P, "the computer's turn target: oracle_turnfind (tools/devkit/oracles/turnfind.py)", false, "%s missing", path);
+        return;
+    }
+    char line[400] = "";
+    while (fgets(line, sizeof line, fo) && line[0] == '#') {}
+    fclose(fo);
+    const bool moves_first = strstr(line, "order moves_first") != nullptr;
+    const bool early = strstr(line, "early 0x") != nullptr;
+    const bool facts_ok = strstr(line, "seen 1") && strstr(line, "struck continue") && strstr(line, "pass1walls 1");
+    int taunt = 0;
+    if (const char* q = strstr(line, "taunt ")) taunt = static_cast<int>(strtol(q + 6, nullptr, 16));
+    if (!fight() || !fg->b.fx || !fg->b.fx->invisible) return;
+    combat::Battle& b = fg->b;
+    const combat::Tables& t = fg->t;
+    const uint8_t inv = b.fx->invisible;
+    // a wall: a ground value whose obstacle stands over the floor's eye
+    const uint8_t floor = b.ground[10][10];
+    int wall = -1;
+    for (int v = 1; v < combat::kGroundValues && wall < 0; ++v)
+        if (t.ground[v][2] > t.ground[floor][1]) wall = v;
+    auto scene = [&](bool walled) {
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        b.ground[10][7] = floor;
+        mx::put(B, 1, 10, 10, 60);
+        mx::put(0, 0, 4, 10, 60);
+        mx::put(1, 0, 16, 10, 60);
+        if (walled && wall > 0) b.ground[10][7] = static_cast<uint8_t>(wall);
+        F(B).target = -1;
+        b.taunter = -1;
+    };
+    auto run = [&](std::initializer_list<int> rolls) {
+        fd_at = 0;
+        int k = 0;
+        for (int r : rolls) fd_seq[k++] = r;
+        while (k < 8) fd_seq[k++] = 1;
+        create::g_die_hook = fd_die;
+        const int got = combat::finder_any(b, t, B, rng);
+        create::g_die_hook = nullptr;
+        return got;
+    };
+    int n = 0, bad = 0;
+    char first[200] = "";
+    auto check = [&](const char* what, int got, int want) {
+        ++n;
+        if (got != want && !bad++) snprintf(first, sizeof first, "%s: %d, want %d", what, got, want);
+    };
+    scene(true);
+    const bool walled = wall > 0 && !combat::range(b, t, B, 0, false, nullptr) && combat::range(b, t, B, 1, false, nullptr);
+    if (walled) {
+        // kept behind the wall (no sight line, no range in the keep step)
+        F(B).target = 0;
+        check("target kept behind a wall", run({2}), 0);
+        F(B).target = -1;
+        // no target: pass 1's list is member 1 alone (member 0 behind the wall)
+        check("pass 1: only those in a sight line", run({1}), 1);
+        // the one in sight invisible: struck, pass 2 takes either (walls passed over)
+        scene(true);
+        mx::add_aff(1, inv);
+        check("pass 2 over the wall, its first", run({1, 1}), 0);
+        F(B).target = -1;
+        check("pass 2 over the wall, its second", run({1, 2}), 1);
+    }
+    // an invisible target dropped
+    scene(false);
+    mx::add_aff(1, inv);
+    F(B).target = 1;
+    check("an invisible target dropped", run({1}), 0);
+    {
+        // a struck pick spends its try: 0 unseen picked three times, then 1
+        // (old reading: the pass over at the second, pass 2's roll 1 -> 0)
+        scene(false);
+        mx::add_aff(0, inv);
+        check("a struck pick spends its try", t.finder_scan ? run({1}) : run({1, 1, 1, 2}), 1);
+    }
+    if (taunt && b.fx->taunted == taunt) {
+        // Champions: the kender first in the list taken on the first try
+        scene(false);
+        mx::add_aff(B, taunt);
+        b.taunter = 0;
+        check("taunted: the kender first in the list, no roll", run({2}), 0);
+        scene(false);
+        mx::add_aff(B, taunt);
+        b.taunter = 1;
+        check("taunted: the kender second in the list, a roll", run({1}), 0);
+    } else if (taunt) {
+        check("taunt effect as the oracle's", b.fx->taunted, taunt);
+    }
+    // the moves test's place: think at moves 0 with no target
+    scene(false);
+    F(B).moves = 0;
+    create::g_die_hook = fd_die;
+    fd_at = 0;
+    for (int k = 0; k < 8; ++k) fd_seq[k] = 1;
+    (void)combat::think(b, t, B, rng);
+    create::g_die_hook = nullptr;
+    check("moves 0: the finder asked (Curse-type) or not (Darkness-type)", F(B).target >= 0, !moves_first);
+    check("the turn's first finder", t.finder_first, early);
+    scene(false);
+    for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+    combat::occupancy(b);
+    expect(P, "the computer's turn target as the original's (oracle_turnfind: kept while seen, the first pass in sight lines, struck picks, the moves' place, Champions' kender)",
+           bad == 0 && facts_ok && walled, "facts %d walled %d; %d of %d wrong (%s)", facts_ok, walled, bad, n, first);
 }
 
 // The stats' recalculation's effects (round 16): oracle_statfx_<game>.txt
@@ -3123,6 +3249,7 @@ void run()
     if (want("qhooks")) queen_hooks();
     if (want("statfx")) stat_effects();
     if (want("finder")) finder_check();
+    if (want("turnfind")) turnfind_check();
     if (want("khit")) knights_hit();
     if (want("restore")) restore();
     if (want("rest")) rest();

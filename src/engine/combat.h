@@ -111,6 +111,10 @@ struct Tables {
     // the list from one random place (GAME.OVR 0x22191 / 0x2A422), the
     // others pick at random up to 20 times
     bool    finder_scan;                // (set by read_tables)
+    // The turn's first finder (round 17): Darkness / Treasures / Death
+    // Knights ask it before the AI dice when the target is empty (GAME.OVR
+    // 0x9AF2 / 0xA904 / 0xA239)
+    bool    finder_first;
     StepCloud clouds[3];
     uint8_t foe_names[20][16];
     uint8_t dodge_names[2][16];
@@ -133,6 +137,7 @@ struct TableAt {
     bool     step_pool = false;         // PoolRad's try: the ground's value < the moves, the cost <= the moves (else cost < moves)
     StepCloud clouds[3] = {};
     bool     finder_scan = false;       // Tables::finder_scan
+    bool     finder_first = false;      // Tables::finder_first
 };
 // Reads them: read(ctx, ds offset, out, n) gives the data segment's bytes
 using ReadDs = bool (*)(void* ctx, uint16_t ds, uint8_t* out, size_t n);
@@ -1139,9 +1144,10 @@ bool flight_step(FlightPath& p);
 // with a missile weapon it shoots at its target in reach and sight (or a
 // random one there); else it steps toward its target; else it guards.
 Plan think(Battle& b, const Tables& t, int i, create::Dice& d);
-// The DAX games' second step back's target finder (range 0xFF, the sight
-// test skipped in its second pass - Curse GAME.OVR 0x171AC; round 16): the
-// target set, or -1
+// The DAX games' target finder (range 0xFF, second argument 1 - Curse
+// GAME.OVR 0x171AC; rounds 16 / 17): the target kept while seen, else one
+// in a sight line and seen, else any - the AI loop's, the turn's first and
+// the second step back's: the target set, or -1
 int finder_any(Battle& b, const Tables& t, int i, create::Dice& d);
 // Leaving the fight: gets away (faster than every enemy able to reach, or
 // even and d2) - status Running, off the field

@@ -4525,6 +4525,9 @@ void ai_step(pic::Canvas& c)
     // 0xA28C - round 15: the same code in each)
     if (fg->t.mood_known && !fg->ai_checked && !fg->flee_told && !fg->ai_diced) {
         fg->ai_diced = true;
+        // (Darkness 0x9AF2, Treasures 0xA904, Death Knights 0xA239: with no
+        // target the finder is asked before the dice - round 17)
+        if (fg->t.finder_first && (f.target < 0 || f.target >= b.n)) combat::finder_any(b, fg->t, i, rng);
         champ_ai_dice(f);
     }
     // Quick Actions (Tom, 2026-11-09; features.h CYD_QUICK_ACTIONS): the

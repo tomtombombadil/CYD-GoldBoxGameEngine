@@ -247,6 +247,7 @@ bool read_tables(Tables& t, const TableAt& at, ReadDs read, void* ctx)
     t.flee_inc = at.flee_inc;
     t.step_pool = at.step_pool;
     t.finder_scan = at.finder_scan;
+    t.finder_first = at.finder_first;
     for (int k = 0; k < 3; ++k) t.clouds[k] = at.clouds[k];
     if (t.mood_known && !read(ctx, at.mood_rows, t.mood, sizeof t.mood)) return false;
     if (at.reserve && !(read(ctx, at.reserve, t.reserve_mon, 5) && read(ctx, static_cast<uint16_t>(at.reserve + 5), t.reserve_pic, 5)))
@@ -3505,29 +3506,39 @@ bool cloud_ok(const Battle& b, const Tables& t, Fighter& f, int x, int y, create
 
 } // namespace
 
-// The second step back's finder (Curse GAME.OVR 0x171AC, the same in every
-// DAX game - its count-2 call with range 0xFF and the second argument 1;
-// round 16): pass 1 - up to 20 random picks among the enemies on the field,
-// one seen (0x144AB) taken, one not struck off, a pick already struck ends
-// the pass (Darkness / Treasures, 0x22191 / 0x2A422: one random place, then
-// the list in order from there, round, as many as it holds); pass 2 - the
-// list made again and its random pick taken, seen or not ([0x6EAC]+6 set
-// skips the sight test)
+// The DAX games' target finder (range 0xFF, second argument 1, third 0;
+// rounds 16 / 17 - tools/devkit/oracles/finder.py, turnfind.py): the AI
+// loop's at each step of its turn (Curse GAME.OVR 0xBC36 ...), the turn's
+// first (Darkness-type, Death Knights) and the second step back's (0xC6DA
+// ...). Curse 0x171AC: its target kept when it is of the other side, on the
+// field and seen (0x144AB) - no range, no sight line; else pass 1: the list
+// of the other side in a sight line (the map scan, walls counted), up to 20
+// random picks - one seen taken, one not struck off, a pick already struck
+// spends its try, none left ends the pass (Darkness / Treasures, 0x22191 /
+// 0x2A422: one random place, then the list in order from there, round, as
+// many as it holds); pass 2 - the list made again with the walls passed over
+// (map +6) and its random pick taken, seen or not. Champions (0x18D09): on a
+// pass's first try one taunted (0x5B) takes the list's first entry without a
+// roll when that is the kender who yelled
 int finder_any(Battle& b, const Tables& t, int i, create::Dice& d)
 {
     Fighter& f = b.f[i];
+    if (seen_enemy(b, i, f.target)) return f.target;
+    f.target = -1;
     const int my = f.team() ? 1 : 0;
     int list[kMaxFighters], n = 0;
-    auto build = [&]() {
+    auto build = [&](bool ignore_walls) {
         n = 0;
         for (int c = 0; c < b.n && n < kMaxFighters; ++c)
-            if (b.f[c].up() && b.f[c].size && (b.f[c].team() ? 1 : 0) != my) list[n++] = c;
+            if (b.f[c].up() && b.f[c].size && (b.f[c].team() ? 1 : 0) != my && range(b, t, i, c, ignore_walls, nullptr))
+                list[n++] = c;
     };
     auto take = [&](int c) {
         f.target = static_cast<int16_t>(c);
         return c;
     };
-    build();
+    const bool taunted = b.fx && b.fx->taunted && f.has(b.fx->taunted) && b.taunter >= 0;
+    build(false);
     if (t.finder_scan) {
         if (n) {
             int k = d.roll(n, 1) - 1;
@@ -3535,18 +3546,18 @@ int finder_any(Battle& b, const Tables& t, int i, create::Dice& d)
                 if (seen_enemy(b, i, list[k])) return take(list[k]);
         }
     } else {
-        for (int tries = 20; tries > 0 && n > 0; --tries) {
-            const int k = d.roll(n, 1) - 1;
-            if (list[k] < 0) break;
+        int left = n;
+        for (int tries = 20; tries > 0 && left > 0; --tries) {
+            const int k = taunted && tries == 20 && list[0] == b.taunter ? 0 : d.roll(n, 1) - 1;
+            if (list[k] < 0) continue;
             if (seen_enemy(b, i, list[k])) return take(list[k]);
             list[k] = -1;
-            bool any = false;
-            for (int j = 0; j < n; ++j) any = any || list[j] >= 0;
-            if (!any) break;
+            --left;
         }
     }
-    build();
+    build(true);
     if (!n) return -1;
+    if (!t.finder_scan && taunted && list[0] == b.taunter) return take(list[0]);
     return take(list[d.roll(n, 1) - 1]);
 }
 
@@ -3690,8 +3701,16 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
         p.act = Act::Guard;
         return p;
     }
-    // The target: kept while it's an enemy in sight
-    pick_target(b, t, i, d);
+    // The target. The DAX games (round 17; tools/devkit/oracles/turnfind.py):
+    // their AI loop's finder at each step (finder_any - Curse GAME.OVR
+    // 0xBC36, PoolRad 0xAD7E, Secret 0xD122, Gateway 0xD1A8, Champions
+    // 0xC722, Death Knights 0xA419: the finder, then the moves; Darkness
+    // 0x9CDB / Treasures 0xAAED: moves left first - none, the finder not
+    // asked: the target kept only while seen). The Dark Queen: kept while it's an enemy in sight
+    // and reach, else one there, else the nearest seen (pick_target)
+    if (!t.mood_known) pick_target(b, t, i, d);
+    else if (!t.finder_scan || f.moves > 0) finder_any(b, t, i, d);
+    else if (!seen_enemy(b, i, f.target)) f.target = -1;
     if (f.target < 0) {
         p.act = Act::Guard;
         return p;
