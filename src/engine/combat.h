@@ -115,6 +115,10 @@ struct Tables {
     // Knights ask it before the AI dice when the target is empty (GAME.OVR
     // 0x9AF2 / 0xA904 / 0xA239)
     bool    finder_first;
+    // The Dark Queen's finder (round 18; DQK.EXE 0x28AFE): its AI loop's,
+    // its turn's first (0x2DE39) - Curse-type but as many tries as the list
+    // holds, a roll first, the taunted kender moved to the list's front
+    bool    finder_queen;
     StepCloud clouds[3];
     uint8_t foe_names[20][16];
     uint8_t dodge_names[2][16];
@@ -138,6 +142,7 @@ struct TableAt {
     StepCloud clouds[3] = {};
     bool     finder_scan = false;       // Tables::finder_scan
     bool     finder_first = false;      // Tables::finder_first
+    bool     finder_queen = false;      // Tables::finder_queen
 };
 // Reads them: read(ctx, ds offset, out, n) gives the data segment's bytes
 using ReadDs = bool (*)(void* ctx, uint16_t ds, uint8_t* out, size_t n);
@@ -1166,6 +1171,11 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d);
 // in a sight line and seen, else any - the AI loop's, the turn's first and
 // the second step back's: the target set, or -1
 int finder_any(Battle& b, const Tables& t, int i, create::Dice& d);
+// The computer's guard (think's Act::Guard) as each DAX original's guard
+// routine (round 18 - Curse GAME.OVR 0xCC32; tools/devkit/oracles/guard.py):
+// held (Facts::held), a readied weapon whose type's range is over 1, or no
+// moves left - the turn just ends, no guard; false then
+bool guard_takes(const Battle& b, const Tables& t, int i);
 // Leaving the fight: gets away (faster than every enemy able to reach, or
 // even and d2) - status Running, off the field
 bool flee(Battle& b, const Tables& t, int i, create::Dice& d);

@@ -2048,7 +2048,10 @@ constexpr combat::Facts kQueenFightFacts = {.held = {0x33, 0x34, 0x35, 0x1F}, .b
                        .stun = 0x6A},
                 .race = {0x5E, 0x12, 0x1A, 0x07, 0x2F, 0x30, 0x69, true},
                 .items = {.displace = 0x59, .ring_invisible = 0x38, .fire_ring = 0x3D},
-                .berserk = 0x6B, .dk = {.dragon_fear = 0x64, .feared = 0x78}, .taunted = 0x5B, .feeble_lost = true, .feeble_direct = true,
+                .berserk = 0x6B, .dk = {.dragon_fear = 0x64, .feared = 0x78}, .taunted = 0x8C, .feeble_lost = true, .feeble_direct = true,
+                // (taunted 0x8C - round 18: its Yell DQK.EXE 0x5FDB0 gives it,
+                // its finder's list 0x24550 and the finder 0x28BF8 ask it;
+                // Death Knights' 0x5B is its lightning breath here)
                 .hit_needs_damage = true, .hit_free = 0xB8, .q_cloud_proof = 0x8F,
                 // (round 16: its to-hit hooks - Invisible to Animals 0x45 is no
                 // bite here, the dragons' fear 0x64 terrifies, 0x78)
@@ -2282,6 +2285,10 @@ constexpr spells::CampSpell kQueenCamp[] = {
 constexpr auto kQueenFight = [] {
     decltype(Profile::fight) f{};
     f.tables = {0x6197, 0x5D0B, 0x5D1B, 0x5D2B, 0x5D2F, 0x5D37, 0x5D3F, 0x5D7B, 0x5A5F, 0, 11, 0, 4};   // (turning: its own, rule 4)
+    // (its AI's finder - DQK.EXE 0x28AFE, the loop's 0x2E02B and the turn's
+    // first 0x2DE39 with no target, before its dice: round 18)
+    f.tables.finder_queen = true;
+    f.tables.finder_first = true;
     for (int i = 0; i < kFightWords; ++i) f.words[i] = kQueenFightWords[i];
     // (a damage text's fall, res 0x8F04: "Goes Down" 0x19B - the hit's own
     // "goes down" is 0x5B8B - and "%s and is Dying" 0x1A5)
