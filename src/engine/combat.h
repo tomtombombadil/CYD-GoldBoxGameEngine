@@ -111,6 +111,10 @@ struct Tables {
     // the list from one random place (GAME.OVR 0x22191 / 0x2A422), the
     // others pick at random up to 20 times
     bool    finder_scan;                // (set by read_tables)
+    // The turn's first finder (round 17): Darkness / Treasures / Death
+    // Knights ask it before the AI dice when the target is empty (GAME.OVR
+    // 0x9AF2 / 0xA904 / 0xA239)
+    bool    finder_first;
     StepCloud clouds[3];
     uint8_t foe_names[20][16];
     uint8_t dodge_names[2][16];
@@ -133,6 +137,7 @@ struct TableAt {
     bool     step_pool = false;         // PoolRad's try: the ground's value < the moves, the cost <= the moves (else cost < moves)
     StepCloud clouds[3] = {};
     bool     finder_scan = false;       // Tables::finder_scan
+    bool     finder_first = false;      // Tables::finder_first
 };
 // Reads them: read(ctx, ds offset, out, n) gives the data segment's bytes
 using ReadDs = bool (*)(void* ctx, uint16_t ds, uint8_t* out, size_t n);
@@ -457,11 +462,17 @@ struct Facts {
     // no spell lost. An original's mistake: with the Game Fixes on, the
     // Darkness / Dark Queen Feeblemind (feeble_direct, no effect)
     bool feeble_drain = false;
-    // Death Knights' on-hit specials (its hook events 2 / 3 - attack 1's /
-    // 2's - GAME.OVR 0x204E9, round 16): only when the blow did damage
-    // ([0xBE6C] > 0); any holder's, the party's own too (its feebleminded
-    // one drains whoever it hits)
+    // The on-hit specials (hook events 2 / 3 - attack 1's / 2's) only when
+    // the blow did damage (rounds 16 / 17, tools/devkit/oracles/onhit.py):
+    // Death Knights GAME.OVR 0x204E8 ([0xBE6C] > 0; any holder's, the
+    // party's own too - its feebleminded one drains whoever it hits),
+    // Secret 0x16413 ([0x87D4]), Champions 0x1662F ([0x6B30]), Darkness
+    // 0x1FD85 / Treasures 0x27E3C (the word [0xA7D8] / [0x9E20] > 0), the
+    // Dark Queen DQK.EXE 0x2648B ([0xAE55] > 0, or the attacker has
+    // hit_free); PoolRad / Curse / Gateway after any hit (their hook calls
+    // 0x13F3C / 0x14B94 / 0x17A83: the target in the fight only)
     bool hit_needs_damage = false;
+    uint8_t hit_free = 0;               // (the Dark Queen's 0xB8)
     // The Dark Queen's stinking cloud (DQK.EXE 0x805D, round 11): this effect
     // keeps one from breathing it (with the undead, the nauseous, flags 2 &
     // 0x18); coughing and nausea 1d4 + 1 each, data 0xFF. 0: the others' rule
@@ -490,6 +501,13 @@ struct Facts {
         // (unnamed ones: the attacker's +2 (0x50F39) and -2 (0x5039B), the
         // target's -1 (0x528F8))
         uint8_t plus2 = 0, minus2 = 0, tgt_minus1 = 0;
+        // 0x83 (0x543D8, round 17; a hoopak-like weapon): the holder's to-hit
+        // in use made its THAC0 base (record 0x87) + Strength's to-hit next to
+        // its target (the scan's distance under 2), else + Dexterity's missile
+        // bonus - kept in the record as the original; its damage words
+        // (1d6 + 2 / 1d4 + 1) set there are lost (the blow's damage is worked
+        // out after the roll)
+        uint8_t hoopak = 0;
         // Its clock (0x5EFF, called by the time step 0x61AD with 1 minute
         // from the round's start 0x2336C): every effect a minute on as each
         // round STARTS - the first one too - not as it ends
@@ -677,6 +695,10 @@ struct Fighter {
     // Undead or run away in confusion; the computer's step takes any cloud
     bool    driven = false;
     uint8_t blows = 0;                  // Darkness: its blows in the attack made now (Kalistes' weapons by number - R14)
+    // The Dark Queen (round 17): what its own blow's hooks put on its stored
+    // AC bytes (blind 0x4E502 -4, 0xA2 +2) - taken off when a blow on it
+    // recalculates its AC (0x77E:0xBE2)
+    int8_t  q_ac_shift = 0;
     // Secret's record bytes with no Curse place (secret_facts_2.md 19): flags
     // 2 (0x15E: 8 = unharmed by Slay Living and the Death Spell) and magic
     // resistance (0x1A5, % - by the caster's level as Curse's effects)
@@ -1139,9 +1161,10 @@ bool flight_step(FlightPath& p);
 // with a missile weapon it shoots at its target in reach and sight (or a
 // random one there); else it steps toward its target; else it guards.
 Plan think(Battle& b, const Tables& t, int i, create::Dice& d);
-// The DAX games' second step back's target finder (range 0xFF, the sight
-// test skipped in its second pass - Curse GAME.OVR 0x171AC; round 16): the
-// target set, or -1
+// The DAX games' target finder (range 0xFF, second argument 1 - Curse
+// GAME.OVR 0x171AC; rounds 16 / 17): the target kept while seen, else one
+// in a sight line and seen, else any - the AI loop's, the turn's first and
+// the second step back's: the target set, or -1
 int finder_any(Battle& b, const Tables& t, int i, create::Dice& d);
 // Leaving the fight: gets away (faster than every enemy able to reach, or
 // even and d2) - status Running, off the field

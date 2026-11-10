@@ -2049,11 +2049,11 @@ constexpr combat::Facts kQueenFightFacts = {.held = {0x33, 0x34, 0x35, 0x1F}, .b
                 .race = {0x5E, 0x12, 0x1A, 0x07, 0x2F, 0x30, 0x69, true},
                 .items = {.displace = 0x59, .ring_invisible = 0x38, .fire_ring = 0x3D},
                 .berserk = 0x6B, .dk = {.dragon_fear = 0x64, .feared = 0x78}, .taunted = 0x5B, .feeble_lost = true, .feeble_direct = true,
-                .q_cloud_proof = 0x8F,
+                .hit_needs_damage = true, .hit_free = 0xB8, .q_cloud_proof = 0x8F,
                 // (round 16: its to-hit hooks - Invisible to Animals 0x45 is no
                 // bite here, the dragons' fear 0x64 terrifies, 0x78)
                 .q = {.hooks = true, .race_plus = 0x1A, .giants = 0x2F, .animals = 0x45, .dance = 0x76, .highlight = 0x47,
-                      .iron_skin = 0x7A, .plus2 = 0xA2, .minus2 = 0x94, .tgt_minus1 = 0xCF,
+                      .iron_skin = 0x7A, .plus2 = 0xA2, .minus2 = 0x94, .tgt_minus1 = 0xCF, .hoopak = 0x83,
                       .tick_at_start = true}};
 // The Dark Queen's spells (queen_facts_4.md 8): Darkness's numbers 1-126 and
 // their workings (its handler table DS 0xAF45 + 4 x spell shares handlers as
@@ -2872,7 +2872,7 @@ const Profile kProfiles[] = {
                           .boots = 0x4A, .no_disease = 0x4C, .displace_unused = true,
                           .scrolls = {39, 40}},
                 .berserk = 0x6B, .secret = true, .globe_major = 0x39,
-                .cloud_ground = 0x1D, .poison_ground = 0x1B, .cleric_xp_wis = 15},
+                .cloud_ground = 0x1D, .poison_ground = 0x1B, .cleric_xp_wis = 15, .hit_needs_damage = true},
                kSecretFight, sizeof kSecretFight / sizeof kSecretFight[0]},
      // The script machine's words (GAME.OVR): the encounter's "Both sides
      // wait." / "The monsters flee.", DAMAGE's " dies. " / " is hit FOR " /
@@ -3057,7 +3057,7 @@ const Profile kProfiles[] = {
                 .race = {0x5E, 0x12, 0x1A, 0x07, 0x2F, 0x30, 0x69, true},
                 .items = {.displace = 0x59, .ring_invisible = 0x38, .fire_ring = 0x3D},
                 // (the kapak's acid pool: GAME.OVR 0x12F1F)
-                .berserk = 0x6B, .acid_ground = 0x1D, .taunted = 0x5B},
+                .berserk = 0x6B, .acid_ground = 0x1D, .taunted = 0x5B, .hit_needs_damage = true},
                kChampionsFight, sizeof kChampionsFight / sizeof kChampionsFight[0]},
      .script_words = {0x2D2D, 0x2D3E, 0xAA9C, 0xAAA4, 0xAAB1, 0x35AD},
      .random_items = &kCurseRandom, .random_rows = 0,
@@ -3258,7 +3258,7 @@ const Profile kProfiles[] = {
      // in the program as Darkness's (the menus whole strings - its two-row
      // menu with Yell), its effect numbers mostly Champions' (its handler
      // table DS 0xBE7E + 4 x effect, set at GAME.OVR 0x1E50A)
-     .fight = {{0x4420, 0x0336, 0x0346, 0x0356, 0x035A, 0x0362, 0x036A, 0x03AE, 0x05A5, 0, 11, 0, 3, 0x0312, 1, false, {{1, {0x20, 0x1E, 0x63, 0x3F}, 0, true, true, false}, {2, {0x63}, 0, true, false, true}}},
+     .fight = {{0x4420, 0x0336, 0x0346, 0x0356, 0x035A, 0x0362, 0x036A, 0x03AE, 0x05A5, 0, 11, 0, 3, 0x0312, 1, false, {{1, {0x20, 0x1E, 0x63, 0x3F}, 0, true, true, false}, {2, {0x63}, 0, true, false, true}}, false, true},
                {
                 kP | 0xE6E7, 0, 0, 0, 0, 0, 0, kP | 0xEE53, kP | 0xD3ED, 0, kP | 0xE216, kP | 0xD3CC, 0, 0, 0, kP | 0xEDE9, 0, 0, 0, 0,
                 kP | 0xE9A2, kP | 0xEDD4, 0x9FB0, 0, 0, kP | 0xF128, kP | 0xE9ED, kP | 0xEA02, kP | 0xEA17, kP | 0xEA22, 0x1EEFE, 0x1EF12, kP | 0xEA4C,
@@ -3519,7 +3519,7 @@ const Profile kProfiles[] = {
      // takes away (DS 0x0C6E, 16 - GAME.OVR 0x32DB0); the effects by
      // Darkness's own numbers (its View names, DS 0x4061; its handler table
      // DS 0xA7EA + 4 x (effect - 1), set at GAME.OVR 0x1DD3B)
-     .fight = {{0x3EBA, 0x090C, 0x091C, 0x092C, 0x0930, 0x0938, 0x0940, 0x097C, 0x09FB, 0, 11, 0x08D8, 0, 0x08E8, 1, false, {{1, {0x1E, 0x3F}, 0x18, true, false, false}, {2, {0x39}, 0x10, true, false, false}, {3, {}, 0, true, false, false}}, true},
+     .fight = {{0x3EBA, 0x090C, 0x091C, 0x092C, 0x0930, 0x0938, 0x0940, 0x097C, 0x09FB, 0, 11, 0x08D8, 0, 0x08E8, 1, false, {{1, {0x1E, 0x3F}, 0x18, true, false, false}, {2, {0x39}, 0x10, true, false, false}, {3, {}, 0, true, false, false}}, true, true},
               {
                0xD2F1, 0, 0, 0, 0, 0, 0, 0xA290, kP | 0xC0B5, 0, 0x9785, kP | 0xC03A, 0, 0, 0, kP | 0xC88C, 0, 0, 0, 0,
                0x36BDA, kP | 0xC863, 0x9837, 0, 0, kP | 0xCDD3, 0x1E89C, 0x1E8A8, 0x1E8B7, 0x1E8BF, 0x1E8CE, 0x1E8E2, 0x1E8EF,
@@ -3587,7 +3587,7 @@ const Profile kProfiles[] = {
                        .no_disease = 0x4C, .disease = 0x22, .gaze_pic = 6},
                 // (its Feeblemind - GAME.OVR Darkness 0x2E902 / effect 0x44's handler
                 // 0x1C2F3, Treasures 0x37E08 / 0x21F6x - as the Dark Queen's: round 15)
-                .feeble_lost = true, .feeble_direct = true},
+                .feeble_lost = true, .feeble_direct = true, .hit_needs_damage = true},
                kDarknessFight, sizeof kDarknessFight / sizeof kDarknessFight[0],
                // COMSPR (its 22 blocks, + 0x80 the second pictures; loaded at a
                // fight's start as slots 13-34 - GAME.OVR 0xD34A): 0-2 the arrows, 3
@@ -3925,7 +3925,7 @@ const Profile kProfiles[] = {
                .kept_highlight = true},
      // Fights: the ground table DS 0x43F8, placing 0x0918-0x094C, turn undead
      // 0x0B33 (its code reads them there); no summoning reserve table
-     .fight = {{0x43F8, 0x0918, 0x0928, 0x0938, 0x093C, 0x0944, 0x094C, 0x0988, 0x0B33, 0, 11, 0, 0, 0x08F4, 1, false, {{1, {0x1E, 0x3F}, 0x18, true, false, false}, {2, {0x39}, 0x10, true, false, false}, {3, {}, 0, true, false, false}}, true},
+     .fight = {{0x43F8, 0x0918, 0x0928, 0x0938, 0x093C, 0x0944, 0x094C, 0x0988, 0x0B33, 0, 11, 0, 0, 0x08F4, 1, false, {{1, {0x1E, 0x3F}, 0x18, true, false, false}, {2, {0x39}, 0x10, true, false, false}, {3, {}, 0, true, false, false}}, true, true},
               {
                0xE2EF, 0, 0, 0, 0, 0, 0, 0xB0DA, kP | 0xE6BA, 0, 0xA537, kP | 0xE63C, 0, 0, 0, kP | 0xEEC0, 0, 0, 0, 0,
                0x40C65, kP | 0xEE96, 0xA5F1, 0, 0, kP | 0xF426, 0x268AC, 0x268B8, 0x268C7, 0x268CF, 0x268DE, 0x268F2, 0x268FF,
@@ -3993,7 +3993,7 @@ const Profile kProfiles[] = {
                        .no_disease = 0x4C, .disease = 0x22, .gaze_pic = 6},
                 // (its Feeblemind - GAME.OVR Darkness 0x2E902 / effect 0x44's handler
                 // 0x1C2F3, Treasures 0x37E08 / 0x21F6x - as the Dark Queen's: round 15)
-                .feeble_lost = true, .feeble_direct = true},
+                .feeble_lost = true, .feeble_direct = true, .hit_needs_damage = true},
                kTreasuresFight, sizeof kTreasuresFight / sizeof kTreasuresFight[0],
                {0, 1, 2, 3, 6, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15}, {15, 9, 14},
                {kP | 0xF9DF, kP | 0xF98B, kP | 0xF9B5, kP | 0xF94C, kP | 0xF88F, kP | 0xF961, kP | 0x10195}},

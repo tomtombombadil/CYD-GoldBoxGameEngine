@@ -883,7 +883,7 @@ uint32_t Vm::rnd(uint32_t n)
     return n ? rng_ % n : 0;
 }
 
-int queen_target_hooks(party::Character& tg, const party::Character& sel, bool fixes, bool* miss)
+int queen_target_hooks(party::Character& tg, const party::Character& sel, bool fixes, bool* miss, int roll, int rounds)
 {
     // (DQK.EXE's handlers for event 0x10, the effect numbers its own:
     // Invisible 0x19 - 0x4E3DA; Invisible to Animals 0x45 - 0x4EDC3, the
@@ -899,12 +899,19 @@ int queen_target_hooks(party::Character& tg, const party::Character& sel, bool f
         if ((w.rec[0x14B] & 0x45) && !w.has_affect(0x18)) h -= 4;
     }
     if (tg.has_affect(0x2F) && (sel.rec[0x14B] & 4)) h -= 4;
+    // (0x4F183: [0xAE4C] 0 and the roll byte [0xBEC5] 0 - the data's high
+    // nibble cleared, the blow goes on; else unused - a miss, marked)
     for (int k = 0; k < tg.n_affects; ++k)
-        if (tg.affects[k][0] == 0x59 && !(tg.affects[k][3] & 0x10)) {
-            tg.affects[k][3] |= 0x10;
-            *miss = true;
+        if (tg.affects[k][0] == 0x59) {
+            if ((rounds & 0xFF) == 0 && ((roll + h) & 0xFF) == 0) tg.affects[k][3] &= 0x0F;
+            else if (!(tg.affects[k][3] & 0x10)) {
+                tg.affects[k][3] |= 0x10;
+                *miss = true;
+            }
             break;
         }
+    // 0xCF (0x528F8): one off, after the cloak
+    if (tg.has_affect(0xCF)) --h;
     return h;
 }
 
@@ -2263,7 +2270,8 @@ Stop Vm::step()
                     // selected one ([0xAD67]) stands as the attacker
                     bool miss = false;
                     const int sel = before >= 0 && before < count ? before : i;
-                    const int q = static_cast<int8_t>(r + queen_target_hooks(party_->m[i], party_->m[sel], rules::fixes(), &miss));
+                    const int q =
+                        static_cast<int8_t>(r + queen_target_hooks(party_->m[i], party_->m[sel], rules::fixes(), &miss, r, q_rounds_));
                     if (!miss && q >= 0 && q + t > c.rec[0x19A]) hurt(i, dmg & 0xFF);
                 } else if (r > 1 && r + t > c.rec[0x19A]) {
                     hurt(i, dmg & 0xFF);

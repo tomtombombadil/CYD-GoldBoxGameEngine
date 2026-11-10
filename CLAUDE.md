@@ -511,6 +511,9 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   game's handler (rules4 feeble; Death Knights' drain-2 behind Game Fixes).
   Round 16: the step back's second finder skips the sight test in its
   second pass (`combat::finder_any`, Tables::finder_scan for Darkness-type).
+  Round 17: that finder is also the AI's turn target in every DAX game (kept
+  while seen, walls and reach aside; Tables::finder_first; oracles
+  turnfind.py / onhit.py - on-hit needs damage per Facts::hit_needs_damage).
 - The Dark Queen's effect hooks (round 16): DQK.EXE's hook switch 0x7202
   calls the handlers at DS 0xBEE8 + 4 x effect (overlay w9: segment 0x2B3A
   at file 0x4DE90, 0x30CC after it) - Facts::q (`queen_roll_hooks`,

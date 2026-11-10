@@ -184,8 +184,12 @@ public:
 int queen_damage(bool made, int flags, int dmg, bool swapped, bool fixes);
 // ... and its DAMAGE's one-target roll (0x83D0): what the target's hooks
 // (event 0x10) add, `sel` the selected one standing as the attacker; *miss
-// when the Magical Cloak takes the blow (marked used)
-int queen_target_hooks(party::Character& tg, const party::Character& sel, bool fixes, bool* miss);
+// when the Magical Cloak takes the blow (marked used). `roll` the d20 (20
+// as 100) and `rounds` the fight round count byte [0xAE4C] (0 before any
+// fight): with that 0 and the roll made exactly 0 by the hooks before it
+// the cloak is made fresh instead (round 17)
+int queen_target_hooks(party::Character& tg, const party::Character& sel, bool fixes, bool* miss, int roll = 1,
+                       int rounds = 1);
 
 class Vm {
 public:
@@ -278,6 +282,11 @@ public:
     // Game time: adds `amount` to clock slot `slot` (0x4BC6 + slot) with
     // carries (slot 1 = minutes, 2 = ten minutes, 3 = hours ...)
     void advance_clock(int slot, int amount);
+    // The Dark Queen's fight round count (DQK.EXE [0xAE4C], a byte: 0 at a
+    // fight's set-up 0x2DAE1, + 1 as each round starts 0x23389; 0 before
+    // any fight) - DAMAGE's cloak reads it
+    void queen_rounds(int n) { q_rounds_ = static_cast<uint8_t>(n); }
+    void queen_round() { ++q_rounds_; }
     // Minutes the clock moved since the last call (effects run out by them)
     int take_minutes()
     {
@@ -389,6 +398,7 @@ private:
     uint16_t answer_values_[8] = {};
     int      budget_ = 0;           // instructions left before giving up (endless loops)
     uint32_t rng_ = 0x2545F491;
+    uint8_t  q_rounds_ = 0;             // (queen_rounds)
 
     // String operands of the instruction being run
     char     arena_[2048];

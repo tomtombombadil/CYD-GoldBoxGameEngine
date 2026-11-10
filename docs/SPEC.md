@@ -3462,4 +3462,13 @@ the game's Settings (As Original: all of them).
   NOT differences: they're listed as quirks in the facts docs. Round 15's:
   the computer's step needs its cost strictly under the moves left (all
   DAX games but PoolRad - a last step that would use the moves up is never
-  taken).
+  taken). Round 17's (no new Game Fixes): the computer keeps its target
+  while it is seen even behind walls and out of reach (every DAX game's
+  finder); Champions' taunted take the kender only when it stands first
+  in the finder's list; the on-hit specials need damage in Secret,
+  Darkness, Treasures, Champions, Death Knights and the Dark Queen (a
+  0xB8 holder's always) but not in PoolRad, Curse, Gateway; the Dark
+  Queen's 0x83 works out a hoopak's damage that the blow then throws away
+  (only its to-hit counts), a blind attacker's own stored AC drops 4 at
+  each blow until it is hit, and DAMAGE before any fight makes a Magical
+  Cloak fresh on a roll of exactly 0.

@@ -240,3 +240,22 @@ Round 16 (2026-11-10): the Dark Queen's hooks, the stats' effects, the step back
   Baselines: rules4 full PoolRad 39/0, Curse 42/0, Secret 37/0, Darkness 41/0, Gateway 37/0, Treasures 43/0,
   Champions 48/0, Knights 45/0, Queen 57/0; budgets (bytes) unchanged from round 15 (Curse 133721, PoolRad 135372,
   Darkness 149721, Champions 135928, Knights 135938, Queen 143244, Treasures 151918).
+
+Round 17 (2026-11-10): the computer's turn target, on-hit after no damage, the Dark Queen's 0x83 / cloak
+  oracles/turnfind.py <GAME.OVR> <image> <g>   oracle_turnfind_<g>.txt (the eight DAX games): the AI loop's finder call
+                                     (range 0xFF, 1, 0) and its place against the moves test (Curse-type: the finder
+                                     then the moves; Darkness-type: moves first), the turn's first finder (Darkness,
+                                     Treasures, Death Knights - only with no target), the finder's keep step (side,
+                                     active byte, seen), a struck pick (a try spent), the first pass's walls (map +6 set
+                                     only in pass 2), Champions' taunt (0x5B: the list's first entry on a pass's first try)
+  oracles/onhit.py <GAME.OVR|DQK.EXE> <g>   oracle_onhit_<g>.txt (all nine): the blow's test between the target's
+                                     in-the-fight test and the on-hit hook (slot + 1): needs_damage, the damage word,
+                                     the Dark Queen's free effect (0xB8)
+  oracles/qhooks.py                  + the 0x83 line: "tohit base 0x87 cut 2 near_str23 .. far_dex21 .." (the bonus
+                                     routines run with x86.run), the damage dice it sets (lost)
+  rules4 ONLY=turnfind (eight DAX games: kept behind a wall, pass 1 in sight lines, struck picks, pass 2 over walls,
+         an invisible target dropped, Champions' kender, moves 0, the turn's first finder) ONLY=onhit (all nine: a poison
+         holder's hit of 0 / 1d6, Darkness-type vorpal, the Queen's 0xB8) ONLY=qhooks (+ 0x83's to-hit near / far, the
+         blind / 0xA2 attacker's stored AC after its blow and once hit); host test test_queen_target_hooks + the DAMAGE
+         cloak's roll-0 reset before any fight and 0xCF
+  Run turnfind.py / onhit.py / qhooks.py before rules4 (ORACLE_DIR). Binaries: bin/r17r4, bin/r17simx.
