@@ -138,6 +138,11 @@ the Project as claude/TODO.md.
 
 ## Claude
 
+- [ ] With the next firmware change (Tom, 2026-11-10, not a release of its
+      own): the Party view's short statuses without full stops (Unc, Par,
+      Prot ...) - drop the abbr's "." and companion.cpp's stops /
+      no-stops step; SPEC 11's list to match.
+
 - [x] Party view class / level line (Tom, 2026-11-10, v0.191.0): classes
       left ("Fighter 7" when it fits, else "F7/M9"), the state right,
       short forms when tight, colour coded; 2 px between members.
