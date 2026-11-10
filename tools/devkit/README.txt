@@ -215,3 +215,6 @@ Round 15 (2026-11-10): the computer's step and Feeblemind
                               for "lost a spell", "loses intellect"; the recalculation keeps 3), Death Knights (Game
                               Fixes off: drain-2 effect, the target's target drained, "gets drained"; on: Darkness's)
   host test test_queen_damage  the Dark Queen's DAMAGE save branches (ecl::queen_damage)
+  Baselines: rules4 full PoolRad 38/0, Curse 41/0, Secret 35/0, Darkness 39/0, Gateway 36/0, Treasures 41/0,
+  Champions 47/0, Knights 43/0, Queen 54/0; budgets (bytes) Curse 133721, PoolRad 135372, Darkness 149721,
+  Champions 135928, Knights 135938, Queen 143244, Treasures 151918.
