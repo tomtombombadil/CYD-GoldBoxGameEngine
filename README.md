@@ -23,18 +23,22 @@ The screens on these CYD's are small. Fingertips are not. So we recommend the us
 Easiest method: Use the web flasher!
 **https://tomtombombadil.github.io/CYD-GoldBoxGameEngine/** in Chrome or Edge on a computer - pick your board, click Install.
 
-| Board (what's printed on the back) | Firmware | Link |
-|---|---|---|
-| 2.8" ESP32-2432S028, single micro-USB (ILI9341) | `TTB-CYD-GBGE_2.8in_ILI9341_Resistive` | https://www.amazon.com/dp/B0FFZ32T3D |
-| 2.8" ESP32-2432S028, micro-USB + USB-C (ST7789) | `TTB-CYD-GBGE_2.8in_ST7789_Resistive` | https://www.amazon.com/dp/B0FX2SFCKV |
-| 3.2" ESP32-32E, 240x320 | `TTB-CYD-GBGE_3.2in_ST7789_Resistive` | purchased from same Amazon seller as others, but no longer available |
-| 3.5" ESP32-32E, 320x480 | `TTB-CYD-GBGE_3.5in_ST7796_Resistive` | https://www.amazon.com/dp/B0FFYWJ8BZ |
-| 4.0" ESP32-32E, 320x480 | `TTB-CYD-GBGE_4.0in_ST7796_Resistive` | https://www.amazon.com/dp/B0FFZ599FJ |
-| 4.0" ESP32-**S3**, 480x320 capacitive touch (FNK0104, ST7796 model) | `TTB-CYD-GBGE_4.0in_ST7796_Capacitive_ESP32-S3` | https://www.amazon.com/dp/B0H6W1HJSG |
-| 5.0" ESP32-**S3**, 800x480 capacitive touch (FNK0115Q) | `TTB-CYD-GBGE_5.0in_Capacitive_ESP32-S3` | https://www.amazon.com/dp/B0H93PLQVX |
-| 2.8" ESP32-**C5**, two USB-C (NM-CYD-C5) | `TTB-CYD-GBGE_2.8in_ST7789_Resistive_ESP32-C5` | https://www.amazon.com/dp/B0H1QCHMW6 |
+| Board (what's printed on the back) | Firmware | Link | Approx. Price |
+|---|---|---|---|
+| 2.8" ESP32-2432S028, single micro-USB (ILI9341) | `TTB-CYD-GBGE_2.8in_ILI9341_Resistive` | https://www.amazon.com/dp/B0FFZ32T3D | ~$13 |
+| 2.8" ESP32-2432S028, micro-USB + USB-C (ST7789) | `TTB-CYD-GBGE_2.8in_ST7789_Resistive` | https://www.amazon.com/dp/B0FX2SFCKV | ~$10 |
+| 3.2" ESP32-32E, 240x320 | `TTB-CYD-GBGE_3.2in_ST7789_Resistive` | purchased from same Amazon seller as others, but no longer available | -NA- |
+| 3.5" ESP32-32E, 320x480 | `TTB-CYD-GBGE_3.5in_ST7796_Resistive` | https://www.amazon.com/dp/B0FFYWJ8BZ | ~$13 |
+| 4.0" ESP32-32E, 320x480 | `TTB-CYD-GBGE_4.0in_ST7796_Resistive` | https://www.amazon.com/dp/B0FFZ599FJ | ~$19 |
+| 4.0" ESP32-**S3**, 480x320 capacitive touch (FNK0104, ST7796 model) | `TTB-CYD-GBGE_4.0in_ST7796_Capacitive_ESP32-S3` | https://www.amazon.com/dp/B0H6W1HJSG | ~$29 |
+| 5.0" ESP32-**S3**, 800x480 capacitive touch (FNK0115Q) | `TTB-CYD-GBGE_5.0in_Capacitive_ESP32-S3` | https://www.amazon.com/dp/B0H93PLQVX | ~$39 |
+| 2.8" ESP32-**C5**, two USB-C (NM-CYD-C5) | `TTB-CYD-GBGE_2.8in_ST7789_Resistive_ESP32-C5` | https://www.amazon.com/dp/B0H1QCHMW6 | ~$26 |
 
-These five ESP32 boards, the ESP32-C5 board and the ESP32-S3 board are tested with this firmware. The base ESP32 CYD boards I tested with were all purchased through Amazon and are 'Freenove' brand. Links below.
+Prices are approximate as of November 2026 and fluctuate heavily dependent on market availability. You can get better prices on AliExpress, but there's no guarantee the board will be identical to the ones I've tested.
+
+These five ESP32 boards, the ESP32-C5 board and the two ESP32-S3 boards are tested with this firmware. The base ESP32 CYD boards I tested with were all purchased through Amazon and are 'Freenove' brand. Links above.
+
+**The best touch/play experience I've had on these boards is the 5.0" S3 board with the capacitive touch screen. You don't need a stylus, and can just play with your finger. It can be a little challenging to tap the character names and menus, but that's why there are menu navigation buttons along the bottom.**
 
 ## Prepare Your SD Card
 
