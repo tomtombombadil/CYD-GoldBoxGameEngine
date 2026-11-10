@@ -60,7 +60,7 @@ G = {
     # (the Dark Queen: save A stands in Palanthas' town menu - its exploring
     # picture; D outside Cergoth, where it camps and fights)
     "queen":     dict(steps=8, play=10, load=(172, 149), where=(146, 194), save=162, save_a=146,
-                      begin=(172, 177), camp=(140, 190), exit=(296, 190), fight="8C11"),
+                      begin=(172, 177), camp=(140, 190), exit=(296, 190), fight="8C11", rounds=1),
 }
 ORDER = ["poolrad", "curse", "secret", "darkness", "gateway", "treasures", "champions", "knights", "queen"]
 
@@ -201,8 +201,9 @@ def game_run(s, size, only):
         # from its first word, then Select - and the field after the turns
         # up to the next one's menu; twice)
         # (PoolRad's and Champions' Done is a menu of its own - Delay Quit
-        # Speed Exit: its first word, Delay, ends the turn)
-        for _ in range(2):
+        # Speed Exit: its first word, Delay, ends the turn; the Dark Queen's
+        # next menu starts on End, so Left would reach Speed - one round)
+        for _ in range(g.get("rounds", 2)):
             t.tap(k["left"], 3000)
             t.tap(k["select"], 12000 if not g.get("done_menu") else 4000)
             if g.get("done_menu"):

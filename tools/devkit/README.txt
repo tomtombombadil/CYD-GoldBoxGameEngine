@@ -289,7 +289,7 @@ graphics and GOG / publisher art: scratch only, never the repo):
   shots_saves.sh         slot D in every game, made by the playsim (bin/simshots: build.sh simshots "-DCYD_TEST_HOOKS"
                          tools/playsim/sim.cpp) - placed for a nice 3D view (shots_viewscan.py <short>: every square
                          and facing, a contact sheet to pick from) and in the block of the fight's LOAD MONSTER
-  shots_all.py [games|engine|queen_a|panelcheck] [--size 480|320] [--only explore,camp,fight]
+  shots_all.py [games|engine|queen_a|mapkey:<game>|panelcheck] [--size 480|320] [--only explore,camp,fight]
                          the S3 QEMU builds (qemus3 480x320, qemus3_50 320x240) on a read-only card made of one game
                          folder + the scan's _CYD (LIBRARY.BIN cut to it): Load D, explore / Companion views / camp /
                          "runat <LOAD MONSTER>" (TAPS.TXT, CYD_QEMU only) for the fight; engine = Home (box art and
