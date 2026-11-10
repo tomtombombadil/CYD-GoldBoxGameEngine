@@ -138,6 +138,15 @@ the Project as claude/TODO.md.
 
 ## Claude
 
+- [ ] Screenshot findings (2026-11-10, S3 QEMU shots): (1) Darkness on
+      480x320 - a tap on the Companion panel leaves the 3D view drawn
+      with the left wall missing (a white wedge) until Area is toggled
+      (`shots_all.py panelcheck` repeats it); (2) the Companion's Map
+      view in a fight is headed "Party menu / 6 characters"; (3) the
+      scan still says Queen is "(newer format - not playable yet)";
+      (4) Queen outside Cergoth (save D) drew a black 3D view in the
+      playsim. Merge branch `shots` (QEMU-only hooks + devkit tools).
+
 - [x] Round 12 rule fix (2026-11-09, Tom: "the original does Bandage
       last"; with Quick Actions, not pushed yet): the computer's
       bandaging, found in each original's code - the bandage routine by
