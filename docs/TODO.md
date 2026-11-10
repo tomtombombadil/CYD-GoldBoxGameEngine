@@ -146,7 +146,12 @@ the Project as claude/TODO.md.
       for Companion buttons still to be designed (Tom). Map (Tom,
       2026-11-10): no area / script / map lines, the legend one line
       "Red: Locked  S: Secret" (no "Gold: door", no "Tap:Party") - 158
-      px tall, so the buttons get y 381-479; on the 4.0" too? Open: the
+      px tall, so the buttons get y 381-479; the same on the 4.0" (Tom:
+      the maps the same on every board where possible). Battle view in
+      the same 158 px (Tom): no "Round n / x v y" line, the legend
+      "Party" green + "Foes" red (no colour words), the selected line
+      kept for now, the blink line "Blinking: can't act" (proposed,
+      static). Open: the
       buttons; what the Map key under the game does then; taps on the
       strip.
 
