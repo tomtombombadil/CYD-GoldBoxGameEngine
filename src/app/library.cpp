@@ -275,7 +275,6 @@ ScanResult scan(GameDir* out, int max, int* n, Progress progress, void* ctx)
                     say(progress, ctx, true, "Found game files in %s (a game this engine doesn't know)", g.folder);
                 else
                     say(progress, ctx, true, "Found %s", games::title(g.game));
-                if (g.format == Format::Hlib) say(progress, ctx, false, "  (newer format - not playable yet)");
                 if (g.icon[0]) say(progress, ctx, false, "Found the %s game icon", games::short_title(g.game));
                 if (g.journal[0]) say(progress, ctx, false, "Found the %s journal", games::title(g.game));
                 if (g.gbc[0]) say(progress, ctx, false, "Found the Gold Box Companion's %s journal", games::short_title(g.game));

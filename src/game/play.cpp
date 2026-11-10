@@ -16567,7 +16567,13 @@ bool panel_icon(int i, uint8_t* px, uint8_t* see, int* w, int* h)
         ic = &fg->icon[fg->b.f[k].icon];        // (the fight's own)
     } else if (!fg) {
         // (as View's portrait box: an NPC from the monsters' files its own
-        // picture, else the record's icon - the ready pose alone, let go below)
+        // picture, else the record's icon - the ready pose alone, let go below).
+        // A VGA game's picture sends its palette entries as it's read: the
+        // screen's put back after (the panel's icons are 16-colour values),
+        // else the 3D view's colours changed with a Companion tap (Darkness)
+        pic::Rgb* keep_pal = vga ? static_cast<pic::Rgb*>(malloc(sizeof vga->now)) : nullptr;
+        const bool keep_changed = vga && vga->changed;
+        if (keep_pal) memcpy(keep_pal, vga->now, sizeof vga->now);
         if (!pool_files() && ch.rec[0xF7] >= 0x80 && ch.rec[0x126] && !ch.rec[0x141] && !ch.rec[0x142]) {
             char file[16];
             area_fmt(file, sizeof file, "CPIC%d.DAX");
@@ -16576,6 +16582,11 @@ bool panel_icon(int i, uint8_t* px, uint8_t* see, int* w, int* h)
             if (own.px[0]) own.w = static_cast<uint8_t>(pw), own.h = static_cast<uint8_t>(ph);
         }
         if (!own.px[0]) build_icon(ch.rec, own, true);
+        if (keep_pal) {
+            memcpy(vga->now, keep_pal, sizeof vga->now);
+            vga->changed = keep_changed;
+            free(keep_pal);
+        }
         ic = &own;
     }
     bool ok = false;

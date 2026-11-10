@@ -153,14 +153,13 @@ the Project as claude/TODO.md.
       left ("Fighter 7" when it fits, else "F7/M9"), the state right,
       short forms when tight, colour coded; 2 px between members.
 
-- [ ] Screenshot findings (2026-11-10, S3 QEMU shots): (1) Darkness on
-      480x320 - a tap on the Companion panel leaves the 3D view drawn
-      with the left wall missing (a white wedge) until Area is toggled
-      (`shots_all.py panelcheck` repeats it); (2) the Companion's Map
-      view in a fight is headed "Party menu / 6 characters"; (3) the
-      scan still says Queen is "(newer format - not playable yet)";
-      (4) Queen outside Cergoth (save D) drew a black 3D view in the
-      playsim. Merge branch `shots` (QEMU-only hooks + devkit tools).
+- [x] Screenshot findings (2026-11-10; v0.192.2): Darkness's 3D view
+      lost its colours after a Companion tap - an NPC's picture loaded for
+      the Party view sent its palette (the screen's now put back); the
+      fight Map view's "Party menu" heading went with v0.192.0's map lines;
+      the scan's "newer format - not playable yet" for Queen removed.
+- [ ] Queen outside Cergoth (save D) drew a black 3D view in the playsim
+      (screenshot run, 2026-11-10) - look into it.
 
 - [x] Round 12 rule fix (2026-11-09, Tom: "the original does Bandage
       last"; with Quick Actions, not pushed yet): the computer's

@@ -16,7 +16,7 @@ namespace library {
 //         Knights of Krynn, the Savage Frontier games) - readable.
 //   Hlib: "HLIB" .TLB / .GLB libraries in DISK1-3 folders (The Dark Queen
 //         of Krynn, Unlimited Adventures) - engine/hlib.* reads them (the
-//         Resource Test); not playable yet. data_dir = the folder holding
+//         Resource Test, the Dark Queen's play). data_dir = the folder holding
 //         DISK1-3.
 enum class Format : uint8_t { Dax, Hlib };
 
