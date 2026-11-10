@@ -3458,6 +3458,13 @@ the game's Settings (As Original: all of them).
   the protections' -2 come before the d20 (event 0xB) and are lost - with
   Game Fixes they count; a coughing target's AC is recalculated, which
   loses its Shield (AC 3 at worst, the front only) - kept with Game Fixes.
+- **The Dark Queen's 0x83 damage** (Game Fixes; round 18 - DQK.EXE
+  0x543D8, the hoopak's effect - item type 67: Dawnshine's, ITEM.DAT 45,
+  214, 215): at each roll past a 1 its handler rolls the blow's damage -
+  next to the target 1d6 + Strength's damage + the weapon's plus + 2,
+  further off 1d4 + the plus + 1 - and the blow then writes its own
+  over it (the die is rolled and lost). With Game Fixes on the blow does
+  the handler's damage; off: as the original (the weapon's own).
 - Smaller things kept from the originals although they look like bugs are
   NOT differences: they're listed as quirks in the facts docs. Round 15's:
   the computer's step needs its cost strictly under the moves left (all
@@ -3471,4 +3478,14 @@ the game's Settings (As Original: all of them).
   Queen's 0x83 works out a hoopak's damage that the blow then throws away
   (only its to-hit counts), a blind attacker's own stored AC drops 4 at
   each blow until it is hit, and DAMAGE before any fight makes a Magical
-  Cloak fresh on a roll of exactly 0.
+  Cloak fresh on a roll of exactly 0. Round 18's: at no moves left the
+  computer never strikes, even one next to it (every original's AI loop
+  goes to its move-and-attack step only with moves over 0, else to the
+  guard); its guard is no guard - the turn just ends - when it is held,
+  has a missile weapon readied (range over 1) or has no moves left; the
+  Dark Queen's finder tries as many times as its list holds (not 20),
+  rolls once before the tries, and its taunted (0x8C) take the kender
+  without a roll only from a list of 20; the Dark Queen's 0xFF-class
+  spells (2, 4, 7, 38, 40, 44, 56, 66, 68, 72, 76, 103, 104) leave its
+  caster level unset (res 0xB4E0) - read only by the magic resistance
+  roll (0x6FDD): stack garbage, not reproducible - the engine's 12.

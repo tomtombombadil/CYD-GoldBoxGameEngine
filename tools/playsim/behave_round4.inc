@@ -2778,9 +2778,12 @@ void turnfind_check()
         mx::add_aff(B, taunt);
         b.taunter = 1;
         check("taunted: the kender second in the list, a roll", run({1}), 0);
-    } else if (taunt) {
+    } else if (taunt && b.fx->taunted) {
         check("taunt effect as the oracle's", b.fx->taunted, taunt);
     }
+    // (a finder with the taunt test in a game with no Yell - Secret: its
+    // taunter word DS 0x8E23 is never written, so the list's first, a
+    // fighter, never matches it - moot; round 18)
     // the moves test's place: think at moves 0 with no target
     scene(false);
     F(B).moves = 0;
