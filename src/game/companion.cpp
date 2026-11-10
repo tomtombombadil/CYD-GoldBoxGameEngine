@@ -48,7 +48,7 @@ constexpr uint16_t kYellow = rgb(230, 200, 40);     // the rest
 
 struct Word {
     const char* full;
-    const char* abbr;                   // shortened, with its full stop (nullptr: none)
+    const char* abbr;                   // shortened (nullptr: none)
     uint16_t    col;
 };
 
@@ -63,24 +63,24 @@ int state_words(int health, uint16_t fx, Word* w)
 {
     static const struct { uint8_t h; Word w; } kHealth[] = {
         {party::Okay, {"OK", nullptr, kGood}},
-        {party::Animated, {"Animated", "Anim.", kYellow}},
+        {party::Animated, {"Animated", "Anim", kYellow}},
         {party::TempGone, {"Away", nullptr, style::kTextMuted}},
         {party::Running, {"Fled", nullptr, style::kTextMuted}},
-        {party::Unconscious, {"Unconscious", "Unc.", kYellow}},
+        {party::Unconscious, {"Unconscious", "Unc", kYellow}},
         {party::Dying, {"Dying", nullptr, style::kWarn}},
         {party::Dead, {"Dead", nullptr, style::kWarn}},
         {party::Stoned, {"Stoned", "Stone", kYellow}},
         {party::Gone, {"Gone", nullptr, style::kTextMuted}},
     };
     static const struct { uint16_t bit; Word w; } kFx[] = {
-        {play::kPxAsleep, {"Asleep", "Sleep", kYellow}},       {play::kPxParalysed, {"Paralyzed", "Par.", kYellow}},
+        {play::kPxAsleep, {"Asleep", "Sleep", kYellow}},       {play::kPxParalysed, {"Paralyzed", "Par", kYellow}},
         {play::kPxHeld, {"Held", nullptr, kYellow}},           {play::kPxStunned, {"Stunned", "Stun", kYellow}},
         {play::kPxFleeing, {"Fleeing", "Flee", kYellow}},      {play::kPxCharmed, {"Charmed", "Charm", kYellow}},
-        {play::kPxAfraid, {"Afraid", "Fear", kYellow}},        {play::kPxPoisoned, {"Poisoned", "Pois.", kYellow}},
-        {play::kPxDiseased, {"Diseased", "Dis.", kYellow}},    {play::kPxBlind, {"Blind", nullptr, kYellow}},
+        {play::kPxAfraid, {"Afraid", "Fear", kYellow}},        {play::kPxPoisoned, {"Poisoned", "Pois", kYellow}},
+        {play::kPxDiseased, {"Diseased", "Dis", kYellow}},    {play::kPxBlind, {"Blind", nullptr, kYellow}},
         {play::kPxCursed, {"Cursed", "Curse", kYellow}},       {play::kPxSlowed, {"Slowed", "Slow", kYellow}},
         {play::kPxBlessed, {"Blessed", "Bless", kGood}},       {play::kPxHasted, {"Hasted", "Haste", kGood}},
-        {play::kPxInvisible, {"Invisible", "Invis.", kGood}},  {play::kPxProtected, {"Protected", "Prot.", kGood}},
+        {play::kPxInvisible, {"Invisible", "Invis", kGood}},  {play::kPxProtected, {"Protected", "Prot", kGood}},
     };
     int n = 0;
     if (health != party::Okay || !fx)
@@ -115,22 +115,18 @@ int class_spans(const play::PanelMember& m, bool full, Span* sp, int* ns)
 }
 
 // The state as spans in `room` characters: whole words; then the longest
-// shortened one by one; then without full stops; then as many as fit + "+".
+// shortened one by one; then as many as fit + "+".
 int state_spans(const Word* w, int n, int room, Span* sp, int* ns)
 {
     const char* t[kMaxWords];
     bool shortn[kMaxWords] = {};
     for (int i = 0; i < n; ++i) t[i] = w[i].full;
-    auto width = [&](bool stops) {
+    auto width = [&]() {
         int l = 0;
-        for (int i = 0; i < n; ++i) {
-            const int wl = static_cast<int>(strlen(t[i]));
-            l += (i ? 1 : 0) + wl - (!stops && shortn[i] && t[i][wl - 1] == '.' ? 1 : 0);
-        }
+        for (int i = 0; i < n; ++i) l += (i ? 1 : 0) + static_cast<int>(strlen(t[i]));
         return l;
     };
-    bool stops = true;
-    while (width(true) > room) {
+    while (width() > room) {
         int best = -1;
         for (int i = 0; i < n; ++i)
             if (w[i].abbr && !shortn[i] && (best < 0 || strlen(w[i].full) > strlen(w[best].full))) best = i;
@@ -138,15 +134,14 @@ int state_spans(const Word* w, int n, int room, Span* sp, int* ns)
         t[best] = w[best].abbr;
         shortn[best] = true;
     }
-    if (width(true) > room) stops = false;
     int keep = n;
-    const bool cut = width(stops) > room;
+    const bool cut = width() > room;
     if (cut) {
         // (whole words and the "+")
         int l = 0;
         keep = 0;
         for (int i = 0; i < n; ++i) {
-            const int wl = static_cast<int>(strlen(t[i])) - (!stops && shortn[i] && t[i][strlen(t[i]) - 1] == '.' ? 1 : 0);
+            const int wl = static_cast<int>(strlen(t[i]));
             if (l + (i ? 1 : 0) + wl + 1 > room) break;
             l += (i ? 1 : 0) + wl;
             ++keep;
@@ -154,9 +149,7 @@ int state_spans(const Word* w, int n, int room, Span* sp, int* ns)
     }
     int len = 0, k = 0;
     for (int i = 0; i < keep; ++i) {
-        int wl = static_cast<int>(strlen(t[i]));
-        if (!stops && shortn[i] && t[i][wl - 1] == '.') --wl;
-        len += snprintf(sp[k].t, sizeof sp[k].t, "%s%.*s", i ? " " : "", wl, t[i]);
+        len += snprintf(sp[k].t, sizeof sp[k].t, "%s%s", i ? " " : "", t[i]);
         sp[k++].col = w[i].col;
     }
     if (cut) {
