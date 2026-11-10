@@ -503,6 +503,12 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   2026-11-09): ticked, Quick casts that character's memorized spells.
   The column is "Move" (Tom), never "Advance". Engine: `Fighter::qa`,
   `think` / `choose_weapon`, `ai_step`, `play_quick.inc`.
+- The computer's step (round 15, 2026-11-10, from the originals' code):
+  every DAX game steps by its mood rows (combat::Tables mood / flee_inc /
+  step_pool / clouds, read from the program; the AI dice once a turn), a
+  run's way from the party's facing; tools/devkit/oracles/aistep.py reads
+  each GAME.OVR's try / step, rules4 aimood checks it. Feeblemind by each
+  game's handler (rules4 feeble; Death Knights' drain-2 behind Game Fixes).
 - The computer's bandaging (round 12, 2026-11-09, from the originals'
   code): in its move-and-attack step in every game (Curse GAME.OVR
   0xC7EC +0x3D ...), never at the turn's start; PoolRad's computer never

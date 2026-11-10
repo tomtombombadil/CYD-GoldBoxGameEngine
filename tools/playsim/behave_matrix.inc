@@ -86,6 +86,7 @@ void put(int i, int team, int x, int y, int hp = 60)
     f.flags2 = f.magic_res = 0;
     f.flee_last = 8;
     f.flee_back = 0;
+    f.driven = false;
     combat::occupancy(play::fg->b);
 }
 

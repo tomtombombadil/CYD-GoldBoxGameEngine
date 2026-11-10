@@ -116,6 +116,13 @@ struct OpSet {
     // the same (DQK.EXE 0x5D6E from its clock's carries, 0x60C8) on its game
     // block's bytes: phases 0x1FA-0x1FC, counters 0x1FD-0x1FF
     bool moons = false;
+    // The Dark Queen's DAMAGE (DQK.EXE 0x4256F, round 15): a save's bonus
+    // is the flags & 0x0F; made with 0x10 half (the selected one's -
+    // 0x426B2), and the whole party's / a random one's (0x42646 / 0x42720)
+    // the other way round: failed half, made with 0x10 the whole (an
+    // original's mistake: with the Game Fixes as the selected one's) -
+    // ecl::queen_damage
+    bool queen_damage = false;
     // Champions' character codes for coins (its operand loader GAME.OVR
     // 0x9330 / writer 0x96AD): 0xBB its record's 0xEB (coin 0, silver),
     // 0xBD copper, 0xBF bronze, 0xC1 platinum, 0xC3 steel - turned into

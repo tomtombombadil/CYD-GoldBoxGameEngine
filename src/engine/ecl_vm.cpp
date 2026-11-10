@@ -883,6 +883,12 @@ uint32_t Vm::rnd(uint32_t n)
     return n ? rng_ % n : 0;
 }
 
+int queen_damage(bool made, int flags, int dmg, bool swapped, bool fixes)
+{
+    if (swapped && !fixes) return made ? ((flags & 0x10) ? dmg : -1) : dmg >> 1;    // (0x42650 / 0x4272A)
+    return made ? ((flags & 0x10) ? dmg >> 1 : -1) : dmg;                          // (0x426BC)
+}
+
 uint8_t Vm::roll(int sides, int n)
 {
     int t = 0;
@@ -2191,7 +2197,23 @@ Stop Vm::step()
         int dmg = roll(sd, n) + p;
         const int count = party_->count;
         const int random = (f & 0x40) ? 0 : roll(count, 1) - 1;
-        if (f & 0x80) {
+        if ((f & 0x80) && set_.queen_damage) {
+            // The Dark Queen's (DQK.EXE 0x42619-0x4275B): bonus f & 0x0F;
+            // everyone (f & 0x40; 0x20: no save) or a random one, else (t &
+            // 0x80) the selected one, type 0 no save (type - 1 the save's)
+            const int bonus = f & 0x0F, type = t & 7;
+            auto one = [&](int i, bool save, int ty, bool swapped) {
+                const int got = save ? queen_damage(saves(i, ty, bonus), f, dmg, swapped, rules::fixes()) : dmg;
+                if (got >= 0) hurt(i, got & 0xFF);
+            };
+            if (f & 0x40) {
+                for (int i = 0; i < count; ++i) one(i, !(f & 0x20), type, true);
+            } else if (t & 0x80) {
+                one(party_->selected, type != 0, type - 1, false);
+            } else {
+                one(random, true, type, true);
+            }
+        } else if (f & 0x80) {
             const int bonus = f & 0x1F, type = t & 7;
             auto one = [&](int i, bool save, int ty) {
                 if (!save || !saves(i, ty, bonus) || (f & 0x10)) hurt(i, dmg & 0xFF);

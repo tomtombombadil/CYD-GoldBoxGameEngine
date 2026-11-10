@@ -4506,8 +4506,11 @@ void ai_step(pic::Canvas& c)
     combat::Battle& b = fg->b;
     const int i = fg->cur;
     combat::Fighter& f = b.f[i];
-    // (Champions: its dice first, once a turn - before the morale test)
-    if (d->prof->game == games::Game::ChampionsOfKrynn && !fg->ai_checked && !fg->flee_told && !fg->ai_diced) {
+    // (the DAX games: its dice first, once a turn - before the morale test;
+    // GAME.OVR PoolRad 0xAC14, Curse 0xBACB, Secret 0xCFD6, Gateway 0xD02E,
+    // Darkness 0x9B45, Treasures 0xA957, Champions 0xC5B0, Death Knights
+    // 0xA28C - round 15: the same code in each)
+    if (fg->t.mood_known && !fg->ai_checked && !fg->flee_told && !fg->ai_diced) {
         fg->ai_diced = true;
         champ_ai_dice(f);
     }
@@ -5084,11 +5087,13 @@ void fight_start(pic::Canvas& c)
     } else {
         combat::place(b, fg->t, d->gs.dir & 6, vm->fight_distance(), b.indoors ? solid_side : nullptr, nullptr,
                       darkness_files() ? vm->fight_sides() : 0);
-        // (Champions, GAME.OVR 0xCFC4: a run's way from the party's facing
-        // [0x6D87] as Pool's - round 11)
+        // (the DAX games, a run's way from the party's facing as PoolRad's:
+        // Champions GAME.OVR 0xCFC4 [0x6D87] - round 11; Curse 0xC54F
+        // [0x722B], ... - round 15; Darkness, Treasures and Death Knights
+        // + 1 - tools/devkit/oracles/aistep.py)
         if (fg->t.mood_known) {
             const int fd = d->gs.dir & 6;
-            b.flee_dir = (fd - ((fd + 2) % 4) / 2 + 8) & 7;
+            b.flee_dir = (fd - ((fd + 2) % 4) / 2 + fg->t.flee_inc + 8) & 7;
         }
     }
     combat::battle_start(b, &rng);           // those invisible from the start

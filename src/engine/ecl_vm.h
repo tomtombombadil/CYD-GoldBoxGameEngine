@@ -178,6 +178,11 @@ public:
     virtual void log(const char* what) = 0;
 };
 
+// The Dark Queen's DAMAGE after a save (OpSet::queen_damage): the points
+// taken (-1: none) - made or not, the flags (0x10), the whole dice,
+// `swapped` the whole party's / a random one's branch, `fixes` the Game Fixes
+int queen_damage(bool made, int flags, int dmg, bool swapped, bool fixes);
+
 class Vm {
 public:
     Vm(GameState& s, Host& h, const OpSet& set) : s_(s), h_(h), set_(set) {}

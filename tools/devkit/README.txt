@@ -202,3 +202,19 @@ The Quick tab as an engine page + the party's NPCs (2026-11-09, round 14):
                            -> Game -> Quick (open, Spells tapped, the NPC, Bandage First, "?"), Settings, Cheats.
                            QEMU=qemu-system-xtensa (Espressif esp-develop-9.2.2-20250817; apt: dosfstools mtools),
                            SIM=a playsim. The PNGs show game screens: scratch only.
+
+Round 15 (2026-11-10): the computer's step and Feeblemind
+  oracles/aistep.py [games]   oracle_aistep_<game>.txt (the eight DAX games): each GAME.OVR's try (a mood row's
+                              column: the table read just after a routine's start) and step (the table read again after
+                              the flee's way): the rows' DS place, the facing byte and the +1, the cost test (strict /
+                              PoolRad's), the cloud squares' rules (effects, driven, flags 2, Hit Dice, a save)
+  rules4 ONLY=aimood          all eight: every mood x way x column, the step back three times, the cost at the moves'
+                              edge, a run's way (both sides), each cloud rule case by case (effects, driven, HD, flags 2,
+                              the save made / failed by the d20 hook)
+  rules4 ONLY=feeble          Darkness / Treasures (effect 0x44 kept, Int / Wis 3, memorizing forgotten, the spell left
+                              for "lost a spell", "loses intellect"; the recalculation keeps 3), Death Knights (Game
+                              Fixes off: drain-2 effect, the target's target drained, "gets drained"; on: Darkness's)
+  host test test_queen_damage  the Dark Queen's DAMAGE save branches (ecl::queen_damage)
+  Baselines: rules4 full PoolRad 38/0, Curse 41/0, Secret 35/0, Darkness 39/0, Gateway 36/0, Treasures 41/0,
+  Champions 47/0, Knights 43/0, Queen 54/0; budgets (bytes) Curse 133721, PoolRad 135372, Darkness 149721,
+  Champions 135928, Knights 135938, Queen 143244, Treasures 151918.

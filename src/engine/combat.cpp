@@ -244,6 +244,9 @@ bool read_tables(Tables& t, const TableAt& at, ReadDs read, void* ctx)
     t.turn_rule = at.turn_rule;
     for (int k = 0; k < 5; ++k) t.reserve_mon[k] = t.reserve_pic[k] = 0;
     t.mood_known = at.mood_rows != 0;
+    t.flee_inc = at.flee_inc;
+    t.step_pool = at.step_pool;
+    for (int k = 0; k < 3; ++k) t.clouds[k] = at.clouds[k];
     if (t.mood_known && !read(ctx, at.mood_rows, t.mood, sizeof t.mood)) return false;
     if (at.reserve && !(read(ctx, at.reserve, t.reserve_mon, 5) && read(ctx, static_cast<uint16_t>(at.reserve + 5), t.reserve_pic, 5)))
         return false;
@@ -1435,6 +1438,7 @@ TurnFx turn_effects(Battle& b, int i)
             if (fx.fear) give_aff(f, fx.fear, 10, made_quick ? 1 : 0, true);
             f.fleeing = true;
             f.panic = false;
+            f.driven = true;                // (combat +0x10: Curse GAME.OVR 0x10901)
             f.quick = true;
             f.target = -1;
             return TurnFx::RunsAway;
@@ -3355,42 +3359,78 @@ int taunt(Battle& b, int kender, create::Dice& d, int* out, int cap)
 }
 
 namespace {
-// Champions' step toward its target (round 11; GAME.OVR 0xCF53 - 0xD17C, a
-// try 0xCC6A): the five directions of its mood's row (combat byte 0x15, the
-// table DS 0x396: row m, columns 1-5) added to the way to the target, the
-// first it can take - its cost within the moves left, a stinking cloud only
-// with a save made, a poison cloud never below 7 Hit Dice; no
-// "not further away" test. None, or the one back the way it came last: the
-// count of such goes up and the mood turns to the next row (m % 6 + 1) -
-// the second time its target is dropped, the third ends its moving; with
-// none the turn's moving ends there (it guards)
-Plan mood_step(Battle& b, const Tables& t, int i, int base, create::Dice& d, Plan p)
+// The computer's step in the DAX games (Champions round 11, the others round
+// 15 - tools/devkit/oracles/aistep.py; e.g. Curse GAME.OVR 0xC40C / its try
+// 0xC176, the rows DS 0x2B8): the five directions of its mood's row (combat
+// byte 0x15 - Darkness-type 0x14; rows 1-6, columns 1-5) added to its way -
+// to the target, or fleeing (a d2 for the mood, each step) from the party's
+// facing (b.flee_dir) - the first it can take (step_fits, cloud_ok); no
+// "not further away" test. Fleeing, a column off the field's edge takes it
+// off. None, or the one back the way it came last: the count of such goes
+// up and the mood turns to the next row (m % 6 + 1); the second time its
+// target is dropped and another looked for (Curse 0xC6E3: the finder with
+// range 0xFF; none - it guards, 0xCC32), the third ends its moving; with
+// none found the moving ends there. Returns false when a fleeing one's run
+// is over (moves 0): its turn goes on as the engine's (attack or guard)
+bool step_fits(const Battle& b, const Tables& t, int i, int dir, int cost)
+{
+    const Fighter& f = b.f[i];
+    if (cost == 0xFF) return false;
+    if (!t.step_pool) return cost < f.moves;                // (the try: cost < moves, strictly)
+    // PoolRad's (0xB2C7): the ground's own value < the moves, then the cost within them
+    return cost / (dir % 2 ? 3 : 2) < f.moves && cost <= f.moves;
+}
+
+bool cloud_ok(const Battle& b, const Tables& t, Fighter& f, int x, int y, create::Dice& d)
+{
+    const uint8_t g = b.ground[y][x];
+    for (const StepCloud& c : t.clouds) {
+        if (!c.kind) continue;
+        const uint8_t cg = c.kind == 1 ? cloud_g(b) : c.kind == 2 ? poison_g(b) : b.fx ? b.fx->dk.knives : 0;
+        if (!cg || g != cg) continue;
+        if (c.hd7 && f.rec[0xE5] >= 7) return true;
+        bool ok = (c.driven && f.driven) || (c.flags2 && (f.flags2 & c.flags2));
+        for (int k = 0; k < 6 && c.eff[k] && !ok; ++k) ok = f.has(c.eff[k]);
+        if (!ok && c.save) ok = saving_throw(f, 0, 0, d);
+        return ok;
+    }
+    return true;
+}
+
+bool mood_step(Battle& b, const Tables& t, int i, int base, create::Dice& d, Plan& p, bool fleeing)
 {
     Fighter& f = b.f[i];
     const int m = f.ai_mood <= 6 ? f.ai_mood : 0;
     int dir = -1;
     for (int col = 1; col <= 5 && dir < 0; ++col) {
         const int dd = (t.mood[m * 5 + col] + base) & 7;
-        const int cost = step_cost(b, t, i, dd, nullptr, nullptr);
-        if (cost == 0xFF || cost > f.moves) continue;
-        const int nx = f.x + kDx[dd], ny = f.y + kDy[dd];
-        if (b.ground[ny][nx] == cloud_g(b) && !saving_throw(f, 0, 0, d)) continue;
-        if (b.ground[ny][nx] == poison_g(b) && f.rec[0xE5] < 7) continue;
+        bool edge;
+        const int cost = step_cost(b, t, i, dd, &edge, nullptr);
+        if (edge && fleeing) {
+            p.act = Act::Flee;
+            return true;
+        }
+        if (!step_fits(b, t, i, dd, cost)) continue;
+        if (!cloud_ok(b, t, f, f.x + kDx[dd], f.y + kDy[dd], d)) continue;
         dir = dd;
     }
     if (dir < 0 || (f.flee_last < 8 && ((dir + 4) & 7) == f.flee_last)) {
         f.ai_mood = static_cast<uint8_t>(f.ai_mood % 6 + 1);
-        if (++f.flee_back > 1) f.target = -1;
-        if (dir < 0 || f.flee_back > 2) {
+        ++f.flee_back;
+        if (f.flee_back > 1) f.target = -1;
+        bool done = dir < 0 || f.flee_back > 2;
+        if (!done && f.flee_back == 2 && pick_target(b, t, i, d) < 0) done = true;     // (none: 0xCC32, it guards)
+        if (done) {
             f.moves = 0;
+            if (fleeing) return false;
             p.act = Act::Guard;
-            return p;
+            return true;
         }
     }
     f.flee_last = static_cast<uint8_t>(dir);
     p.act = Act::Step;
     p.dir = dir;
-    return p;
+    return true;
 }
 } // namespace
 
@@ -3410,7 +3450,13 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
         p.act = Act::Guard;
         return p;
     }
-    if (f.fleeing && f.moves >= 2) {
+    if (f.fleeing && f.moves >= 2 && t.mood_known && b.flee_dir >= 0) {
+        // The DAX games (round 15; Curse GAME.OVR 0xC538): a d2 for its mood,
+        // the way from the party's facing (+ 4 for the party's own), its row
+        f.ai_mood = static_cast<uint8_t>(d.roll(2, 1));
+        const int base = (b.flee_dir + (f.team() ? 0 : 4)) & 7;
+        if (mood_step(b, t, i, base, d, p, true)) return p;
+    } else if (f.fleeing && f.moves >= 2) {
         // Away from the nearest enemy, off the field's edge
         int near = -1, best = 9999;
         for (int c = 0; c < b.n; ++c) {
@@ -3424,24 +3470,10 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
         }
         int base = near >= 0 ? (direction(f.x, f.y, b.f[near].x, b.f[near].y) + 4) & 7 : 0;
         if (base > 7) base = 0;
+        // (the DAX games run by their mood rows - above; this way the Dark
+        // Queen's)
         static const int kAway[5] = {0, 1, -1, 2, -2};
-        // (Pool, ovr10 +0x8C7 / +0x675: one way for the whole side - the
-        // party's the other way - tried straight, then the left two or the
-        // right two first by a d2, DS 0x2AE's rows 8 7 6 1 2 / 8 1 2 7 6)
-        static const int kPoolAway[2][5] = {{0, -1, -2, 1, 2}, {0, 1, 2, -1, -2}};
         const int* tries = kAway;
-        int rows[5];
-        if (b.flee_dir >= 0) {
-            base = (b.flee_dir + (f.team() ? 0 : 4)) & 7;
-            const int r = d.roll(2, 1);
-            tries = kPoolAway[r - 1];
-            if (t.mood_known) {
-                // (Champions, GAME.OVR 0xCFAD: the d2 is its mood - row 1 / 2 of its table)
-                f.ai_mood = static_cast<uint8_t>(r);
-                for (int j = 0; j < 5; ++j) rows[j] = t.mood[r * 5 + 1 + j] & 7;
-                tries = rows;
-            }
-        }
         for (int j = 0; j < 5; ++j) {
             const int k = tries[j];
             const int dir = (base + k + 8) & 7;
@@ -3457,7 +3489,6 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
             // byte_1AB18 / byte_1AB19 - one turn's count; a ground costing
             // nothing had a cornered gargoyle step to and fro for ever)
             if (f.flee_last < 8 && ((dir + 4) & 7) == f.flee_last) {
-                if (t.mood_known) f.ai_mood = static_cast<uint8_t>(f.ai_mood % 6 + 1);   // (Champions, 0xD0F0)
                 if (++f.flee_back > 2) break;
                 if (f.flee_back > 1) f.target = -1;
             }
@@ -3580,7 +3611,10 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
     const int base = direction(f.x, f.y, tg.x, tg.y);
     if (base > 7) return p;
     static const int kTry[5] = {0, 1, -1, 2, -2};
-    if (t.mood_known) return mood_step(b, t, i, base, d, p);
+    if (t.mood_known) {
+        mood_step(b, t, i, base, d, p, false);
+        return p;
+    }
     int ox[4], oy[4];
     const int n0 = squares(tg.size ? tg.size : 1, ox, oy);
     int now_best = 9999;
@@ -4375,7 +4409,9 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
             if (!f.up() || resisted(k, b.fx ? b.fx->feeble : 0)) continue;
             // This save only: a cleric -1, a magic-user +4, others +2 on the number needed
             int adj = f.rec[0x75] == 0 ? -1 : f.rec[0x75] == 5 ? 4 : 2;
-            if (b.fx && b.fx->secret) {
+            if (b.fx && b.fx->secret && !b.fx->feeble_direct) {
+                // (Darkness / Treasures - feeble_direct - by the generic rule
+                // above: GAME.OVR 0x2E902 / 0x37E08, round 15)
                 // Secret's (GAME.OVR 0x31B94) by the class byte: clerics (C/F, C/T) -1;
                 // rangers +1 at 8 Hit Dice, +2 from 9; paladins +4 from 9; magic-users
                 // (F/MU, F/MU/T, MU/T) +4 a human, else +2; C/F/MU, C/R, C/MU +2; any
@@ -4403,8 +4439,21 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
                 say(who[k], Did::Unaffected, 0);
                 continue;
             }
+            if (b.fx && b.fx->feeble_drain && !rules::fixes()) {
+                // Death Knights' own (feeble_drain): the drain-2 effect for
+                // ever, then its handler - the target's target drained 2
+                // levels ("gets drained")
+                if (b.fx->mon.drain2) give_aff(f, b.fx->mon.drain2, 0, pw, false);
+                const int tt = f.target;
+                if (tt >= 0 && tt < b.n && tt != who[k] && b.f[tt].up() && b.f[tt].size) {
+                    int nn = 0;
+                    drain(b, tt, 2, nullptr, 0, &nn, -1);
+                    say(tt, Did::Word2, 0);
+                }
+                continue;
+            }
             if (b.fx && b.fx->feeble) give_aff(f, b.fx->feeble, 0, pw, false);
-            if (b.fx && b.fx->feeble_direct) {
+            if (b.fx && (b.fx->feeble_direct || b.fx->feeble_drain)) {
                 // The Dark Queen's (its spell DQK.EXE 0x58108, effect 0x44's
                 // handler 0x53EA6): Intelligence and Wisdom in use 3 at once,
                 // and every spell still being memorized (+ 0x80) forgotten
@@ -5615,6 +5664,7 @@ static int turn_undead_dk(Battle& b, const Tables& t, int cleric, create::Dice& 
         if (v > 0) {
             f.fleeing = true;
             f.panic = false;
+            f.driven = true;                // (combat +0x10: Curse GAME.OVR 0x146D3)
             out[n++] = best;
         } else {
             f.rec[kHealth] = party::Gone;
@@ -5666,6 +5716,7 @@ static int turn_undead_ck(Battle& b, const Tables& t, int cleric, create::Dice& 
         if (v > 0) {
             f.fleeing = true;
             f.panic = false;
+            f.driven = true;                // (combat +0x10: Curse GAME.OVR 0x146D3)
             out[n++] = best;
         } else {
             f.rec[kHealth] = party::Gone;
@@ -5740,6 +5791,7 @@ int turn_undead(Battle& b, const Tables& t, int cleric, create::Dice& d, int* ou
         if (v > 0) {
             f.fleeing = true;
             f.panic = false;
+            f.driven = true;                // (combat +0x10: Curse GAME.OVR 0x146D3)
             out[n++] = best;
         } else {
             f.rec[kHealth] = party::Gone;

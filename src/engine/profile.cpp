@@ -677,7 +677,7 @@ constexpr combat::FightSpell kDarknessFight[] = {
     {0x4D, SpellDoes::Affect, 0, 0, 0, 0, 0, 0x2BB7D},
     {0x56, SpellDoes::Fumble, 0, 0, 0, 0, 0, 0x2E67E, 0x2E688, 0x2E67E},  // Fumble: "is clumsy" / "is slowed"
     {0x57, SpellDoes::Damage, 3, 10, 0, 0, 0x0A, 0},        // Ice Storm: 3d10 cold
-    {0x5D, SpellDoes::Feeble, 0, 0, 0, 0, 0, 0},            // Feeblemind
+    {0x5D, SpellDoes::Feeble, 0, 0, 0, 0, 0, 0x1C2D2},      // Feeblemind: "loses intellect" (row 10, a wait - effect 0x44's handler GAME.OVR 0x1C2F3)
     {0x0C, SpellDoes::Enlarge, 0, 0, 0, 0, 0, 0x2BD59},     // Enlarge: "is stronger"
     {0x0D, SpellDoes::Reduce, 0, 0, 0, 0, 0, 0x2BEC0},      // Reduce: "has been reduced"
     {0x2B, SpellDoes::RemoveCurse, 0, 0, 0, 0, 0, 0x2D047, 0, 0x2D054},   // Remove Curse: "is un-cursed",
@@ -904,7 +904,7 @@ constexpr combat::FightSpell kTreasuresFight[] = {
     {0x4D, SpellDoes::Affect, 0, 0, 0, 0, 0, 0x34C0C},
     {0x56, SpellDoes::Fumble, 0, 0, 0, 0, 0, 0x37B5C, 0x37B66, 0x37B5C},  // Fumble: "is clumsy" / "is slowed"
     {0x57, SpellDoes::Damage, 3, 10, 0, 0, 0x0A, 0},        // Ice Storm: 3d10 cold
-    {0x5D, SpellDoes::Feeble, 0, 0, 0, 0, 0, 0},            // Feeblemind
+    {0x5D, SpellDoes::Feeble, 0, 0, 0, 0, 0, 0x21F55},      // Feeblemind: "loses intellect" (row 10, a wait - effect 0x44's handler)
     {0x0C, SpellDoes::Enlarge, 0, 0, 0, 0, 0, 0x34E6B},     // Enlarge: "is stronger"
     {0x0D, SpellDoes::Reduce, 0, 0, 0, 0, 0, 0x34FDA},      // Reduce: "has been reduced"
     {0x2B, SpellDoes::RemoveCurse, 0, 0, 0, 0, 0, 0x36330, 0, 0x3633D},   // Remove Curse: "is un-cursed",
@@ -1579,6 +1579,7 @@ constexpr ecl::OpSet kQueenEcl = [] {
     s.krynn_race = true;
     s.camp_resumes = true;          // (PROGRAM 9: its inns' city menu again after the camp - DOSBox)
     s.moons = true;                 // (its clock steps the moons a day at a time: DQK.EXE 0x60C8 -> 0x5E58)
+    s.queen_damage = true;          // (its DAMAGE's saves - DQK.EXE 0x4256F, round 15)
     return s;
 }();
 
@@ -1947,7 +1948,7 @@ constexpr combat::FightSpell kDeathKnightsFight[] = {
     {0x67, SpellDoes::Affect, 0, 0, 0, 0, 0, kP | 0xDA04},  // (103)
     {0x56, SpellDoes::Fumble, 0, 0, 0, 0, 0, kP | 0xDF44, kP | 0xDE5C},  // Fumble: "is clumsy" / "is slowed"
     {0x57, SpellDoes::Damage, 3, 10, 0, 0, 0x0A, 0},        // Ice Storm: 3d10 cold
-    {0x5D, SpellDoes::Feeble, 0, 0, 0, 0, 0, 0},            // Feeblemind
+    {0x5D, SpellDoes::Feeble, 0, 0, 0, 0, 0, 0, kP | 0x1EBD},   // Feeblemind; its target's target "gets drained" (Game Fixes off - combat.h feeble_drain)
     {0x0C, SpellDoes::Enlarge, 0, 0, 0, 0, 0, kP | 0xDCAE}, // Enlarge: "is stronger"
     {0x0D, SpellDoes::Reduce, 0, 0, 0, 0, 0, kP | 0xDCC3},  // Reduce: "has been reduced"
     {0x2B, SpellDoes::RemoveCurse, 0, 0, 0, 0, 0, kP | 0xDDD4, 0, kP | 0xDDE9},   // Remove Curse: "is uncursed",
@@ -2436,7 +2437,7 @@ const Profile kProfiles[] = {
        0x1A8F6, 0x1A908, 0x1A91D, 0x1AC6D, 0x1AC77, 0x1AC86, 0x1AC96, 0x1ACA1},
       {0xB32C, 0xB355, 0xB37E, 0xB3A7, 0xB3D0},
       {0x23E3B, 0x23E3F, 0x23E4E, 0x23E52, 0x23E58, 0x23E71, 0x23E76, 0x23E9B}},
-     {{0x26A4, 0x02DC, 0x02EC, 0x02FC, 0x0300, 0x0308, 0x0310, 0x0354, 0x0369},
+     {{0x26A4, 0x02DC, 0x02EC, 0x02FC, 0x0300, 0x0308, 0x0310, 0x0354, 0x0369, 0, 10, 0, 0, 0x02B8, 0, false, {{1, {0x20, 0x1E, 0x6F, 0x7D, 0x81, 0x3F}, 0, true, true, false}, {2, {0x81, 0x6F, 0x85, 0x7D}, 0, true, false, true}}},
       {0xF349, 0xAC73, 0xAC79, 0xAC83, 0xAC88, 0xAC8E, 0xAC94,
        0xB04C, 0xB069, 0xB06F, 0xB446,
        0x16358, 0x16364, 0x1636C, 0x1637E, 0x1638A,
@@ -2591,7 +2592,7 @@ const Profile kProfiles[] = {
      // table's place, no terrain table (Pool's outdoor fields are made by
      // code), turn undead at DS 0x0447; the effects Pool has (the same
      // number often means something else in Pool: those are 0 here)
-     .fight = {{0x2744, 0x02D2, 0x02E2, 0x02F2, 0x02F6, 0x02FE, 0x0306, 0, 0x0447, 0x0342},
+     .fight = {{0x2744, 0x02D2, 0x02E2, 0x02F2, 0x02F6, 0x02FE, 0x0306, 0, 0x0447, 0x0342, 10, 0, 0, 0x02AE, 0, true, {{1, {0x20, 0x1E, 0x6F, 0x7D}, 0, false, false, false}}},
                {0xE3EF, 0x9E00, 0x9E06, 0x9E10, 0x9E15, 0x9E1B, 0x9E21, 0xA1BB, 0xA1D8, 0, 0xA537, 0x15264, 0x15270,
                 0x15278, 0x1528A, 0x15296, 0xA605, 0xA60C, 0xA618, 0xA621, kP | 0x321D, 0xA8D6, 0xA8E2, 0xA8E8, 0xA8F0,
                 0xA8F8, 0x12A2D, 0x12A39, 0x12A48, 0x12A50, 0x12A5F, 0x12A73, 0x12A80, 0x12A88, 0x12A91, 0x12A9B,
@@ -2804,7 +2805,7 @@ const Profile kProfiles[] = {
                {0xE702, 0xE72B, 0xE754, 0xE77D, 0xE7A6},
                {0x21326, 0x2132A, 0x21339, 0x2133D, 0x21343, 0x2135C, 0x21361, 0x21386},
                kP | 0xE272},
-     .fight = {{0x1A9E, 0x0350, 0x0360, 0x0370, 0x0374, 0x037C, 0x0384, 0, 0, 0},
+     .fight = {{0x1A9E, 0x0350, 0x0360, 0x0370, 0x0374, 0x037C, 0x0384, 0, 0, 0, 10, 0, 0, 0x032C, 0, false, {{1, {0x1E, 0x3F, 0x39, 0x63}, 0, true, true, false}, {2, {0x63}, 0, true, false, true}}},
               {               0x10016, 0xC0E5, 0xC0EB, 0xC0F5, 0xC0FA, 0, 0xC100, 0xC54A, 0xC56A, 0xC570, 0xC8EB, 0x17B38, 0x17B44,
                0x17B4C, 0x17B5E, 0x17B6A, 0xC9B8, 0xC9BF, 0xC9CB, 0xC9D4, 0x3AF83, 0xCC50, 0xCC5C, 0xCC62, 0xCC6A, 0xCC72,
                0x150F8, 0x15104, 0x15113, 0x1511B, 0x1512A, 0x1513E, 0x1514B, 0x15153, 0x1515C, 0x15166, 0x15171, 0x1517E, 0x15188,
@@ -3008,7 +3009,7 @@ const Profile kProfiles[] = {
                {0x24222, 0x24226, 0x24235, 0x24239, 0x2423F, 0x24258, 0x2425D, 0x24282}},
      // Fights: Curse's tables at Champions' places (its effect numbers:
      // chunk 7)
-     .fight = {{0x1EE4, 0x03BA, 0x03CA, 0x03DA, 0x03DE, 0x03E6, 0x03EE, 0x0432, 0x0444, 0, 13, 0, 2, 0x0396},   // (turn undead: DS 0x444, 13 columns, its own rules - rules_round4_facts.md T3; the AI's step rows DS 0x396 - round 11)
+     .fight = {{0x1EE4, 0x03BA, 0x03CA, 0x03DA, 0x03DE, 0x03E6, 0x03EE, 0x0432, 0x0444, 0, 13, 0, 2, 0x0396, 0, false, {{1, {0x20, 0x1E, 0x63, 0x3F}, 0, true, true, false}, {2, {0x63}, 0, true, false, true}}},   // (turn undead: DS 0x444, 13 columns, its own rules - rules_round4_facts.md T3; the AI's step rows DS 0x396 - round 11)
                {0xFDDF, 0xB5BD, 0xB5C3, 0xB5CD, 0xB5D2, 0xB5D8, 0xB5E4,
                 0xBABE, 0xBADE, 0xBAE4, 0xBE59,
                 0x17D59, 0x17D65, 0x17D6D, 0x17D7F, 0x17D8B,
@@ -3252,7 +3253,7 @@ const Profile kProfiles[] = {
      // in the program as Darkness's (the menus whole strings - its two-row
      // menu with Yell), its effect numbers mostly Champions' (its handler
      // table DS 0xBE7E + 4 x effect, set at GAME.OVR 0x1E50A)
-     .fight = {{0x4420, 0x0336, 0x0346, 0x0356, 0x035A, 0x0362, 0x036A, 0x03AE, 0x05A5, 0, 11, 0, 3},
+     .fight = {{0x4420, 0x0336, 0x0346, 0x0356, 0x035A, 0x0362, 0x036A, 0x03AE, 0x05A5, 0, 11, 0, 3, 0x0312, 1, false, {{1, {0x20, 0x1E, 0x63, 0x3F}, 0, true, true, false}, {2, {0x63}, 0, true, false, true}}},
                {
                 kP | 0xE6E7, 0, 0, 0, 0, 0, 0, kP | 0xEE53, kP | 0xD3ED, 0, kP | 0xE216, kP | 0xD3CC, 0, 0, 0, kP | 0xEDE9, 0, 0, 0, 0,
                 kP | 0xE9A2, kP | 0xEDD4, 0x9FB0, 0, 0, kP | 0xF128, kP | 0xE9ED, kP | 0xEA02, kP | 0xEA17, kP | 0xEA22, 0x1EEFE, 0x1EF12, kP | 0xEA4C,
@@ -3294,7 +3295,10 @@ const Profile kProfiles[] = {
                        .stun = 0x06},
                 .race = {0x5E, 0x12, 0x1A, 0x07, 0x2F, 0x30, 0x69, true},
                 .items = {.displace = 0x59, .ring_invisible = 0x38, .fire_ring = 0x3D},
-                .berserk = 0x6B, .taunted = 0x5B},
+                .berserk = 0x6B, .taunted = 0x5B,
+                // (its Feeblemind - GAME.OVR 0x2E610: the row's effect 0x44 is its
+                // drain-2, its handler 0x1D3F8 called at once - round 15)
+                .feeble_drain = true},
                kDeathKnightsFight, sizeof kDeathKnightsFight / sizeof kDeathKnightsFight[0],
                // COMSPR (22 blocks, + 0x80 the second pictures): 0-2 arrows, 3
                // the axe, 4 the flask, 5 the spell, 6 lightning, 7 a rock, 8 a
@@ -3381,6 +3385,11 @@ const Profile kProfiles[] = {
                .overloaded = 0x5F4F,
                .title = kP | 0xB5A8, .heading = kP | 0xB5D1, .yes = 0x3430D, .no = 0x34314, .cursed = 0x25099,
                .wrong_class = 0x250A6, .already = 0x250B2, .hands_full = 0x250C1, .plural_s = 0x35ABD,
+               // (its stats' recalculation - GAME.OVR Darkness 0x3307E, Treasures
+               // 0x3CD87 - keeps Intelligence / Wisdom at 3 while effect 0x44
+               // lasts; round 15. It checks Secret's other four too - 0x26,
+               // 0x71, 0x0C / 0x3E / 0x0E - not followed yet)
+               .stat_fx = {0, 0, 0, 0, 0x44, 0},
                // (the treasure's Detect: spell 77, its effect 5 - facts_shops.md 4)
                .detect = {5, 0x4D, 0, 0},
                // (Sell's prices as Secret's - facts_shops.md 2.2)
@@ -3504,7 +3513,7 @@ const Profile kProfiles[] = {
      // takes away (DS 0x0C6E, 16 - GAME.OVR 0x32DB0); the effects by
      // Darkness's own numbers (its View names, DS 0x4061; its handler table
      // DS 0xA7EA + 4 x (effect - 1), set at GAME.OVR 0x1DD3B)
-     .fight = {{0x3EBA, 0x090C, 0x091C, 0x092C, 0x0930, 0x0938, 0x0940, 0x097C, 0x09FB, 0, 11, 0x08D8},
+     .fight = {{0x3EBA, 0x090C, 0x091C, 0x092C, 0x0930, 0x0938, 0x0940, 0x097C, 0x09FB, 0, 11, 0x08D8, 0, 0x08E8, 1, false, {{1, {0x1E, 0x3F}, 0x18, true, false, false}, {2, {0x39}, 0x10, true, false, false}, {3, {}, 0, true, false, false}}},
               {
                0xD2F1, 0, 0, 0, 0, 0, 0, 0xA290, kP | 0xC0B5, 0, 0x9785, kP | 0xC03A, 0, 0, 0, kP | 0xC88C, 0, 0, 0, 0,
                0x36BDA, kP | 0xC863, 0x9837, 0, 0, kP | 0xCDD3, 0x1E89C, 0x1E8A8, 0x1E8B7, 0x1E8BF, 0x1E8CE, 0x1E8E2, 0x1E8EF,
@@ -3569,7 +3578,10 @@ const Profile kProfiles[] = {
                 .dk = {.knives = 0x1B, .knife_n = 8, .knife_sides = 8, .dancing = 0x76, .dragon_fear = 0x64,
                        .feared = 0x78, .para_gaze = 0x72, .gaze_proof = 0x7E, .vamp_gaze = 0x7C, .beholder = 0x75,
                        .vorpal = 0x73, .kalistes = 0x74, .rake = 0x63, .blessed = 0x52, .blessed_type = 0x4A,
-                       .no_disease = 0x4C, .disease = 0x22, .gaze_pic = 6}},
+                       .no_disease = 0x4C, .disease = 0x22, .gaze_pic = 6},
+                // (its Feeblemind - GAME.OVR Darkness 0x2E902 / effect 0x44's handler
+                // 0x1C2F3, Treasures 0x37E08 / 0x21F6x - as the Dark Queen's: round 15)
+                .feeble_lost = true, .feeble_direct = true},
                kDarknessFight, sizeof kDarknessFight / sizeof kDarknessFight[0],
                // COMSPR (its 22 blocks, + 0x80 the second pictures; loaded at a
                // fight's start as slots 13-34 - GAME.OVR 0xD34A): 0-2 the arrows, 3
@@ -3721,7 +3733,7 @@ const Profile kProfiles[] = {
      // Darkness's ("Move Aim Use Cast Turn Guard Quick @Delay Bandage View
      // Speed End", GAME.OVR overlay 0xBA76 +0x812, the words not offered left
      // out); the effects a fight ends (DS 0x037A, 20); Curse's effects
-     .fight = {{0x31AC, 0x03B4, 0x03C4, 0x03D4, 0x03D8, 0x03E0, 0x03E8, 0x042C, 0x0441, 0, 10, 0, 1},   // (turn undead: Gateway's paladins too - rules_round4_facts.md T2)
+     .fight = {{0x31AC, 0x03B4, 0x03C4, 0x03D4, 0x03D8, 0x03E0, 0x03E8, 0x042C, 0x0441, 0, 10, 0, 1, 0x0390, 0, false, {{1, {0x20, 0x1E, 0x6F, 0x7D, 0x81, 0x3F}, 0, true, true, false}, {2, {0x81, 0x6F, 0x85, 0x7D}, 0, true, false, true}}},   // (turn undead: Gateway's paladins too - rules_round4_facts.md T2)
               {
                0x10BF2, 0xC1DC, 0xC1E2, 0xC1E7, 0xC20C, 0xC212, 0xC21F, 0xC796, 0xC7B3, 0xC7B9, 0xCBAE, 0x19324,
                0x19330, 0x19338, 0x1934A, 0x19356, 0xC218, 0, 0xC22E, 0, 0x41875, 0xCCA4, 0xCCB0, 0xCCB6, 0xCCBE,
@@ -3813,6 +3825,11 @@ const Profile kProfiles[] = {
                .overloaded = 0x6C6C,
                .title = kP | 0xDB68, .heading = kP | 0xDB92, .yes = 0x3E18C, .no = 0x3E193, .cursed = 0x2D513,
                .wrong_class = 0x2D520, .already = 0x2D52C, .hands_full = 0x2D53B, .plural_s = 0x3FAB9,
+               // (its stats' recalculation - GAME.OVR Darkness 0x3307E, Treasures
+               // 0x3CD87 - keeps Intelligence / Wisdom at 3 while effect 0x44
+               // lasts; round 15. It checks Secret's other four too - 0x26,
+               // 0x71, 0x0C / 0x3E / 0x0E - not followed yet)
+               .stat_fx = {0, 0, 0, 0, 0x44, 0},
                // (the treasure's Detect: spell 77, its effect 5 - facts_shops.md 4)
                .detect = {5, 0x4D, 0, 0},
                // (Sell's prices as Secret's - facts_shops.md 2.2)
@@ -3901,7 +3918,7 @@ const Profile kProfiles[] = {
                .kept_highlight = true},
      // Fights: the ground table DS 0x43F8, placing 0x0918-0x094C, turn undead
      // 0x0B33 (its code reads them there); no summoning reserve table
-     .fight = {{0x43F8, 0x0918, 0x0928, 0x0938, 0x093C, 0x0944, 0x094C, 0x0988, 0x0B33, 0, 11, 0},
+     .fight = {{0x43F8, 0x0918, 0x0928, 0x0938, 0x093C, 0x0944, 0x094C, 0x0988, 0x0B33, 0, 11, 0, 0, 0x08F4, 1, false, {{1, {0x1E, 0x3F}, 0x18, true, false, false}, {2, {0x39}, 0x10, true, false, false}, {3, {}, 0, true, false, false}}},
               {
                0xE2EF, 0, 0, 0, 0, 0, 0, 0xB0DA, kP | 0xE6BA, 0, 0xA537, kP | 0xE63C, 0, 0, 0, kP | 0xEEC0, 0, 0, 0, 0,
                0x40C65, kP | 0xEE96, 0xA5F1, 0, 0, kP | 0xF426, 0x268AC, 0x268B8, 0x268C7, 0x268CF, 0x268DE, 0x268F2, 0x268FF,
@@ -3966,7 +3983,10 @@ const Profile kProfiles[] = {
                 .dk = {.knives = 0x1B, .knife_n = 8, .knife_sides = 8, .dancing = 0x76, .dragon_fear = 0x64,
                        .feared = 0x78, .para_gaze = 0x72, .gaze_proof = 0x7E, .vamp_gaze = 0x7C, .beholder = 0x75,
                        .vorpal = 0x73, .kalistes = 0x74, .rake = 0x63, .blessed = 0x52, .blessed_type = 0x4A,
-                       .no_disease = 0x4C, .disease = 0x22, .gaze_pic = 6}},
+                       .no_disease = 0x4C, .disease = 0x22, .gaze_pic = 6},
+                // (its Feeblemind - GAME.OVR Darkness 0x2E902 / effect 0x44's handler
+                // 0x1C2F3, Treasures 0x37E08 / 0x21F6x - as the Dark Queen's: round 15)
+                .feeble_lost = true, .feeble_direct = true},
                kTreasuresFight, sizeof kTreasuresFight / sizeof kTreasuresFight[0],
                {0, 1, 2, 3, 6, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15}, {15, 9, 14},
                {kP | 0xF9DF, kP | 0xF98B, kP | 0xF9B5, kP | 0xF94C, kP | 0xF88F, kP | 0xF961, kP | 0x10195}},

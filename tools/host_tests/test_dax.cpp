@@ -2696,6 +2696,22 @@ struct PartyHost : TestHost {
     void party_killed() override { ++killed; }
 };
 
+// The Dark Queen's DAMAGE after a save (DQK.EXE 0x4256F, round 15): the
+// selected one's branch (0x426BC) failed - the whole, made - half with 0x10,
+// else none; the whole party's / a random one's (0x42650 / 0x4272A) failed
+// - half, made - the whole with 0x10, else none (with the Game Fixes: as
+// the selected one's)
+static void test_queen_damage()
+{
+    for (int fixes = 0; fixes < 2; ++fixes)
+        for (int fl : {0x80, 0x90}) {
+            CHECK(ecl::queen_damage(false, fl, 9, false, fixes) == 9);
+            CHECK(ecl::queen_damage(true, fl, 9, false, fixes) == ((fl & 0x10) ? 4 : -1));
+            CHECK(ecl::queen_damage(false, fl, 9, true, fixes) == (fixes ? 9 : 4));
+            CHECK(ecl::queen_damage(true, fl, 9, true, fixes) == ((fl & 0x10) ? (fixes ? 4 : 9) : -1));
+        }
+}
+
 static void test_ecl_party()
 {
     const profile::Profile* pr = profile::find(games::Game::CurseOfTheAzureBonds, 57789, 62432);
@@ -9033,6 +9049,7 @@ int main()
     test_vm_darkness();
     test_vm_events_facts();
     test_ecl_party();
+    test_queen_damage();
     test_treasure();
     test_treasure_pool();
     test_sound();
