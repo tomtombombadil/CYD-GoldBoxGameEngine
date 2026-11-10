@@ -39,58 +39,133 @@ void put(Painter& p, int x, int y, const char* s, uint16_t col, int n = 64)
     p.text(x, y, b, col);
 }
 
-const char* health_word(int h)
+// ---- The Party view's third line: the classes and levels at the left,
+// the state at the right (Tom, 2026-11-10). Each part has a long and a
+// short form; the long ones while they fit.
+constexpr uint16_t kWhite  = rgb(255, 255, 255);
+constexpr uint16_t kGood   = rgb(40, 200, 40);      // OK and the helpful effects
+constexpr uint16_t kYellow = rgb(230, 200, 40);     // the rest
+
+struct Word {
+    const char* full;
+    const char* abbr;                   // shortened, with its full stop (nullptr: none)
+    uint16_t    col;
+};
+
+constexpr int kMaxWords = 18;
+struct Span {
+    char     t[24];
+    uint16_t col;
+};
+
+// The state's words: its health (OK when nothing is wrong), then its effects, worst first
+int state_words(int health, uint16_t fx, Word* w)
 {
-    switch (h) {
-    case party::Okay:        return "Okay";
-    case party::Animated:    return "Animated";
-    case party::TempGone:    return "Away";
-    case party::Running:     return "Fled";
-    case party::Unconscious: return "Unconscious";
-    case party::Dying:       return "Dying";
-    case party::Dead:        return "Dead";
-    case party::Stoned:      return "Stoned";
-    case party::Gone:        return "Gone";
-    }
-    return "";
+    static const struct { uint8_t h; Word w; } kHealth[] = {
+        {party::Okay, {"OK", nullptr, kGood}},
+        {party::Animated, {"Animated", "Anim.", kYellow}},
+        {party::TempGone, {"Away", nullptr, style::kTextMuted}},
+        {party::Running, {"Fled", nullptr, style::kTextMuted}},
+        {party::Unconscious, {"Unconscious", "Unc.", kYellow}},
+        {party::Dying, {"Dying", nullptr, style::kWarn}},
+        {party::Dead, {"Dead", nullptr, style::kWarn}},
+        {party::Stoned, {"Stoned", "Stone", kYellow}},
+        {party::Gone, {"Gone", nullptr, style::kTextMuted}},
+    };
+    static const struct { uint16_t bit; Word w; } kFx[] = {
+        {play::kPxAsleep, {"Asleep", "Sleep", kYellow}},       {play::kPxParalysed, {"Paralyzed", "Par.", kYellow}},
+        {play::kPxHeld, {"Held", nullptr, kYellow}},           {play::kPxStunned, {"Stunned", "Stun", kYellow}},
+        {play::kPxFleeing, {"Fleeing", "Flee", kYellow}},      {play::kPxCharmed, {"Charmed", "Charm", kYellow}},
+        {play::kPxAfraid, {"Afraid", "Fear", kYellow}},        {play::kPxPoisoned, {"Poisoned", "Pois.", kYellow}},
+        {play::kPxDiseased, {"Diseased", "Dis.", kYellow}},    {play::kPxBlind, {"Blind", nullptr, kYellow}},
+        {play::kPxCursed, {"Cursed", "Curse", kYellow}},       {play::kPxSlowed, {"Slowed", "Slow", kYellow}},
+        {play::kPxBlessed, {"Blessed", "Bless", kGood}},       {play::kPxHasted, {"Hasted", "Haste", kGood}},
+        {play::kPxInvisible, {"Invisible", "Invis.", kGood}},  {play::kPxProtected, {"Protected", "Prot.", kGood}},
+    };
+    int n = 0;
+    if (health != party::Okay || !fx)
+        for (const auto& h : kHealth)
+            if (h.h == health) w[n++] = h.w;
+    for (const auto& k : kFx)
+        if ((fx & k.bit) && n < kMaxWords) w[n++] = k.w;
+    return n;
 }
 
-// The words for a member's state: its health (unless Okay), then its
-// effects, worst first, as many whole words as fit in n characters ("+"
-// when some are left out). The line's colour: red for the dead / dying,
-// gold for those out of action, cream otherwise.
-uint16_t status_line(int health, uint16_t fx, char* out, int n)
+// The classes: "Fighter 7" / "Cleric 6/Ranger 6" long, "F7" / "C6/R6" short;
+// a former class grey, the "/" grey. Returns the length.
+int class_spans(const play::PanelMember& m, bool full, Span* sp, int* ns)
 {
-    static const struct { uint16_t bit; const char* w; } kWords[] = {
-        {play::kPxAsleep, "Asleep"},     {play::kPxParalysed, "Paralysed"}, {play::kPxHeld, "Held"},
-        {play::kPxStunned, "Stunned"},   {play::kPxFleeing, "Fleeing"},     {play::kPxCharmed, "Charmed"},
-        {play::kPxAfraid, "Afraid"},     {play::kPxPoisoned, "Poisoned"},   {play::kPxDiseased, "Diseased"},
-        {play::kPxBlind, "Blind"},       {play::kPxCursed, "Cursed"},       {play::kPxSlowed, "Slowed"},
-        {play::kPxBlessed, "Blessed"},   {play::kPxHasted, "Hasted"},       {play::kPxInvisible, "Invisible"},
-        {play::kPxProtected, "Protected"},
-    };
-    int len = 0;
-    out[0] = 0;
-    bool cut = false;
-    auto add = [&](const char* w) {
-        const int wl = static_cast<int>(strlen(w)) + (len ? 1 : 0);
-        if (cut || len + wl > n - 1) {
-            cut = true;
-            return;
+    static const char* const kName[8] = {"Cleric", "Druid", "Fighter", "Paladin", "Ranger", "Magic-User", "Thief", "Monk"};
+    static const char* const kLetter[8] = {"C", "D", "F", "P", "R", "M", "T", "Mo"};
+    int len = 0, n = 0;
+    for (int c = 0; c < 8; ++c) {
+        if (!m.lv[c]) continue;
+        if (n) {
+            snprintf(sp[n].t, sizeof sp[n].t, "/");
+            sp[n++].col = style::kTextMuted;
+            ++len;
         }
-        len += snprintf(out + len, static_cast<size_t>(n + 1 - len), "%s%s", len ? " " : "", w);
-    };
-    if (health != party::Okay || !fx) add(health_word(health));
-    for (const auto& k : kWords)
-        if (fx & k.bit) add(k.w);
-    if (cut && len < n) {
-        out[len++] = '+';
-        out[len] = 0;
+        const char* nm = full ? (m.krynn && c == 5 ? "Mage" : m.krynn && c == 7 ? "Knight" : kName[c])
+                              : (m.krynn && c == 7 ? "K" : kLetter[c]);
+        len += snprintf(sp[n].t, sizeof sp[n].t, full ? "%s %d" : "%s%d", nm, m.lv[c]);
+        sp[n++].col = (m.stopped >> c & 1) ? style::kTextMuted : kWhite;
     }
-    if (health == party::Dead || health == party::Dying || health == party::Stoned || health == party::Gone)
-        return style::kWarn;
-    if (health == party::Unconscious || health == party::Running || (fx & play::kPxBlink)) return style::kGold;
-    return health == party::Okay && !fx ? style::kTextMuted : style::kText;
+    *ns = n;
+    return len;
+}
+
+// The state as spans in `room` characters: whole words; then the longest
+// shortened one by one; then without full stops; then as many as fit + "+".
+int state_spans(const Word* w, int n, int room, Span* sp, int* ns)
+{
+    const char* t[kMaxWords];
+    bool shortn[kMaxWords] = {};
+    for (int i = 0; i < n; ++i) t[i] = w[i].full;
+    auto width = [&](bool stops) {
+        int l = 0;
+        for (int i = 0; i < n; ++i) {
+            const int wl = static_cast<int>(strlen(t[i]));
+            l += (i ? 1 : 0) + wl - (!stops && shortn[i] && t[i][wl - 1] == '.' ? 1 : 0);
+        }
+        return l;
+    };
+    bool stops = true;
+    while (width(true) > room) {
+        int best = -1;
+        for (int i = 0; i < n; ++i)
+            if (w[i].abbr && !shortn[i] && (best < 0 || strlen(w[i].full) > strlen(w[best].full))) best = i;
+        if (best < 0) break;
+        t[best] = w[best].abbr;
+        shortn[best] = true;
+    }
+    if (width(true) > room) stops = false;
+    int keep = n;
+    const bool cut = width(stops) > room;
+    if (cut) {
+        // (whole words and the "+")
+        int l = 0;
+        keep = 0;
+        for (int i = 0; i < n; ++i) {
+            const int wl = static_cast<int>(strlen(t[i])) - (!stops && shortn[i] && t[i][strlen(t[i]) - 1] == '.' ? 1 : 0);
+            if (l + (i ? 1 : 0) + wl + 1 > room) break;
+            l += (i ? 1 : 0) + wl;
+            ++keep;
+        }
+    }
+    int len = 0, k = 0;
+    for (int i = 0; i < keep; ++i) {
+        int wl = static_cast<int>(strlen(t[i]));
+        if (!stops && shortn[i] && t[i][wl - 1] == '.') --wl;
+        len += snprintf(sp[k].t, sizeof sp[k].t, "%s%.*s", i ? " " : "", wl, t[i]);
+        sp[k++].col = w[i].col;
+    }
+    if (cut) {
+        snprintf(sp[k].t, sizeof sp[k].t, "+");
+        sp[k++].col = style::kTextMuted;
+        ++len;
+    }
+    *ns = k;
+    return len;
 }
 
 // ---- Party
@@ -102,8 +177,9 @@ Rows party_rows(const Area& a, int n)
 {
     Rows r;
     r.y0 = a.y + 11;
-    r.pitch = n ? (a.h - 11) / n : 24;
-    if (r.pitch > 24) r.pitch = 24;
+    // (2 px between members when they fit - Tom, 2026-11-10)
+    r.pitch = n ? (a.h - 11) / n : 26;
+    if (r.pitch > 26) r.pitch = 26;
     r.icon = r.pitch < 24 ? r.pitch : 24;
     r.tx = a.x + 2 + 24 + 3;
     r.tw = a.x + a.w - 2 - r.tx;
@@ -157,9 +233,28 @@ void party_row(Painter& p, const Rows& r, int i, const play::PanelMember& m)
                                                  : kBarOk;
         p.fill(r.tx, by, fw, bh, col);
     }
-    char st[40];
-    const uint16_t sc = status_line(m.health, m.fx, st, cols < 39 ? cols : 39);
-    put(p, r.tx, by + bh + 2, st, sc);
+    // Classes left, state right: the long classes while they fit beside the whole words
+    Word w[kMaxWords];
+    const int nw = state_words(m.health, m.fx, w);
+    Span cs[16], ss[kMaxWords + 1];
+    int nc = 0, ns = 0;
+    int cl = class_spans(m, true, cs, &nc);
+    int full_state = 0;
+    for (int i = 0; i < nw; ++i) full_state += (i ? 1 : 0) + static_cast<int>(strlen(w[i].full));
+    if (cl + 1 + full_state > cols) cl = class_spans(m, false, cs, &nc);
+    if (cl > cols) nc = 0, cl = 0;
+    const int sl = state_spans(w, nw, cols - cl - (cl ? 1 : 0), ss, &ns);
+    const int ty = by + bh + 2;
+    int x = r.tx;
+    for (int i = 0; i < nc; ++i) {
+        p.text(x, ty, cs[i].t, cs[i].col);
+        x += static_cast<int>(strlen(cs[i].t)) * kCharW;
+    }
+    x = r.tx + (cols - sl) * kCharW;
+    for (int i = 0; i < ns; ++i) {
+        p.text(x, ty, ss[i].t, ss[i].col);
+        x += static_cast<int>(strlen(ss[i].t)) * kCharW;
+    }
 }
 
 // ---- Battle: the last draw's geometry

@@ -2630,15 +2630,26 @@ a PC, PortMaster handhelds):
     (section 4). 480x320: a tap on the panel cycles **Map -> Party ->
     Battle** (Battle only in a fight); a fight starts on Battle and the
     player's own view (Map / Party, the last picked) comes back as it
-    ends. Party: a row a member (24 px; 23 with 8) - the combat icon (the
-    fight's own pictures; outside a fight made from the record, ready
-    pose only, then let go), the name (gold: the selected / the turn's),
-    "HP now/most", a bar (green, yellow under half, red under a quarter),
-    the health word unless Okay, then the effects worst first (Asleep,
-    Paralysed, Held, Stunned, Fleeing, Charmed, Afraid, Poisoned,
+    ends. Party: a row a member (26 px, 2 px apart - fewer with 8) -
+    the combat icon (the fight's own pictures; outside a fight made from
+    the record, ready pose only, then let go), the name (gold: the
+    selected / the turn's), "HP now/most", a bar (green, yellow under
+    half, red under a quarter), then (Tom, 2026-11-10) the classes left
+    and the state right. Classes: "Fighter 7" / "Cleric 6/Ranger 6" when
+    they fit beside the state's whole words, else "F7" / "C6/R6" (C D F P
+    R M T, K the knight; M = Magic-User or Mage); as View shows them (a
+    dual-classed human's former class once the new one passed it, grey;
+    the classes white, "/" grey). State: OK unless something is wrong,
+    else the health word, then the effects worst first (Asleep,
+    Paralyzed, Held, Stunned, Fleeing, Charmed, Afraid, Poisoned,
     Diseased, Blind, Cursed, Slowed, Blessed, Hasted, Invisible,
-    Protected - from the game's own effect numbers, profile fight.facts),
-    whole words while they fit, "+" for more. Battle: the field is 50 x
+    Protected - from the game's own effect numbers, profile fight.facts);
+    whole words while they fit, then the longest shortened first (Unc.,
+    Par., Prot., Pois., Dis., Invis., Anim., Sleep, Stun, Flee, Charm,
+    Fear, Curse, Slow, Bless, Haste, Stone), then without full stops,
+    then "+" for more. Colours: Dead / Dying red; Fled / Away / Gone
+    grey; OK, Blessed, Invisible, Hasted, Protected green; the rest
+    yellow. Battle: the field is 50 x
     25 squares in every game (`combat::kW / kH`); the part it uses (ground
     or fighters) fitted as large as fits, square cells (panel: 159 x 200,
     at most 8 px - the full field 3 px = 150 x 75; turned on its side it

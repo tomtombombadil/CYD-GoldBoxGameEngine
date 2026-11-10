@@ -16529,6 +16529,17 @@ bool panel_member(int i, PanelMember& m)
     const int k = member_fighter(i);
     if (k >= 0 && fg->b.f[k].fleeing) m.fx |= kPxFleeing;
     m.current = fg ? (fg->cur >= 0 && fg->cur < fg->b.n && fg->b.f[fg->cur].member == i) : pt->selected == i;
+    // (View's rule: a class with levels, and a former class once a newer one passed it)
+    int top = 0;
+    for (int c = 0; c < 8; ++c)
+        if (ch.level(c) > top) top = ch.level(c);
+    m.stopped = 0;
+    for (int c = 0; c < 8; ++c) {
+        const int lv = ch.level(c), old = ch.old_level(c);
+        m.lv[c] = static_cast<uint8_t>(lv > 0 || (old > 0 && old < top) ? lv + old : 0);
+        if (m.lv[c] && lv <= 0) m.stopped |= static_cast<uint8_t>(1u << c);
+    }
+    m.krynn = krynn_rules();
     return true;
 }
 

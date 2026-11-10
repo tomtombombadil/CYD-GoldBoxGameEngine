@@ -235,6 +235,10 @@ struct PanelMember {
     uint8_t  health;                    // party::Health
     bool     current;                   // the one whose turn it is (a fight), else the selected
     uint16_t fx;                        // PanelFx
+    uint8_t  lv[8];                     // the classes' levels as View shows them (0: not shown);
+                                        // cleric druid fighter paladin ranger magic-user thief monk
+    uint8_t  stopped;                   // bit k: class k a dual-classed human's former one
+    bool     krynn;                     // (magic-user = Mage, monk's place = Knight)
 };
 int  panel_members();
 bool panel_member(int i, PanelMember& m);
