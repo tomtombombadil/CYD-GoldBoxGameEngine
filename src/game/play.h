@@ -156,6 +156,7 @@ struct Options {
     bool camp_fix = true;         // Pool's camp has Fix as the later games' (CYD_CAMP_FIX)
     bool cheats = true;           // the Game menu's Cheats tab (CYD_CHEATS)
     bool quick_acts = true;       // the per-character Quick Actions and the Game menu's Quick tab (CYD_QUICK_ACTIONS)
+    bool read_time = true;        // timed messages at least 1 s (CYD_READ_TIME)
     bool max_hp = false;          // hit dice at their highest (training, creation) - a cheat the player opts into (CYD_MAX_HP)
     uint8_t font = 0;             // the game's text (CYD_CLEAR_FONT): 0 its own (the default), 1 the engine's
                                   // Clear font, 2 the player's Pools of Darkness font (set_darkness_dir),

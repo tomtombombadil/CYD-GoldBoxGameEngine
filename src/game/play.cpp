@@ -604,6 +604,8 @@ bool         page_prompt = false;   // "press any key" shown
 uint32_t     t_last = 0;
 bool         t_started = false;
 uint32_t     pause_until = 0;
+bool         pause_reads = false;    // the script's pause follows its text (CYD_READ_TIME: a tap ends it)
+bool         text_since_pause = false;
 int          list_row0 = 0;         // first row of a list menu's items
 int          list_sel = 0;          // the highlighted one (the cursor keys)
 bool         list_wait = false;     // the prompt printed; the list is up
@@ -894,8 +896,14 @@ bool open_area_dax(const char* stem, int block, plat::File& f, char* name, size_
 // ---- drawing ------------------------------------------------------------------
 
 bool hl();
+#ifdef CYD_TEST_FLASH
+char g_put_text[25][48];            // (the playsim's flash check: the last words put on each row)
+#endif
 void put(pic::Canvas& c, const char* s, int col, int row, uint8_t fg)
 {
+#ifdef CYD_TEST_FLASH
+    if (row >= 0 && row < 25 && s[0]) snprintf(g_put_text[row], sizeof g_put_text[row], "%s", s);
+#endif
     font::draw_text(c, d->font, s, col, row, fg, 0);
 }
 
@@ -1306,6 +1314,8 @@ void draw_tr_overland(pic::Canvas& c)
 
 uint32_t text_wipe_at = 0;               // (Pool's treasure Detect: its lines cleared then)
 uint32_t game_delay_ms();
+constexpr uint32_t kReadMs = 1000;    // (Readable Messages' least time - read_ms)
+uint32_t read_ms(uint32_t times = 1);
 uint8_t start_speed();
 bool world_parked = false;           // the 3D view's walls on the card during a fight (play_fight.inc)
 // The scripts' text colour: light green (Darkness: game byte 0x39 - its
@@ -3483,7 +3493,7 @@ void note(pic::Canvas& c, const char* t)
     // (one game delay: the games' menu-line message routine prints and
     // waits it once - Curse's START image 0x579F, the same in Secret,
     // Champions, Death Knights, Darkness; Pool's START.EXE 0x2233 -> 0x7E4E)
-    note_until = plat::now_ms() + game_delay_ms();
+    note_until = plat::now_ms() + read_ms();
     if (!note_until) note_until = 1;
 }
 
@@ -4315,7 +4325,7 @@ bool items_yes_no(Ask what, char k, pic::Canvas& c)
         // menu line, for the game's delay - then the items again: START
         // ovr20 +0x20F8 -> 0x709:0xDBE; DOSBox, the shop at 9,11)
         say_item(c, t);
-        note_until = plat::now_ms() + game_delay_ms();
+        note_until = plat::now_ms() + read_ms();
         if (!note_until) note_until = 1;
         items_after_note = true;
         return true;
@@ -9297,7 +9307,7 @@ void show_scrolls(pic::Canvas& c)
             // (Pool: its words wait the game's delay and go - START ovr16
             // +0xC26 -> 0xBA:0x16EC with its "timed" flag: 0x709:0xDBE, then
             // the rows cleared; DOSBox, Scribe with no scroll: gone at once)
-            note_until = plat::now_ms() + game_delay_ms();
+            note_until = plat::now_ms() + read_ms();
             if (!note_until) note_until = 1;
             status_after_note = true;
         }
@@ -9769,7 +9779,7 @@ void rest_tick(uint32_t now, pic::Canvas& c)
         if (said) {
             dirty_rows(17, 22);
             draw_rest_time(c);
-            rest.pause_until = now + delay;
+            rest.pause_until = now + (CYD_READ_TIME && opts.read_time && delay < kReadMs ? kReadMs : delay);
             if (!rest.pause_until) rest.pause_until = 1;
             return;
         }
@@ -9956,6 +9966,16 @@ void ow(uint32_t at, char* out, size_t cap)
     OvrWords src;
     if (!at || !src.open()) return;
     read_word(src, at, out, cap);
+}
+
+uint32_t game_delay_ms();
+// How long a timed message stays (CYD_READ_TIME, Tom 2026-11-10): the
+// game's delay, but at least a second while Readable Messages is on (a tap
+// still puts it away sooner); `times` the original's multiple
+uint32_t read_ms(uint32_t times)
+{
+    const uint32_t g = game_delay_ms() * times;
+    return CYD_READ_TIME && opts.read_time && g < kReadMs ? kReadMs : g;
 }
 
 uint32_t game_delay_ms()
@@ -10211,7 +10231,7 @@ void next_line(pic::Canvas& c)
     }
     say_line(c, l.who, t);
     if (cr.on_camp) draw_party(c, 17);
-    cr.until = plat::now_ms() + game_delay_ms();
+    cr.until = plat::now_ms() + read_ms();
     if (!cr.until) cr.until = 1;
 }
 
@@ -10260,7 +10280,7 @@ void choose_spell(int spell, pic::Canvas& c)
         cr.stage = CastRun::Saying;
         cr.n = cr.at = 0;
     }
-    cr.until = plat::now_ms() + game_delay_ms();
+    cr.until = plat::now_ms() + read_ms();
     if (!cr.until) cr.until = 1;
 }
 
@@ -10439,7 +10459,7 @@ void use_spell(int i, int sp, bool scroll, pic::Canvas& c)
     put(c, it, 1, 22, 10);
     dirty_rows(21, 22);
     cr.stage = CastRun::Casts;
-    cr.until = plat::now_ms() + game_delay_ms();
+    cr.until = plat::now_ms() + read_ms();
     if (!cr.until) cr.until = 1;
 }
 
@@ -13331,6 +13351,7 @@ void begin_wait(pic::Canvas& c)
     switch (vm->wait()) {
     case ecl::Wait::Print: {
         heard(vm->text());
+        if (vm->text()[0] && strcmp(vm->text(), "\n") != 0) text_since_pause = true;
         if (strcmp(vm->text(), "\n") == 0) {          // PRINT RETURN
             w.col = w.r.x0;
             ++w.row;
@@ -13464,9 +13485,15 @@ void begin_wait(pic::Canvas& c)
         input_buf[0] = 0;
         draw_input(c);
         break;
-    case ecl::Wait::Pause:
-        pause_until = plat::now_ms() + vm->pause_ms();
+    case ecl::Wait::Pause: {
+        // (a pause after the script's text: at least read_ms - Readable Messages)
+        uint32_t ms = vm->pause_ms();
+        pause_reads = text_since_pause && CYD_READ_TIME && opts.read_time;
+        if (pause_reads && ms < kReadMs) ms = kReadMs;
+        text_since_pause = false;
+        pause_until = plat::now_ms() + ms;
         break;
+    }
     case ecl::Wait::Who: {
         // "<prompt> Select" over the party list (a tap on a line picks them)
         text::clear(c, text::kTextArea);
@@ -18184,7 +18211,24 @@ void tap_highlight_end(pic::Canvas& c)
     fl.orig = nullptr;
 }
 
+#ifdef CYD_TEST_FLASH
+// (the playsim's flash check: a tap as the board makes it - the thing under
+// the stylus lit as it touches, the tap, then the light put back)
+void tap_inner(int x, int y, pic::Canvas& c);
 void tap(int x, int y, pic::Canvas& c)
+{
+    static int depth = 0;
+    int y0, y1;
+    const bool lit = depth == 0 && d && tap_highlight(x, y, c, &y0, &y1);
+    ++depth;
+    tap_inner(x, y, c);
+    --depth;
+    if (lit && d) tap_highlight_end(c);
+}
+void tap_inner(int x, int y, pic::Canvas& c)
+#else
+void tap(int x, int y, pic::Canvas& c)
+#endif
 {
     if (!d) return;
     cv = &c;
@@ -18217,6 +18261,10 @@ void tap(int x, int y, pic::Canvas& c)
         return;
     }
     const int row = y / 8, col = x / 8;
+    if (waiting && vm->wait() == ecl::Wait::Pause && pause_reads) {
+        pause_until = plat::now_ms();       // (a tap ends a pause kept for reading)
+        return;
+    }
     if (waiting) {
         switch (vm->wait()) {
         case ecl::Wait::Print:

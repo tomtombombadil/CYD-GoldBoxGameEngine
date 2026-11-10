@@ -2775,6 +2775,19 @@ a PC, PortMaster handhelds):
     16 +10, F/T +7, F/MU +7 / +4; Pool C/F/MU Con 12 (8+10+4)/3 = +7;
     Treasures F/MU/T Con 18 (MU) 4/3 + 2/3 = +1; Champions knight Con 18
     +14.
+  - `CYD_READ_TIME` (Tom, 2026-11-10: "messages ... flash past so quickly
+    you can't read them. That's not acceptable"): **Readable Messages** (on
+    by default, `comforts_off2` bit 16) - a message the originals show for
+    their delay and take away (the menu line's notes - "Not Enough
+    Experience", a shop's word, "Not enough Money.", "Must be unreadied",
+    "X breathes a sigh of relief." - a camp spell's lines, the rest's
+    words, a script's pause after its text, PoolRad's treasure Detect
+    lines) stays at least 1 s (`play::read_ms`, kReadMs), or until a tap.
+    The originals' delay: Speed x 100 ms (PoolRad x 225) - none at speed 0.
+    Fights keep the Speed setting (the player's own choice). Checked by
+    sweep's `flashcheck` (tools/playsim/flash_check.inc, devkit
+    flashcheck.sh: text rows wiped under 1 s with no input; READTIME=0 the
+    originals' timing).
   - `CYD_QUICK_ACTIONS` (Tom, 2026-11-09): **Quick Actions** - what each
     party member may do when Quick (an NPC: the computer) plays it in a
     fight. The Game menu's **Quick** tab (between Logs and Cheats; with it

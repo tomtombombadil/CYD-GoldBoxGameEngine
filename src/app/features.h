@@ -272,6 +272,20 @@
 #define CYD_QUICK_ACTIONS 1
 #endif
 
+// CYD_READ_TIME (Tom, 2026-11-10: "messages ... flash past so quickly you
+// can't read them. That's not acceptable"): a message the originals show
+// for their delay alone and then take away - the menu line's ("Not Enough
+// Experience" at a training hall, a shop's word, "Not enough Money."), a
+// camp spell's lines, a script's pause after its text, Pool's treasure
+// lines - stays at least kReadMs (1 s) or until a tap (a tap puts it away
+// as before). The originals' delay is the game's Speed x 100 ms (Pool's x
+// 225) - nothing at all at speed 0. Fights keep the Speed setting's
+// timing (the player's own choice there). Settings key Readable Messages
+// (on by default; As Original turns it off). Where: play.cpp read_ms().
+#ifndef CYD_READ_TIME
+#define CYD_READ_TIME 1
+#endif
+
 // Each comfort compiled in can also be switched off by the player: the
 // game's Settings page (Tom, 2026-10-11, v0.72.0; one set for all games,
 // settings.h comforts_off), the one Settings screen (Home, a game's page, the

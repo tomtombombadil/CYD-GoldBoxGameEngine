@@ -7063,7 +7063,7 @@ void treasure_detect(pic::Canvas& c)
     dirty_rows(17, 22);
     names->detect = true;
     // (Pool: the lines go after the game's delay - DOSBox: gone at the next screen)
-    if (d->prof->game == games::Game::PoolOfRadiance) text_wipe_at = plat::now_ms() + 3 * game_delay_ms();
+    if (d->prof->game == games::Game::PoolOfRadiance) text_wipe_at = plat::now_ms() + read_ms(3);
     treasure_menu(c);
 }
 

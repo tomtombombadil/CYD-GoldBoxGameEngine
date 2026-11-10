@@ -3280,7 +3280,7 @@ void tap_sounds(const ui::Tap& t)
 // One set for all games (settings.h comforts_off), on the one Settings
 // screen (below); a comfort compiled out (app/features.h) isn't listed.
 enum Comfort { kCFont, kCGallery, kCBigIcon, kCJournal, kCDemoTap, kCMoreGuys, kCPortrait, kCItemFixes, kCRolls,
-               kCCampFix, kCCheats, kCCompanion, kCMaxHp, kCQuick, kComforts };
+               kCCampFix, kCCheats, kCCompanion, kCMaxHp, kCQuick, kCRead, kComforts };
 
 bool comfort_built(int c)
 {
@@ -3299,6 +3299,7 @@ bool comfort_built(int c)
     case kCCompanion: return CYD_COMPANION_VIEWS;
     case kCMaxHp: return CYD_MAX_HP;
     case kCQuick: return CYD_QUICK_ACTIONS;
+    case kCRead: return CYD_READ_TIME;
     default: return true;
     }
 }
@@ -3307,7 +3308,8 @@ uint16_t comfort_bit(int c)
 {
     static const uint16_t kBits[kComforts] = {0, kOffGallery, kOffBigIcon, kOffJournal, kOffDemoTap, kOffMoreGuys,
                                               kOffPortrait, kOffItemFixes, kOffRolls, kOff2CampFix << 8,
-                                              kOff2Cheats << 8, kOff2Companion << 8, 0, kOff2Quick << 8};
+                                              kOff2Cheats << 8, kOff2Companion << 8, 0, kOff2Quick << 8,
+                                              kOff2ReadTime << 8};
     return kBits[c];
 }
 uint16_t comforts_off() { return static_cast<uint16_t>(cfg->comforts_off | cfg->comforts_off2 << 8); }
@@ -3341,6 +3343,7 @@ void apply_options()
     o.cheats = comfort_on(kCCheats);
     o.max_hp = comfort_on(kCMaxHp);
     o.quick_acts = comfort_on(kCQuick);
+    o.read_time = comfort_on(kCRead);
     o.font = comfort_on(kCFont) ? cfg->game_font : kFontGame;
     play::set_options(o);
 }
@@ -3373,7 +3376,7 @@ ui::Rect comfort_qmark(const ui::Rect& cell)
 const char* const kComfortNames[kComforts] = {"Game Font",        "Icon Gallery",    "Large Icon",    "Journal Pop-Up",
                                               "Tap to Stop Demo", "More Characters", "Icon Portrait", "Game Fixes",
                                               "Show Rolls",       "Camp Fix",        "Cheats Tab",      "Companion Views",
-                                              "Max Hit Points",   "Quick Actions"};
+                                              "Max Hit Points",   "Quick Actions",   "Readable Messages"};
 
 // What each option does (sentence case; Tom, v0.84.0)
 const char* comfort_help_text(int c)
@@ -3479,6 +3482,12 @@ const char* comfort_help_text(int c)
                "Spells ticked - Quick as the game's own; Spells ticked is the original's Magic On (its "
                "Alt-M): Quick casts that character's spells. NPCs start with all but Bandage First ticked - "
                "the game's own AI. Off: as the original, no Quick tab.";
+    case kCRead:
+        return "Messages the game shows only for a moment and then takes away - \"Not Enough Experience\" "
+               "at a training hall, a shop's word, a camp spell's lines, a script's line before it goes on - "
+               "stay at least a second, or until you tap. The originals show them for the game's Speed "
+               "setting's delay, which at the fastest is none at all. Fights keep the Speed setting's "
+               "timing. Off: as the original.";
     case kCMaxHp:
         return "A cheat: a new character's hit points and each level gained by training (a training hall "
                "or the Cheats tab's Trainer) get the most their hit dice can give - 10 a fighter, 8 a "

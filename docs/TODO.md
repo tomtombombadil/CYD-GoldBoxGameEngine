@@ -138,6 +138,18 @@ the Project as claude/TODO.md.
 
 ## Claude
 
+- [x] Messages too quick to read (Tom, 2026-11-10, PoolRad's training
+      "Not Enough Experience"; v0.194.0): Readable Messages (CYD_READ_TIME,
+      Settings key, on) - the menu line's notes, camp spell lines, the
+      rest's words, a script's pause after its text, PoolRad's treasure
+      lines stay at least 1 s or until a tap. sweep flashcheck (devkit
+      flashcheck.sh): originals' timing 88 finds over 2 seeds x 9 games,
+      with the comfort 0 over 3 seeds x 9 games. Fights keep the Speed
+      setting. Not reached by the monkey: every script's own pauses.
+- [ ] Tom: are fight messages fast enough to read at your Speed setting,
+      or should Readable Messages cover fights too? (They keep the game's
+      Speed now - Speed is the player's own choice there.)
+
 - [x] 5.0" Companion Strip (Tom, 2026-11-10; v0.192.0): Settings switch
       (on by default), the game against the left edge, the strip 1:1 -
       Party y 0-218, map / battle y 220-377 (map lines and legend cut on

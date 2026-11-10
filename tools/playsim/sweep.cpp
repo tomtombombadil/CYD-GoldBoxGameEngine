@@ -1382,6 +1382,9 @@ static bool monkey_boot()
     return d && pt && pt->count;
 }
 
+static int monkey_settle = 5;               // (ticks after each action; flashcheck: 1.5 s)
+static void (*monkey_tick)() = nullptr;     // (flashcheck: after every tick)
+static void (*monkey_input)() = nullptr;    // (flashcheck: before every action)
 static void sweep_monkey(int rounds)
 {
     using namespace play;
@@ -1399,6 +1402,7 @@ static void sweep_monkey(int rounds)
     if (!monkey_boot()) return;
     int last_screen = -1, same_screen = 0;
     for (int r = 0; r < rounds; ++r) {
+        if (monkey_input) monkey_input();
         if (!d || screen == Screen::Title || !pt || pt->count < 3) {
             if (++boots > 200 || system(back_up.c_str()) != 0 || !monkey_boot()) break;
             continue;
@@ -1412,9 +1416,10 @@ static void sweep_monkey(int rounds)
         // rest, items, training's screens get the actions)
         if (play::walking() && getenv("MCAMP") && pick(100) < atoi(getenv("MCAMP"))) {
             if (!tap_word('E') && !tap_word('C')) tap_item(pick(menu.count));
-            for (int k = 0; k < 5; ++k) {
+            for (int k = 0; k < monkey_settle; ++k) {
                 g_now += 20;
                 play::tick(g_now, C);
+                if (monkey_tick) monkey_tick();
             }
             pcheck::check();
             continue;
@@ -1450,9 +1455,10 @@ static void sweep_monkey(int rounds)
             static const play::Act acts[] = {play::Act::Forward, play::Act::Forward, play::Act::Forward, play::Act::TurnLeft,
                                              play::Act::TurnRight, play::Act::TurnAround, play::Act::StepLeft, play::Act::StepRight};
             play::act(acts[pick(8)], C);
-            for (int k = 0; k < 5; ++k) {
+            for (int k = 0; k < monkey_settle; ++k) {
                 g_now += 20;
                 play::tick(g_now, C);
+                if (monkey_tick) monkey_tick();
             }
             continue;
         }
@@ -1491,11 +1497,13 @@ static void sweep_monkey(int rounds)
             for (int k = 0; k < 50; ++k) {
                 g_now += 20;
                 play::tick(g_now, C);
+                if (monkey_tick) monkey_tick();
             }
         }
-        for (int k = 0; k < 5; ++k) {
+        for (int k = 0; k < monkey_settle; ++k) {
             g_now += 20;
             play::tick(g_now, C);
+            if (monkey_tick) monkey_tick();
         }
         if (!d) continue;
         {
@@ -1788,6 +1796,9 @@ static void dice_faces(std::initializer_list<int> f) { dice_usual(); b_faces.ass
 #endif
 #include "camp_fuzz.inc"
 #include "nav_check.inc"
+#ifdef CYD_TEST_FLASH
+#include "flash_check.inc"
+#endif
 
 int main(int argc, char** argv)
 {
@@ -1821,6 +1832,20 @@ int main(int argc, char** argv)
         sweep_monkey(argc > 4 ? atoi(argv[4]) : 5000);
         nvc::report();
     }
+#ifdef CYD_TEST_FLASH
+    else if (mode == "flashcheck") {
+        rnd.seed(static_cast<unsigned>(arg ? arg : 1));
+        if (getenv("READTIME") && atoi(getenv("READTIME")) == 0) {
+            play::opts.read_time = false;
+        }
+        monkey_tick = flash::tick;
+        monkey_settle = 75;
+        monkey_input = flash::input;
+        monkey_modify = nvc::enter_modify;
+        sweep_monkey(argc > 4 ? atoi(argv[4]) : 5000);
+        flash::report();
+    }
+#endif
     else if (mode == "monkey") {
         rnd.seed(static_cast<unsigned>(arg ? arg : 1));
         sweep_monkey(argc > 4 ? atoi(argv[4]) : 20000);

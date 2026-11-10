@@ -973,7 +973,11 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
 - Slow work inside a tap puts its message up first (`play::present_now`;
   Tom, v0.85.5: saving shows "Saving to slot A...").
 - Errors stay on screen until tapped (Tom, 2026-10-09) - never timed. The
-  games' own timed messages ("Not enough Money.") keep the games' timing.
+  games' own timed messages ("Not enough Money.") stay at least 1 s or
+  until a tap (Tom, 2026-11-10: they flashed past unread - Readable
+  Messages, `CYD_READ_TIME`; off = the games' timing); fights keep the
+  Speed setting. New timed text goes through `play::read_ms`, and
+  sweep's `flashcheck` must stay at 0 in every game.
 - Sounds: go easy - no sound on plain key presses.
 - Game sound (Tom, 2026-10-09): the games' own sound effects, both ways
   the originals offered - **Tandy 1000** (the 3-voice + noise chip; the
