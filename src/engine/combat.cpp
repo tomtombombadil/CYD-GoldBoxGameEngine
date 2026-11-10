@@ -246,6 +246,7 @@ bool read_tables(Tables& t, const TableAt& at, ReadDs read, void* ctx)
     t.mood_known = at.mood_rows != 0;
     t.flee_inc = at.flee_inc;
     t.step_pool = at.step_pool;
+    t.finder_scan = at.finder_scan;
     for (int k = 0; k < 3; ++k) t.clouds[k] = at.clouds[k];
     if (t.mood_known && !read(ctx, at.mood_rows, t.mood, sizeof t.mood)) return false;
     if (at.reserve && !(read(ctx, at.reserve, t.reserve_mon, 5) && read(ctx, static_cast<uint16_t>(at.reserve + 5), t.reserve_pic, 5)))
@@ -3502,6 +3503,54 @@ bool cloud_ok(const Battle& b, const Tables& t, Fighter& f, int x, int y, create
     return true;
 }
 
+} // namespace
+
+// The second step back's finder (Curse GAME.OVR 0x171AC, the same in every
+// DAX game - its count-2 call with range 0xFF and the second argument 1;
+// round 16): pass 1 - up to 20 random picks among the enemies on the field,
+// one seen (0x144AB) taken, one not struck off, a pick already struck ends
+// the pass (Darkness / Treasures, 0x22191 / 0x2A422: one random place, then
+// the list in order from there, round, as many as it holds); pass 2 - the
+// list made again and its random pick taken, seen or not ([0x6EAC]+6 set
+// skips the sight test)
+int finder_any(Battle& b, const Tables& t, int i, create::Dice& d)
+{
+    Fighter& f = b.f[i];
+    const int my = f.team() ? 1 : 0;
+    int list[kMaxFighters], n = 0;
+    auto build = [&]() {
+        n = 0;
+        for (int c = 0; c < b.n && n < kMaxFighters; ++c)
+            if (b.f[c].up() && b.f[c].size && (b.f[c].team() ? 1 : 0) != my) list[n++] = c;
+    };
+    auto take = [&](int c) {
+        f.target = static_cast<int16_t>(c);
+        return c;
+    };
+    build();
+    if (t.finder_scan) {
+        if (n) {
+            int k = d.roll(n, 1) - 1;
+            for (int left = n; left > 0; --left, k = (k + 1) % n)
+                if (seen_enemy(b, i, list[k])) return take(list[k]);
+        }
+    } else {
+        for (int tries = 20; tries > 0 && n > 0; --tries) {
+            const int k = d.roll(n, 1) - 1;
+            if (list[k] < 0) break;
+            if (seen_enemy(b, i, list[k])) return take(list[k]);
+            list[k] = -1;
+            bool any = false;
+            for (int j = 0; j < n; ++j) any = any || list[j] >= 0;
+            if (!any) break;
+        }
+    }
+    build();
+    if (!n) return -1;
+    return take(list[d.roll(n, 1) - 1]);
+}
+
+namespace {
 bool mood_step(Battle& b, const Tables& t, int i, int base, create::Dice& d, Plan& p, bool fleeing)
 {
     Fighter& f = b.f[i];
@@ -3524,7 +3573,7 @@ bool mood_step(Battle& b, const Tables& t, int i, int base, create::Dice& d, Pla
         ++f.flee_back;
         if (f.flee_back > 1) f.target = -1;
         bool done = dir < 0 || f.flee_back > 2;
-        if (!done && f.flee_back == 2 && pick_target(b, t, i, d) < 0) done = true;     // (none: 0xCC32, it guards)
+        if (!done && f.flee_back == 2 && finder_any(b, t, i, d) < 0) done = true;     // (none: 0xCC32, it guards)
         if (done) {
             f.moves = 0;
             if (fleeing) return false;

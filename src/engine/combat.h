@@ -107,6 +107,10 @@ struct Tables {
     // the cloud squares its try takes (StepCloud)
     uint8_t flee_inc;
     bool    step_pool;
+    // The second step back's finder (finder_any): Darkness / Treasures scan
+    // the list from one random place (GAME.OVR 0x22191 / 0x2A422), the
+    // others pick at random up to 20 times
+    bool    finder_scan = false;
     StepCloud clouds[3];
     uint8_t foe_names[20][16];
     uint8_t dodge_names[2][16];
@@ -128,6 +132,7 @@ struct TableAt {
     uint8_t  flee_inc = 0;              // Tables::flee_inc
     bool     step_pool = false;         // PoolRad's try: the ground's value < the moves, the cost <= the moves (else cost < moves)
     StepCloud clouds[3] = {};
+    bool     finder_scan = false;       // Tables::finder_scan
 };
 // Reads them: read(ctx, ds offset, out, n) gives the data segment's bytes
 using ReadDs = bool (*)(void* ctx, uint16_t ds, uint8_t* out, size_t n);
@@ -1129,6 +1134,10 @@ bool flight_step(FlightPath& p);
 // with a missile weapon it shoots at its target in reach and sight (or a
 // random one there); else it steps toward its target; else it guards.
 Plan think(Battle& b, const Tables& t, int i, create::Dice& d);
+// The DAX games' second step back's target finder (range 0xFF, the sight
+// test skipped in its second pass - Curse GAME.OVR 0x171AC; round 16): the
+// target set, or -1
+int finder_any(Battle& b, const Tables& t, int i, create::Dice& d);
 // Leaving the fight: gets away (faster than every enemy able to reach, or
 // even and d2) - status Running, off the field
 bool flee(Battle& b, const Tables& t, int i, create::Dice& d);

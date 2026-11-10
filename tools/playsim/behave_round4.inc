@@ -2523,6 +2523,86 @@ void feeblemind()
     }
 }
 
+// The second step back's finder (round 16): oracle_finder_<game>.txt from
+// GAME.OVR (tools/devkit/oracles/finder.py - the count-2 call's finder and
+// its passes). combat::finder_any with set d-rolls: none in sight - one is
+// still taken (pass 2 skips the sight test); random-pick games: a pick of one
+// already struck ends pass 1 and pass 2 may take an unseen one beside a seen
+// one; scan games (Darkness-type): from any start the seen one is found
+int fd_seq[8], fd_at = 0;
+int fd_die(int n) { return fd_at < 8 && fd_seq[fd_at] > 0 ? (fd_seq[fd_at++] - 1) % n : 0; }
+void finder_check()
+{
+    static const char* kName[] = {"", "poolrad", "curse", "secret", "darkness", "champions", "knights", "queen", "gateway", "treasures"};
+    const int g = game();
+    if (g == 7 || g < 1 || g > 9) return;
+    char path[256];
+    snprintf(path, sizeof path, "%s/oracle_finder_%s.txt", getenv("ORACLE_DIR") ? getenv("ORACLE_DIR") : "/tmp/claude-0/bt", kName[g]);
+    FILE* fo = fopen(path, "r");
+    if (!fo) {
+        expect(P, "the step back's finder: oracle_finder (tools/devkit/oracles/finder.py)", false, "%s missing", path);
+        return;
+    }
+    int tries = -1, scan = -1, skip = -1;
+    char line[240];
+    while (fgets(line, sizeof line, fo)) {
+        const char* q = strstr(line, "tries ");
+        if (q) tries = atoi(q + 6);
+        if ((q = strstr(line, "scan "))) scan = atoi(q + 5);
+        if ((q = strstr(line, "pass2skip "))) skip = atoi(q + 10);
+    }
+    fclose(fo);
+    if (!fight() || !fg->b.fx || !fg->b.fx->invisible) return;
+    combat::Battle& b = fg->b;
+    const uint8_t inv = b.fx->invisible;
+    auto scene = [&]() {
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(B, 1, 10, 10, 60);
+        mx::put(0, 0, 3, 3, 60);
+        mx::put(1, 0, 16, 3, 60);
+        F(B).target = -1;
+    };
+    auto run = [&](std::initializer_list<int> rolls) {
+        fd_at = 0;
+        int k = 0;
+        for (int r : rolls) fd_seq[k++] = r;
+        while (k < 8) fd_seq[k++] = 1;
+        create::g_die_hook = fd_die;
+        const int got = combat::finder_any(b, fg->t, B, rng);
+        create::g_die_hook = nullptr;
+        return got;
+    };
+    int n = 0, bad = 0;
+    char first[200] = "";
+    auto check = [&](const char* what, int got, int want) {
+        ++n;
+        if (got != want && !bad++) snprintf(first, sizeof first, "%s: %d, want %d", what, got, want);
+    };
+    // nobody in sight: pass 2 takes its pick all the same
+    scene();
+    q_add(F(0), inv, 0);
+    q_add(F(1), inv, 0);
+    // (pass 1: a scan takes one roll, the random picks one each - here two, both struck)
+    check("none in sight, pass 2 picks the first", scan == 1 ? run({1, 1}) : run({1, 2, 1}), skip ? 0 : -1);
+    check("none in sight, pass 2 picks the second", scan == 1 ? run({1, 2}) : run({1, 2, 2}), skip ? 1 : -1);
+    if (scan == 1) {
+        // Darkness-type: 0 unseen, 1 seen - from either start the scan finds 1
+        scene();
+        q_add(F(0), inv, 0);
+        check("scan from the unseen one", run({1}), 1);
+        check("scan from the seen one", run({2}), 1);
+    } else {
+        scene();
+        q_add(F(0), inv, 0);
+        check("the seen one picked", run({2}), 1);
+        // the unseen one picked, struck, picked again: pass 1 over - pass 2 takes it unseen
+        check("a struck one picked again: pass 2, its pick unseen", run({1, 1, 1}), skip ? 0 : 1);
+        check("the unseen one struck, then the seen one", run({1, 2}), 1);
+    }
+    expect(P, "the second step back's finder as the original's (oracle_finder: its passes, the second without the sight test)",
+           bad == 0 && tries >= 0 && skip == 1, "tries %d scan %d skip %d; %d of %d wrong (%s)", tries, scan, skip, bad, n, first);
+}
+
 // The stats' recalculation's effects (round 16): oracle_statfx_<game>.txt
 // from GAME.OVR (tools/devkit/oracles/statfx.py - Secret 0x374A8, Darkness
 // 0x3307E, Treasures 0x3CD87: the Strength effects in order, the levels
@@ -2973,6 +3053,7 @@ void run()
     if (want("qlost")) queen_lost();
     if (want("qhooks")) queen_hooks();
     if (want("statfx")) stat_effects();
+    if (want("finder")) finder_check();
     if (want("restore")) restore();
     if (want("rest")) rest();
     rules::set_fixes(true);
