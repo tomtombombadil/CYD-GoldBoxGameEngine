@@ -294,6 +294,10 @@ public:
         minutes_ = 0;
         return m;
     }
+#ifdef CYD_TEST_HOOKS
+    // (the tests: every minute the clock has moved - effects follow it)
+    long minutes_all() const { return minutes_all_; }
+#endif
 
 private:
     struct Op {
@@ -382,6 +386,9 @@ private:
     bool dmg_killed_ = false;
     Stop damage_step();
     int minutes_ = 0;
+#ifdef CYD_TEST_HOOKS
+    long minutes_all_ = 0;
+#endif
     items::Ground* ground_ = nullptr;
     bool monsters_ = false;             // LOAD MONSTER since the last CLEARMONSTERS
     bool duel_ = false;                 // CALL 0x8000 / 0x8001 since the last fight

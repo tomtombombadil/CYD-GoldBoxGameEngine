@@ -195,6 +195,10 @@ The Quick tab as an engine page + the party's NPCs (2026-11-09, round 14):
                            off, Melee / Move / Spells unticked limit an NPC) and the NPC file case
   fightfuzz FUZZDRAIN=1     every monster drains a level with its hits (its game's drain-1 effect): fight_check R15 -
                            a party character drained (levels down or lost levels up) shows Drained in the Companion
+  fightfuzz (R17 / R18)     effects against the game clock in fights, the fight's end list; FXTRACE=i one fighter's
+                           minutes each clock step, AFFWATCH=NAME a party member's effects as they change, R18DBG=1
+  monkey P8FX=1             timed effects put on the party now and then: party_check P8 - out of fights they follow
+                           the clock (args: monkey <seed> <actions>)
   fightfuzz FUZZCHARM=1     the game's charm (200 minutes) put on party members: R16 - none left after the fight with
                            Game Fixes (R16NEG=1: the fixes off - must fire in PoolRad)
   fightfuzz FUZZTAPQ=n      one pass in n a tap on the field during pages / the computer's play (with QAFUZZ=1):

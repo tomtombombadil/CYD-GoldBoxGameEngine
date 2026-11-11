@@ -162,6 +162,19 @@ the Project as claude/TODO.md.
       (R14, nine games, and R14 fails with the hand-off taken out). (c) is
       now moot for pages (a tap no longer moves them on). (a) decided (Tom,
       20:05): no - the attack pause stays ours (10 ms + 10 a speed step).
+- [x] Status lifecycle round (Tom, 2026-11-11: "statuses ... enabled
+      when they should be ... disabled when they should be ... don't last
+      or hang too long or not long enough"; no firmware change needed):
+      fightfuzz R17 - every effect against the game clock's minutes (a
+      minute a round; time 0 for ever; at or under the step it ends; the
+      Dark Queen's clock at the round's start): too long / a wrong count /
+      gone in a minute nobody acted; R18 - the fight's end takes exactly
+      the game's own list (+ charm / dragon fear with Game Fixes) and keeps
+      the rest; monkey P8 (P8FX=1 puts timed effects on) - out of fights
+      the same clock rule. Results, nine games x two seeds: thousands of
+      countdowns and run-outs, 0 broken. Also found: party_check never kept
+      `s.hp`, so P1's wrap, P3 and P4 (checks against the last look) never
+      ran - fixed, they pass.
 - [x] Companion: Charmed after the fight / Dirten Drained (Tom,
       2026-11-11, PoolRad, Valhingen's vampire; his save F): v0.196.4 -
       the charm's effect ends with the fight under Game Fixes (PoolRad's

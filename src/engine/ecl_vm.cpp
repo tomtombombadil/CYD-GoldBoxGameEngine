@@ -136,6 +136,9 @@ void Vm::advance_clock(int slot, int amount)
         int m = amount;
         for (int k = 2; k <= slot; ++k) m *= kClockScale[k - 1];
         if (minutes_ < 100000) minutes_ += m;
+#ifdef CYD_TEST_HOOKS
+        minutes_all_ += m;
+#endif
     }
     for (int carry = amount; slot >= 0 && slot < 7 && carry; ++slot) {
         if (slot == 6 && set_.byte_map) {

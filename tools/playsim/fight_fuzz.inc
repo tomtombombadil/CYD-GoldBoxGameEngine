@@ -68,6 +68,7 @@ void put_fx(combat::Fighter& f, int type, int minutes)
         f.aff = m->aff;
     }
     uint8_t* a = f.aff[(*f.n_aff)++];
+    ++fc::fx_acts;                      // (R17: an effect put on, as an act would)
     memset(a, 0, party::kAffectSize);
     a[0] = static_cast<uint8_t>(type);
     a[1] = static_cast<uint8_t>(minutes);
@@ -323,6 +324,7 @@ bool fight(int k)
         default: break;
         }
     }
+    if (!fg) fc::fight_end();
     // R16 (Tom, 2026-11-11): with Game Fixes no charm outlasts its fight
     // (R16NEG=1: the check without the fixes - it must fire in PoolRad)
     if (!fg && (rules::fixes() || getenv("R16NEG")) && play::pt && play::d->prof->fight.facts.charm)

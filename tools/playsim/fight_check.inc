@@ -121,11 +121,24 @@ unsigned long hp_seen = ~0ul;                 // (R10: the fighters' hit points,
 int  hp_round = 0;
 long tapq_seen = 0, drain_seen = 0, charm_seen = 0;                           // (R14: taps during pages / the computer's play)
 long qa_seen = 0;                             // (R13: a Quick member's own actions with any switch unticked)
+// R17 / R18 (Tom, 2026-11-11: "statuses ... enabled when they should be ...
+// disabled when they should be ... don't last too long or not long enough"):
+// each fighter's effects at the last round (type, minutes), the acts since
+struct FxSeen { uint8_t type; int minutes; };
+std::vector<std::vector<FxSeen>> fx_prev;
+long fx_clock = -1;
+long fx_acts = 0;
+long fx_count[4] = {};                        // (counted down, ran out, renewed, taken by an act)
+// R18: the party's effects at the fight's last tick
+std::vector<std::vector<FxSeen>> party_fx;
+std::vector<std::string> party_names;           // (by name: one leaving at the fight's end moves the others up)
+long party_fx_acts = 0;                       // (the acts when it was taken: any after it, the fight's last tick did more than end it)
 
 void on_act(const combat::Battle& b, int i, combat::TestAct a, int t, int extra)
 {
     using combat::TestAct;
     ++acts;
+    ++fx_acts;
     if (i < 0 || i >= b.n) {
         bad("R1", std::string(act_name(a)) + " by fighter " + std::to_string(i) + " of " + std::to_string(b.n));
         return;
@@ -255,6 +268,64 @@ void on_act(const combat::Battle& b, int i, combat::TestAct a, int t, int extra)
     }
 }
 
+// R18 the fight's end: the game's own list (its program's - none in
+// PoolRad) leaves no party character with one of its effects, the charm
+// and Darkness's dragon fear neither with Game Fixes; every other effect
+// still running at the fight's last tick is kept (the animated dead's goes
+// with them; a timed one at 1 minute may have just run out)
+long end_kept = 0, end_taken = 0;
+void fight_end()
+{
+    if (!play::pt || !play::d) return;
+    const auto& fp = play::d->prof->fight;
+    auto ended_by_fight = [&](uint8_t t) {
+        for (uint8_t e : fp.ends)
+            if (e && e == t) return true;
+        if (rules::fixes() && ((fp.facts.charm && t == fp.facts.charm) || (fp.facts.dk.feared && t == fp.facts.dk.feared)))
+            return true;
+        return false;
+    };
+    for (int ci = 0; ci < play::pt->count; ++ci) {
+        const party::Character& ch = play::pt->m[ci];
+        char nm[20];
+        ch.name(nm, sizeof nm);
+        int i = -1;
+        for (int j = 0; j < (int)party_names.size(); ++j)
+            if (party_names[j] == nm) i = j;
+        if (i < 0 || i >= (int)party_fx.size()) continue;
+        for (int k = 0; k < ch.n_affects; ++k)
+            if (ended_by_fight(ch.affects[k][0]))
+                bad("R18", "effect " + std::to_string(ch.affects[k][0]) + " left after the fight on " + nm);
+        for (const FxSeen& was : party_fx[i]) {
+            if (ended_by_fight(was.type)) {
+                ++end_taken;
+                continue;
+            }
+            if (fp.facts.sp.animated && was.type == fp.facts.sp.animated) continue;
+            if (was.minutes == 1) continue;
+            if (acts != party_fx_acts) continue;        // (blows and spells after the last look)
+            bool still = false;
+            for (int k = 0; k < ch.n_affects; ++k)
+                if (ch.affects[k][0] == was.type) still = true;
+            if (still) ++end_kept;
+            else {
+                bad("R18", "effect " + std::to_string(was.type) + " (" + std::to_string(was.minutes) + " minutes) taken by the fight's end from " + nm);
+                if (getenv("R18DBG")) {
+                    printf("   before:");
+                    for (const FxSeen& w : party_fx[i]) printf(" %02X:%d", w.type, w.minutes);
+                    printf("\n   after:");
+                    for (int k = 0; k < ch.n_affects; ++k) printf(" %02X:%d/%02X", ch.affects[k][0], ch.affects[k][1] | ch.affects[k][2] << 8, ch.affects[k][3]);
+                    printf("\n   status %d hp %d\n", ch.rec[0x195], ch.hp());
+                    printf("   ends:");
+                    for (uint8_t e : fp.ends) printf(" %02X", e);
+                    printf(" charm %02X feared %02X animated %02X\n", fp.facts.charm, fp.facts.dk.feared, fp.facts.sp.animated);
+                }
+            }
+        }
+    }
+    party_fx.clear();
+}
+
 void install()
 {
     on = true;
@@ -294,6 +365,8 @@ void tick()
         start_hp.assign(combat::kMaxFighters, -1);
         told.clear();
         ally_attacked = false;
+        fx_clock = -1;
+        fx_prev.clear();
     }
     // R15 the Companion's Drained (Tom, 2026-11-10): a party character
     // drained in the fight - its levels fell (only a drain lowers them) or its
@@ -324,6 +397,112 @@ void tick()
             lv0[i] = sum;
             e70[i] = ch.rec[0xE7];
         }
+    }
+    // R17 the effects' minutes, round by round (a round = a minute; time 0
+    // for ever; at or under 1 it ends at the round's turn - Curse's end,
+    // Darkness's / the Dark Queen's start - monster_fx_facts 2.1,
+    // rules_round16 1): too long - one at 1 minute still there, not put on
+    // again; a wrong count - one that didn't lose a minute; too short - one
+    // with time left gone in a round nobody acted in
+    // (measured by the game clock's minutes, which the effects follow -
+    // the Dark Queen steps it as a round starts, the others as one ends)
+    const long clock = play::vm ? play::vm->minutes_all() : 0;
+    if (clock != fx_clock) {
+        const int dt = static_cast<int>(clock - fx_clock);
+        const bool next = fx_clock >= 0 && dt > 0 && dt <= 2 && (int)fx_prev.size() == b.n;
+        const combat::MonFx* mf = b.fx ? &b.fx->mon : nullptr;
+        for (int i = 0; next && i < b.n; ++i) {
+            const combat::Fighter& f = b.f[i];
+            // (one type may be held more than once - an item's lasting
+            // Protection beside the spell's: each type's times compared as a set)
+            std::map<int, std::vector<int>> was_t, now_t;
+            for (const FxSeen& w : fx_prev[i]) was_t[w.type].push_back(w.minutes);
+            for (int k = 0; f.n_aff && k < *f.n_aff; ++k) now_t[f.aff[k][0]].push_back(f.aff[k][1] | f.aff[k][2] << 8);
+            for (auto& [type, wl] : was_t) {
+                // (the stirge's / leech's hold keeps its blood in its time)
+                if (mf && (type == mf->sucking || type == mf->blood)) continue;
+                std::vector<int> nl = now_t.count(type) ? now_t[type] : std::vector<int>{};
+                // the expected: the lasting ones as they were, each timed one a minute less, those at 1 gone
+                std::multiset<int> want, got(nl.begin(), nl.end());
+                for (int m : wl)
+                    if (m == 0) want.insert(0);
+                    else if (m > dt) want.insert(m - dt);
+                    else ++fx_count[1];
+                for (auto it = want.begin(); it != want.end();) {
+                    auto g = got.find(*it);
+                    if (g != got.end()) {
+                        if (*it) ++fx_count[0];
+                        got.erase(g);
+                        it = want.erase(it);
+                    } else ++it;
+                }
+                // left in want: gone early or counted wrongly; left in got: put on again, or kept too long
+                for (int m : got) {
+                    bool renew = false;
+                    // (with an act in that minute any further entry is a new effect)
+                    for (int w : wl)
+                        if (m > w - dt + 1) renew = true;
+                    if (renew || fx_acts) {
+                        ++fx_count[2];
+                        // (a want entry it may stand for)
+                        if (!want.empty()) want.erase(want.begin());
+                        continue;
+                    }
+                    bad_once("R17", i, "effect " + std::to_string(type) + " at " + std::to_string(m) + " minutes, not " + std::to_string(dt) + " less than it was (" +
+                                           [&] { std::string t; for (int w : wl) t += std::to_string(w) + " "; return t; }() + "): " + who(b, i));
+                }
+                for (int m : want) {
+                    if (fx_acts) ++fx_count[3];
+                    else if (f.up())
+                        bad_once("R17", i, "effect " + std::to_string(type) + " (" + std::to_string(m + dt) +
+                                               " minutes left) gone in a round nobody acted in: " + who(b, i));
+                }
+            }
+        }
+        if (const char* tr = getenv("FXTRACE")) {        // (FXTRACE=i: fighter i's effects' minutes each round)
+            const int ti = atoi(tr);
+            if (ti < b.n && b.f[ti].n_aff) {
+                printf("  [fxtrace] round %d minute %ld:", b.round, clock);
+                for (int k = 0; k < *b.f[ti].n_aff; ++k) printf(" %02X:%d", b.f[ti].aff[k][0], b.f[ti].aff[k][1] | b.f[ti].aff[k][2] << 8);
+                printf("\n");
+            }
+        }
+        fx_prev.assign(b.n, {});
+        for (int i = 0; i < b.n; ++i)
+            for (int k = 0; b.f[i].n_aff && k < *b.f[i].n_aff; ++k)
+                fx_prev[i].push_back(FxSeen{b.f[i].aff[k][0], b.f[i].aff[k][1] | b.f[i].aff[k][2] << 8});
+        fx_clock = clock;
+        fx_acts = 0;
+    }
+    if (const char* wn = getenv("AFFWATCH")) {        // (AFFWATCH=NAME: that member's effects as they change)
+        static std::string last;
+        for (int i = 0; play::pt && i < play::pt->count; ++i) {
+            char nm[20];
+            play::pt->m[i].name(nm, sizeof nm);
+            if (strcmp(nm, wn)) continue;
+            std::string t;
+            for (int k = 0; k < play::pt->m[i].n_affects; ++k) {
+                char e[16];
+                snprintf(e, sizeof e, " %02X:%d", play::pt->m[i].affects[k][0], play::pt->m[i].affects[k][1] | play::pt->m[i].affects[k][2] << 8);
+                t += e;
+            }
+            if (t != last) printf("  [affwatch] round %d st %d cur %d acts %ld:%s\n", b.round, (int)fg->st, fg->cur, acts, t.c_str());
+            last = t;
+        }
+    }
+    // (R18: the party's effects as the fight goes)
+    if (play::pt) {
+        party_fx_acts = acts;
+        party_fx.assign(play::pt->count, {});
+        party_names.assign(play::pt->count, {});
+        for (int i = 0; i < play::pt->count; ++i) {
+            char nm[20];
+            play::pt->m[i].name(nm, sizeof nm);
+            party_names[i] = nm;
+        }
+        for (int i = 0; i < play::pt->count; ++i)
+            for (int k = 0; k < play::pt->m[i].n_affects; ++k)
+                party_fx[i].push_back(FxSeen{play::pt->m[i].affects[k][0], play::pt->m[i].affects[k][1] | play::pt->m[i].affects[k][2] << 8});
     }
     if (b.round == last_round && ticks % 8) return;     // (the whole field: each round, and every 8th tick)
     last_round = b.round;
@@ -369,7 +548,7 @@ void tick()
 
 void report()
 {
-    printf("== fight checks: %ld actions, %ld ticks, %ld Quick actions under unticked switches (R13), %ld taps taking Quick back (R14), %ld drains (R15), %ld charms put on (R16);", acts, ticks, qa_seen, tapq_seen, drain_seen, charm_seen);
+    printf("== fight checks: %ld actions, %ld ticks, %ld Quick actions under unticked switches (R13), %ld taps taking Quick back (R14), %ld drains (R15), %ld charms put on (R16); effects (R17) %ld counted down, %ld ran out, %ld put on again, %ld taken by acts; fight ends (R18) %ld kept, %ld taken;", acts, ticks, qa_seen, tapq_seen, drain_seen, charm_seen, fx_count[0], fx_count[1], fx_count[2], fx_count[3], end_kept, end_taken);
     if (broken.empty()) printf(" no rule broken\n");
     for (auto& kv : broken) printf(" %s x%d", kv.first.c_str(), kv.second);
     if (!broken.empty()) printf("\n");
