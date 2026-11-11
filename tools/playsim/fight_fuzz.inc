@@ -80,6 +80,13 @@ int fxs_put = 0;
 
 void stir(combat::Battle& b, int cur)
 {
+    // FUZZCHARM=1 (R16): the game's charm put on a party member now and
+    // then (its own side kept in the data, as a charm records it)
+    if (getenv("FUZZCHARM") && b.fx && b.fx->charm && cur >= 0 && cur < b.n && b.f[cur].member >= 0 && b.f[cur].up() &&
+        !b.f[cur].has(b.fx->charm) && fpick(6) == 0) {
+        put_fx(b.f[cur], b.fx->charm, 200);   // (a lasting charm: the vampire's outlasts the fight)
+        ++fc::charm_seen;
+    }
     // FUZZDRAIN=1 (R15, the Companion's Drained): every monster drains a
     // level with its hits (its game's drain-1 effect put on as turns begin)
     if (getenv("FUZZDRAIN") && b.fx) {
@@ -316,6 +323,15 @@ bool fight(int k)
         default: break;
         }
     }
+    // R16 (Tom, 2026-11-11): with Game Fixes no charm outlasts its fight
+    // (R16NEG=1: the check without the fixes - it must fire in PoolRad)
+    if (!fg && (rules::fixes() || getenv("R16NEG")) && play::pt && play::d->prof->fight.facts.charm)
+        for (int i = 0; i < play::pt->count; ++i)
+            if (play::pt->m[i].has_affect(play::d->prof->fight.facts.charm)) {
+                char nm[20];
+                play::pt->m[i].name(nm, sizeof nm);
+                fc::bad("R16", std::string("still charmed after the fight: ") + nm);
+            }
     (void)k;
     return true;
 }
@@ -325,6 +341,10 @@ bool fight(int k)
 static void sweep_fightfuzz(unsigned seed, int fights)
 {
     using namespace play;
+    if (getenv("R16NEG")) {
+        play::opts.item_fixes = false;     // (the game sets the switch from it at each start)
+        rules::set_fixes(false);
+    }
     fc::install();
     if (getenv("FXCHECK")) {
         fxc::install();

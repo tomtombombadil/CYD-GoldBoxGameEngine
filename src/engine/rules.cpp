@@ -1451,5 +1451,7 @@ bool g_fixes = true;
 void set_fixes(bool on) { g_fixes = on; }
 bool fixes() { return g_fixes; }
 
+int lost_levels(uint8_t lost) { return g_fixes && lost >= 0x80 ? 0 : lost; }
+
 } // namespace rules
 

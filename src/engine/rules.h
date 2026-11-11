@@ -294,5 +294,12 @@ int price(const uint8_t* item, int factor);
 // so and is listed in SPEC section 12.
 void set_fixes(bool on);
 bool fixes();
+// The record's lost levels (0xE7, the hit points they took 0xE8). PoolRad's
+// NPCs come from monster records with 0xFF there (unused for monsters - its
+// MON1CHA / MON3CHA's Dirten, Tom 2026-11-11): the original counts 255
+// levels lost (Restoration and training count it down, a drain wraps it);
+// with Game Fixes a byte of 0x80 or more is none.
+// (`lost` = the byte; a drain clears such a byte first with the fixes)
+int lost_levels(uint8_t lost);
 
 } // namespace rules

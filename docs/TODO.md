@@ -162,13 +162,15 @@ the Project as claude/TODO.md.
       (R14, nine games, and R14 fails with the hand-off taken out). (c) is
       now moot for pages (a tap no longer moves them on). (a) decided (Tom,
       20:05): no - the attack pause stays ours (10 ms + 10 a speed step).
-- [x] Companion: Charmed after the fight (Tom, 2026-11-11, PoolRad,
-      Valhingen's vampire): PoolRad has no list of effects a fight's end
-      takes away - the charm's effect stays (its side put back, nothing
-      reads it again) - v0.196.3 shows Charmed only during a fight.
-- [ ] Dirten still Drained after two Restorations (Tom, 2026-11-11): one
-      Restoration = one level; a vampire's hit drains two - asked Tom for
-      the save to count his lost levels (record byte 0x74).
+- [x] Companion: Charmed after the fight / Dirten Drained (Tom,
+      2026-11-11, PoolRad, Valhingen's vampire; his save F): v0.196.4 -
+      the charm's effect ends with the fight under Game Fixes (PoolRad's
+      own end keeps it; a loaded save's goes too); Dirten was never
+      drained - his NPC record (MON1CHA / MON3CHA 107) has 0xFF in the lost
+      levels / HP, counted down by his training and Restorations to 250:
+      Drained counts 1-127 only, and with Game Fixes 0x80+ is none for
+      Restoration, training and drains (SPEC 12). Checked on his save in
+      the playsim (Party view: all OK), R16 / R16NEG, host test.
 - [x] Drained in the Companion's party view (Tom, 2026-11-10, v0.196.0):
       red, also for characters drained before (their saved lost levels).
       Checked: fightfuzz FUZZDRAIN=1 (every monster drains) fight_check R15

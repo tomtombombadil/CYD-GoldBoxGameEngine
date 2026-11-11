@@ -9103,6 +9103,21 @@ static void test_drained()
     party::Character dc2;
     party::from_darkness(dk, dc2);
     CHECK(dc2.ext[party::kExtBestLevels + 2] == 9 && create::drained(dc2));
+    // PoolRad's NPCs: 0xFF in the lost bytes (a monster record's filler -
+    // Dirten, Tom 2026-11-11) is never Drained; with Game Fixes it counts
+    // as none (the original's 255 levels without them)
+    pool[0x74] = 0xFF;
+    pool[0x75] = 0xFF;
+    party::Character npc;
+    party::from_pool(pool, npc.rec);
+    CHECK(!create::drained(npc));
+    npc.rec[0xE7] = 250;
+    CHECK(!create::drained(npc));
+    rules::set_fixes(true);
+    CHECK(rules::lost_levels(0xFF) == 0 && rules::lost_levels(2) == 2);
+    rules::set_fixes(false);
+    CHECK(rules::lost_levels(0xFF) == 0xFF);
+    rules::set_fixes(true);
 }
 
 int main()

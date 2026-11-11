@@ -5223,6 +5223,10 @@ void fight_cleanup_party(combat::Result r)
         const uint8_t charm = d->prof->fight.facts.charm;
         for (int k = 0; charm && k < ch.n_affects; ++k)
             if (ch.affects[k][0] == charm) combat::uncharm(ch.rec, ch.affects[k]);     // back on the party's side
+        // (PoolRad's fight end - no list of effects it takes away - keeps the
+        // charm's effect; with Game Fixes it ends with the fight, as the later
+        // games' lists and AD&D have it: Tom, 2026-11-11, Valhingen's vampire)
+        if (charm && rules::fixes()) rules::remove_affects(ch, charm);
         ch.rec[0x197] = 0;                              // (whatever happened: the party's side after a fight)
         for (uint8_t t : d->prof->fight.ends)
             if (t) rules::remove_affects(ch, t);

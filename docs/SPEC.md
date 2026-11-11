@@ -2651,11 +2651,10 @@ a PC, PortMaster handhelds):
     the classes white, "/" grey). State: OK unless something is wrong,
     else the health word, then Drained (Tom, 2026-11-10: levels lost to a
     drain and not restored - `create::drained`: the record's lost levels,
-    0xE7, or a class below its best level in Darkness / Death Knights /
+    0xE7 - 1 to 127 only: 0x80 on is a monster record's filler, PoolRad's
+    NPCs' 0xFF - or a class below its best level in Darkness / Death Knights /
     the Dark Queen; a saved game's drained characters too; never OK beside
-    it), then the effects worst first (Charmed only during a fight - Tom,
-    2026-11-11: PoolRad's fight end keeps the charm's effect on the record,
-    its side put back): Asleep,
+    it), then the effects worst first (Asleep,
     Paralyzed, Held, Stunned, Fleeing, Charmed, Afraid, Poisoned,
     Diseased, Blind, Cursed, Slowed, Blessed, Hasted, Invisible,
     Protected - from the game's own effect numbers, profile fight.facts);
@@ -2919,6 +2918,17 @@ the game's Settings (As Original: all of them).
   (PoolRad GAME.OVR 0x2A332: speed x 225 ms; Curse 0x2B693 / 0x2B74B:
   x 100; v0.196.2 - was ours, speed x 0.3 s), Readable Messages' 1 s
   at least.
+- **Charm and lost levels in PoolRad** (Game Fixes, Tom 2026-11-11,
+  Valhingen's vampire): PoolRad's fight end (no list of effects it takes
+  away) keeps a charm's effect after the fight - with Game Fixes it ends
+  with the fight (and one in a loaded save goes), as the later games' lists
+  and AD&D. Its NPCs come from monster records with 0xFF in the lost levels
+  / their hit points (0x74 / 0x75 - MON1CHA / MON3CHA's Dirten): the
+  original counts 255 levels lost (Restoration and training count it down,
+  a hit point each; a drain wraps it) - with Game Fixes a byte of 0x80 or
+  more is none (`rules::lost_levels`). Checked: fightfuzz FUZZCHARM=1 R16
+  (no charm after a fight; R16NEG=1 - the fixes off - fires in PoolRad),
+  host test test_drained.
 - **A tap in a fight** (Tom, 2026-11-10): never skips a page, a picture or
   a skull (until v0.195.0 a tap moved the pages on and cut pictures short -
   the engine's own, from v0.32); the fight's pace is the Speed setting's.

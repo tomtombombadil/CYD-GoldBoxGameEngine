@@ -1399,7 +1399,7 @@ void train_classes(party::Character& c, const classes::Tables& t, const Facts& f
             // A level lost (record 0xE7, its hit points 0xE8) is made up by
             // one trained: its share of the lost hit points no longer owed
             // (the original's train_player)
-            if (r[0xE7] > 0) {
+            if (rules::lost_levels(r[0xE7]) > 0) {
                 r[0xE8] = static_cast<uint8_t>(r[0xE8] - r[0xE8] / r[0xE7]);
                 --r[0xE7];
             }
@@ -1446,7 +1446,7 @@ void train_classes(party::Character& c, const classes::Tables& t, const Facts& f
 
 bool drained(const party::Character& c)
 {
-    if (c.rec[0xE7] > 0) return true;
+    if (c.rec[0xE7] > 0 && c.rec[0xE7] < 0x80) return true;   // (0x80 on: filler, never a count - rules::lost_levels)
     for (int j = 0; j < 7; ++j)
         if (c.ext[party::kExtBestLevels + j] > c.rec[kLevels + j]) return true;
     return false;
@@ -1455,7 +1455,7 @@ bool drained(const party::Character& c)
 bool restore(party::Character& c, const classes::Tables& t)
 {
     uint8_t* r = c.rec;
-    const int lost = r[0xE7];
+    const int lost = rules::lost_levels(r[0xE7]);
     if (lost <= 0) return false;
     const int hp = r[0xE8] / lost;
     r[kHpMax] = static_cast<uint8_t>(r[kHpMax] + hp);

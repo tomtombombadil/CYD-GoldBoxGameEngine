@@ -3013,6 +3013,7 @@ void drain(Battle& b, int c, int n, Event* out, int cap, int* n_out, int hit)
     }
     for (int k = 0; k < n; ++k) {
         if (f.status() == party::Gone) continue;
+        if (rules::lost_levels(r[kDrained]) != r[kDrained]) r[kDrained] = r[kDrainedHp] = 0;
         ++r[kDrained];
         // A level's share of the hit points
         int sum = 0;
@@ -5491,7 +5492,7 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
     case SpellDoes::Restore:
         // (the level itself: the caller, create::restore)
         for (int k = 0; k < m; ++k)
-            if (b.f[who[k]].rec[0xE7] > 0) say(who[k], Did::Word, 0);
+            if (rules::lost_levels(b.f[who[k]].rec[0xE7]) > 0) say(who[k], Did::Word, 0);
         break;
     case SpellDoes::Sleep: {
         int budget = d.roll(4, 4);

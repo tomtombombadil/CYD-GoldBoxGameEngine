@@ -119,7 +119,7 @@ int last_round = -1;
 bool endless_told = false;
 unsigned long hp_seen = ~0ul;                 // (R10: the fighters' hit points, the round they last changed)
 int  hp_round = 0;
-long tapq_seen = 0, drain_seen = 0;                           // (R14: taps during pages / the computer's play)
+long tapq_seen = 0, drain_seen = 0, charm_seen = 0;                           // (R14: taps during pages / the computer's play)
 long qa_seen = 0;                             // (R13: a Quick member's own actions with any switch unticked)
 
 void on_act(const combat::Battle& b, int i, combat::TestAct a, int t, int extra)
@@ -369,7 +369,7 @@ void tick()
 
 void report()
 {
-    printf("== fight checks: %ld actions, %ld ticks, %ld Quick actions under unticked switches (R13), %ld taps taking Quick back (R14), %ld drains (R15);", acts, ticks, qa_seen, tapq_seen, drain_seen);
+    printf("== fight checks: %ld actions, %ld ticks, %ld Quick actions under unticked switches (R13), %ld taps taking Quick back (R14), %ld drains (R15), %ld charms put on (R16);", acts, ticks, qa_seen, tapq_seen, drain_seen, charm_seen);
     if (broken.empty()) printf(" no rule broken\n");
     for (auto& kv : broken) printf(" %s x%d", kv.first.c_str(), kv.second);
     if (!broken.empty()) printf("\n");
