@@ -285,9 +285,11 @@ the Project as claude/TODO.md.
       step forward that way does.
 - [ ] Rest messages (v0.196.2, from PoolRad's / Curse's code): every
       message of a step shown, each with its game delay (the engine showed
-      a step's first only); PoolRad / Curse: the name (party-list colour)
-      and words on row 19, the spell on row 20. The other games' rest
-      routines not read - one line as before; read them.
+      a step's first only); the name (party-list colour) and words on row
+      19, the spell on row 20 - read in all seven DAX games but Death
+      Knights (v0.196.5, oracles/restmsg.py: the same routine in each).
+      Left: Death Knights (its words in START.EXE's data) and the Dark
+      Queen - one line until read.
 - [ ] Game speed (2026-11-06): the rest messages' pause - DONE v0.196.2:
       the game delay, read in PoolRad's and Curse's rest routines (SPEC
       12 "Game speed"; the later games taken as the same); Gateway's / Treasures' /

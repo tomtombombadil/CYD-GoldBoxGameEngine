@@ -9725,10 +9725,13 @@ void rest_tap(int x, int y, pic::Canvas& c)
 }
 
 // Resting: a few steps each tick, the messages as they come
-// One of a rest step's messages (PoolRad's / Curse's own layout, their
-// GAME.OVR 0x2A332 / 0x2DFB5 + 0x648D: the rows cleared, the name and the
-// words on row 19, the spell on row 20; the other games one line - theirs
-// not read)
+// One of a rest step's messages, the DAX games' own layout (the message
+// routine each GAME.OVR reaches through an overlay stub - PoolRad 0x2A332,
+// Curse 0x34442, Secret 0x32C73, Darkness 0x30A2D, Gateway 0x3B362,
+// Treasures 0x3A195, Champions 0x333F6; tools/devkit/oracles/restmsg.py):
+// the rows cleared, the name and the words on row 19, the spell on row 20,
+// then the game's delay. Death Knights (its words in START.EXE's data) and
+// the Dark Queen not read - one line
 void rest_msg(pic::Canvas& c, const RestRun::Msg& m)
 {
     c.fill(8, 18 * 8, 38 * 8, 4 * 8, 0);
@@ -9744,7 +9747,8 @@ void rest_msg(pic::Canvas& c, const RestRun::Msg& m)
     (void)t;
     if (m.kind == 1) cw(profile::kHasScribed, w1, sizeof w1);
     else mw(profile::kHasMemorized, w1, sizeof w1);
-    if (pool_files() || d->prof->game == games::Game::CurseOfTheAzureBonds) {
+    const games::Game g = d->prof->game;
+    if (g != games::Game::DeathKnightsOfKrynn && g != games::Game::DarkQueenOfKrynn) {
         // (the name by the party list's printer - its colour, not selected)
         const party::Character& ch = pt->m[m.who];
         put(c, nm, 1, 19, !ch.in_combat() ? 12 : ch.enemy() ? 14 : 11);
