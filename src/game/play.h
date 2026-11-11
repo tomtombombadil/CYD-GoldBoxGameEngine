@@ -246,6 +246,7 @@ struct PanelMember {
                                         // cleric druid fighter paladin ranger magic-user thief monk
     uint8_t  stopped;                   // bit k: class k a dual-classed human's former one
     bool     krynn;                     // (magic-user = Mage, monk's place = Knight)
+    bool     drained;                   // levels lost to a drain, not restored (create::drained)
 };
 int  panel_members();
 bool panel_member(int i, PanelMember& m);

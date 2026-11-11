@@ -1444,6 +1444,14 @@ void train_classes(party::Character& c, const classes::Tables& t, const Facts& f
     r[kHp] = static_cast<uint8_t>(r[kHpMax] - lost);
 }
 
+bool drained(const party::Character& c)
+{
+    if (c.rec[0xE7] > 0) return true;
+    for (int j = 0; j < 7; ++j)
+        if (c.ext[party::kExtBestLevels + j] > c.rec[kLevels + j]) return true;
+    return false;
+}
+
 bool restore(party::Character& c, const classes::Tables& t)
 {
     uint8_t* r = c.rec;

@@ -2649,14 +2649,18 @@ a PC, PortMaster handhelds):
     R M T, K the knight; M = Magic-User or Mage); as View shows them (a
     dual-classed human's former class once the new one passed it, grey;
     the classes white, "/" grey). State: OK unless something is wrong,
-    else the health word, then the effects worst first (Asleep,
+    else the health word, then Drained (Tom, 2026-11-10: levels lost to a
+    drain and not restored - `create::drained`: the record's lost levels,
+    0xE7, or a class below its best level in Darkness / Death Knights /
+    the Dark Queen; a saved game's drained characters too; never OK beside
+    it), then the effects worst first (Asleep,
     Paralyzed, Held, Stunned, Fleeing, Charmed, Afraid, Poisoned,
     Diseased, Blind, Cursed, Slowed, Blessed, Hasted, Invisible,
     Protected - from the game's own effect numbers, profile fight.facts);
     whole words while they fit, then the longest shortened first (Unc,
     Par, Prot, Pois, Dis, Invis, Anim, Sleep, Stun, Flee, Charm, Fear,
-    Curse, Slow, Bless, Haste, Stone - no full stops, Tom), then "+" for
-    more. Colours: Dead / Dying red; Fled / Away / Gone
+    Curse, Slow, Bless, Haste, Stone, Drain - no full stops, Tom), then "+" for
+    more. Colours: Dead / Dying / Drained red; Fled / Away / Gone
     grey; OK, Blessed, Invisible, Hasted, Protected green; the rest
     yellow. Battle: the field is 50 x
     25 squares in every game (`combat::kW / kH`); the part it uses (ground

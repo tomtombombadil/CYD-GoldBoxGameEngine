@@ -9070,8 +9070,44 @@ static void test_thumb()
     }
 }
 
+// The Companion's Drained (Tom, 2026-11-10): a character drained before the
+// session - as its game saved it - counts (synthetic records)
+static void test_drained()
+{
+    // PoolRad: its lost levels at 0x74
+    uint8_t pool[party::kPoolRecordSize] = {};
+    party::Character pc;
+    party::from_pool(pool, pc.rec);
+    CHECK(!create::drained(pc));
+    pool[0x74] = 1;
+    party::from_pool(pool, pc.rec);
+    CHECK(create::drained(pc));
+    // Curse's own layout: 0xE7
+    party::Character cc;
+    cc.rec[0x109 + 2] = 5;
+    CHECK(!create::drained(cc));
+    cc.rec[0xE7] = 2;
+    CHECK(create::drained(cc));
+    // Darkness: a class below its best level (record 0x15F on)
+    uint8_t dk[party::kDarknessRecordSize] = {};
+    party::Character dc;
+    party::from_darkness(dk, dc);
+    CHECK(!create::drained(dc));
+    dc.rec[0x109 + 2] = 7;
+    dc.ext[party::kExtBestLevels + 2] = 7;
+    CHECK(!create::drained(dc));
+    dc.ext[party::kExtBestLevels + 2] = 9;
+    CHECK(create::drained(dc));
+    // (as Darkness saved it: the best levels at its record's 0x15F)
+    dk[0x15F + 2] = 9;
+    party::Character dc2;
+    party::from_darkness(dk, dc2);
+    CHECK(dc2.ext[party::kExtBestLevels + 2] == 9 && create::drained(dc2));
+}
+
 int main()
 {
+    test_drained();
     test_rle_known_bytes();
     test_quickacts();
     test_heal_target();

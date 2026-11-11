@@ -162,6 +162,16 @@ the Project as claude/TODO.md.
       (R14, nine games, and R14 fails with the hand-off taken out). (c) is
       now moot for pages (a tap no longer moves them on). (a) decided (Tom,
       20:05): no - the attack pause stays ours (10 ms + 10 a speed step).
+- [x] Drained in the Companion's party view (Tom, 2026-11-10, v0.196.0):
+      red, also for characters drained before (their saved lost levels).
+      Checked: fightfuzz FUZZDRAIN=1 (every monster drains) fight_check R15
+      - each drain shows at once (PoolRad 39, Darkness 41, Treasures 178,
+      Knights 144, Queen 111; 0 missed), host test test_drained (saved
+      PoolRad / Curse / Darkness records), a playsim snapshot (PoolRad save
+      with one member's lost-levels byte set: "Drained" in red).
+      Noted: Curse, Secret, Gateway and Champions have no fight-time level
+      drain in the engine (no drain effect in their facts) - check against
+      each original whether their monsters drain levels (rules round).
 - [x] Treasures K8 (fightfuzz FXCHECK, seed 5 fight 1): with Show Rolls
       on, a blow that met a mirror image sent the attack back to the
       original's pages, and a miss beside it lost its roll - v0.195.2: one

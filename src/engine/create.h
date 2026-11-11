@@ -150,6 +150,11 @@ bool train(party::Character& c, const classes::Tables& t, const Facts& f, Dice& 
 // (then the least experience to its next level) that may go up rises one,
 // its experience raised to that level's when below it. False: no level lost.
 bool restore(party::Character& c, const classes::Tables& t);
+// Levels lost to a drain and not yet restored (Tom, 2026-11-10: the
+// Companion's "Drained"): the record's lost levels (0xE7 - PoolRad, Curse,
+// Secret, the Savage Frontier, Champions) or a class below its best level
+// from before the drain (the Ext's - Darkness, Death Knights, the Dark Queen)
+bool drained(const party::Character& c);
 
 // The classes a character has the experience for (and no race limit), as
 // class mask bits (the tables' class masks; a training hall's 0x7EA8 uses

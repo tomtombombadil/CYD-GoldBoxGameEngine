@@ -119,7 +119,7 @@ int last_round = -1;
 bool endless_told = false;
 unsigned long hp_seen = ~0ul;                 // (R10: the fighters' hit points, the round they last changed)
 int  hp_round = 0;
-long tapq_seen = 0;                           // (R14: taps during pages / the computer's play)
+long tapq_seen = 0, drain_seen = 0;                           // (R14: taps during pages / the computer's play)
 long qa_seen = 0;                             // (R13: a Quick member's own actions with any switch unticked)
 
 void on_act(const combat::Battle& b, int i, combat::TestAct a, int t, int extra)
@@ -295,6 +295,36 @@ void tick()
         told.clear();
         ally_attacked = false;
     }
+    // R15 the Companion's Drained (Tom, 2026-11-10): a party character
+    // drained in the fight - its levels fell (only a drain lowers them) or its
+    // lost levels (0xE7) rose - shows Drained (the dead forever too)
+    if (play::pt) {
+        static std::vector<int> lv0, e70;
+        static const void* lv_fight = nullptr;
+        if (lv_fight != fg) {
+            lv_fight = fg;
+            lv0.assign(play::pt->count, -1);
+            e70.assign(play::pt->count, -1);
+        }
+        for (int i = 0; i < play::pt->count && i < (int)lv0.size(); ++i) {
+            const party::Character& ch = play::pt->m[i];
+            int sum = 0;
+            for (int c = 0; c < 8; ++c) sum += ch.rec[0x109 + c];
+            if (lv0[i] < 0) lv0[i] = sum, e70[i] = ch.rec[0xE7];
+            if (sum < lv0[i] || ch.rec[0xE7] > e70[i]) {
+                ++drain_seen;
+                play::PanelMember m;
+                if (play::panel_member(i, m) && !m.drained) {
+                    char nm[20];
+                    ch.name(nm, sizeof nm);
+                    bad("R15", std::string("drained in the fight (levels ") + std::to_string(lv0[i]) + " -> " + std::to_string(sum) +
+                                   ", lost " + std::to_string(e70[i]) + " -> " + std::to_string(ch.rec[0xE7]) + "), not shown Drained: " + nm);
+                }
+            }
+            lv0[i] = sum;
+            e70[i] = ch.rec[0xE7];
+        }
+    }
     if (b.round == last_round && ticks % 8) return;     // (the whole field: each round, and every 8th tick)
     last_round = b.round;
     for (int i = 0; i < b.n; ++i) {
@@ -339,7 +369,7 @@ void tick()
 
 void report()
 {
-    printf("== fight checks: %ld actions, %ld ticks, %ld Quick actions under unticked switches (R13), %ld taps taking Quick back (R14);", acts, ticks, qa_seen, tapq_seen);
+    printf("== fight checks: %ld actions, %ld ticks, %ld Quick actions under unticked switches (R13), %ld taps taking Quick back (R14), %ld drains (R15);", acts, ticks, qa_seen, tapq_seen, drain_seen);
     if (broken.empty()) printf(" no rule broken\n");
     for (auto& kv : broken) printf(" %s x%d", kv.first.c_str(), kv.second);
     if (!broken.empty()) printf("\n");

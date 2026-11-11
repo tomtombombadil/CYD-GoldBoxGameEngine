@@ -193,6 +193,8 @@ The Quick tab as an engine page + the party's NPCs (2026-11-09, round 14):
                            the whole party's rows, each toggle written at once and read back, the game screen and the
                            fight untouched, not while typing; ONLY=quickacts adds the NPC cases (kComputer = the switch
                            off, Melee / Move / Spells unticked limit an NPC) and the NPC file case
+  fightfuzz FUZZDRAIN=1     every monster drains a level with its hits (its game's drain-1 effect): fight_check R15 -
+                           a party character drained (levels down or lost levels up) shows Drained in the Companion
   fightfuzz FUZZTAPQ=n      one pass in n a tap on the field during pages / the computer's play (with QAFUZZ=1):
                            fight_check R14 - the tap moves no page, leaves no party character on Quick, and the
                            computer never acts for one taken off (Tom, 2026-11-10)

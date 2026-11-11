@@ -16612,6 +16612,7 @@ bool panel_member(int i, PanelMember& m)
     m.hp_max = static_cast<int16_t>(ch.hp_max());
     m.health = static_cast<uint8_t>(ch.health());
     m.fx = member_fx(ch);
+    m.drained = create::drained(ch);
     const int k = member_fighter(i);
     if (k >= 0 && fg->b.f[k].fleeing) m.fx |= kPxFleeing;
     m.current = fg ? (fg->cur >= 0 && fg->cur < fg->b.n && fg->b.f[fg->cur].member == i) : pt->selected == i;
@@ -16700,7 +16701,7 @@ uint32_t panel_party_sig(bool icons)
         PanelMember m;
         panel_member(i, m);
         h = sig_mix(h, static_cast<uint16_t>(m.hp) | static_cast<uint32_t>(m.hp_max) << 16);
-        h = sig_mix(h, m.health | static_cast<uint32_t>(m.fx) << 8 | (m.current ? 1u << 24 : 0u));
+        h = sig_mix(h, m.health | static_cast<uint32_t>(m.fx) << 8 | (m.current ? 1u << 24 : 0u) | (m.drained ? 1u << 25 : 0u));
     }
     return h;
 }

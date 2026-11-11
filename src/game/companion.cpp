@@ -59,7 +59,7 @@ struct Span {
 };
 
 // The state's words: its health (OK when nothing is wrong), then its effects, worst first
-int state_words(int health, uint16_t fx, Word* w)
+int state_words(int health, uint16_t fx, bool drained, Word* w)
 {
     static const struct { uint8_t h; Word w; } kHealth[] = {
         {party::Okay, {"OK", nullptr, kGood}},
@@ -83,9 +83,11 @@ int state_words(int health, uint16_t fx, Word* w)
         {play::kPxInvisible, {"Invisible", "Invis", kGood}},  {play::kPxProtected, {"Protected", "Prot", kGood}},
     };
     int n = 0;
-    if (health != party::Okay || !fx)
+    // (Drained - Tom, 2026-11-10: red, after the health; never "OK" beside it)
+    if (health != party::Okay || (!fx && !drained))
         for (const auto& h : kHealth)
             if (h.h == health) w[n++] = h.w;
+    if (drained) w[n++] = Word{"Drained", "Drain", style::kWarn};
     for (const auto& k : kFx)
         if ((fx & k.bit) && n < kMaxWords) w[n++] = k.w;
     return n;
@@ -228,7 +230,7 @@ void party_row(Painter& p, const Rows& r, int i, const play::PanelMember& m)
     }
     // Classes left, state right: the long classes while they fit beside the whole words
     Word w[kMaxWords];
-    const int nw = state_words(m.health, m.fx, w);
+    const int nw = state_words(m.health, m.fx, m.drained, w);
     Span cs[16], ss[kMaxWords + 1];
     int nc = 0, ns = 0;
     int cl = class_spans(m, true, cs, &nc);

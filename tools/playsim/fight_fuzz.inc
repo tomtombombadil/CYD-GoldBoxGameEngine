@@ -80,6 +80,19 @@ int fxs_put = 0;
 
 void stir(combat::Battle& b, int cur)
 {
+    // FUZZDRAIN=1 (R15, the Companion's Drained): every monster drains a
+    // level with its hits (its game's drain-1 effect put on as turns begin)
+    if (getenv("FUZZDRAIN") && b.fx) {
+        static bool told = false;
+        if (!told) printf("  [drain] drain1 %02X drain2 %02X dk %d\n", b.fx->mon.drain1, b.fx->mon.drain2, combat::g_dk_drain != nullptr);
+        told = true;
+    }
+    if (getenv("FUZZDRAIN") && b.fx && b.fx->mon.drain1)
+        for (int i = 0; i < b.n; ++i)
+            if (b.f[i].member < 0 && b.f[i].up() && !b.f[i].has(b.fx->mon.drain1)) {
+                put_fx(b.f[i], b.fx->mon.drain1, 0);
+                if (getenv("FUZZDRAINLOG")) printf("  [drain] fighter %d given %02X: has %d\n", i, b.fx->mon.drain1, (int)b.f[i].has(b.fx->mon.drain1));
+            }
     if (!b.fx || (getenv("FUZZFX") && !atoi(getenv("FUZZFX")))) return;
     const combat::Facts& fx = *b.fx;
     const uint8_t types[] = {fx.held[0], fx.held[1], fx.held[2], fx.held[3], fx.sp.stun, fx.bless,  fx.curse,
