@@ -119,6 +119,7 @@ int last_round = -1;
 bool endless_told = false;
 unsigned long hp_seen = ~0ul;                 // (R10: the fighters' hit points, the round they last changed)
 int  hp_round = 0;
+long tapq_seen = 0;                           // (R14: taps during pages / the computer's play)
 long qa_seen = 0;                             // (R13: a Quick member's own actions with any switch unticked)
 
 void on_act(const combat::Battle& b, int i, combat::TestAct a, int t, int extra)
@@ -187,6 +188,14 @@ void on_act(const combat::Battle& b, int i, combat::TestAct a, int t, int extra)
     // (a hold's bite at the turn's start - Pool's mantis, its own rule: not a blow of its choosing)
     if (own && f.fleeing && ((a == TestAct::Attack && f.moves > 0 && !in_bite) || a == TestAct::Special))
         bad("R5", std::string(act_name(a)) + " on its own turn while fleeing (moves left " + std::to_string(f.moves) + "): " + who(b, i));
+    // R14 a tap takes the party back from Quick (Tom, 2026-11-10): one of
+    // the player's own characters off Quick is never played by the computer
+    // on its own turn (an action while the fight is in its Ai state)
+    // (its turn's start isn't a choice; a spell it began itself before is the player's)
+    if (own && a != TestAct::TurnStart && !(a == TestAct::Cast && static_cast<size_t>(i) < pending.size() && pending[i]) &&
+        play::fg->st == play::FSt::Ai && f.member >= 0 && !f.team() && !f.quick && !f.fleeing &&
+        f.rec[0xF7] < 0x80 && f.status() != party::Animated && !play::qa_npc(f.member))
+        bad("R14", std::string(act_name(a)) + " by the computer for one taken off Quick: " + who(b, i));
     // R13 Quick Actions (Tom, 2026-11-09): one of the player's own characters
     // played by Quick - or one of the party's NPCs (the computer's; their
     // switches too since Tom's 2026-11-09 addition) - does on its own turn
@@ -330,7 +339,7 @@ void tick()
 
 void report()
 {
-    printf("== fight checks: %ld actions, %ld ticks, %ld Quick actions under unticked switches (R13);", acts, ticks, qa_seen);
+    printf("== fight checks: %ld actions, %ld ticks, %ld Quick actions under unticked switches (R13), %ld taps taking Quick back (R14);", acts, ticks, qa_seen, tapq_seen);
     if (broken.empty()) printf(" no rule broken\n");
     for (auto& kv : broken) printf(" %s x%d", kv.first.c_str(), kv.second);
     if (!broken.empty()) printf("\n");

@@ -277,6 +277,29 @@ bool fight(int k)
         case FSt::More:
         case FSt::Results:
         case FSt::Destroyed: play::tap(2, 2, C); break;
+        case FSt::Pages:
+        case FSt::Ai:
+            // FUZZTAPQ=n (Tom, 2026-11-10): one pass in n a tap on the field
+            // while pages show or the computer plays - it takes the party off
+            // Quick and skips nothing (fight_check R14: no computer turn for
+            // them after; here: the page's wait and the pictures untouched)
+            if (const char* tq = getenv("FUZZTAPQ"); tq && fpick(atoi(tq) > 0 ? atoi(tq) : 50) == 0) {
+                const uint32_t until = fg->until;
+                const bool fx_on = fg->fx_on;
+                const int pages = fg->pages, at = fg->at;
+                const FSt st = fg->st;
+                play::tap(100, 60, C);
+                ++fc::tapq_seen;
+                if (fg && st == FSt::Pages && (fg->until != until || fg->fx_on != fx_on || fg->pages != pages || fg->at != at))
+                    fc::bad("R14", "a tap during the pages moved them on");
+                if (fg)
+                    for (int i = 0; i < fg->b.party_size && i < fg->b.n; ++i) {
+                        const combat::Fighter& o = fg->b.f[i];
+                        if (o.quick && o.member >= 0 && !o.team() && o.rec[0xF7] < 0x80 && o.status() != party::Animated && !o.fleeing)
+                            fc::bad("R14", "a tap left one on Quick: " + fc::who(fg->b, i));
+                    }
+            }
+            break;
         default: break;
         }
     }

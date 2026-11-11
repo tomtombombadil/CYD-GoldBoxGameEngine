@@ -193,6 +193,9 @@ The Quick tab as an engine page + the party's NPCs (2026-11-09, round 14):
                            the whole party's rows, each toggle written at once and read back, the game screen and the
                            fight untouched, not while typing; ONLY=quickacts adds the NPC cases (kComputer = the switch
                            off, Melee / Move / Spells unticked limit an NPC) and the NPC file case
+  fightfuzz FUZZTAPQ=n      one pass in n a tap on the field during pages / the computer's play (with QAFUZZ=1):
+                           fight_check R14 - the tap moves no page, leaves no party character on Quick, and the
+                           computer never acts for one taken off (Tom, 2026-11-10)
   fightfuzz QANPC=1        the party's last member made an NPC for the fights (R13 checks NPCs too)
   r4all.sh                 BIN= LOGS= TAGP= (parallel agents); board_build.sh [env] (KEEP=1 keeps .pio/build/<env>)
   playsim MAKENPC=k        member k made an NPC before SAVENOW (a test save with an NPC; scratch only)

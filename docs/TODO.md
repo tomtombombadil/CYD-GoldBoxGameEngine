@@ -155,6 +155,15 @@ the Project as claude/TODO.md.
       engine's (v0.32), not checked against the originals - check / follow;
       (c) capacitive taps are queued (cap::sampler) - several taps act on
       several pages in a row.
+      (b) decided (Tom, 19:05): "a tap on the combat area should end Quick
+      for all characters. It shouldn't be skipping game events or display
+      events" - v0.195.1: a fight tap skips nothing, takes the party off
+      Quick (SPEC 12 "A tap in a fight"); checked by fightfuzz FUZZTAPQ
+      (R14, nine games, and R14 fails with the hand-off taken out). (c) is
+      now moot for pages (a tap no longer moves them on). (a) still open.
+- [ ] Treasures K8 (fightfuzz FXCHECK, seed 5 fight 1, MON1 #101 x5,
+      speed 0; with or without taps): "1 blow whose to-hit roll no page
+      showed" - Show Rolls misses one blow's roll. Look at it.
 
 - [x] Messages too quick to read (Tom, 2026-11-10, PoolRad's training
       "Not Enough Experience"; v0.194.0): Readable Messages (CYD_READ_TIME,

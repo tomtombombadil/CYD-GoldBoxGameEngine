@@ -4530,6 +4530,11 @@ void ai_step(pic::Canvas& c)
     combat::Battle& b = fg->b;
     const int i = fg->cur;
     combat::Fighter& f = b.f[i];
+    // (taken back from Quick by a tap during its pages: the player's turn now)
+    if (f.member >= 0 && f.up() && !ai_controls(f)) {
+        fight_menu(c);
+        return;
+    }
     // (the DAX games: its dice first, once a turn - before the morale test;
     // GAME.OVR PoolRad 0xAC14, Curse 0xBACB, Secret 0xCFD6, Gateway 0xD02E,
     // Darkness 0x9B45, Treasures 0xA957, Champions 0xC5B0, Death Knights
@@ -6709,6 +6714,23 @@ void done_key(pic::Canvas& c, char key)
     }
 }
 
+// A tap takes the party back from Quick (the original's Space): every
+// player character runs by the player again (NPCs, the animated and the
+// fleeing stay the computer's); now: the one acting gets its menu at once
+// (its turn's AI not begun), else when its pages are done (ai_step)
+void quick_off(pic::Canvas& c, bool now)
+{
+    bool any = false;
+    for (int k = 0; k < fg->b.n; ++k) {
+        combat::Fighter& o = fg->b.f[k];
+        if (o.member < 0 || o.rec[0xF7] >= 0x80 || o.status() == party::Animated || !o.quick || o.fleeing) continue;
+        o.quick = false;
+        any = true;
+    }
+    if (now && any && fg->cur >= 0 && fg->b.f[fg->cur].member >= 0 && !fg->b.f[fg->cur].quick && fg->b.f[fg->cur].up())
+        fight_menu(c);
+}
+
 void fight_tap(int x, int y, pic::Canvas& c)
 {
     if (!fg) return;
@@ -6723,11 +6745,11 @@ void fight_tap(int x, int y, pic::Canvas& c)
         page_more(c);
         return;
     case FSt::Pages:
-        if (fg->fx_on) {                // a tap cuts the pictures short and moves on
-            fx_end(c);
-            fg->fx_at = 2;
-        }
-        if (fg->until) fg->until = 1;   // a tap moves on
+        // (Tom, 2026-11-10: a tap on the fight never skips its events or
+        // pictures - the pace is the Speed setting's; it takes the party
+        // back from Quick, as the Ai state's tap does; the one acting now
+        // gets its menu when its pages are done - ai_step)
+        quick_off(c, false);
         return;
     case FSt::OldAge:
         old_age_next(c);
@@ -6748,22 +6770,9 @@ void fight_tap(int x, int y, pic::Canvas& c)
         }
         fight_done(c);
         return;
-    case FSt::Ai: {
-        // A tap takes the party back from Quick (the original's Space): every
-        // player character runs by the player again; one acting now gets
-        // the menu at once
-        bool any = false;
-        for (int k = 0; k < fg->b.n; ++k) {
-            combat::Fighter& o = fg->b.f[k];
-            if (o.member < 0 || o.rec[0xF7] >= 0x80 || o.status() == party::Animated || !o.quick || o.fleeing)
-                continue;
-            o.quick = false;
-            any = true;
-        }
-        if (any && fg->cur >= 0 && fg->b.f[fg->cur].member >= 0 && !fg->b.f[fg->cur].quick && fg->b.f[fg->cur].up())
-            fight_menu(c);
+    case FSt::Ai:
+        quick_off(c, true);
         return;
-    }
     case FSt::Menu: {
         // (the Dark Queen's two rows of buttons from y 177)
         const bool q2 = hl() && text::two_rows(menu);
