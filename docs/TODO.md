@@ -147,6 +147,14 @@ the Project as claude/TODO.md.
       its own attack pause, roll, hit page, fall + skull, field put back,
       then the next. Asked Tom for his firmware version and how he
       attacks (Aim / Target, a step into the goblin, Quick).
+      Tom (19:00): his Speed is 0, he attacks by Move + a step into the
+      foe (and on Quick). At speed 0 the pages wait 0 ms and our attack
+      pose 10 ms (SPEC 12: the originals' Delay(100) is fixed) - a 3-goblin
+      sweep is over in ~0.3 s. Open, asked Tom: (a) the originals' fixed
+      100 ms attack pause back; (b) "a tap moves on" in fight pages is the
+      engine's (v0.32), not checked against the originals - check / follow;
+      (c) capacitive taps are queued (cap::sampler) - several taps act on
+      several pages in a row.
 
 - [x] Messages too quick to read (Tom, 2026-11-10, PoolRad's training
       "Not Enough Experience"; v0.194.0): Readable Messages (CYD_READ_TIME,
