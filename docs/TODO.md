@@ -261,8 +261,14 @@ the Project as claude/TODO.md.
       wells, "you can't go that way", NO-MOVE 0x7EC9 squares) - a
       side-step away must not ask, a side-step into one must ask as a
       step forward that way does.
-- [ ] Game speed (2026-11-06): check the rest messages' pause (ours:
-      speed x 0.3 s) against the rest routine; Gateway's / Treasures' /
+- [ ] Rest messages (v0.196.2, from PoolRad's / Curse's code): every
+      message of a step shown, each with its game delay (the engine showed
+      a step's first only); PoolRad / Curse: the name (party-list colour)
+      and words on row 19, the spell on row 20. The other games' rest
+      routines not read - one line as before; read them.
+- [ ] Game speed (2026-11-06): the rest messages' pause - DONE v0.196.2:
+      the game delay, read in PoolRad's and Curse's rest routines (SPEC
+      12 "Game speed"; the later games taken as the same); Gateway's / Treasures' /
       Dark Queen's letter wait (taken as speed x 3 ms) and Dark Queen's
       game delay (taken as x 100 - its program isn't Turbo Pascal).
       Cheap draw win if needed: dirty columns as well as rows (a flight

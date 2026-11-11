@@ -9575,6 +9575,14 @@ struct RestRun {
     int  fix_heal = 0;
     uint32_t pause_until = 0;       // a message stays a moment
     bool interrupt_next = false;    // an encounter broke in on a step that had a message: told after it
+    // (a step's messages one at a time, each with its wait - the originals
+    // print each and wait the game delay: PoolRad GAME.OVR 0x2A332; until
+    // v0.196.2 only a step's first was shown)
+    struct Msg {
+        uint8_t kind, who;              // kind 0 healed, 1 scribed, 2 memorized
+        int16_t spell;
+    } q[1 + 2 * party::kMaxParty];
+    uint8_t qn = 0, qi = 0;
     int  shown = 0;                 // steps since the time was shown
     magic::Rest r;
 } rest;
@@ -9713,13 +9721,47 @@ void rest_tap(int x, int y, pic::Canvas& c)
 }
 
 // Resting: a few steps each tick, the messages as they come
+// One of a rest step's messages (PoolRad's / Curse's own layout, their
+// GAME.OVR 0x2A332 / 0x2DFB5 + 0x648D: the rows cleared, the name and the
+// words on row 19, the spell on row 20; the other games one line - theirs
+// not read)
+void rest_msg(pic::Canvas& c, const RestRun::Msg& m)
+{
+    c.fill(8, 18 * 8, 38 * 8, 4 * 8, 0);
+    if (m.kind == 0) {
+        char t[32];
+        mw(profile::kHealedAll, t, sizeof t);
+        put(c, t, 1, 19, 10);
+        draw_party(c, 17);
+        return;
+    }
+    char nm[20], w1[20], t[64];
+    pt->m[m.who].name(nm, sizeof nm);
+    (void)t;
+    if (m.kind == 1) cw(profile::kHasScribed, w1, sizeof w1);
+    else mw(profile::kHasMemorized, w1, sizeof w1);
+    if (pool_files() || d->prof->game == games::Game::CurseOfTheAzureBonds) {
+        // (the name by the party list's printer - its colour, not selected)
+        const party::Character& ch = pt->m[m.who];
+        put(c, nm, 1, 19, !ch.in_combat() ? 12 : ch.enemy() ? 14 : 11);
+        put(c, w1, 1 + static_cast<int>(strlen(nm)) + 1, 19, 10);
+        put(c, spell_name(m.spell), 1, 20, 10);
+    } else {
+        snprintf(t, sizeof t, "%s %s %s", nm, w1, spell_name(m.spell));
+        put(c, t, 1, 19, 10);
+    }
+}
+
 void rest_tick(uint32_t now, pic::Canvas& c)
 {
     if (!rest.running || screen != Screen::Rest) return;
     if (rest.pause_until && static_cast<int32_t>(now - rest.pause_until) < 0) return;
-    // (a rest message stays 3 tenths a speed step - ours, not checked
-    // against the originals' rest routine)
-    const uint32_t delay = static_cast<uint32_t>(vm->get(0x4BFC) & 0xFF) * 300;
+    // (a rest message stays the game's delay - the originals' rest prints
+    // "has memorized" / "Healed" / "interrupted" then their delay routine:
+    // PoolRad GAME.OVR 0x2A332's 0x709:0xDBE (speed x 225), Curse's rest
+    // 0x2B693 / 0x2B74B the same shape (speed x 100); until v0.196.2 ours
+    // was speed x 300 ms)
+    const uint32_t delay = game_delay_ms();
     const uint32_t hold = CYD_READ_TIME && opts.read_time && delay < kReadMs ? kReadMs : delay;
     if (rest.pause_until) {
         rest.pause_until = 0;
@@ -9727,6 +9769,13 @@ void rest_tick(uint32_t now, pic::Canvas& c)
         dirty_rows(18, 21);
         if (rest.interrupted) {
             end_rest(c);
+            return;
+        }
+        if (rest.qi < rest.qn) {
+            rest_msg(c, rest.q[rest.qi++]);
+            dirty_rows(17, 22);
+            rest.pause_until = now + hold;
+            if (!rest.pause_until) rest.pause_until = 1;
             return;
         }
         // (an encounter rolled on a step that had its own message - "has
@@ -9758,32 +9807,14 @@ void rest_tick(uint32_t now, pic::Canvas& c)
         const magic::Step st = magic::step(rest.r, *pt, mrules->tables, scroll_facts(), false);
         camp_heal_steps = rest.r.steps;
         effects_clock(5, c);
-        bool said = false;
-        if (st.healed) {
-            char t[32];
-            mw(profile::kHealedAll, t, sizeof t);
-            put(c, t, 1, 19, 10);
-            draw_party(c, 17);
-            said = true;
-        }
-        for (int i = 0; i < pt->count && !said; ++i)
-            if (st.scribed[i]) {
-                char nm[20], w1[20], t[64];
-                pt->m[i].name(nm, sizeof nm);
-                cw(profile::kHasScribed, w1, sizeof w1);
-                snprintf(t, sizeof t, "%s %s %s", nm, w1, spell_name(st.scribed[i]));
-                put(c, t, 1, 19, 10);
-                said = true;
-            }
-        for (int i = 0; i < pt->count && !said; ++i)
-            if (st.learnt[i]) {
-                char nm[20], w1[20], t[64];
-                pt->m[i].name(nm, sizeof nm);
-                mw(profile::kHasMemorized, w1, sizeof w1);
-                snprintf(t, sizeof t, "%s %s %s", nm, w1, spell_name(st.learnt[i]));
-                put(c, t, 1, 19, 10);
-                said = true;
-            }
+        rest.qn = rest.qi = 0;
+        if (st.healed) rest.q[rest.qn++] = RestRun::Msg{0, 0, 0};
+        for (int i = 0; i < pt->count; ++i)
+            if (st.scribed[i]) rest.q[rest.qn++] = RestRun::Msg{1, static_cast<uint8_t>(i), static_cast<int16_t>(st.scribed[i])};
+        for (int i = 0; i < pt->count; ++i)
+            if (st.learnt[i]) rest.q[rest.qn++] = RestRun::Msg{2, static_cast<uint8_t>(i), static_cast<int16_t>(st.learnt[i])};
+        bool said = rest.qn > 0;
+        if (said) rest_msg(c, rest.q[rest.qi++]);
         // An encounter can break in
         const int period = vm->get(d->prof->magic.rest_period), chance = vm->get(d->prof->magic.rest_chance);
         // (the Cheats tab's Sanctuary: nothing breaks in)
