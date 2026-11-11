@@ -5550,6 +5550,8 @@ bool camp_fix_on() { return CYD_CAMP_FIX && opts.camp_fix; }
 // a fighter's Quick turn follows (quickacts::kDefault: as the game), the party's
 // read from the card at a fight's start
 uint8_t quick_mask(const combat::Fighter& f);
+bool qa_member(int m);
+bool qa_npc(int m);
 void qa_load();
 bool qa_on() { return CYD_QUICK_ACTIONS && opts.quick_acts; }
 // Training free: once the game is won (as the originals), or the Cheats tab's Trainer

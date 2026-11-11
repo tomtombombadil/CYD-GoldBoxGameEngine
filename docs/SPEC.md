@@ -2821,7 +2821,16 @@ a PC, PortMaster handhelds):
     untouched (nothing parked; the game waits while the menu is up).
     Unticked: **Melee** - no blow at a foe next to it (a thrown weapon can
     still be thrown at it, Missile ticked); **Missile** - no shot or throw,
-    and no missile weapon readied (the melee one); **Spells** - casts
+    and no missile weapon readied (the melee one); ticked (v0.196.6, Tom,
+    2026-11-11: "If they have missile enabled, and they have a missile
+    weapon and ammo, and they are not engaged ... they should use their
+    missile attack") one of the player's own Quick characters readies its
+    best loaded bow / crossbow / sling whenever no foe is next to it -
+    whatever the games' rating says (theirs keeps a +3 sword over a plain
+    bow and walks) - and the choice is made again at each step of its
+    turn, so the bow comes back out once the foe it fought is gone (the
+    originals choose once, at the turn's start); thrown things (darts,
+    daggers, oil, holy water) and the NPCs stay by the games' rating; **Spells** - casts
     nothing; ticked it casts its memorized spells as the games' AI does
     (the same choice as monsters' and NPCs': d7 rounds by priority, its
     targets, the spell out of memory). That is each original's **Magic
@@ -2960,7 +2969,11 @@ the game's Settings (As Original: all of them).
   Magic On (Alt-M) for that character alone, the originals' flag is the
   whole party's for one fight. With its defaults (all but Bandage First
   and Spells) Quick is the original's (Magic Off, as every fight
-  starts); with the switch off there is no Magic On (no Alt-M key). The
+  starts) - but for Missile (v0.196.6, Tom): a loaded bow / crossbow /
+  sling whenever no foe is next to it, chosen again at each step, where
+  the originals rate it against the melee weapon once a turn; with the
+  switch off the original's choice. With the switch off there is no
+  Magic On (no Alt-M key). The
   party's NPCs get switches too (the originals' NPCs are always the
   computer's, spells and all): with their defaults (all but Bandage
   First) they act as the originals'; unticking limits them - a thing the

@@ -205,6 +205,13 @@ The Quick tab as an engine page + the party's NPCs (2026-11-09, round 14):
                            fight_check R14 - the tap moves no page, leaves no party character on Quick, and the
                            computer never acts for one taken off (Tom, 2026-11-10)
   fightfuzz QANPC=1        the party's last member made an NPC for the fights (R13 checks NPCs too)
+  fightfuzz FUZZBOW=1 QAALL=1  every member who may use one a bow + 40 readied arrows, its melee weapon +0-3, the whole
+                           party Quick with the Quick tab's start: fight_check R19 - Missile ticked, no foe next to
+                           it, a loaded bow / crossbow / sling and a foe in sight in reach: no step (Tom, 2026-11-11;
+                           v0.196.5 broke it 81 times in 40 PoolRad fights, v0.196.6 none in 9 games x 80)
+  rules4 ONLY=quickacts     + the bow scenes (sword held, bow + arrows carried; a +3 sword: ticked the bow, the switch
+                           off the game's rating); QABOWITM=<.ITM> a player's own items in the scene, QADEBUG=1 lists
+                           them with their ratings (Tom's save F: scratch only)
   r4all.sh                 BIN= LOGS= TAGP= (parallel agents); board_build.sh [env] (KEEP=1 keeps .pio/build/<env>)
   playsim MAKENPC=k        member k made an NPC before SAVENOW (a test save with an NPC; scratch only)
   qemu_shots.sh [dir]      real screenshots of the engine's screens from the firmware in QEMU - the S3 builds' frame

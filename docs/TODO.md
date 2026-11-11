@@ -6,6 +6,17 @@ to the bottom with their version, then drop off after a while. Synced to
 the Project as claude/TODO.md.
 
 ## Tom
+- [ ] Try v0.196.6 (Tom, 2026-11-11: "my characters ... fail to ready
+      their missile weapons and charge into melee"): Quick with Missile
+      ticked now readies a loaded bow / crossbow / sling whenever no foe
+      is next to the character, at every step of its turn. Found: the
+      originals (and the engine until now) choose the weapon once, at the
+      turn's start, and by a rating that keeps a much better sword over
+      the bow - so a fighter who started its turn next to a foe walked on
+      to the next one sword in hand. Your save F's fighters (+5 bows,
+      arrows readied) shot in every test fight from it; tell me where it
+      still happens (thrown things - darts, oil, holy water - stay by the
+      games' rating).
 - [x] 2.8" ILI9341: no sound (Tom, 2026-11-08) - silent in Classic-Games /
       Classic-Arcade too, the 3.2" and 2.8" ST7789 fine. v0.179.2: GPIO 4 (the red LED's pin)
       is the amplifier's enable on the 2.8" ILI9341 only (v0.179.1 had both), low from Play's start (a

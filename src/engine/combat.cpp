@@ -6757,6 +6757,32 @@ int choose_weapon(const Battle& b, int i)
     // (Quick Actions: Missile unticked - no missile weapon readied; Melee
     // unticked - the missile weapon whenever it can shoot)
     if (!(f.qa & quickacts::kMissile)) best_missile = -1;
+    // (Quick Actions, Missile ticked for one of the player's own: the best
+    // loaded launcher or sling - not a thrown item, oil and holy water among
+    // them - whenever no foe is next to it; the games' rating otherwise)
+    if (f.qa_shoot && best_missile >= 0 && !enemy_next_to(b, i)) {
+        int best_l = -1, l_r = 0;
+        for (int k = 0; k < f.n_items; ++k) {
+            const items::TypeInfo& ti = n.type(f.items[k][0x2E]);
+            if (ti.slot != items::kSlotWeapon || !(ti.classes & r[0x12B]) || !(ti.flags & 0x08) || (ti.flags & 0x10) || ti.range <= 1) continue;
+            bool loaded = (ti.flags & 0xFF) == 0x0A;
+            for (int j = 0; !loaded && j < f.n_items; ++j) {
+                if (!f.items[j][0x34]) continue;
+                const int t = f.items[j][0x2E];
+                if (((ti.flags & 0x01) && t == b.arrow) || ((ti.flags & 0x80) && t == b.quarrel)) loaded = true;
+            }
+            const int rating = weapon_rating(n, f.items[k], hands);
+            if (loaded && rating > 0 && (best_l < 0 || rating > l_r)) {
+                best_l = k;
+                l_r = rating;
+            }
+        }
+        if (best_l >= 0) {
+            const int held = weapon(f, n);
+            if (held == best_l || (held >= 0 && f.items[held][0x36])) return kKeep;
+            return best_l;
+        }
+    }
     if (best_missile >= 0 && (missile_r > melee_r / 2 || !(f.qa & quickacts::kMelee))) {
         const items::TypeInfo& ti = n.type(f.items[best_missile][0x2E]);
         // What it shoots: itself (thrown), its readied arrows / quarrels, or nothing (a sling)

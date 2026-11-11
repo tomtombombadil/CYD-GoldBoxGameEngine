@@ -4554,6 +4554,10 @@ void ai_step(pic::Canvas& c)
     // and for the party's NPCs (kComputer as they start: the game's AI);
     // kComputer for monsters: as the game
     f.qa = quick_mask(f);
+    // (Missile ticked for one of the player's own Quick characters: a loaded
+    // bow / crossbow / sling whenever no foe is next to it - Tom, 2026-11-11)
+    f.qa_shoot = qa_on() && qa_member(f.member) && !qa_npc(f.member) && f.quick && !f.team() && f.rec[0xF7] < 0x80 &&
+                 f.status() != party::Animated && (f.qa & quickacts::kMissile);
     // The computer bandages a dying friend in its move-and-attack step -
     // after morale, items, the pending spell, Turn, spells and the weapon,
     // with moves left and a foe to go for (below): Curse GAME.OVR 0xC829 in
@@ -4809,6 +4813,9 @@ void ai_step(pic::Canvas& c)
         f.moves = 0;
         return;
     }
+    // (and at each step of its turn: the foe it fought gone, the bow comes
+    // out again - the originals choose once a turn, at its start)
+    if (f.qa_shoot && fg->ai_checked && ai_ready_weapon(i)) draw_panel_for(c, i);
     const combat::Plan p = combat::think(b, fg->t, i, rng);
     switch (p.act) {
     case combat::Act::Attack:

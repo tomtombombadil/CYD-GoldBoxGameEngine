@@ -47,6 +47,59 @@ struct QaOut {
 };
 // The first memorized place the game's computer looks at (AiCast::list_from)
 int qa_place() { return play::fg && play::fg->t.ai ? play::fg->t.ai->list_from : 0; }
+// qa_bow: member 0 holds a sword and carries a bow with readied arrows (the
+// game's own types) - or QABOWITM=<a .ITM file>: those items (a player's)
+bool qa_bow = false;
+int qa_sword_plus = 0;                  // (the sword's plus: +3 out-rates a plain bow by the games' rule)
+void qa_bow_items(party::Character& ch, combat::Fighter& f)
+{
+    if (const char* path = getenv("QABOWITM")) {
+        FILE* fp = fopen(path, "rb");
+        ch.n_items = 0;
+        while (fp && ch.n_items < party::kMaxItems && fread(ch.items[ch.n_items], 1, items::kRecordSize, fp) == items::kRecordSize)
+            ++ch.n_items;
+        if (fp) fclose(fp);
+        if (getenv("QADEBUG"))
+            for (int k = 0; k < ch.n_items; ++k) {
+                const items::TypeInfo& ti = names->type(ch.items[k][0x2E]);
+                printf("    item %d type %d slot %d hands %d %dd%d flags %02X range %d attacks %d classes %02X plus %d ready %d rating %d\n", k,
+                       ch.items[k][0x2E], ti.slot, ti.hands, ti.dice, ti.sides, ti.flags, ti.range, ti.attacks, ti.classes,
+                       static_cast<int8_t>(ch.items[k][0x32]), ch.items[k][0x34], combat::weapon_rating(*names, ch.items[k], 0));
+            }
+        return;
+    }
+    int sword = -1, bow = -1, best = 0;
+    for (int k = 1; k < 256; ++k) {
+        const items::TypeInfo& ti = names->type(k);
+        if (ti.slot != items::kSlotWeapon || !(ti.classes & f.rec[0x12B])) continue;
+        if (!(ti.flags & 0x18) && ti.hands <= 1 && ti.dice * ti.sides > best) { sword = k; best = ti.dice * ti.sides; }
+        if ((ti.flags & 0x01) && ti.range > 3 && bow < 0) bow = k;
+    }
+    // (none its class may use - Gateway's fighter: the bow's classes given to it)
+    for (int k = 1; k < 256 && bow < 0; ++k) {
+        const items::TypeInfo& ti = names->type(k);
+        if (ti.slot == items::kSlotWeapon && (ti.flags & 0x01) && ti.range > 3) {
+            bow = k;
+            f.rec[0x12B] = static_cast<uint8_t>(f.rec[0x12B] | ti.classes);
+        }
+    }
+    memset(ch.items, 0, sizeof ch.items[0] * 3);
+    ch.items[0][0x2E] = static_cast<uint8_t>(sword);
+    ch.items[0][0x34] = 1;
+    ch.items[0][0x32] = static_cast<uint8_t>(qa_sword_plus);
+    ch.items[1][0x2E] = static_cast<uint8_t>(bow);
+    ch.items[2][0x2E] = static_cast<uint8_t>(fg->b.arrow);
+    ch.items[2][0x34] = 1;
+    ch.items[2][0x39] = 40;
+    ch.n_items = 3;
+    if (getenv("QADEBUG")) {
+        printf("  qa bow: sword %d bow %d arrow %d (classes %02X)\n", sword, bow, fg->b.arrow, static_cast<int>(f.rec[0x12B]));
+        for (int k = 1; k < 256; ++k) {
+            const items::TypeInfo& ti = names->type(k);
+            if (ti.slot == items::kSlotWeapon && (ti.flags & 0x81)) printf("    launcher %d flags %02X range %d classes %02X\n", k, ti.flags, ti.range, ti.classes);
+        }
+    }
+}
 QaOut qa_scene(int mask, int dist, bool dying, int undead, int cls = 0, bool thrown = false, bool npc = false, int spell = 0)
 {
     QaOut o;
@@ -107,6 +160,10 @@ QaOut qa_scene(int mask, int dist, bool dying, int undead, int cls = 0, bool thr
             ch.items[0][0x39] = 5;          // (a pile of them)
             ch.n_items = 1;
         }
+    }
+    if (qa_bow) {
+        qa_bow_items(ch, f);
+        rules::recalc(ch, *names, d->facts);
     }
     f.items = ch.items;
     f.n_items = ch.n_items;
@@ -358,6 +415,28 @@ void quick_actions()
                s_off_nm.guarded,
            "ticked shot %d; unticked shot %d stepped %d; + Move unticked shot %d stepped %d guarded %d", s_on.missile, s_off.attacked,
            s_off.stepped, s_off_nm.attacked, s_off_nm.stepped, s_off_nm.guarded);
+    // Missile with a bow (Tom, 2026-11-11: his PoolRad fighters charged): a
+    // sword held, a bow and readied arrows carried, the foe 3 squares off -
+    // the bow readied and shot; next to the foe the sword
+    qa_bow = true;
+    const QaOut w_on = qa_scene(D, 3, false, 0, 2), w_off = qa_scene(D & ~kMissile, 3, false, 0, 2);
+    const QaOut w_next = qa_scene(D, 1, false, 0, 2);
+    // A +3 sword out-rates a plain bow by the games' rule (8 + 24 + 3 > 2 x
+    // the bow's): the switch off - the game's own - keeps the sword and
+    // steps; Missile ticked - the bow (Tom, 2026-11-11)
+    qa_sword_plus = 3;
+    const QaOut r_on = qa_scene(D, 3, false, 0, 2), r_off = qa_scene(-1, 3, false, 0, 2);
+    qa_sword_plus = 0;
+    qa_bow = false;
+    expect(P, "Quick Actions, Missile with a bow and a +3 sword: ticked the bow (shot); the switch off the game's rating (no "
+              "shot: it steps)",
+           r_on.missile && !r_off.missile && r_off.stepped, "ticked shot %d; off shot %d stepped %d", r_on.missile, r_off.missile,
+           r_off.stepped);
+    expect(P, "Quick Actions, Missile with a bow: a sword held, a bow and readied arrows carried, the foe 3 squares off - "
+              "ticked it readies the bow and shoots; unticked no shot; the foe next to it: a blow",
+           w_on.missile && !w_off.missile && w_next.attacked && !w_next.missile, "ticked shot %d attacked %d stepped %d; "
+           "unticked shot %d; next to it attacked %d shot %d", w_on.missile, w_on.attacked, w_on.stepped, w_off.missile,
+           w_next.attacked, w_next.missile);
     // Move: a fighter, the foe 4 squares off, nothing to throw
     const QaOut v_on = qa_scene(D, 4, false, 0, 2), v_off = qa_scene(D & ~kMove, 4, false, 0, 2);
     const QaOut v_mel = qa_scene(D & ~kMelee, 4, false, 0, 2);

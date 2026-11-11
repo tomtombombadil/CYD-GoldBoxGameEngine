@@ -795,6 +795,12 @@ struct Fighter {
     // the caller for the player's own Quick characters - kDefault with the
     // switch off -, kComputer for everyone else: as the games)
     uint8_t qa = quickacts::kComputer;
+    // Quick Actions' Missile for one of the player's own Quick characters
+    // (Tom, 2026-11-11: "If they have missile enabled, and they have a
+    // missile weapon and ammo, and they are not engaged ... they should use
+    // their missile attack"): a loaded bow / crossbow / sling whenever no
+    // foe is next to it, whatever the games' rating says (choose_weapon)
+    bool    qa_shoot = false;
     uint8_t spell_t[24] = {};
     int     team() const { return rec[0x197]; }
     bool    up() const { return rec[0x196] != 0; }          // able to fight

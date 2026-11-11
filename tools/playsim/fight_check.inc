@@ -233,6 +233,46 @@ void on_act(const combat::Battle& b, int i, combat::TestAct a, int t, int extra)
             if (!next && !(q & kMissile)) broke = "a shot with Missile unticked";
         }
         if (a == TestAct::Step && !f.fleeing && !(q & kMove)) broke = "a step with Move unticked";
+        // R19 (Tom, 2026-11-11: his PoolRad fighters charged with bows and
+        // arrows): one of the player's own, Missile ticked, no foe next to
+        // it, a bow / crossbow / sling it may use with its ammunition and a
+        // foe in sight within its reach - no step, it shoots
+        if (a == TestAct::Step && !f.fleeing && !qa_npc && (q & kMissile) && (f.attacks[0] > 0 || f.attacks[1] > 0) && play::names && f.items) {
+            bool next = false;
+            for (int c = 0; c < b.n && !next; ++c)
+                next = c != i && b.f[c].up() && b.f[c].size && b.f[c].team() != f.team() && combat::adjacent(b, i, c);
+            const int held = combat::weapon(f, *play::names);
+            const bool stuck = held >= 0 && f.items[held][0x36];
+            int reach = 0, wk = -1;
+            for (int k = 0; k < f.n_items && !next && !stuck; ++k) {
+                const items::TypeInfo& ti = play::names->type(f.items[k][0x2E]);
+                // (a launcher or sling - thrown items, oil and holy water among
+                // them, by the games' rating)
+                if (ti.slot != items::kSlotWeapon || !(ti.flags & 0x08) || (ti.flags & 0x10) || ti.range <= 1 ||
+                    !(ti.classes & f.rec[0x12B]) || combat::weapon_rating(*play::names, f.items[k], 0) <= 1)
+                    continue;
+                bool loaded = (ti.flags & 0xFF) == 0x0A;
+                for (int j = 0; !loaded && j < f.n_items; ++j) {
+                    if (!f.items[j][0x34]) continue;
+                    const int ty = f.items[j][0x2E];
+                    loaded = ((ti.flags & 0x01) && ty == b.arrow) || ((ti.flags & 0x80) && ty == b.quarrel);
+                }
+                const int r = ti.range - 1 > 1 ? ti.range - 1 : 1;
+                if (loaded && r > reach) { reach = r; wk = k; }
+            }
+            for (int c = 0; c < b.n && reach > 0; ++c) {
+                int sq;
+                if (c == i || !b.f[c].up() || !b.f[c].size || b.f[c].team() == f.team() || combat::hidden(b, i, c)) continue;
+                if (combat::range(b, play::fg->t, i, c, false, &sq) && sq <= reach) {
+                    static std::string m;
+                    m = "a step with Missile ticked, item " + std::to_string(wk) + " loaded (held " +
+                        std::to_string(combat::weapon(f, *play::names)) + "), " + who(b, c) + " " +
+                        std::to_string(sq) + " squares off in sight";
+                    broke = m.c_str();
+                    break;
+                }
+            }
+        }
         if (a == TestAct::Cast && !(q & kSpells) && !(static_cast<size_t>(i) < pending.size() && pending[i])) broke = "a spell with Spells unticked";
         if (a == TestAct::UseItem && !(q & kItems)) broke = "an item with Items unticked";
         if (a == TestAct::TurnUndead && !(q & kTurn)) broke = "Turn Undead unticked";
@@ -240,7 +280,7 @@ void on_act(const combat::Battle& b, int i, combat::TestAct a, int t, int extra)
         if (broke) {
             char m[16];
             snprintf(m, sizeof m, " (mask %02X)", q);
-            bad("R13", std::string(broke) + m + ": " + who(b, i));
+            bad(strncmp(broke, "a step with Missile", 19) ? "R13" : "R19", std::string(broke) + m + ": " + who(b, i));
         }
     }
     switch (a) {

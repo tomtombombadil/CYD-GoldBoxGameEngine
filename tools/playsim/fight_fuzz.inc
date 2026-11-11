@@ -449,6 +449,44 @@ static void sweep_fightfuzz(unsigned seed, int fights)
             }
             ff::steps += g;
         }
+        // QAALL=1: the whole party on Quick from the start, the switches as
+        // the Quick tab starts them (R19: Tom's bowmen, 2026-11-11)
+        if (getenv("QAALL") && play::fg) {
+            for (int i = 0; i < party::kMaxParty; ++i) play::qa_mask[i] = quickacts::kDefault;
+            for (int i = 0; i < play::fg->b.party_size; ++i) play::fg->b.f[i].quick = true;
+        }
+        // FUZZBOW=1: each party member who may use one gets a bow and 40
+        // readied arrows (the game's own types) when it has no launcher, and
+        // the readied melee weapon a plus of 0-3 at random (R19)
+        if (getenv("FUZZBOW") && play::fg && play::names) {
+            combat::Battle& fb = play::fg->b;
+            for (int i = 0; i < fb.party_size; ++i) {
+                combat::Fighter& f = fb.f[i];
+                if (f.member < 0 || f.member >= play::pt->count || !f.items) continue;
+                party::Character& ch = play::pt->m[f.member];
+                bool has = false;
+                for (int k = 0; k < ch.n_items; ++k) {
+                    const items::TypeInfo& ti = play::names->type(ch.items[k][0x2E]);
+                    if (ti.slot == items::kSlotWeapon && (ti.flags & 0x01)) has = true;
+                    if (ch.items[k][0x34] && ti.slot == items::kSlotWeapon && !(ti.flags & 0x18) && !ch.items[k][0x36])
+                        ch.items[k][0x32] = static_cast<uint8_t>(ff::fr() % 4);
+                }
+                int bow = -1;
+                for (int k = 1; k < 256 && bow < 0; ++k) {
+                    const items::TypeInfo& ti = play::names->type(k);
+                    if (ti.slot == items::kSlotWeapon && (ti.flags & 0x01) && ti.range > 3 && (ti.classes & f.rec[0x12B])) bow = k;
+                }
+                if (has || bow < 0 || fb.arrow <= 0 || ch.n_items + 2 > party::kMaxItems) continue;
+                memset(ch.items[ch.n_items], 0, 2 * items::kRecordSize);
+                ch.items[ch.n_items][0x2E] = static_cast<uint8_t>(bow);
+                ch.items[ch.n_items + 1][0x2E] = static_cast<uint8_t>(fb.arrow);
+                ch.items[ch.n_items + 1][0x34] = 1;
+                ch.items[ch.n_items + 1][0x39] = 40;
+                ch.n_items += 2;
+                f.items = ch.items;
+                f.n_items = ch.n_items;
+            }
+        }
         before = fc::broken;
         if (getenv("FXCHECK")) {
             fxc::begin(t);
