@@ -16649,6 +16649,11 @@ bool panel_member(int i, PanelMember& m)
     m.hp_max = static_cast<int16_t>(ch.hp_max());
     m.health = static_cast<uint8_t>(ch.health());
     m.fx = member_fx(ch);
+    // (a charm only works in a fight: out of one its effect can stay on the
+    // record - PoolRad's fight end keeps it, the side put back - so the
+    // Companion says Charmed only during a fight; Tom, 2026-11-11: the
+    // vampire's charm still shown after leaving the graveyard)
+    if (!fg) m.fx &= static_cast<uint16_t>(~kPxCharmed);
     m.drained = create::drained(ch);
     const int k = member_fighter(i);
     if (k >= 0 && fg->b.f[k].fleeing) m.fx |= kPxFleeing;

@@ -2653,7 +2653,9 @@ a PC, PortMaster handhelds):
     drain and not restored - `create::drained`: the record's lost levels,
     0xE7, or a class below its best level in Darkness / Death Knights /
     the Dark Queen; a saved game's drained characters too; never OK beside
-    it), then the effects worst first (Asleep,
+    it), then the effects worst first (Charmed only during a fight - Tom,
+    2026-11-11: PoolRad's fight end keeps the charm's effect on the record,
+    its side put back): Asleep,
     Paralyzed, Held, Stunned, Fleeing, Charmed, Afraid, Poisoned,
     Diseased, Blind, Cursed, Slowed, Blessed, Hasted, Invisible,
     Protected - from the game's own effect numbers, profile fight.facts);
