@@ -132,6 +132,11 @@ void party_turn()
     char t[24];
     snprintf(t, sizeof t, " r%d:%d:", fg->b.round, fg->cur);
     steps += t;
+    if (getenv("FUZZMOVEATK")) {        // (Tom's way: Move, then a step into the foe)
+        steps += "M";
+        if (!tap_word('M')) tap_item(0);
+        return;
+    }
     if (r < 22) {
         steps += "Q";
         if (!tap_word('Q')) tap_item(0);
@@ -217,6 +222,27 @@ bool fight(int k)
             party_turn();
             break;
         case FSt::Move:
+            if (getenv("FUZZMOVEATK")) {
+                // (toward the nearest standing foe; a step into it attacks)
+                const combat::Battle& b = fg->b;
+                const combat::Fighter& f = b.f[fg->cur];
+                int best = -1, bd = 1 << 30;
+                for (int i = 0; i < b.n; ++i)
+                    if (b.f[i].team() != f.team() && b.f[i].up() && b.f[i].size) {
+                        const int dd = (b.f[i].x - f.x) * (b.f[i].x - f.x) + (b.f[i].y - f.y) * (b.f[i].y - f.y);
+                        if (dd < bd) bd = dd, best = i;
+                    }
+                if (best < 0 || moves_made++ > 12) {
+                    play::tap(4, text::kMenuRow * 8 + 2, C);
+                    break;
+                }
+                const int dx = (b.f[best].x > f.x) - (b.f[best].x < f.x), dy = (b.f[best].y > f.y) - (b.f[best].y < f.y);
+                static const int kWay[3][3] = {{7, 0, 1}, {6, -1, 2}, {5, 4, 3}};
+                const int w = kWay[dy + 1][dx + 1];
+                if (w < 0) play::tap(4, text::kMenuRow * 8 + 2, C);
+                else play::fight_dir(w, C);
+                break;
+            }
             if (moves_made++ < 1 + fpick(4)) play::fight_dir(fpick(8), C);
             else if (hl()) tap_word('D');
             else play::tap(4, text::kMenuRow * 8 + 2, C);
