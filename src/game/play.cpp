@@ -14190,6 +14190,12 @@ void begin_adventuring()
             const int blk[3] = {d->save.look & 0xFF, d->save.look >> 8, d->save.look_slot & 0xFF};
             for (int s2 = 0; s2 < 3; ++s2) host->load_slot(s2, blk[s2] ? blk[s2] : -1);
             host->slots_done();
+        } else if (dungeon && hl()) {
+            // (the Dark Queen: its map again - the walls are the map
+            // header's sets, the backdrop the saved look; until v0.196.1 a
+            // save made in a 3D area loaded no map: a black view, no steps -
+            // DOSBox: save D outside Cergoth, the forest, steps to 4,2)
+            host->load_map(vm->get(0x4BC5) & 0xFF);
         } else if (dungeon && darkness_files()) {
             // (Darkness: its map and its look again - darkness_facts.md S8)
             host->load_map(vm->get(0x4BC5) & 0xFF);

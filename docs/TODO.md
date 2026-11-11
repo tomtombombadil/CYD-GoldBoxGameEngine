@@ -169,9 +169,11 @@ the Project as claude/TODO.md.
       Knights 144, Queen 111; 0 missed), host test test_drained (saved
       PoolRad / Curse / Darkness records), a playsim snapshot (PoolRad save
       with one member's lost-levels byte set: "Drained" in red).
-      Noted: Curse, Secret, Gateway and Champions have no fight-time level
-      drain in the engine (no drain effect in their facts) - check against
-      each original whether their monsters drain levels (rules round).
+      Curse, Secret, Gateway and Champions have no fight-time level drain
+      in the engine - as their originals: their programs have no drain
+      words at all (GAME.OVR / EXEs; PoolRad "is drained", Darkness /
+      Treasures / Knights "gets drained" - the games the engine drains in).
+      Their Restoration still serves imported drained characters.
 - [x] Treasures K8 (fightfuzz FXCHECK, seed 5 fight 1): with Show Rolls
       on, a blow that met a mirror image sent the attack back to the
       original's pages, and a miss beside it lost its roll - v0.195.2: one
@@ -214,8 +216,12 @@ the Project as claude/TODO.md.
       the Party view sent its palette (the screen's now put back); the
       fight Map view's "Party menu" heading went with v0.192.0's map lines;
       the scan's "newer format - not playable yet" for Queen removed.
-- [ ] Queen outside Cergoth (save D) drew a black 3D view in the playsim
-      (screenshot run, 2026-11-10) - look into it.
+- [x] Queen outside Cergoth (save D) drew a black 3D view (v0.196.1): a
+      save made in a 3D area loaded no map (the resume path wanted wall
+      blocks its saves don't keep) - black view, steps going nowhere.
+      Now its map again; checked against DOSBox (the original on the same
+      save: the forest, F -> 4,2 at 11:01 - the engine the same), every
+      other game's save D loads its map, Queen saveload / monkey clean.
 
 - [x] Round 12 rule fix (2026-11-09, Tom: "the original does Bandage
       last"; with Quick Actions, not pushed yet): the computer's
