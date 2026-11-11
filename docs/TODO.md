@@ -160,7 +160,8 @@ the Project as claude/TODO.md.
       events" - v0.195.1: a fight tap skips nothing, takes the party off
       Quick (SPEC 12 "A tap in a fight"); checked by fightfuzz FUZZTAPQ
       (R14, nine games, and R14 fails with the hand-off taken out). (c) is
-      now moot for pages (a tap no longer moves them on). (a) still open.
+      now moot for pages (a tap no longer moves them on). (a) decided (Tom,
+      20:05): no - the attack pause stays ours (10 ms + 10 a speed step).
 - [ ] Treasures K8 (fightfuzz FXCHECK, seed 5 fight 1, MON1 #101 x5,
       speed 0; with or without taps): "1 blow whose to-hit roll no page
       showed" - Show Rolls misses one blow's roll. Look at it.

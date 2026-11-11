@@ -2898,7 +2898,7 @@ the game's Settings (As Original: all of them).
 - **Game speed** (Tom, 2026-11-06: fights sluggish at speed 0): no
   longer ours - except the attack frame's pause before a blow's messages:
   10 ms + 10 ms a speed step (100 ms at 9; the originals 100 ms always - Tom,
-  2026-11-06) - speed 0 waits nothing, as the originals' Turbo Pascal
+  2026-11-06; kept, Tom 2026-11-10: don't put the 100 ms back) - speed 0 waits nothing, as the originals' Turbo Pascal
   Delay(speed x 100 ms; Pool x 225) (until v0.170.1 the engine waited 0
   as 4). A game starts at its program's own speed - 4, Pool 1 (each
   program's start-up / per-run reset; `start_speed`) - and a saved game
