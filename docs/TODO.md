@@ -162,9 +162,16 @@ the Project as claude/TODO.md.
       (R14, nine games, and R14 fails with the hand-off taken out). (c) is
       now moot for pages (a tap no longer moves them on). (a) decided (Tom,
       20:05): no - the attack pause stays ours (10 ms + 10 a speed step).
-- [ ] Treasures K8 (fightfuzz FXCHECK, seed 5 fight 1, MON1 #101 x5,
-      speed 0; with or without taps): "1 blow whose to-hit roll no page
-      showed" - Show Rolls misses one blow's roll. Look at it.
+- [x] Treasures K8 (fightfuzz FXCHECK, seed 5 fight 1): with Show Rolls
+      on, a blow that met a mirror image sent the attack back to the
+      original's pages, and a miss beside it lost its roll - v0.195.2: one
+      page a blow there too (Secret / Gateway / Treasures fuzz clean).
+- [x] Flash check (2026-11-10, all games, seeds 3 and 7: 0): the rest's
+      clock row no longer counted; the Dark Queen's box frame cells at a
+      row's ends no longer make a cleared row "shown" (its one report was
+      that). v0.195.2: an encounter rolled on a rest step that had its own
+      message ("has memorized ...") is told after that message's wait, not
+      over it (same dice; stopping the rest then still lets it break in).
 
 - [x] Messages too quick to read (Tom, 2026-11-10, PoolRad's training
       "Not Enough Experience"; v0.194.0): Readable Messages (CYD_READ_TIME,

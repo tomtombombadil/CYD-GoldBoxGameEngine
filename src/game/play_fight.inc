@@ -3006,9 +3006,10 @@ void attack_pages(int a, int t, const combat::Attack& at, bool behind, bool shot
     // too ("Misses", its roll), each shot flying - so the player sees each
     // one (Tom, 2026-11-06: "only 1 dart thrown"). The originals page the
     // hits only, a miss just when nothing hit; play is the same either way.
-    bool each = fg->rolls && at.n > 1 && !at.slain;
-    for (int k = 0; each && k < at.n; ++k)
-        if (at.image[k]) each = false;          // (Secret's images: the original's pages)
+    // (a mirror image's blow too - its "lost an image" page; until v0.195.1
+    // images went back to the original's pages and a miss beside one lost
+    // its roll - fx_check K8, Treasures)
+    const bool each = fg->rolls && at.n > 1 && !at.slain;
     // The sounds: a shot's flight, then a blow each hit, a swish for no hit at all
     auto hit_page = [&]() {
         if ((first || each) && shot) {

@@ -52,6 +52,8 @@ void tick()
     std::vector<uint8_t> now;
     for (int r = kRow0; r <= kRow1; ++r) {
         if (r == 23) continue;
+        // (the rest's clock on row 17 counts down - not a message)
+        if (r == 17 && rest.running) continue;
         row_px(r, now);
         if (prev[r].empty()) {
             prev[r] = now;
@@ -66,6 +68,10 @@ void tick()
             if (count[v] > count[bg]) bg = v;
         bool blank_prev = true, blank_now = true, grow = true;
         for (size_t i = 0; i < now.size(); ++i) {
+            // (the frame's cells at the row's ends aren't text - the Dark
+            // Queen's box edges; until 2026-11-10 a cleared row counted as shown)
+            const int x = static_cast<int>(i % 320);
+            if (x < 8 || x >= 312) continue;
             if (prev[r][i] != bg) blank_prev = false;
             if (now[i] != bg) blank_now = false;
             if (prev[r][i] != bg && now[i] != prev[r][i]) grow = false;
@@ -92,6 +98,7 @@ void tick()
                     }
                 }
                 if (getenv("FLASHDBG")) printf("   then %s now [%s|%s]\n", menu_then[r], menu.prompt, menu.s);
+                if (getenv("FLASHDBG")) printf("   rest running %d left %d pause %d interrupted %d last_in %u shown %u\n", (int)rest.running, rest.left, (int)(rest.pause_until ? (int32_t)(rest.pause_until - g_now) : -1), (int)rest.interrupted, (unsigned)last_in, (unsigned)shown_at[r]);
                 if (getenv("FLASHDBG")) printf("   note_until %d now %u held %d wait %d\n", (int)(note_until ? (int32_t)(note_until - g_now) : -99999), (unsigned)g_now, (int)note_held, vm ? (int)vm->wait() : -1);
             }
         }

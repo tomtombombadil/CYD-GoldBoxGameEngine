@@ -1641,7 +1641,9 @@ static void sweep_monkey(int rounds)
             last_area = d->gs.game_area;
             printf("  monkey %d: now in area %d\n", r, last_area);
         }
-        if (r % 1000 == 0) printf("  monkey %d: screen %d party %d area %d script %d\n", r, (int)screen, pt->count, d->gs.game_area, d->gs.script);
+        if (r % (getenv("MEVERY") ? atoi(getenv("MEVERY")) : 1000) == 0)
+            printf("  monkey %d: screen %d party %d area %d script %d%s\n", r, (int)screen, pt->count, d->gs.game_area, d->gs.script,
+                   fg ? (" fight st " + std::to_string((int)fg->st) + " round " + std::to_string(fg->b.round) + " cur " + std::to_string(fg->cur)).c_str() : "");
         if (getenv("HEAPLOG") && play::walking() && r % 200 == 0) printf("  heap %d: %zu in use (boot %d)\n", r, mallinfo2().uordblks, boots);
     }
     printf("  %d boots, %d fights\n", boots, fights_seen);

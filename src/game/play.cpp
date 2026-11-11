@@ -9574,6 +9574,7 @@ struct RestRun {
     bool ship = false;              // Treasures' PROGRAM 4: the script goes on after it
     int  fix_heal = 0;
     uint32_t pause_until = 0;       // a message stays a moment
+    bool interrupt_next = false;    // an encounter broke in on a step that had a message: told after it
     int  shown = 0;                 // steps since the time was shown
     magic::Rest r;
 } rest;
@@ -9634,6 +9635,12 @@ void open_rest(pic::Canvas& c, bool from_magic)
 void end_rest(pic::Canvas& c)
 {
     rest.running = false;
+    // (an encounter already rolled still breaks in when the rest is stopped
+    // during the message before it)
+    if (rest.interrupt_next) {
+        rest.interrupt_next = false;
+        rest.interrupted = true;
+    }
     text::clear(c, text::kTextArea);
     dirty_rows(17, 22);
     if (rest.ship) {
@@ -9710,6 +9717,10 @@ void rest_tick(uint32_t now, pic::Canvas& c)
 {
     if (!rest.running || screen != Screen::Rest) return;
     if (rest.pause_until && static_cast<int32_t>(now - rest.pause_until) < 0) return;
+    // (a rest message stays 3 tenths a speed step - ours, not checked
+    // against the originals' rest routine)
+    const uint32_t delay = static_cast<uint32_t>(vm->get(0x4BFC) & 0xFF) * 300;
+    const uint32_t hold = CYD_READ_TIME && opts.read_time && delay < kReadMs ? kReadMs : delay;
     if (rest.pause_until) {
         rest.pause_until = 0;
         c.fill(8, 18 * 8, 38 * 8, 4 * 8, 0);
@@ -9718,10 +9729,26 @@ void rest_tick(uint32_t now, pic::Canvas& c)
             end_rest(c);
             return;
         }
+        // (an encounter rolled on a step that had its own message - "has
+        // memorized ..." - is told after that message's wait, never over it:
+        // flashcheck, the Dark Queen, 2026-11-10)
+        if (rest.interrupt_next) {
+            rest.interrupt_next = false;
+            rest.interrupted = true;
+            if (pool_files()) {
+                end_rest(c);
+                return;
+            }
+            char t[40];
+            mw(profile::kInterrupted, t, sizeof t);
+            c.fill(8, 19 * 8, 38 * 8, 8, 0);
+            put(c, t, 1, 19, 15);
+            dirty_rows(17, 22);
+            rest.pause_until = now + hold;
+            if (!rest.pause_until) rest.pause_until = 1;
+            return;
+        }
     }
-    // (a rest message stays 3 tenths a speed step - ours, not checked
-    // against the originals' rest routine)
-    const uint32_t delay = static_cast<uint32_t>(vm->get(0x4BFC) & 0xFF) * 300;
     for (int k = 0; k < 6 && rest.left > 0; ++k) {
         rest.left -= 5;
         if (rest.left < 0) rest.left = 0;
@@ -9762,7 +9789,10 @@ void rest_tick(uint32_t now, pic::Canvas& c)
         // (the Cheats tab's Sanctuary: nothing breaks in)
         if (period > 0 && cheat != Cheat::Sanctuary && ++rest_encounter_steps >= period) {
             rest_encounter_steps = 0;
-            if (rng.roll(100, 1) <= chance) {
+            const bool hit = rng.roll(100, 1) <= chance;
+            if (hit && said) {
+                rest.interrupt_next = true;     // (told after this step's message)
+            } else if (hit) {
                 if (pool_files()) {
                     // (Pool: the camp-interrupted script first - ovr21
                     // +0xE0A; "The Party is rudely interrupted!" only after
@@ -9783,7 +9813,7 @@ void rest_tick(uint32_t now, pic::Canvas& c)
         if (said) {
             dirty_rows(17, 22);
             draw_rest_time(c);
-            rest.pause_until = now + (CYD_READ_TIME && opts.read_time && delay < kReadMs ? kReadMs : delay);
+            rest.pause_until = now + hold;
             if (!rest.pause_until) rest.pause_until = 1;
             return;
         }
