@@ -1821,6 +1821,8 @@ int start_round(Battle& b, create::Dice& d, Event* out, int cap)
         f.moves = mv * 2;
         if (b.fx && f.has(b.fx->haste)) f.moves *= 2;
         if (b.fx && f.has(b.fx->slow)) f.moves /= 2;
+        // (the Dark Queen under water: a third, unless effect 0x96 - DQK.EXE 0xA767)
+        if (b.underwater && !f.has(0x96)) f.moves /= 3;
         bool ranged = false;
         f.attacks[0] = slot1_attacks(b, f, &ranged);
         int half2 = f.rec[kHalf2];
@@ -3402,6 +3404,7 @@ int missile(const Battle& b, const Fighter& f, int* ammo)
 {
     *ammo = -1;
     if (!b.names) return 0;
+    if (b.underwater) return 0;         // (the Dark Queen: nothing shoots under water - DQK.EXE 0x24CA1)
     const int w = weapon(f, *b.names);
     if (w < 0) return 0;
     const items::TypeInfo& ti = b.names->type(f.items[w][0x2E]);
@@ -4456,6 +4459,33 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
     auto say = [&](int who, Did did, int amount) {
         if (lines < cap) out[lines++] = SpellLine{static_cast<uint8_t>(who), did, amount};
     };
+    if (b.underwater) {
+        static const uint8_t kNone[] = {9, 64, 47, 74, 115, 118, 124, 133};
+        for (uint8_t k : kNone)
+            if (spell == k) {
+                say(caster, Did::Water, 0);
+                return lines;
+            }
+        if ((spell == 51 && fs.does == SpellDoes::Bolt && b.tables && b.aim_x >= 0) || (spell == 87 && fs.n == 3)) {
+            FightSpell w = fs;
+            int tg[kMaxFighters], nt = n;
+            if (spell == 51) {
+                w.does = SpellDoes::Damage;
+                nt = in_area(b, *b.tables, b.aim_x, b.aim_y, 2, tg, kMaxFighters);
+            } else {
+                // (Ice Storm: 1d10 over an area of 3 round the square aimed
+                // at - DQK.EXE 0x29658's aim, 0x57FBB's dice)
+                w.n = 1;
+                if (b.tables && b.aim_x >= 0) nt = in_area(b, *b.tables, b.aim_x, b.aim_y, 3, tg, kMaxFighters);
+                else
+                    for (int k = 0; k < n && k < kMaxFighters; ++k) tg[k] = targets[k];
+            }
+            b.underwater = false;
+            const int r = cast(b, st, caster, spell, w, tg, nt, d, out, cap, pw);
+            b.underwater = true;
+            return r;
+        }
+    }
     Fighter& me = b.f[caster];
     const spells::Entry e = spells::entry(st, spell);
     if (pw <= 0) pw = power_of(me, st, spell);

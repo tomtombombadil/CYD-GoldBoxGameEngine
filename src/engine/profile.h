@@ -229,6 +229,8 @@ enum FightWord {
     // The Dark Queen's fall after a damage text (DQK.EXE res 0x8F04): "%s and
     // is Dying" round its "Goes Down" (kGoesDownS)
     kGoesDownDyingQ,
+    // The Dark Queen under water: "That has no effect underwater!"
+    kNoEffectWaterQ,
     kFightWords
 };
 

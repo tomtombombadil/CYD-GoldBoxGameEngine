@@ -5136,6 +5136,7 @@ void fight_start(pic::Canvas& c)
             b.rate.hands_ge3 = b.rate.target_fx = b.rate.plus_unsigned = true;
             b.rate.item_fx = false;
             b.rate.no_ranged = vm && vm->get(0x3C) != 0;      // (its game block's byte 0x3C: underwater)
+            b.underwater = b.rate.no_ranged;
         }
     }
     // Darkness's Turn Undead (R13): the undead its LOAD MONSTERs loaded (each
@@ -6090,6 +6091,14 @@ void fight_spell_chosen(int sp, pic::Canvas& c)
         note(c, fw(profile::kCampOnly));
         return;
     }
+    // The Dark Queen under water: the fire spells refused as picked, the spell
+    // kept (DQK.EXE 0x2731D: Flame Strike, Burning Hands, Fireball, Fire
+    // Touch, Delayed Blast Fireball, Meteor Swarm)
+    if (fg->b.underwater && (sp == 74 || sp == 9 || sp == 47 || sp == 118 || sp == 115 || sp == 124)) {
+        fight_menu(c);
+        note(c, fw(profile::kNoEffectWaterQ));
+        return;
+    }
     const combat::FightSpell* fs = fight_spell(sp);
     if (!fs || fs->does == combat::SpellDoes::NotYet) {
         fight_menu(c);
@@ -6215,6 +6224,7 @@ void spell_pages(int caster, const combat::SpellLine* l, int n, const combat::Fi
         }
         case combat::Did::Misses: add_page(caster, fw(profile::kMisses), nullptr, l[k].who); break;
         case combat::Did::LostImage: add_page(l[k].who, fw(profile::kLostImage)); break;
+        case combat::Did::Water: add_page(l[k].who, fw(profile::kNoEffectWaterQ)); break;
         case combat::Did::Fallen:
             if (fg->pages > 0 && !fg->page_dropped) fg->page[fg->pages - 1].fx[1] = skull_fx(l[k].who);
             break;

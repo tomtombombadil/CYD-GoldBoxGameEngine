@@ -10,6 +10,11 @@ O=/tmp/claude-0/ag7/obj/$name
 mkdir -p "$O" "$B"
 cd "$R"
 objs=()
+# (a header newer than the last build rebuilds everything: a changed struct
+# with old objects linked boots into nonsense - "a release the engine doesn't
+# know", 2026-11-12, twice)
+stamp=$O/.stamp
+if [ -f "$stamp" ] && [ -n "$(find src tools/host -name '*.h' -newer "$stamp" -print -quit)" ]; then REBUILD=1; fi
 for f in src/engine/*.cpp tools/host/*.cpp "$@"; do
   o=$O/$(echo "$f" | tr '/' '_').o
   objs+=("$o")
@@ -23,4 +28,5 @@ wait
 echo "g++ $main"
 g++ -std=c++17 -O1 -g $flags -Itools/host -Isrc -c "$main" -o "$O/main.o"
 g++ -std=c++17 -O1 -g $flags $LDEXTRA -o "$B/$name" "$O/main.o" "${objs[@]}" -ldl
+touch "$stamp"
 echo "built $B/$name"

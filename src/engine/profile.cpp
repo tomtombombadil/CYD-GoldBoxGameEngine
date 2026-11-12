@@ -2315,6 +2315,7 @@ constexpr auto kQueenFight = [] {
     // "goes down" is 0x5B8B - and "%s and is Dying" 0x1A5)
     f.words[kGoesDownS] = qw(0x19B);
     f.words[kGoesDownDyingQ] = qw(0x1A5);
+    f.words[kNoEffectWaterQ] = qw(0x87C9);
     // (its gaze sent back, "reflects it!" 0x8373; "engulfs %s" 0x84E7,
     // "constricts %s" 0x85F8 - the target's name after them: DQK.EXE
     // 0x4EAEF, 0x5181C, 0x529E9)

@@ -853,6 +853,14 @@ struct Battle {
         bool    hands_ge3 = false, target_fx = false;
         bool    item_fx = true, plus_unsigned = false, no_ranged = false;
     } rate{};
+    // The Dark Queen under water (its game byte 0x3C; rules round 22,
+    // DQK.EXE's spell handlers): no effect from Burning Hands (9 / 64),
+    // Fireball (47), Flame Strike (74), Delayed Blast Fireball (115), Fire
+    // Touch (118), Meteor Swarm (124), the Necklace of Missiles (133);
+    // Lightning Bolt (51) bursts as a fireball within 2 of the square aimed
+    // at, both sides; Ice Storm (87) 1d10 for 3d10, over 3 round the aim;
+    // nothing shoots (0x24CA1); moves a third without effect 0x96 (0xA767)
+    bool    underwater = false;
     int     morale_base = 0;            // the script's morale word (0x7EC6)
     // The morale routine's last figure (Curse DS 0x6FBC, Darkness 0xA7E1,
     // the Dark Queen 0xC2DE - round 19): 100 as a fighter is set up (Curse
@@ -1372,7 +1380,8 @@ struct FightSpell {
 };
 // What happened to each target, in order
 // Fallen: the skull, no words; Risen: "gets back up" / "stands up and grins"
-enum class Did : uint8_t { Word, Damage, Unaffected, Misses, Healed, Down, Word2, Fallen, Word3, Risen, LostImage, Word4 };
+// (Water: the Dark Queen's "That has no effect underwater!" - the spell spent)
+enum class Did : uint8_t { Word, Damage, Unaffected, Misses, Healed, Down, Word2, Fallen, Word3, Risen, LostImage, Word4, Water };
 struct SpellLine {
     uint8_t who;
     Did     did;

@@ -1913,6 +1913,107 @@ void q_add(combat::Fighter& f, uint8_t t, int minutes)
     a[1] = static_cast<uint8_t>(minutes);
 }
 
+// Round 22 (2026-11-12): the Dark Queen under water (game byte 0x3C;
+// DQK.EXE's spell handlers, the spell number to handler by its table DS
+// 0xAF45 + 4 x spell filled at 0x59F37-0x5A2E1): Burning Hands, Fireball,
+// Flame Strike, Delayed Blast Fireball, Fire Touch, Meteor Swarm, the
+// Necklace of Missiles - "That has no effect underwater!" (DS 0x87C9) and
+// nothing done; Lightning Bolt (0x57183) goes to Fireball's routine, which
+// takes everyone within 2 of the square aimed at (0x1D99:0xE9B with 2,
+// 0xFF); Ice Storm (0x57FBB) 1d10 for 3d10
+void queen_water()
+{
+    if (game() != 7 || !fight()) return;
+    combat::Battle& b = fg->b;
+    if (!mrules) load_magic();
+    if (!mrules) return;
+    mx::put(0, 0, 10, 10, 200);
+    mx::put(B, 1, 13, 10, 200);
+    b.underwater = true;
+    int none_ok = 0, none_n = 0;
+    std::string word;
+    for (int sp : {9, 64, 47, 74, 115, 118, 124, 133}) {
+        const combat::FightSpell* fs = fight_spell(sp);
+        if (!fs) continue;
+        ++none_n;
+        combat::SpellLine lines[8];
+        const int tg[1] = {B};
+        b.aim_x = b.f[B].x;
+        b.aim_y = b.f[B].y;
+        const int hp = b.f[B].hp();
+        const int n = combat::cast(b, mrules->tables, 0, sp, *fs, tg, 1, rng, lines, 8, 9);
+        if (n == 1 && lines[0].did == combat::Did::Water && b.f[B].hp() == hp) ++none_ok;
+    }
+    word = fw(profile::kNoEffectWaterQ);
+    expect(P, "the Dark Queen under water: Burning Hands, Fireball, Flame Strike, Delayed Blast Fireball, Fire Touch, "
+              "Meteor Swarm, the Necklace of Missiles do nothing - \"That has no effect underwater!\" (DS 0x87C9)",
+           none_n > 0 && none_ok == none_n && word == "That has no effect underwater!", "%d of %d, the word \"%s\"", none_ok,
+           none_n, word.c_str());
+    // Lightning Bolt: one 1 square from the aim (off the bolt's line beside
+    // the caster) is hurt; one 3 squares off is not
+    int bolt_hit = -1, bolt_far = -1;
+    if (const combat::FightSpell* fs = fight_spell(51)) {
+        mx::put(0, 0, 4, 10, 200);
+        mx::put(B, 1, 13, 10, 200);
+        const int C2 = B + 1 < b.n ? B + 1 : -1;
+        if (C2 >= 0) mx::put(C2, 1, 13, 12, 200);
+        b.aim_x = 13;
+        b.aim_y = 11;
+        const int h1 = b.f[B].hp(), h2 = C2 >= 0 ? b.f[C2].hp() : 0;
+        combat::SpellLine lines[16];
+        const int tg[1] = {B};
+        combat::cast(b, mrules->tables, 0, 51, *fs, tg, 1, rng, lines, 16, 9);
+        bolt_hit = b.f[B].hp() < h1;
+        bolt_far = C2 >= 0 ? b.f[C2].hp() < h2 : -1;
+        (void)bolt_far;
+        // and one 4 squares off the aim on the bolt's line from the caster: untouched
+        mx::put(B, 1, 9, 10, 200);
+        const int h3 = b.f[B].hp();
+        b.aim_x = 13;
+        b.aim_y = 10;
+        combat::cast(b, mrules->tables, 0, 51, *fs, tg, 1, rng, lines, 16, 9);
+        bolt_far = b.f[B].hp() < h3;
+    }
+    expect(P, "the Dark Queen under water: Lightning Bolt bursts round the square aimed at (within 2) - one beside it hurt, "
+              "one on the bolt's line 4 squares short of it untouched (0x57183 -> 0x56BD9)",
+           bolt_hit == 1 && bolt_far == 0, "beside %d, on the line %d", bolt_hit, bolt_far);
+    // Ice Storm: 1d10, never more than 10 (20 casts)
+    int ice_max = -1;
+    if (const combat::FightSpell* fs = fight_spell(87)) {
+        for (int k = 0; k < 20; ++k) {
+            mx::put(B, 1, 13, 10, 200);
+            b.aim_x = 13;
+            b.aim_y = 10;
+            const int h = b.f[B].hp();
+            combat::SpellLine lines[8];
+            const int tg[1] = {B};
+            combat::cast(b, mrules->tables, 0, 87, *fs, tg, 1, rng, lines, 8, 9);
+            ice_max = std::max(ice_max, h - b.f[B].hp());
+        }
+    }
+    expect(P, "the Dark Queen under water: Ice Storm 1d10 (0x57FBB; 3d10 on land)", ice_max >= 1 && ice_max <= 10,
+           "the most in 20 casts %d", ice_max);
+    // The round's moves: a third (0xA767), and nothing shoots (0x24CA1)
+    {
+        combat::Fighter& f = b.f[0];
+        const int mv = f.rec[0x1A5] >= 1 && f.rec[0x1A5] <= 96 ? f.rec[0x1A5] : 1;
+        const int keep_weather = b.weather;
+        b.weather = 2;                  // (no weather)
+        b.underwater = false;
+        combat::start_round(b, rng);
+        const int land = f.moves;
+        b.underwater = true;
+        combat::start_round(b, rng);
+        const int water = f.moves;
+        b.weather = keep_weather;
+        int ammo = 0;
+        expect(P, "the Dark Queen under water: moves a third (DQK.EXE 0xA767: without effect 0x96), missile() none (0x24CA1)",
+               land == mv * 2 && water == mv * 2 / 3 && combat::missile(b, f, &ammo) == 0, "move %d: land %d, water %d", mv, land,
+               water);
+    }
+    b.underwater = false;
+}
+
 void queen_lost()
 {
     if (game() != 7 || !fight()) return;
@@ -3872,6 +3973,7 @@ void run()
     if (want("wrap")) queen_wrap();
     if (want("qpages")) queen_pages();
     if (want("qlost")) queen_lost();
+    if (want("qwater")) queen_water();
     if (want("qhooks")) queen_hooks();
     if (want("statfx")) stat_effects();
     if (want("finder")) finder_check();
