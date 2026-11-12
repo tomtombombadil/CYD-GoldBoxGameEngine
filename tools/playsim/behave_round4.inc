@@ -2011,6 +2011,26 @@ void queen_water()
                land == mv * 2 && water == mv * 2 / 3 && combat::missile(b, f, &ammo) == 0, "move %d: land %d, water %d", mv, land,
                water);
     }
+    // Fire Shield (85, 0x57DE0): the hot one does nothing, the cold one is
+    // given as on land
+    {
+        int hot = -1, cold = -1;
+        if (const combat::FightSpell* fs = fight_spell(85)) {
+            mx::put(0, 0, 10, 10, 200);
+            b.underwater = true;
+            combat::SpellLine lines[8];
+            const int tg[1] = {0};
+            b.flame = 1;
+            int n = combat::cast(b, mrules->tables, 0, 85, *fs, tg, 1, rng, lines, 8, 9);
+            hot = n == 1 && lines[0].did == combat::Did::Water;
+            b.flame = 2;
+            const int had = b.f[0].n_aff ? *b.f[0].n_aff : 0;
+            n = combat::cast(b, mrules->tables, 0, 85, *fs, tg, 1, rng, lines, 8, 9);
+            cold = (b.f[0].n_aff ? *b.f[0].n_aff : 0) > had;
+        }
+        expect(P, "the Dark Queen under water: Fire Shield's hot flame \"That has no effect underwater!\", the cold one given "
+                  "(0x57DE0)", hot == 1 && cold == 1, "hot %d, cold %d", hot, cold);
+    }
     // The party's blows (0x95's handler 0x503A5): a weapon of blow type 0
     // full damage, another / (the bonus + 1), one with a range none; a
     // monster's unchanged

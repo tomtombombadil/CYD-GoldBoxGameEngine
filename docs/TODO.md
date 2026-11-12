@@ -1615,10 +1615,13 @@ the Project as claude/TODO.md.
       the party's blows (effect 0x95, the attacker's damage event 4,
       handler 0x503A5): a weapon with a range 0, a blow type other than 0
       damage / (the first blow's bonus + 1 - record 0x196, the bonus, as
-      the original's code has it). Left: the melee refusal's extra
-      "Can't use that underwater" (0x239CC, a message only); handler
-      0x57DE0 (not in the spell table - an item's?); 0x5BA58 / 0x5BA89 /
-      0x5EDBD (screen numbers - the drawing under water?). The scripts do
+      the original's code has it). v0.196.12: Fire Shield's hot flame "no
+      effect" (0x57DE0 - in fights and camp, the spell spent; the cold one
+      as on land); an item of spell 64 "Nothing Happens", not used
+      (0x5EDBD). Left: the melee refusal's extra "Can't use that
+      underwater" (0x239CC, before "Not with that weapon" - a message
+      only); 0x5BA58 / 0x5BA89 (a choice of 0x1D99:0xF3B's arguments, set
+      3 for 2 - its meaning not read). The scripts do
       set it: sweep events VMWATCH=3c (Queen, 44 of its blocks swept) -
       ECL.GLB blocks 1, 2, 3, 14, 15. the Dark Queen's ground 0x46 - laid by effect 0x9A's
       handler (DQK.EXE 0x50A77) as a cloud record of 1d6 at the holder's

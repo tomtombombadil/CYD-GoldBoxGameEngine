@@ -2316,6 +2316,7 @@ constexpr auto kQueenFight = [] {
     f.words[kGoesDownS] = qw(0x19B);
     f.words[kGoesDownDyingQ] = qw(0x1A5);
     f.words[kNoEffectWaterQ] = qw(0x87C9);
+    if (!f.words[kNothingHappens]) f.words[kNothingHappens] = qw(0x8FE5);      // (an item's: DQK.EXE 0x5EDCB)
     // (its gaze sent back, "reflects it!" 0x8373; "engulfs %s" 0x84E7,
     // "constricts %s" 0x85F8 - the target's name after them: DQK.EXE
     // 0x4EAEF, 0x5181C, 0x529E9)

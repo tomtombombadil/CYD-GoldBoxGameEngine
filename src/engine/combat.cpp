@@ -5160,6 +5160,11 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
         if (!b.fx) break;
         const int flame = b.flame ? b.flame : d.roll(10, 1) > 5 ? 1 : 2;
         b.flame = 0;
+        // (the Dark Queen under water: the hot one does nothing - DQK.EXE 0x57DE0)
+        if (b.underwater && flame == 1) {
+            say(caster, Did::Water, 0);
+            break;
+        }
         const uint8_t shield = flame == 1 ? b.fx->sp.hot : b.fx->sp.cold;
         if (shield) give_aff(me, shield, minutes, 0, false);
         if (b.fx->sp.zap) give_aff(me, b.fx->sp.zap, minutes, 0, false);

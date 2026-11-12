@@ -10264,6 +10264,20 @@ void do_cast(pic::Canvas& c)
     int pw = 0;
     if (cr.item < 0) magic::remove(me, cr.spell, hl());
     else pw = spells::item_power(me, mrules->tables, cr.spell);
+    // (the Dark Queen under water: Fire Shield's hot one does nothing, the
+    // spell spent - DQK.EXE 0x57DE0)
+    if (cr.cs && cr.cs->does == spells::Does::FireShield && cr.flame == 1 && d->prof->game == games::Game::DarkQueenOfKrynn && vm &&
+        vm->get(0x3C)) {
+        if (cr.item >= 0) {
+            if (cr.scroll) magic::scroll_used(me, scroll_facts(), cr.item, cr.spell);
+            else magic::used(me, cr.item);
+        }
+        char nw[48];
+        ow(d->prof->fight.words[profile::kNoEffectWaterQ], nw, sizeof nw);
+        show_memory(c);
+        note(c, nw);
+        return;
+    }
     cr.n = spells::cast(*pt, cr.caster, cr.target, *cr.cs, mrules->tables, d->prof->cures, d->prof->magic.facts, rng,
                         cr.lines, 24, pw, cr.flame);
     if (cr.item >= 0) {
@@ -10671,6 +10685,14 @@ void use_item(int i, pic::Canvas& c)
         return;
     }
     if (!scroll) {
+        // (the Dark Queen under water: an item of spell 64 - Burning Hands -
+        // "Nothing Happens", the item not used; DQK.EXE 0x5EDBD)
+        if (d->prof->game == games::Game::DarkQueenOfKrynn && vm && vm->get(0x3C) && magic::item_spell(it, pool_files()) == 64) {
+            char nw[48];
+            ow(d->prof->fight.words[profile::kNothingHappens], nw, sizeof nw);
+            note(c, nw);
+            return;
+        }
         use_spell(i, magic::item_spell(it, pool_files()), false, c);
         return;
     }
