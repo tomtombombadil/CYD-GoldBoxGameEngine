@@ -845,9 +845,13 @@ struct Battle {
     // Death Knights 0x36; 0 none), a type's hands with those in use over 2
     // (Secret) or over 3 (the rest) rate 0, and Darkness / Treasures look at
     // the target's effects (the plus a weapon needs, halving by its blow)
+    // The Dark Queen (DQK.EXE 0x2F081 / 0x2F1A6): Darkness's with no item
+    // effect tests, the plus compared unsigned, and a weapon with a range
+    // rated 0 while its game byte 0x3C is set
     struct AiRate {
         uint8_t holy = 0;
         bool    hands_ge3 = false, target_fx = false;
+        bool    item_fx = true, plus_unsigned = false, no_ranged = false;
     } rate{};
     int     morale_base = 0;            // the script's morale word (0x7EC6)
     // The morale routine's last figure (Curse DS 0x6FBC, Darkness 0xA7E1,

@@ -135,9 +135,67 @@ def run_game(game, n, out):
                                                             ','.join('%x' % e for e in effs) or '-', got))
 
 
+def run_queen(n, out):
+    # The Dark Queen (DQK.EXE, C): the rating 0x2F081 (fighter, item) - its
+    # code segment taken at file 0x20000 (near calls land right; only the
+    # offsets within it matter), DS:0 at file 0x63A20; the type table through
+    # the far pointer DS 0xAE3E (put at 0x4000:0, ITEMS.DAT's rows), the game
+    # block's through DS 0xB20F (0x4800:0, byte 0x3C the "no ranged" byte);
+    # the chooser 0x2F1A6 sets DS 0xACA8-0xACAB from the target's effects as
+    # Darkness's parent (read, not run); the item struct: type +0x28, plus
+    # +0x30, cursed +0x34; the fighter's hands in use +0xCA; memcpy
+    # 0xD7:0x2B69 (count in CX)
+    exe = open(os.path.join(gb.folder('queen'), 'DQK.EXE'), 'rb').read()
+    items = open(os.path.join(gb.folder('queen'), 'DISK1', 'ITEMS.DAT'), 'rb').read()
+    from unicorn.x86_const import UC_X86_REG_CX
+    fn = 0x2F081
+    if exe[fn:fn + 3] != b'\x55\x8b\xec':
+        raise SystemExit('queen: no routine at 0x%x' % fn)
+    r = emu16.Routine(exe, 0x20000, exe, 0x63A20, pascal=False)
+    TS, GS = 0x4000, 0x4800
+    r.mu.mem_write(TS * 16, items[:0x8000])
+    r.poke_ds(0xAE3E, struct.pack('<HH', 0, TS))
+    r.poke_ds(0xB20F, struct.pack('<HH', 0, GS))
+
+    def h_memcpy(e):
+        soff, sseg, doff, dseg = e.args(4)
+        cnt = e.mu.reg_read(UC_X86_REG_CX)
+        e.mu.mem_write(dseg * 16 + doff, bytes(e.mu.mem_read(sseg * 16 + soff, cnt)))
+        return 0
+    r.helper(0xD7, 0x2B69, h_memcpy, 0)
+    rows = len(items) // 16
+    rng = random.Random(21)
+    print('queen: rating 0x%x, types %d rows' % (fn, rows))
+    for _ in range(n):
+        t = rng.randrange(1, rows)
+        plus = rng.choice([-2, -1, 0, 0, 0, 1, 1, 2, 3, 4, 5])
+        cursed = 1 if rng.random() < 0.08 else 0
+        hu = rng.randrange(0, 4)
+        effs = sorted(rng.sample(FX, rng.randrange(0, 3)))
+        ban = 1 if rng.random() < 0.15 else 0
+        item = bytearray(0x40)
+        item[0x28], item[0x30], item[0x34] = t, plus & 0xFF, cursed
+        r.record(0, item)
+        fig = bytearray(0x400)
+        fig[0xCA] = hu
+        r.record(1, fig)
+        need = 0
+        if 0x7D in effs: need = 2
+        if 0x3C in effs: need = 3
+        if {0x50, 0x51, 0x67} & set(effs): need = 1
+        far = need or (1 if 0x29 in effs else 0)
+        r.poke_ds(0xACA8, bytes([int(0x42 in effs), need, int(0x43 in effs), far]))
+        r.mu.mem_write(GS * 16 + 0x3C, bytes([ban]))
+        got = r.call(fn, [emu16.R1, 0, emu16.R2, 0]) & 0xFF
+        # (the line as the others': no effect bytes, alignment or undead; the
+        # "no ranged" byte after the effects)
+        out.write('rate %d %d %d 0 0 0 %d 0 %s %d ban %d\n' % (t, plus, cursed, hu, ','.join('%x' % e for e in effs) or '-',
+                                                              got, ban))
+
+
 if __name__ == '__main__':
-    games = sys.argv[1:] or list(GAMES)
+    games = sys.argv[1:] or list(GAMES) + ['queen']
     os.makedirs('/tmp/claude-0/bt', exist_ok=True)
     for g in games:
         with open('/tmp/claude-0/bt/oracle_wrate_%s.txt' % g, 'w') as f:
-            run_game(g, int(os.environ.get('N', '2000')), f)
+            (run_queen if g == 'queen' else lambda n, o: run_game(g, n, o))(int(os.environ.get('N', '2000')), f)

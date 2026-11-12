@@ -6706,8 +6706,8 @@ int rate_item(const items::Names& names, const Battle::AiRate& rate, const Fight
     if (ti.flags & 0x08) r = (r + (ti.attacks - 1) * 2) & 0xFF;
     if (ti.hands <= 1) r = (r + 3) & 0xFF;
     if (ti.hands + hands_used > (b_rate.hands_ge3 ? 2 : 3)) r = 0;
-    if (f && it[0x3E] == 0x84 && (it[0x3D] & 0x0F) != f->rec[0x11B]) r = 0;
-    if (it[0x3D] == 0x53) r = 0;
+    if (b_rate.item_fx && f && it[0x3E] == 0x84 && (it[0x3D] & 0x0F) != f->rec[0x11B]) r = 0;
+    if (b_rate.item_fx && it[0x3D] == 0x53) r = 0;
     if (it[0x36]) r = 0;
     // Darkness / Treasures (GAME.OVR 0xAFAA / 0xBE48, its effect tests on the
     // target): 0x7D +2, 0x3C +3, 0x50 / 0x51 / 0x67 +1 for a blow (the last
@@ -6726,8 +6726,10 @@ int rate_item(const items::Names& names, const Battle::AiRate& rate, const Fight
             half_hi = tg->has(0x43);
         }
         if ((ti.blow <= 1 && half_lo) || (ti.blow > 0x7F && half_hi)) r >>= 1;
-        if (plus < ((ti.flags & 0x18) ? need_far : need)) r = 0;
+        const int want = (ti.flags & 0x18) ? need_far : need;
+        if (b_rate.plus_unsigned ? it[0x32] < want : plus < want) r = 0;
     }
+    if (b_rate.no_ranged && ti.range > 1) r = 0;
     return r;
 }
 } // namespace

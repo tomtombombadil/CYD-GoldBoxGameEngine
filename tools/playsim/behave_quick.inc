@@ -604,8 +604,11 @@ void wrate_check(const char* game)
     while (fgets(line, sizeof line, fp)) {
         int ty, plus, cursed, x3d, x3e, al, hands, und, want;
         char fx[40];
-        if (sscanf(line, "rate %d %d %d %d %d %d %d %d %39s %d", &ty, &plus, &cursed, &x3d, &x3e, &al, &hands, &und, fx, &want) != 10)
-            continue;
+        int ban = 0;
+        const int got_n = sscanf(line, "rate %d %d %d %d %d %d %d %d %39s %d ban %d", &ty, &plus, &cursed, &x3d, &x3e, &al, &hands,
+                                 &und, fx, &want, &ban);
+        if (got_n < 10) continue;
+        b.rate.no_ranged = ban != 0;            // (the Dark Queen's game byte 0x3C)
         uint8_t it[items::kRecordSize] = {};
         it[0x2E] = static_cast<uint8_t>(ty);
         it[0x32] = static_cast<uint8_t>(plus);
@@ -629,6 +632,7 @@ void wrate_check(const char* game)
     t.rec[0xE9] = keep_und;
     if (t.n_aff) *t.n_aff = keep_naff;
     f.target = static_cast<int16_t>(keep_target);
+    b.rate.no_ranged = false;
     expect(P, "Weapon rating (round 21): combat::ai_rating = the original's routine run in Unicorn, every oracle line",
            n > 0 && bad == 0, "%d lines, %d differ%s%s (the bare rating without the game's own rules: %d differ)", n, bad,
            bad ? "; the first: " : "", first, plain_bad);

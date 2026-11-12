@@ -1599,7 +1599,16 @@ the Project as claude/TODO.md.
       eight). Left: Gateway's chooser never takes the missile weapon while
       its game block's word +0x3EE (DS 0x5D68's block) is set - not known
       what sets it (a script variable?), not in the engine; the Dark
-      Queen's chooser (C code) not read; the Dark Queen's ground 0x46 - laid by effect 0x9A's
+      Queen's rating (DQK.EXE 0x2F081, chooser 0x2F1A6) RUN too (3000
+      items, 0 differ; the bare rating 1137): Darkness's target rules, no
+      item effect tests, the plus unsigned, Secret's hands rule, and a
+      weapon with a range 0 while game byte 0x3C - UNDERWATER - is set.
+- [ ] The Dark Queen underwater (found round 21): game byte 0x3C set =
+      under water; DQK.EXE tests it in 24 places ("Can't use that
+      underwater" DS 0x5939, "That has no effect underwater!" DS 0x87C9 -
+      spells / items; 0x29658 / 0x29670 a word 3 / 2; 0x5BA58 / 0x5BA89
+      / 0x5EDBD screen numbers ...). The engine has only the AI's rating
+      (v0.196.9) - read each site and model it. the Dark Queen's ground 0x46 - laid by effect 0x9A's
       handler (DQK.EXE 0x50A77) as a cloud record of 1d6 at the holder's
       square; MONCHA.GLB's carrier: the Bozak Draconian (78) - when it
       runs (its death?) and what the square does besides stopping steps

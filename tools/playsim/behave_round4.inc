@@ -3855,7 +3855,7 @@ void run()
             {G::PoolOfRadiance, "poolrad"}, {G::CurseOfTheAzureBonds, "curse"}, {G::SecretOfTheSilverBlades, "secret"},
             {G::PoolsOfDarkness, "darkness"}, {G::GatewayToTheSavageFrontier, "gateway"},
             {G::TreasuresOfTheSavageFrontier, "treasures"}, {G::ChampionsOfKrynn, "champions"},
-            {G::DeathKnightsOfKrynn, "knights"}};
+            {G::DeathKnightsOfKrynn, "knights"}, {G::DarkQueenOfKrynn, "queen"}};
         for (const auto& e : shorts)
             if (e.g == d->prof->game) wrate_check(e.s);
     }

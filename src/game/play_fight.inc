@@ -5132,6 +5132,11 @@ void fight_start(pic::Canvas& c)
         if (g == G::ChampionsOfKrynn || g == G::DeathKnightsOfKrynn) b.rate.holy = 0x36;
         b.rate.hands_ge3 = g == G::SecretOfTheSilverBlades;
         b.rate.target_fx = g == G::PoolsOfDarkness || g == G::TreasuresOfTheSavageFrontier;
+        if (g == G::DarkQueenOfKrynn) {
+            b.rate.hands_ge3 = b.rate.target_fx = b.rate.plus_unsigned = true;
+            b.rate.item_fx = false;
+            b.rate.no_ranged = vm && vm->get(0x3C) != 0;      // (its game block's byte 0x3C: underwater)
+        }
     }
     // Darkness's Turn Undead (R13): the undead its LOAD MONSTERs loaded (each
     // cleric turns as many times), the script's penalty (block +0x0E)
