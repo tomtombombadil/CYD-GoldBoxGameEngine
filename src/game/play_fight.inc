@@ -5123,6 +5123,16 @@ void fight_start(pic::Canvas& c)
         f.magic_res = m.magic_res;
     }
     b.fx = &d->prof->fight.facts;
+    // The computer's weapon rating by game (rules round 21, oracles/wrating.py)
+    {
+        using G = games::Game;
+        const G g = d->prof->game;
+        b.rate = {};
+        if (g == G::PoolOfRadiance || g == G::CurseOfTheAzureBonds || g == G::GatewayToTheSavageFrontier) b.rate.holy = 0x55;
+        if (g == G::ChampionsOfKrynn || g == G::DeathKnightsOfKrynn) b.rate.holy = 0x36;
+        b.rate.hands_ge3 = g == G::SecretOfTheSilverBlades;
+        b.rate.target_fx = g == G::PoolsOfDarkness || g == G::TreasuresOfTheSavageFrontier;
+    }
     // Darkness's Turn Undead (R13): the undead its LOAD MONSTERs loaded (each
     // cleric turns as many times), the script's penalty (block +0x0E)
     if (fg->t.turn_cols == 11) {

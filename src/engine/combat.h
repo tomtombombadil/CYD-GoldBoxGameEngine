@@ -839,6 +839,16 @@ struct Battle {
     bool    indoors = true;
     int     to_hit_party = 0, to_hit_monsters = 0;  // the scripts' bonuses
     const Facts* fx = nullptr;
+    // The computer's weapon rating (rules round 21, oracles/wrating.py - each
+    // GAME.OVR's rating routine): the item type rated 8 against an undead
+    // target (holy water: PoolRad / Curse / Gateway 0x55, Champions /
+    // Death Knights 0x36; 0 none), a type's hands with those in use over 2
+    // (Secret) or over 3 (the rest) rate 0, and Darkness / Treasures look at
+    // the target's effects (the plus a weapon needs, halving by its blow)
+    struct AiRate {
+        uint8_t holy = 0;
+        bool    hands_ge3 = false, target_fx = false;
+    } rate{};
     int     morale_base = 0;            // the script's morale word (0x7EC6)
     // The morale routine's last figure (Curse DS 0x6FBC, Darkness 0xA7E1,
     // the Dark Queen 0xC2DE - round 19): 100 as a fighter is set up (Curse
@@ -1594,6 +1604,13 @@ int weapon(const Fighter& f, const items::Names& names);
 // 0 when cursed or when the hands (`hands_used` besides the weapon and
 // shield) would pass 3
 int weapon_rating(const items::Names& names, const uint8_t* item, int hands_used);
+// The computer's rating of a weapon for fighter i - each original's whole
+// routine (rules round 21, oracles/wrating.py): byte sums as weapon_rating,
+// holy water 8 against an undead target, 0 for a lightning item of another
+// alignment (effect 0x84) or a paralysing gaze (0x53), Secret's hands rule,
+// and Darkness / Treasures' target (Battle::rate)
+// (`target`: the fighter it is rated against; -2 its own target)
+int ai_rating(const Battle& b, int i, const uint8_t* item, int hands_used, int target = -2);
 // The weapon fighter i should hold: each weapon its classes can use rated;
 // the best missile weapon (a launcher with its arrows / quarrels readied, a
 // sling, a thrown weapon) when it rates over half the best melee weapon

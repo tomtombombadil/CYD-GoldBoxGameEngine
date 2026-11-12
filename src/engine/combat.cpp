@@ -6691,17 +6691,58 @@ bool flight_step(FlightPath& p)
 }
 
 // ---- The computer's weapon
+namespace {
+int rate_item(const items::Names& names, const Battle::AiRate& rate, const Fighter* f, const Fighter* tg, const uint8_t* it,
+              int hands_used)
+{
+    // (each step a byte, as the originals' - Curse GAME.OVR 0xCF70)
+    const items::TypeInfo& ti = names.type(it[0x2E]);
+    const Battle::AiRate& b_rate = rate;
+    int r = (ti.dice * ti.sides) & 0xFF;
+    const int plus = static_cast<int8_t>(it[0x32]);
+    if (plus > 0) r = (r + 8 * plus) & 0xFF;
+    if (ti.bonus > 0) r = (r + 2 * ti.bonus) & 0xFF;
+    if (b_rate.holy && it[0x2E] == b_rate.holy && tg && static_cast<int8_t>(tg->rec[0xE9]) > 0) r = 8;
+    if (ti.flags & 0x08) r = (r + (ti.attacks - 1) * 2) & 0xFF;
+    if (ti.hands <= 1) r = (r + 3) & 0xFF;
+    if (ti.hands + hands_used > (b_rate.hands_ge3 ? 2 : 3)) r = 0;
+    if (f && it[0x3E] == 0x84 && (it[0x3D] & 0x0F) != f->rec[0x11B]) r = 0;
+    if (it[0x3D] == 0x53) r = 0;
+    if (it[0x36]) r = 0;
+    // Darkness / Treasures (GAME.OVR 0xAFAA / 0xBE48, its effect tests on the
+    // target): 0x7D +2, 0x3C +3, 0x50 / 0x51 / 0x67 +1 for a blow (the last
+    // test wins), a missile the same or +1 for 0x29; 0x42 halves a blow-type
+    // 0 / 1 weapon, 0x43 one over 0x7F
+    if (b_rate.target_fx && f) {
+        int need = 0, need_far = 0;
+        bool half_lo = false, half_hi = false;
+        if (tg) {
+            if (tg->has(0x7D)) need = 2;
+            if (tg->has(0x3C)) need = 3;
+            if (tg->has(0x50) || tg->has(0x51) || tg->has(0x67)) need = 1;
+            need_far = need;
+            if (!need_far && tg->has(0x29)) need_far = 1;
+            half_lo = tg->has(0x42);
+            half_hi = tg->has(0x43);
+        }
+        if ((ti.blow <= 1 && half_lo) || (ti.blow > 0x7F && half_hi)) r >>= 1;
+        if (plus < ((ti.flags & 0x18) ? need_far : need)) r = 0;
+    }
+    return r;
+}
+} // namespace
+
 int weapon_rating(const items::Names& names, const uint8_t* it, int hands_used)
 {
-    const items::TypeInfo& ti = names.type(it[0x2E]);
-    int r = ti.dice * ti.sides;
-    const int plus = static_cast<int8_t>(it[0x32]);
-    if (plus > 0) r += 8 * plus;
-    if (ti.bonus > 0) r += 2 * ti.bonus;
-    if (ti.flags & 0x08) r += (ti.attacks - 1) * 2;
-    if (ti.hands <= 1) r += 3;
-    if (ti.hands + hands_used > 3 || it[0x36]) r = 0;
-    return r;
+    return rate_item(names, Battle::AiRate{}, nullptr, nullptr, it, hands_used);
+}
+
+int ai_rating(const Battle& b, int i, const uint8_t* it, int hands_used, int target)
+{
+    const Fighter* f = &b.f[i];
+    if (target == -2) target = f->target;
+    const Fighter* tg = target >= 0 && target < b.n ? &b.f[target] : nullptr;
+    return rate_item(*b.names, b.rate, f, tg, it, hands_used);
 }
 
 namespace {
@@ -6739,11 +6780,12 @@ int choose_weapon(const Battle& b, int i)
     }
     if (hands < 0) hands = 0;
     int best_missile = -1, missile_r = 1, best_melee = -1;
-    int melee_r = r[0x11E] * r[0x120] + (static_cast<int8_t>(r[0x122]) > 0 ? 2 * static_cast<int8_t>(r[0x122]) : 0);
+    int melee_r = (r[0x11E] * r[0x120]) & 0xFF;
+    if (static_cast<int8_t>(r[0x122]) > 0) melee_r = (melee_r + 2 * static_cast<int8_t>(r[0x122])) & 0xFF;
     for (int k = 0; k < f.n_items; ++k) {
         const items::TypeInfo& ti = n.type(f.items[k][0x2E]);
         if (ti.slot != items::kSlotWeapon || !(ti.classes & r[0x12B])) continue;
-        const int rating = weapon_rating(n, f.items[k], hands);
+        const int rating = ai_rating(b, i, f.items[k], hands);
         if ((ti.flags & 0x18) && rating > missile_r) {
             best_missile = k;
             missile_r = rating;
@@ -6771,7 +6813,7 @@ int choose_weapon(const Battle& b, int i)
                 const int t = f.items[j][0x2E];
                 if (((ti.flags & 0x01) && t == b.arrow) || ((ti.flags & 0x80) && t == b.quarrel)) loaded = true;
             }
-            const int rating = weapon_rating(n, f.items[k], hands);
+            const int rating = ai_rating(b, i, f.items[k], hands);
             if (loaded && rating > 0 && (best_l < 0 || rating > l_r)) {
                 best_l = k;
                 l_r = rating;

@@ -3849,6 +3849,16 @@ void run()
     if (want("aiorder")) ai_pending();
     if (want("bandorder")) ai_bandage_order();
     if (want("quickacts")) quick_actions();
+    if (want("wrate")) {
+        using G = games::Game;
+        static const struct { G g; const char* s; } shorts[] = {
+            {G::PoolOfRadiance, "poolrad"}, {G::CurseOfTheAzureBonds, "curse"}, {G::SecretOfTheSilverBlades, "secret"},
+            {G::PoolsOfDarkness, "darkness"}, {G::GatewayToTheSavageFrontier, "gateway"},
+            {G::TreasuresOfTheSavageFrontier, "treasures"}, {G::ChampionsOfKrynn, "champions"},
+            {G::DeathKnightsOfKrynn, "knights"}};
+        for (const auto& e : shorts)
+            if (e.g == d->prof->game) wrate_check(e.s);
+    }
     if (want("quickpage")) quick_page_check();
     if (want("aiturn")) ai_turn_types();
     if (want("trainspell")) train_spell_offer();

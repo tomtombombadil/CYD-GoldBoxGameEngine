@@ -209,6 +209,10 @@ The Quick tab as an engine page + the party's NPCs (2026-11-09, round 14):
                            party Quick with the Quick tab's start: fight_check R19 - Missile ticked, no foe next to
                            it, a loaded bow / crossbow / sling and a foe in sight in reach: no step (Tom, 2026-11-11;
                            v0.196.5 broke it 81 times in 40 PoolRad fights, v0.196.6 none in 9 games x 80)
+  oracles/wrating.py        each DAX game's weapon rating routine and chooser: what they test (holy water's type,
+                           the hands rule, the effects), facts printed
+  oracles/wrate_emu.py      the rating routines RUN in Unicorn on random items (uvenv python) ->
+                           /tmp/claude-0/bt/oracle_wrate_<game>.txt; rules4 ONLY=wrate compares combat::ai_rating
   rules4 ONLY=quickacts     + the bow scenes (sword held, bow + arrows carried; a +3 sword: ticked the bow, the switch
                            off the game's rating); QABOWITM=<.ITM> a player's own items in the scene, QADEBUG=1 lists
                            them with their ratings (Tom's save F: scratch only)

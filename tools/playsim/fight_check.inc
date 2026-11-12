@@ -247,10 +247,22 @@ void on_act(const combat::Battle& b, int i, combat::TestAct a, int t, int extra)
             for (int k = 0; k < f.n_items && !next && !stuck; ++k) {
                 const items::TypeInfo& ti = play::names->type(f.items[k][0x2E]);
                 // (a launcher or sling - thrown items, oil and holy water among
-                // them, by the games' rating)
+                // them, by the games' rating - that can hurt the foe it aims
+                // at by the game's rating: Darkness's iron golem and a +0 bow)
                 if (ti.slot != items::kSlotWeapon || !(ti.flags & 0x08) || (ti.flags & 0x10) || ti.range <= 1 ||
-                    !(ti.classes & f.rec[0x12B]) || combat::weapon_rating(*play::names, f.items[k], 0) <= 1)
+                    !(ti.classes & f.rec[0x12B]))
                     continue;
+                // (one that hurts every foe up in sight by the game's rating -
+                // Darkness's iron golem, a +3 weapon's, beside others: the
+                // original rates against its target only)
+                bool hurts = true;
+                for (int c = 0; c < b.n && hurts; ++c) {
+                    int sq;
+                    if (c != i && b.f[c].up() && b.f[c].size && b.f[c].team() != f.team() && !combat::hidden(b, i, c) &&
+                        combat::range(b, play::fg->t, i, c, false, &sq))
+                        hurts = combat::ai_rating(b, i, f.items[k], 0, c) > 0;
+                }
+                if (!hurts || combat::ai_rating(b, i, f.items[k], 0) <= 0) continue;
                 bool loaded = (ti.flags & 0xFF) == 0x0A;
                 for (int j = 0; !loaded && j < f.n_items; ++j) {
                     if (!f.items[j][0x34]) continue;

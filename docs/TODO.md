@@ -1588,9 +1588,18 @@ the Project as claude/TODO.md.
       centred; the engine centres on the finder's pick); the Dark Queen's
       spells 138-140 (class 4, 8th level rows past the engine's 138) and
       whether any monster / item casts them; the computer's weapon choice
-      per game (Curse GAME.OVR 0xD0AE's ready routine read only in part -
-      the engine's choose_weapon is coab's 5.3; the other eight not
-      compared); the Dark Queen's ground 0x46 - laid by effect 0x9A's
+      per game - DONE round 21 (v0.196.8): each DAX game's rating routine
+      RUN in Unicorn (oracles/wrate_emu.py, 3000 random items a game;
+      rules4 ONLY=wrate: 0 differ in all eight, the bare rating 414-1123)
+      - holy water 8 against undead (PoolRad / Curse / Gateway 0x55,
+      Champions / Knights 0x36), the lightning item of another alignment
+      and the paralysing gaze 0, byte sums, Secret's hands rule (>= 3),
+      Darkness / Treasures' target (the plus it needs, halving by blow);
+      the choosers read (oracles/wrating.py: the same decision in all
+      eight). Left: Gateway's chooser never takes the missile weapon while
+      its game block's word +0x3EE (DS 0x5D68's block) is set - not known
+      what sets it (a script variable?), not in the engine; the Dark
+      Queen's chooser (C code) not read; the Dark Queen's ground 0x46 - laid by effect 0x9A's
       handler (DQK.EXE 0x50A77) as a cloud record of 1d6 at the holder's
       square; MONCHA.GLB's carrier: the Bozak Draconian (78) - when it
       runs (its death?) and what the square does besides stopping steps

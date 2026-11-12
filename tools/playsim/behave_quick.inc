@@ -572,3 +572,64 @@ void quick_page_check()
     if (!fight()) return;
     quick_page_one("fight");
 }
+
+// ---- Rules round 21: the computer's weapon rating against each original's
+// routine RUN in Unicorn (tools/devkit/oracles/wrate_emu.py -> WRATE_ORACLE,
+// default /tmp/claude-0/bt/oracle_wrate_<game>.txt): combat::ai_rating of
+// the same item (type, plus, cursed, effect bytes 0x3D / 0x3E) for a fighter
+// of that alignment with that many hands in use, at a target undead or not
+// (Darkness / Treasures: with those effects)
+void wrate_check(const char* game)
+{
+    char path[256];
+    const char* o = getenv("WRATE_ORACLE");
+    snprintf(path, sizeof path, "%s", o ? o : (std::string("/tmp/claude-0/bt/oracle_wrate_") + game + ".txt").c_str());
+    FILE* fp = fopen(path, "r");
+    if (!fp) {
+        expect(P, "Weapon rating: the oracle file", false, "%s missing (tools/devkit/oracles/wrate_emu.py)", path);
+        return;
+    }
+    if (!fight()) {
+        fclose(fp);
+        return;
+    }
+    combat::Battle& b = fg->b;
+    combat::Fighter& f = b.f[0];
+    combat::Fighter& t = b.f[B];
+    const uint8_t keep_al = f.rec[0x11B], keep_und = t.rec[0xE9];
+    const int keep_target = f.target, keep_naff = t.n_aff ? *t.n_aff : 0;
+    f.target = static_cast<int16_t>(B);
+    int n = 0, bad = 0, plain_bad = 0;
+    char line[160], first[200] = "";
+    while (fgets(line, sizeof line, fp)) {
+        int ty, plus, cursed, x3d, x3e, al, hands, und, want;
+        char fx[40];
+        if (sscanf(line, "rate %d %d %d %d %d %d %d %d %39s %d", &ty, &plus, &cursed, &x3d, &x3e, &al, &hands, &und, fx, &want) != 10)
+            continue;
+        uint8_t it[items::kRecordSize] = {};
+        it[0x2E] = static_cast<uint8_t>(ty);
+        it[0x32] = static_cast<uint8_t>(plus);
+        it[0x36] = static_cast<uint8_t>(cursed);
+        it[0x3D] = static_cast<uint8_t>(x3d);
+        it[0x3E] = static_cast<uint8_t>(x3e);
+        f.rec[0x11B] = static_cast<uint8_t>(al);
+        t.rec[0xE9] = static_cast<uint8_t>(und);
+        if (t.n_aff) *t.n_aff = keep_naff;
+        if (strcmp(fx, "-"))
+            for (char* q = strtok(fx, ","); q; q = strtok(nullptr, ",")) mx::add_aff(B, static_cast<int>(strtol(q, nullptr, 16)));
+        const int got = combat::ai_rating(b, 0, it, hands);
+        if (combat::weapon_rating(*names, it, hands) != want) ++plain_bad;
+        ++n;
+        if (got != want) {
+            if (!bad++) snprintf(first, sizeof first, "%s -> engine %d", line, got);
+        }
+    }
+    fclose(fp);
+    f.rec[0x11B] = keep_al;
+    t.rec[0xE9] = keep_und;
+    if (t.n_aff) *t.n_aff = keep_naff;
+    f.target = static_cast<int16_t>(keep_target);
+    expect(P, "Weapon rating (round 21): combat::ai_rating = the original's routine run in Unicorn, every oracle line",
+           n > 0 && bad == 0, "%d lines, %d differ%s%s (the bare rating without the game's own rules: %d differ)", n, bad,
+           bad ? "; the first: " : "", first, plain_bad);
+}
