@@ -9749,17 +9749,19 @@ void rest_msg(pic::Canvas& c, const RestRun::Msg& m)
     (void)t;
     if (m.kind == 1) cw(profile::kHasScribed, w1, sizeof w1);
     else mw(profile::kHasMemorized, w1, sizeof w1);
-    const games::Game g = d->prof->game;
-    if (g != games::Game::DeathKnightsOfKrynn && g != games::Game::DarkQueenOfKrynn) {
-        // (the name by the party list's printer - its colour, not selected)
+    if (d->prof->game != games::Game::DarkQueenOfKrynn) {
+        // (the name by the party list's printer - its colour, not selected;
+        // Death Knights: Champions' routine, GAME.OVR 0x2F136)
         const party::Character& ch = pt->m[m.who];
         put(c, nm, 1, 19, !ch.in_combat() ? 12 : ch.enemy() ? 14 : 11);
         put(c, w1, 1 + static_cast<int>(strlen(nm)) + 1, 19, 10);
-        put(c, spell_name(m.spell), 1, 20, 10);
     } else {
-        snprintf(t, sizeof t, "%s %s %s", nm, w1, spell_name(m.spell));
+        // (the Dark Queen: the name and words in the text colour - DOSBox,
+        // 2026-11-12)
+        snprintf(t, sizeof t, "%s %s", nm, w1);
         put(c, t, 1, 19, 10);
     }
+    put(c, spell_name(m.spell), 1, 20, 10);
 }
 
 void rest_tick(uint32_t now, pic::Canvas& c)
