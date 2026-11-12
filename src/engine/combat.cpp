@@ -2737,6 +2737,20 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
             }
             // (a terrified attacker: -2 damage, not under 0 - R14)
             if (b.fx && b.fx->dk.feared && at.has(b.fx->dk.feared)) dmg -= 2;
+            // The Dark Queen under water: the party's effect 0x95 (put on at
+            // the fight's set-up, DQK.EXE 0x2CDC3; its event-4 handler
+            // 0x503A5), unless 0x96 - a weapon with a range does nothing, one
+            // of a blow type other than 0 its damage / (the first blow's bonus
+            // + 1: record 0x196 in the original's)
+            if (b.underwater && at.member >= 0 && !at.has(0x96) && b.names && at.items) {
+                const int w = weapon(at, *b.names);
+                if (w >= 0) {
+                    const items::TypeInfo& wt = b.names->type(at.items[w][0x2E]);
+                    const int div = static_cast<int8_t>(at.rec[kBonus]) + 1;
+                    if (wt.range > 1) dmg = 0;
+                    else if (wt.blow != 0 && div != 0) dmg /= div;
+                }
+            }
             if (dmg < 0) dmg = 0;
             dmg *= times;
             // The magic weapon's own damage (a dragon slayer's: 3 x d12 + 4 + Strength's)

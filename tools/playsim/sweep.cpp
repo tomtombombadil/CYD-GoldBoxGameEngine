@@ -1081,6 +1081,13 @@ static void sweep_events(int only)
                                vm->get(0x24), bigpic, (int)pic_shown);
                     play::act(play::Act::Forward, C);
                     ++steps;
+                    // (VMWATCH=addr: say where a step leaves that script byte set -
+                    // the Dark Queen's 0x3C under water, round 22)
+                    if (const char* w = getenv("VMWATCH"))
+                        if (vm && vm->get(static_cast<uint16_t>(strtol(w, nullptr, 16)))) {
+                            printf("  VMWATCH %s = %d after the step at %d,%d\n", w, vm->get(static_cast<uint16_t>(strtol(w, nullptr, 16))), x, y);
+                            vm->set(static_cast<uint16_t>(strtol(w, nullptr, 16)), 0);
+                        }
                     if (!pump()) {
                         if (stuck_why[0]) printf("  at %d,%d: %s (screen %d)\n", x, y, stuck_why, d ? (int)screen : -1);
                         stuck_why = "";

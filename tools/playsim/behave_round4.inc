@@ -2011,6 +2011,50 @@ void queen_water()
                land == mv * 2 && water == mv * 2 / 3 && combat::missile(b, f, &ammo) == 0, "move %d: land %d, water %d", mv, land,
                water);
     }
+    // The party's blows (0x95's handler 0x503A5): a weapon of blow type 0
+    // full damage, another / (the bonus + 1), one with a range none; a
+    // monster's unchanged
+    {
+        int t_cut = -1, t_other = -1, t_far = -1;
+        for (int k = 1; k < 256; ++k) {
+            const items::TypeInfo& ti = names->type(k);
+            if (ti.slot != items::kSlotWeapon || !ti.sides) continue;
+            if (ti.range <= 1 && ti.blow == 0 && t_cut < 0) t_cut = k;
+            if (ti.range <= 1 && ti.blow != 0 && t_other < 0) t_other = k;
+            if (ti.range > 1 && t_far < 0) t_far = k;
+        }
+        combat::Fighter& at = b.f[0];
+        party::Character& ch = pt->m[at.member >= 0 ? at.member : 0];
+        auto blow = [&](int type, bool water) {
+            for (int k = 0; k < b.n; ++k) b.f[k].size = k == 0 || k == B ? b.f[k].size : 0;
+            mx::put(0, 0, 10, 10, 60);
+            mx::put(B, 1, 11, 10, 200);
+            memset(ch.items[0], 0, items::kRecordSize);
+            ch.items[0][0x2E] = static_cast<uint8_t>(type);
+            ch.items[0][0x34] = 1;
+            ch.n_items = 1;
+            at.items = ch.items;
+            at.n_items = 1;
+            at.rec[0x199] = 60;
+            at.attacks[0] = 1;
+            at.attacks[1] = 0;
+            at.rec[0x19E] = 1;
+            at.rec[0x1A0] = 8;
+            at.rec[0x1A2] = 3;
+            b.underwater = water;
+            create::g_die_hook = [](int nn) { return nn == 20 ? 18 : nn == 8 ? 8 : -1; };
+            const combat::Attack r = combat::attack(b, 0, B, nullptr, rng);
+            create::g_die_hook = nullptr;
+            b.underwater = false;
+            return r.n > 0 && r.hits[0].hit ? r.hits[0].damage : -1;
+        };
+        const int land = t_cut > 0 ? blow(t_cut, false) : -9, cut = t_cut > 0 ? blow(t_cut, true) : -9;
+        const int other = t_other > 0 ? blow(t_other, true) : -9, far = t_far > 0 ? blow(t_far, true) : -9;
+        expect(P, "the Dark Queen under water: the party's blows (effect 0x95, 0x503A5) - 1d8 (8) + 3: blow type 0 full (11), "
+                  "another / 4 (2), a weapon with a range 0",
+               land == 11 && cut == 11 && other == 2 && far == 0, "types %d / %d / %d: land %d, type 0 %d, other %d, ranged %d",
+               t_cut, t_other, t_far, land, cut, other, far);
+    }
     b.underwater = false;
 }
 

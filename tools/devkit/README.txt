@@ -213,6 +213,8 @@ The Quick tab as an engine page + the party's NPCs (2026-11-09, round 14):
                            the hands rule, the effects), facts printed
   oracles/wrate_emu.py      the rating routines RUN in Unicorn on random items (uvenv python) ->
                            /tmp/claude-0/bt/oracle_wrate_<game>.txt; rules4 ONLY=wrate compares combat::ai_rating
+  events VMWATCH=<hex>      say each step that leaves that script byte set (the Dark Queen's 0x3C: under water)
+  rules4 ONLY=qwater        the Dark Queen under water (spells, moves, missiles, the party's blows)
   rules4 ONLY=quickacts     + the bow scenes (sword held, bow + arrows carried; a +3 sword: ticked the bow, the switch
                            off the game's rating); QABOWITM=<.ITM> a player's own items in the scene, QADEBUG=1 lists
                            them with their ratings (Tom's save F: scratch only)

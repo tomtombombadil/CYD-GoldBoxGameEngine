@@ -1611,14 +1611,16 @@ the Project as claude/TODO.md.
       underwater!" (a player's pick refused, the spell kept - 0x2731D;
       otherwise spent); Lightning Bolt a burst within 2 of the aim; Ice
       Storm 1d10 over 3; no missile fire; moves a third without effect
-      0x96; the AI's rating (v0.196.9) - rules4 ONLY=qwater. Left: effect
-      0x95 put on the party at the fight's set-up (0x2CDC3; its handler
-      0x503A5 - a weapon blow's damage 0 or / (record 0x196 + 1) - which
-      event, and 0x1D99:0x1017, not read); the melee refusal's extra
+      0x96; the AI's rating (v0.196.9) - rules4 ONLY=qwater. v0.196.11:
+      the party's blows (effect 0x95, the attacker's damage event 4,
+      handler 0x503A5): a weapon with a range 0, a blow type other than 0
+      damage / (the first blow's bonus + 1 - record 0x196, the bonus, as
+      the original's code has it). Left: the melee refusal's extra
       "Can't use that underwater" (0x239CC, a message only); handler
       0x57DE0 (not in the spell table - an item's?); 0x5BA58 / 0x5BA89 /
-      0x5EDBD (screen numbers - the drawing under water?); whether the
-      scripts set byte 0x3C (where) not checked. the Dark Queen's ground 0x46 - laid by effect 0x9A's
+      0x5EDBD (screen numbers - the drawing under water?). The scripts do
+      set it: sweep events VMWATCH=3c (Queen, 44 of its blocks swept) -
+      ECL.GLB blocks 1, 2, 3, 14, 15. the Dark Queen's ground 0x46 - laid by effect 0x9A's
       handler (DQK.EXE 0x50A77) as a cloud record of 1d6 at the holder's
       square; MONCHA.GLB's carrier: the Bozak Draconian (78) - when it
       runs (its death?) and what the square does besides stopping steps
