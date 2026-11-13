@@ -1623,6 +1623,20 @@ the Project as claude/TODO.md.
       items, 0 differ; the bare rating 1137): Darkness's target rules, no
       item effect tests, the plus unsigned, Secret's hands rule, and a
       weapon with a range 0 while game byte 0x3C - UNDERWATER - is set.
+- [ ] The Dark Queen's draconians dying - NOT in the engine (found round
+      22, 2026-11-13; Champions' are: mon.explode / stone_death /
+      acid_pool). DQK.EXE's own (qhooks.py handler map; carriers.py):
+      Enchanted Baaz (MONCHA 87) 0xBB "loses his weapon" (handler
+      0x51DE8; 0x99 the same word, 0x507D9 - no carrier); Enchanted Kapak
+      (88) 0x9C "dissolves into acid!" (0x50BC8: spreads to the squares
+      round it at random - a d2 per side, field 50 x 25, grounds DS
+      0x6197); Bozak (78) 0x9A (its square ground 0x46 for 1d6 - the
+      cloud list DS 0xB3D4 via 0x50A0E) and 0xA6 given by code (0x50D62 /
+      0x50F81), handler 0x5100F "explodes!" / "is stunned"; Gas Spore 0xB6
+      (0x51A6A "explodes." / "dies from"). Death event 0xD lists 0x9A 0x99
+      0x9C; 0xE 0x46; 0xF 0x44; 5 0x43. To port: read each handler's
+      dice / saves / durations, then map onto the Champions machinery
+      (bozak_burst, baaz_weapon, lay_acid) or Queen-specific variants.
 - [ ] The Dark Queen underwater (found round 21): game byte 0x3C set =
       under water; DQK.EXE tests it in 24 places. v0.196.10 (round 22,
       the Project's rules_round21_facts.md 3): the fire spells (Burning
