@@ -962,7 +962,9 @@ the Project as claude/TODO.md.
       Darkness's background picture freed. Only 3 KB spare: next cut the
       monster records (~540 bytes each, up to 48) - a group's copies
       sharing one, or growable effects (108 bytes each).
-- [ ] Darkness's sounds, with its fights: the area spells' burst plays
+- [x] Darkness's sounds, with its fights (the burst: done before; v0.196.19
+      the shots: the pointed types 12, every other shot - a sling's too -
+      9, Darkness GAME.OVR 0x20E42, Treasures 0x28FDC the same): the area spells' burst plays
       effect 11 again as their picture shows (spells 0x22, 0x2F, 0x40,
       0x57, 0x5B, 0x73 - GAME.OVR 0x29D34 +0x1451; and an item's burst,
       +0x5FB8); a ranged attack's one sound: 12 for the item types 4, 5,

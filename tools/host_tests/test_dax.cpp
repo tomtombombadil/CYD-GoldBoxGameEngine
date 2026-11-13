@@ -7505,6 +7505,10 @@ static void test_combat()
     memcpy(fx.shot_flask, flask, 2); memcpy(fx.shot_sling, sling, 3);
     combat::Flight fl = combat::shot_flight(sb, sb.f[1], -1, 2);
     CHECK(fl.pic == 8 && fl.frames == 2 && fl.slot[0] == 0 && fl.slot[1] == 1 && fl.delay == 10 && fl.sound == 6);
+    // (Darkness / Treasures - their second pointed type set: a sling's shot sounds 9)
+    fx.shot_pointed2 = 0x4A;
+    CHECK(combat::shot_flight(sb, sb.f[1], -1, 2).sound == 9);
+    fx.shot_pointed2 = 0xFF;
     // a bow's arrow: one picture by direction (east: across; west: its attack
     // picture; south-west: the slant's attack picture mirrored), the whistle
     mitems[0][0x2E] = 41;

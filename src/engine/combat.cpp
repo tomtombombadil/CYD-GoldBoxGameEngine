@@ -6713,6 +6713,9 @@ Flight shot_flight(const Battle& b, const Fighter& f, int ammo, int dir)
         fl.slot[1] = 1;
         fl.delay = kind == Shot::Sling ? 10 : 20;
         fl.sound = kind == Shot::Sling ? 6 : 9;
+        // (Darkness / Treasures: one sound for every shot but the pointed
+        // ones - GAME.OVR 0x20E42 / 0x28FDC, [0x3DFC] / [0x43B0]: a sling's too)
+        if (b.fx && b.fx->shot_pointed2 != 0xFF) fl.sound = 9;
         break;
     }
     return fl;
