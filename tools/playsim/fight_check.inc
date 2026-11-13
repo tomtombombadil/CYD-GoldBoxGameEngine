@@ -41,7 +41,9 @@
 //      (the data's top bit; facts 2.6 / spell_facts)
 //  R10 a fight ends: 15 rounds without an attack end it (1.5.7); past
 //      FIGHTCAP rounds (default 120) with no fighter's hit points changed
-//      in the last 60 rounds (or past 4 x FIGHTCAP) it is reported as
+//      in the last 100 rounds (60 until v0.196.26: a lone archer who hits
+//      the Dark Queen's heads only on a 20 went 60 rounds without one in 1
+//      fight of 20 - 0.95^60 = 5%; 100 rounds 0.6%) (or past 4 x FIGHTCAP) it is reported as
 //      endless - a slow fight that still wears its fighters down (only a
 //      20 hitting, the Dark Queen's AC -10 heads) is not a stall; nor a
 //      side the Dark Queen's 0xA5 makes unharmable (the original's)
@@ -118,6 +120,7 @@ bool in_bite = false;               // (a hold's bite: Bite, then its Attack)
 const void* last_fg = nullptr;
 int last_round = -1;
 bool endless_told = false;
+bool was_unharmable = false;          // (R10: a side unharmable at some point this fight)
 unsigned long hp_seen = ~0ul;                 // (R10: the fighters' hit points, the round they last changed)
 int  hp_round = 0;
 long tapq_seen = 0, drain_seen = 0, charm_seen = 0;                           // (R14: taps during pages / the computer's play)
@@ -164,7 +167,8 @@ void on_act(const combat::Battle& b, int i, combat::TestAct a, int t, int extra)
     case TestAct::AttackEnd:
         in_bite = false;
         // (but one that gets up again as it falls - Gateway's boar, "stands up and grins": b.risen)
-        if (blow_held && t >= 0 && t < b.n && b.f[t].up() && b.f[t].size && b.risen != t)
+        // (and the Dark Queen's Aurak up again - mad / reborn: its rise_how still to be said)
+        if (blow_held && t >= 0 && t < b.n && b.f[t].up() && b.f[t].size && b.risen != t && !b.f[t].rise_how)
             bad("R3", "a held target still stands after the blow: " + who(b, t) + " by " + who(b, i));
         // R8w: one hit only by magic weapons (stop_normal, the silver-only
         // undead, +1 / +2 / +3 needed) loses nothing to a party member's bare
@@ -411,6 +415,7 @@ void tick()
         last_fg = fg;
         last_round = -1;
         endless_told = false;
+        was_unharmable = false;
         hp_seen = ~0ul;
         hp_round = 0;
         turn_round.assign(b.n, -1);
@@ -603,7 +608,8 @@ void tick()
                 }
             unharmable = up > 0 && up == safe;
         }
-    if (b.round > fight_cap && (b.round - hp_round > 60 || b.round > 4 * fight_cap) && !endless_told && !unharmable) {
+    if (unharmable) was_unharmable = true;
+    if (b.round > fight_cap && (b.round - hp_round > 100 || b.round > 4 * fight_cap) && !endless_told && !was_unharmable) {
         endless_told = true;
         std::string s = "the fight goes on past round " + std::to_string(fight_cap) + " (no action until " +
                         std::to_string(b.no_action) + ", hit points last changed in round " + std::to_string(hp_round) + "):";

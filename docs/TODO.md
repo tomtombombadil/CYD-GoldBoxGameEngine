@@ -1683,10 +1683,12 @@ the Project as claude/TODO.md.
       that can't be harmed). Not followed: 0xD5's other readers (the
       icon's facing 2; the free-attack list 0x259F0 with 0xD2); 0xA2's
       record 0x18E / 0x18F + 2.
-- [ ] Queen fuzz (QAALL=1, seeds 12 / 13, 60 fights; there before v0.196.26):
+- [x] Queen fuzz (QAALL=1, seeds 12 / 13, 60 fights; there before v0.196.26):
       R10 against the heads (MONCHA 65 / 71 - AC -10 / -11, moves 2) and
-      a Quick melee fighter - no hit points changed for 60 rounds, yet no
-      15 rounds without an attack. Find who attacks whom (FCACTLOG).
+      a lone Quick archer needing a natural 20 (need 35 at +11): 60 rounds
+      without a 20 is 5% - R10's window is 100 rounds now (0.6%); a fight
+      once unharmable (the dragon's body, fleeing but idle) is skipped; R3
+      skips an Aurak getting up. Queen seeds 1-35 clean.
 - [ ] The Dark Queen underwater (found round 21): game byte 0x3C set =
       under water; DQK.EXE tests it in 24 places. v0.196.10 (round 22,
       the Project's rules_round21_facts.md 3): the fire spells (Burning
