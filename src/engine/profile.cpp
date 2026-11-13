@@ -3786,7 +3786,7 @@ const Profile kProfiles[] = {
                0x14DD8, 0x39C45, 0x39C52, 0x39C69, 0x39C77, 0x12205, 0x125B5, 0x12185, 0x36A1D, 0x123EF, 0x12E10,
                0x12901, 0x136C2, 0, 0, 0, 0, 0x15297, 0, 0, 0, 0, 0x150A8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                0, 0, 0, kJ | 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x1AE05, 0x1A5CB, 0x15359, 0x13FF4,
-               0, 0, 0, 0, 0, 0x385D6},   // (kNoEffectWaterQ: its under-water "Nothing Happens.")
+               0, 0, 0, 0, 0, 0x385D6, 0, 0x12986},   // (kNoEffectWaterQ: its under-water "Nothing Happens."; kWaterClearsGw)
               {0x03, 0x0B, 0x0D, 0x15, 0x17, 0x1B, 0x23, 0x28, 0x33, 0x34, 0x35, 0x3A, 0x5B, 0x88, 0x89, 0x8B, 0x8E,
                0x90, 0x1F, 0x96},
               kGatewayFacts, kGatewayFight.s, kGatewayFightN},

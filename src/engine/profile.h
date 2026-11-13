@@ -232,6 +232,7 @@ enum FightWord {
     // The Dark Queen under water: "That has no effect underwater!"
     kNoEffectWaterQ,
     kCantWaterQ,            // "Can't use that underwater"
+    kWaterClearsGw,         // Gateway under water: "The water clears a little..." (GAME.OVR 0x129B6)
     kFightWords
 };
 

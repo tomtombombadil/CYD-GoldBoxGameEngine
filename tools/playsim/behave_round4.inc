@@ -1949,11 +1949,11 @@ void gateway_water()
     int ammo = 0;
     const int shot = combat::missile(b, b.f[0], &ammo);
     b.gw_water = false;
-    const std::string word = fw(profile::kNoEffectWaterQ);
+    const std::string word = fw(profile::kNoEffectWaterQ), clears = fw(profile::kWaterClearsGw);
     expect(P, "Gateway under water: Fireball and the item fireball \"Nothing Happens.\" (GAME.OVR 0x385FB), nothing shoots "
-              "(0x42318)",
-           n > 0 && ok == n && word == "Nothing Happens." && shot == 0, "%d of %d, the word \"%s\", missile %d", ok, n,
-           word.c_str(), shot);
+              "(0x42318), a cloud gone \"The water clears a little...\" (0x129B6)",
+           n > 0 && ok == n && word == "Nothing Happens." && shot == 0 && clears == "The water clears a little...",
+           "%d of %d, the word \"%s\", missile %d, \"%s\"", ok, n, word.c_str(), shot, clears.c_str());
 }
 
 void queen_water()

@@ -3777,7 +3777,9 @@ void round_clouds(pic::Canvas& c)
         // (Champions' acid pool: "The acid drains away..")
         draw_field(c);
         clear_menu_line(c);
-        put(c, gone ? fw(profile::kAirClears) : d->w_acid[1], 0, text::kMenuRow, 10);
+        // (Gateway under water: "The water clears a little...")
+        const bool water = fg->b.gw_water && d->prof->fight.words[profile::kWaterClearsGw];
+        put(c, gone ? fw(water ? profile::kWaterClearsGw : profile::kAirClears) : d->w_acid[1], 0, text::kMenuRow, 10);
         fg->st = FSt::RoundRest;
         fg->until = plat::now_ms() + game_delay_ms();
         if (!fg->until) fg->until = 1;
