@@ -4254,6 +4254,7 @@ bool saving_throw(const Fighter& f, int type, int bonus, create::Dice& d)
         if ((g_kind & 1) && hasx(f, fx.mon.resist_fire)) bonus += 3;
         if ((g_kind & 1) && hasx(f, fx.items.fire_ring)) bonus += 4;      // (Secret's ring of fire resistance)
         if (hasx(f, fx.items.luck)) ++bonus;                              // (Secret's luck stone)
+        if (!(g_kind & 8) && hasx(f, fx.items.barkskin)) ++bonus;         // (Barkskin: not against magic)
         if ((g_kind & 2) && hasx(f, fx.sp.hot)) bonus += 2;           // the fire shields
         if ((g_kind & 1) && hasx(f, fx.sp.cold)) bonus += 2;
         // Protection from evil / good: +2 when the one acting is evil / good
@@ -5251,6 +5252,13 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
         break;
     }
     case SpellDoes::FullHeal:
+        // (Secret's Barkskin with the Game Fixes: AD&D's - no healing, its
+        // effect 0x0D for 4 + the level rounds; SPEC 12)
+        if (spell == 0x5A && b.fx && b.fx->secret && rules::fixes()) {
+            for (int k = 0; k < m; ++k)
+                if (b.f[who[k]].up()) give_aff(b.f[who[k]], 0x0D, 4 + pw, 0, false);
+            break;
+        }
         // Secret's Heal (GAME.OVR 0x2F699; its Barkskin runs it too - the
         // handler table's entry for both - and gives no effect): disease (its
         // list DS 0x1B3E: helpless and the three of the disease's course),

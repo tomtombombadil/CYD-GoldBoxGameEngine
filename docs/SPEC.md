@@ -1115,8 +1115,9 @@ full behaviour checks (every spell, monster, class, item, situation).
   (Curse: the party invisible) - 1d4 + 1 years younger, at least 18
   (`Youth`); 96 the druids' Charm Person or Mammal (as Charm Person: the
   engine doesn't tell mammals apart); 98 the druids' Cure Light Wounds;
-  90 Barkskin runs Heal's routine in the original (and gives its effect)
-  - kept so (section 12). Its item words (Use ... Id, Select) mapped by
+  90 Barkskin runs Heal's routine in the original (no effect: its
+  handlers give everything) - kept so; with Game Fixes (v0.196.17) AD&D's:
+  no healing, effect 0x0D for 4 + the level rounds (section 12). Its item words (Use ... Id, Select) mapped by
   their text; its cures' effect numbers (blindness 0x21, diseases, 0x44
   feeblemind ...). Cure Blindness says "can see" alone, as its routine.
 - **v0.106.0 - its monsters.** Its effect handlers (DS 0x87EA + 4 x
@@ -2905,6 +2906,12 @@ the originals is a bug. Engine comforts with a `features.h` switch are
 marked (switch); since v0.72.0 the player can also turn each one off in
 the game's Settings (As Original: all of them).
 
+- **Secret's Barkskin** (Game Fixes, v0.196.17): the original runs Heal's
+  routine for it (hit points, cures, no effect); fixed: no healing, its
+  effect 0x0D for 4 + the caster's level rounds. Effect 0x0D itself (in
+  Secret, Darkness, Treasures - GAME.OVR 0x11277 / 0x1AE48 / 0x20927, the
+  saves' phase): + 1 to a save not against magic, as the originals (its d20
+  - 1 for blows at it is lost there - not followed).
 - **Side-steps** (ours, every game; Tom, 2026-11-06): a side-step's step
   script (entry 0, before the move) sees the party facing the way it
   steps - C04D the step's direction, C04E the wall that way - as the

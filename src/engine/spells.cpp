@@ -476,6 +476,13 @@ int cast(party::Party& p, int caster, int target, const CampSpell& cs, const cla
         }
         break;
     case Does::FullHeal:
+        // (Secret's Barkskin with the Game Fixes: AD&D's - no healing, its
+        // effect 0x0D (+ 1 to saves not against magic) for 4 + the level
+        // rounds; SPEC 12)
+        if (t.lay.secret && cs.spell == 0x5A && rules::fixes()) {
+            for (int k = 0; k < n; ++k) give(p.m[who[k]], 0x0D, 4 + pw, 0, false);
+            break;
+        }
         // Secret's Heal (GAME.OVR 0x2F699): disease, blindness, feeblemind
         // cured, then the most hit points less n dice (its Barkskin runs this
         // routine - the handler table's entry - and gives no effect)

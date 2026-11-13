@@ -2901,7 +2901,7 @@ const Profile kProfiles[] = {
                 .race = {0x61, 0x12, 0x1A, 0x07, 0x2F, 0x30, 0x69, true},
                 .items = {.displace = 0x59, .ring_invisible = 0x38, .giant_slayer = 0x4B, .luck = 0x4E, .fire_ring = 0x3D,
                           .boots = 0x4A, .no_disease = 0x4C, .displace_unused = true,
-                          .scrolls = {39, 40}},
+                          .scrolls = {39, 40}, .barkskin = 0x0D},
                 .berserk = 0x6B, .secret = true, .globe_major = 0x39,
                 .cloud_ground = 0x1D, .poison_ground = 0x1B, .cleric_xp_wis = 15, .hit_needs_damage = true},
                kSecretFight, sizeof kSecretFight / sizeof kSecretFight[0]},
@@ -3607,7 +3607,7 @@ const Profile kProfiles[] = {
                 .race = {0x61, 0x12, 0x1A, 0x07, 0x2F, 0x30, 0x69, true},
                 .items = {.displace = 0x59, .ring_invisible = 0x38, .giant_slayer = 0x4B, .luck = 0x4E, .fire_ring = 0x3D,
                           .boots = 0x4A, .no_disease = 0x4C, .displace_unused = true,
-                          .scrolls = {39, 40}},
+                          .scrolls = {39, 40}, .barkskin = 0x0D},
                 .berserk = 0x6B, .secret = true, .globe_major = 0x39,
                 // (its clouds: Stinking Cloud 0x1D, Cloudkill 0x1C, Blade Barrier 0x1B - GAME.OVR 0x2C617)
                 .cloud_ground = 0x1D, .poison_ground = 0x1C, .cleric_xp_wis = 15, .plat_xp = 2, .shot_pointed2 = 0x4A,
@@ -4014,7 +4014,7 @@ const Profile kProfiles[] = {
                 .race = {0x61, 0x12, 0x1A, 0x07, 0x2F, 0x30, 0x69, true},
                 .items = {.displace = 0x59, .ring_invisible = 0x38, .giant_slayer = 0x4B, .luck = 0x4E, .fire_ring = 0x3D,
                           .boots = 0x4A, .no_disease = 0x4C, .displace_unused = true,
-                          .scrolls = {39, 40}},
+                          .scrolls = {39, 40}, .barkskin = 0x0D},
                 .berserk = 0x6B, .secret = true, .globe_major = 0x39,
                 // (its clouds: Stinking Cloud 0x1D, Cloudkill 0x1C, Blade Barrier 0x1B - GAME.OVR 0x2C617)
                 .cloud_ground = 0x1D, .poison_ground = 0x1C, .cleric_xp_wis = 15, .plat_xp = 2, .shot_pointed2 = 0x4A,

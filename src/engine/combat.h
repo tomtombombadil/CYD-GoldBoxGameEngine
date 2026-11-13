@@ -409,6 +409,9 @@ struct ItemFx {
     uint8_t giant_slayer = 0, luck = 0, fire_ring = 0, boots = 0, no_disease = 0;
     bool    displace_unused = false;        // Secret: displacement only with rules::fixes()
     uint8_t scrolls[2] = {};                // Secret's scrolls are these types (not slots 11-13)
+    // Barkskin (0x0D; Secret GAME.OVR 0x11277, Darkness 0x1AE48, Treasures
+    // 0x20927 - the saves' phase): a save + 1 unless the kind is magic (8)
+    uint8_t barkskin = 0;
 };
 
 // The effects the fights' rules look at (per game, from the profile)

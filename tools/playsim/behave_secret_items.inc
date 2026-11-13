@@ -891,6 +891,21 @@ void s_fights()
         expect(PI, "... without it, not", !combat::saving_throw(F(t), 0, 0, rng));
         create::g_die_hook = nullptr;
     }
+    // Barkskin (0x0D): + 1 to a save not against magic (the saves' phase,
+    // GAME.OVR 0x11277 - its kind byte 0x87D5 & 8 none)
+    {
+        put(t, 0, 11, 10, 60);
+        give(t, 0x0D);
+        for (int k = 0; k < 5; ++k) F(t).rec[0xDF + k] = 12;
+        F(t).rec[0x186] = 0;
+        int made = 0;
+        for (int kind = 0; kind < 5; ++kind) {
+            s_dice(1, 11);
+            made += combat::saving_throw(F(t), kind, 0, rng);
+        }
+        create::g_die_hook = nullptr;
+        expect(PI, "Barkskin (0x0D): an 11 makes a save of 12 (each of the five kinds; GAME.OVR 0x11277)", made == 5, "%d", made);
+    }
     // The ring of fire resistance (0x3D): fire without magic nothing, magic
     // fire 2 a die less (at least 1 a die)
     {

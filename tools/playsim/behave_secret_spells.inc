@@ -725,6 +725,7 @@ void camp_own()
     const auto& cures = d->prof->cures;
     // Heal (36, GAME.OVR 0x2F699) and Barkskin (90: the same routine - no
     // effect given): the most HP less 1d4; blindness, disease, feeblemind cured
+    rules::set_fixes(false);        // (Barkskin: the original's - Game Fixes off; with them below)
     for (int s : {36, 90}) {
         member(0, s == 36 ? classes::Cleric : classes::Ranger, 16);
         member(1, classes::Fighter, 5, 60);
@@ -741,6 +742,24 @@ void camp_own()
         expect(S, w, caff(1, cures.blinded) < 0 && caff(1, 0x22) < 0 && caff(1, 0x1F) < 0);
         snprintf(w, sizeof w, "camp: spell %d gives no effect", s);
         expect(S, w, caff(1, 0x0D) < 0 && mem(1).n_affects == 0, "%d effects", mem(1).n_affects);
+    }
+    rules::set_fixes(true);
+    // Barkskin with the Game Fixes (SPEC 12): no healing, nothing cured, its
+    // effect 0x0D for 4 + the caster's level
+    {
+        member(0, classes::Ranger, 16);
+        member(1, classes::Fighter, 5, 60);
+        mem(1).rec[0x1A4] = 10;
+        give_member(1, cures.blinded);
+        dice(1);
+        ccast(0, 1, 90);
+        dice_off();
+        int t = 0;
+        const int pw = spells::power(mem(0), mrules->tables, 90);
+        const bool has = caff(1, 0x0D, &t) >= 0;
+        expect(S, "camp: Barkskin with the Game Fixes - no healing, blindness kept, effect 0x0D for 4 + the level",
+               mem(1).hp() == 10 && caff(1, cures.blinded) >= 0 && has && t == 4 + pw,
+               "HP %d, time %d (level %d)", mem(1).hp(), t, pw);
     }
     // Slow Poison (26, GAME.OVR 0x2ED24): a poisoned one - 0 HP to 1, okay
     // again (status 0, in combat), effect 0x16 for 3780 minutes (data 0xFF)

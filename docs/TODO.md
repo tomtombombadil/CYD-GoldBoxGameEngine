@@ -1011,10 +1011,14 @@ the Project as claude/TODO.md.
 - [x] Tom (2026-10-23): the switch is **Game Fixes** (was Game Fixes) -
       the originals' behaviour in the game, the engine's fixes behind it
       (v0.139.0).
-- [ ] Claude: Secret's Barkskin - the original runs Heal's routine for it
-      (the AC effect AND nearly full hit points). Tom's rule (2026-10-23:
-      "Keep original game behaviors in the game and keep our fixes under
-      the ... toggle"): fix it (AC only) behind Game Fixes.
+- [x] Claude: Secret's Barkskin - the original runs Heal's routine for it
+      (nearly full hit points, no effect). v0.196.17: with Game Fixes no
+      healing, effect 0x0D for 4 + level rounds; 0x0D's own rule (+1 to a
+      save not against magic - Secret / Darkness / Treasures, their
+      handlers) in the engine for all three (behave secret: 5415 / 0).
+      Left: the Curse-family games' and Champions' / Knights' / the
+      Queen's 0x0D handlers not read (the Queen's 0x4E0AD: [0xB2E7] + 1
+      unless [0xBEBD] & 8 - its save event list not read).
 - [ ] Tom: try the new library page (v0.103.0) on a board - the art,
       the header keys, the thirds and the triangles.
 - [ ] Tom: when you have a moment, Secret's Screen Test and Walk Test
