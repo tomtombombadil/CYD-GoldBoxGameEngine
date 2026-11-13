@@ -1646,7 +1646,11 @@ the Project as claude/TODO.md.
       distance for multi-square fighters (its area list's distance /
       2 - the list builder's for big fighters not read); a computer spell
       with a casting time aborts at its start, not as it goes off; Darkness
-      / Treasures memorized places 84-140 (the engine's fighters hold 84);
+      / Treasures memorized places 84-140 (the engine's fighters hold 84) -
+      read (round 22): every MON*CHA record with spells keeps them under
+      place 84 (Darkness 41, Treasures 20), and the party's are packed into
+      the first 84 (party.cpp pack_memorized) - only an 85th memorized
+      spell is out of the computer's reach (Quick);
       Secret's chooser gate on effect 0x44 (feeblemind - the engine's
       own can_cast assumed the same).
 - [x] Round 19 left (round 20, 2026-11-10: "moves / 2" the same test;
