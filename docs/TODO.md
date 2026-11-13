@@ -1628,10 +1628,13 @@ the Project as claude/TODO.md.
       acid_pool). DQK.EXE's own (qhooks.py handler map; carriers.py):
       Enchanted Baaz (MONCHA 87) 0xBB "loses his weapon" (handler
       0x51DE8; 0x99 the same word, 0x507D9 - no carrier); Enchanted Kapak
-      (88) 0x9C "dissolves into acid!" (0x50BC8: spreads to the squares
-      round it at random - a d2 per side, field 50 x 25, grounds DS
-      0x6197); Bozak (78) 0x9A (its square ground 0x46 for 1d6 - the
-      cloud list DS 0xB3D4 via 0x50A0E) and 0xA6 given by code (0x50D62 /
+      (88) 0x9C "dissolves into acid!" (0x50BC8, read: its own square and
+      each of the 8 round it on a d2 of 1, inside the field and on a ground
+      of move cost 1 (DS 0x6197 byte 0), get ground 0x46 for 1d6 rounds -
+      a cloud record on DS 0xB3D4's list, 0x50A0E; ground 0x46 is one of
+      its cloud grounds with 0x1B / 0x1C / 0x1D / 0x1E - the square reader
+      0x2AFE0 flags it; its harm not read yet); Bozak (78) 0x9A (queued
+      on death - below) and 0xA6 given by code (0x50D62 /
       0x50F81), handler 0x5100F "explodes!" / "is stunned"; Gas Spore 0xB6
       (0x51A6A "explodes." / "dies from"). v0.196.23: the Enchanted Baaz
       (mon.stone_death 0xBB; its extra tests - the last blow's damage a
