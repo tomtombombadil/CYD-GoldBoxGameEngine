@@ -2042,8 +2042,9 @@ constexpr combat::Facts kQueenFightFacts = {.held = {0x33, 0x34, 0x35, 0x1F}, .b
                         .acid_breath = 0x60, .fire_breath = 0x54,
                         .paralyzed = 0x34, .poisoned = 0x37, .sleep = 0x35, .drain1 = 0x65, .drain2 = 0x66,
                         .ghoul = 0x58, .lightning_breath = 0x5B, .no_fear = 0x5C,
-                        // (its Enchanted Baaz: DQK.EXE 0x51DE8 - round 22)
-                        .stone_death = 0xBB},
+                        // (its Enchanted Baaz: DQK.EXE 0x51DE8, Enchanted
+                        // Kapak 0x50BC8 - round 22)
+                        .stone_death = 0xBB, .acid_pool = 0x9C},
                 .sp = {.enlarge = 0x0C, .confuse = 0x23, .berserk = 0x4D, .evil_ward = 0x04, .hot = 0x32,
                        .cold = 0x36, .zap = 0x70, .slow_poison = 0x16, .poison_damage = 0x0F, .hammer = 0x17,
                        .con_regen = 0x3E, .shield = 0x11, .enfeeble = 0x1D, .ill = 0x22, .weak = 0x2B, .sick = 0x2C,
@@ -2057,6 +2058,9 @@ constexpr combat::Facts kQueenFightFacts = {.held = {0x33, 0x34, 0x35, 0x1F}, .b
                 // ground 0x1E for the stinking cloud and 0 (off the field) for
                 // the knives)
                 .cloud_ground = 0x1D, .poison_ground = 0x1C,
+                // (its kapak's acid: ground 0x46, 1d6 no save on one standing
+                // in it - DQK.EXE 0x83A2, kind 0x100 - round 22)
+                .acid_ground = 0x46, .acid_spread = true,
                 .dk = {.knives = 0x1B, .knife_n = 8, .knife_sides = 8, .dragon_fear = 0x64, .feared = 0x78}, .taunted = 0x8C, .feeble_lost = true, .feeble_direct = true,
                 // (taunted 0x8C - round 18: its Yell DQK.EXE 0x5FDB0 gives it,
                 // its finder's list 0x24550 and the finder 0x28BF8 ask it;
@@ -2312,6 +2316,8 @@ constexpr auto kQueenFight = [] {
     f.tables.clouds[0] = {1, {0x1E, 0xA0, 0x8F, 0x3F, 0x39}, 0x18, true, false, false};
     f.tables.clouds[1] = {2, {0x39, 0x8F}, 0x10, true, false, false};
     f.tables.clouds[2] = {3, {}, 0, true, false, false};
+    // (its kapak's acid 0x46: under 7 Hit Dice and not driven - no step)
+    f.tables.clouds[3] = {4, {}, 0, true, false, true};
     for (int i = 0; i < kFightWords; ++i) f.words[i] = kQueenFightWords[i];
     // (a damage text's fall, res 0x8F04: "Goes Down" 0x19B - the hit's own
     // "goes down" is 0x5B8B - and "%s and is Dying" 0x1A5)
@@ -4231,6 +4237,7 @@ const Profile kProfiles[] = {
                  // (its draconians: "explodes!", "is stunned", "loses his
                  // weapon" - DS 0x848B / 0x8495 / 0x8447; round 22)
                  .burst_words = {qw(0x848B), qw(0x8495), qw(0x8447)},
+                 .acid_words = {qw(0x8458), qw(0x1E1)},     // ("dissolves into acid!", "The acid drains")
                  // (Knight New Order, DQK 0x487F2: its messages 64-70, "Exit"
                  // of the menu "Change Exit" (161) - one " is too
                  // inexperienced" for both orders; the order's name made of

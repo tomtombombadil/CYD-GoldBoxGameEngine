@@ -2509,6 +2509,14 @@ void kapak_acid(int t)
     const uint8_t ac = b.fx ? b.fx->mon.acid_pool : 0;
     if (!ac || !b.f[t].has(ac) || (fg->burst[t / 8] >> (t % 8) & 1) || !d->w_acid[0][0]) return;
     fg->burst[t / 8] |= static_cast<uint8_t>(1 << (t % 8));
+    if (b.fx->acid_spread) {
+        // (the Dark Queen's, DQK.EXE 0x50BC8: its square and each round it
+        // on a d2 of 1, inside the field, on a ground of move cost 1 - each
+        // its own 1d6 rounds; then the words)
+        combat::lay_acid_spread(b, fg->t, b.f[t].x, b.f[t].y, rng);
+        add_page(t, d->w_acid[0]);
+        return;
+    }
     add_page(t, d->w_acid[0]);
     combat::lay_acid(b, fg->t, b.f[t].x, b.f[t].y, rng);
 }

@@ -39,7 +39,7 @@ constexpr int kMaxFighters = party::kMaxParty + kMaxMonsters;
 // all come before the fight, staged fights are fights of their own - but
 // Secret / Darkness may (1.3 KB a fight)
 constexpr int kSpareFighters = 8;
-constexpr int kGroundValues = 0x46;        // (Darkness: 70 values; Curse 0x43)
+constexpr int kGroundValues = 0x47;        // (Darkness: 70 values; Curse 0x43; the Dark Queen 0x46 its kapak acid)
 constexpr int kMaxGroups = 8;           // monster kinds a fight (icon slots 8 ...)
 constexpr int kGroupItems = 8;
 constexpr int kMonsterAffects = 12;    // the most in a monster file (9) and those a fight adds
@@ -58,7 +58,7 @@ struct BoltSeg { uint8_t x0, y0, x1, y1; };
 // +0x10: turned, run away in confusion), 7+ Hit Dice (hd7) - or, with save,
 // a save against poison made; otherwise never
 struct StepCloud {
-    uint8_t kind;                       // 0 none, 1 the stinking cloud's ground, 2 the poison cloud's, 3 Darkness's knives
+    uint8_t kind;                       // 0 none, 1 the stinking cloud's ground, 2 the poison cloud's, 3 Darkness's knives, 4 the acid (Facts::acid_ground)
     uint8_t eff[6];                     // (0 ends the list)
     uint8_t flags2;
     bool    driven, save, hd7;
@@ -141,7 +141,7 @@ struct Tables {
     // 0xCE3A ...); Darkness 0xAD1E, Treasures and the Dark Queen 0x2EF8A
     // have no such test (a byte: up to 254)
     bool    morale_cap;
-    StepCloud clouds[3];
+    StepCloud clouds[4];
     // Round 20: the computer's spell choice by its original (profile::ai_cast;
     // null: the d7 rounds with Curse's judge)
     const struct AiCast* ai;            // (set after read_tables: play.cpp load_fight_tables)
@@ -164,7 +164,7 @@ struct TableAt {
     uint16_t mood_rows = 0;             // Tables::mood (0: none)
     uint8_t  flee_inc = 0;              // Tables::flee_inc
     bool     step_pool = false;         // PoolRad's try: the ground's value < the moves, the cost <= the moves (else cost < moves)
-    StepCloud clouds[3] = {};
+    StepCloud clouds[4] = {};
     bool     finder_scan = false;       // Tables::finder_scan
     bool     finder_first = false;      // Tables::finder_first
     bool     finder_queen = false;      // Tables::finder_queen
@@ -493,8 +493,12 @@ struct Facts {
     // The clouds' ground values (0: Curse's 0x1E / 0x1C - kCloudGround, kPoisonGround;
     // Secret's 0x1D / 0x1B, its ground table's pictures 28 / 26 - GAME.OVR 0x2F39F, 0x31A43)
     uint8_t cloud_ground = 0, poison_ground = 0;
-    // Champions' kapak acid pool's ground (0x1D - GAME.OVR 0x12F1F; 0: none)
+    // Champions' kapak acid pool's ground (0x1D - GAME.OVR 0x12F1F; 0: none;
+    // the Dark Queen's 0x46 - DQK.EXE 0x50A0E)
     uint8_t acid_ground = 0;
+    // The Dark Queen's kapak (DQK.EXE 0x50BC8): its acid on its own square
+    // and each of the 8 round it on a d2 of 1, on grounds of move cost 1
+    bool    acid_spread = false;
     // The cleric's +10% experience from this Wisdom in use (0: AD&D's 16;
     // Secret's program 15 - GAME.OVR 0x6E04 - the original's mistake,
     // applied with rules::fixes() off)
@@ -1439,6 +1443,12 @@ Did breathe_cloud(Battle& b, int i, create::Dice& d);
 // when they step in and as each round ends (GAME.OVR 0x34F7F; the
 // footprint's grounds, ovl 0x116 +0xDBD). False: no room, or not on the field.
 bool lay_acid(Battle& b, const Tables& t, int x, int y, create::Dice& d);
+// The Dark Queen's kapak (DQK.EXE 0x50BC8; Facts::acid_spread): its square
+// and each of the 8 round it on a d2 of 1 (a d2 for every one), inside the
+// field and on a ground of move cost 1 - each its own 1d6 rounds. The squares laid
+int lay_acid_spread(Battle& b, const Tables& t, int x, int y, create::Dice& d);
+// May the computer's step go into (x, y) - its game's clouds (Tables::clouds)
+bool cloud_ok(const Battle& b, const Tables& t, Fighter& f, int x, int y, create::Dice& d);
 // Fighter i stands with a square in acid
 bool on_acid(const Battle& b, int i);
 // The acid's 1d6 on fighter i (the damage; *down when it fell)

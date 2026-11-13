@@ -1640,7 +1640,12 @@ the Project as claude/TODO.md.
       0x50F81), handler 0x5100F "explodes!" / "is stunned"; Gas Spore 0xB6
       (0x51A6A "explodes." / "dies from"). v0.196.23: the Enchanted Baaz
       (mon.stone_death 0xBB; its extra tests - the last blow's damage a
-      multiple of 3, the weapon not cursed). The Bozak's 0x9A (0x509AE,
+      multiple of 3, the weapon not cursed). v0.196.24: the Enchanted
+      Kapak's acid (mon.acid_pool 0x9C, Facts::acid_ground 0x46 /
+      acid_spread: lay_acid_spread; 1d6 no save, kind 0x100 - the cloud
+      harm routine 0x7F9B's flag, 0x83A2; the AI's try - StepCloud kind 4,
+      under 7 Hit Dice and not driven no step; "The acid drains" DS
+      0x1E1; kGroundValues 0x47) - rules4 ONLY=qacid. The Bozak's 0x9A (0x509AE,
       death event 0xD): not active (+0x18B 0) -> status word +0x64 = 10, put
       on a list (DS 0xC284, count [0xBD4C], up to 20), 0x9A taken off; the
       list's routine 0x50CF0: status word cleared, active again, a save

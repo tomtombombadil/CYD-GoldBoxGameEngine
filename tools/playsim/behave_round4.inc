@@ -649,6 +649,54 @@ void secret_feeble()
            "before %d, feebleminded %d", before, F(0).can_cast);
 }
 
+// The Dark Queen's Enchanted Kapak (DQK.EXE 0x50BC8, 0x83A2, the try
+// 0x2E248): its acid on its square and each round it on a d2 of 1, ground
+// 0x46, 1d6 no save on one standing there; under 7 Hit Dice and not driven
+// the computer won't step in - round 22
+void queen_acid()
+{
+    if (game() != 7 || !fight() || !fg->b.fx || !fg->b.fx->acid_spread) return;
+    combat::Battle& b = fg->b;
+    mx::put(0, 0, 10, 10, 60);
+    mx::put(B, 1, 20, 10, 60);
+    for (int y = 8; y <= 12; ++y)
+        for (int x = 18; x <= 22; ++x) b.ground[y][x] = 0x17;
+    b.n_clouds = 0;
+    int laid = 0, want = 0;
+    for (int seed = 1; seed <= 20; ++seed) {
+        b.n_clouds = 0;
+        for (int y = 8; y <= 12; ++y)
+            for (int x = 18; x <= 22; ++x) b.ground[y][x] = 0x17;
+        // the d2s as rolled: 9 of them, the centre always laid
+        int rolls[9];
+        create::Dice dd(static_cast<uint32_t>(seed));
+        create::Dice copy = dd;
+        for (int k = 0; k < 9; ++k) rolls[k] = copy.roll(2, 1);
+        int expect_n = 0;
+        for (int k = 0; k < 9; ++k) expect_n += (rolls[k] == 1 || k == 4);
+        // (1d6 rounds are rolled between, so count only)
+        const int n = combat::lay_acid_spread(b, fg->t, 20, 10, dd);
+        int on = 0;
+        for (int y = 9; y <= 11; ++y)
+            for (int x = 19; x <= 21; ++x) on += b.ground[y][x] == 0x46;
+        laid += n == on && on >= 1 && b.ground[10][20] == 0x46;
+        want += 1;
+        (void)expect_n;
+    }
+    b.f[0].x = 20;
+    b.f[0].y = 10;
+    const bool burns = combat::on_acid(b, 0);
+    // the step: a weak one, not driven, refused; 7 Hit Dice taken
+    combat::Fighter& m = F(B);
+    m.driven = false;
+    m.rec[0xE5] = 3;
+    const bool weak = combat::cloud_ok(b, fg->t, m, 20, 10, play::rng);
+    m.rec[0xE5] = 7;
+    const bool strong = combat::cloud_ok(b, fg->t, m, 20, 10, play::rng);
+    expect(P, "the Dark Queen's kapak acid: its square always, ground 0x46, burns who stands there; under 7 Hit Dice no step in",
+           laid == want && burns && !weak && strong, "%d of %d lays, burns %d, weak %d, strong %d", laid, want, burns, weak, strong);
+}
+
 void queen_moon_room();
 void moons()
 {
@@ -4115,6 +4163,7 @@ void run()
     if (want("gwater")) gateway_water();
     if (want("barkskin")) barkskin_saves();
     if (want("sfeeble")) secret_feeble();
+    if (want("qacid")) queen_acid();
     if (want("qhooks")) queen_hooks();
     if (want("statfx")) stat_effects();
     if (want("finder")) finder_check();

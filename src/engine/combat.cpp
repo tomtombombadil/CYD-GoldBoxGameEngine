@@ -252,7 +252,7 @@ bool read_tables(Tables& t, const TableAt& at, ReadDs read, void* ctx)
     t.step_npc = at.step_npc;
     t.mage_rule = at.mage_rule;
     t.morale_cap = at.morale_cap;
-    for (int k = 0; k < 3; ++k) t.clouds[k] = at.clouds[k];
+    for (int k = 0; k < 4; ++k) t.clouds[k] = at.clouds[k];
     if (t.mood_known && at.mood_stride != 5) {
         // (rows of mood_stride: row m's columns 1-5 at m x stride + c)
         uint8_t raw[7 * 8] = {};
@@ -3627,12 +3627,15 @@ bool step_fits(const Battle& b, const Tables& t, int i, int dir, int cost)
     return cost / (dir % 2 ? 3 : 2) < f.moves && cost <= f.moves;
 }
 
+} // namespace
+
 bool cloud_ok(const Battle& b, const Tables& t, Fighter& f, int x, int y, create::Dice& d)
 {
     const uint8_t g = b.ground[y][x];
     for (const StepCloud& c : t.clouds) {
         if (!c.kind) continue;
-        const uint8_t cg = c.kind == 1 ? cloud_g(b) : c.kind == 2 ? poison_g(b) : b.fx ? b.fx->dk.knives : 0;
+        const uint8_t cg = c.kind == 1 ? cloud_g(b) : c.kind == 2 ? poison_g(b) : !b.fx ? 0
+                           : c.kind == 4 ? b.fx->acid_ground : b.fx->dk.knives;
         if (!cg || g != cg) continue;
         if (c.hd7 && f.rec[0xE5] >= 7) return true;
         bool ok = (c.driven && f.driven) || (c.flags2 && (f.flags2 & c.flags2));
@@ -3643,7 +3646,6 @@ bool cloud_ok(const Battle& b, const Tables& t, Fighter& f, int x, int y, create
     return true;
 }
 
-} // namespace
 
 // The DAX games' target finder (range 0xFF, second argument 1, third 0;
 // rounds 16 / 17 - tools/devkit/oracles/finder.py, turnfind.py): the AI
@@ -7086,6 +7088,22 @@ bool lay_acid(Battle& b, const Tables& t, int x, int y, create::Dice& d)
     cl.present = 1;
     b.ground[y][x] = acid_g(b);
     return true;
+}
+
+int lay_acid_spread(Battle& b, const Tables& t, int x, int y, create::Dice& d)
+{
+    int n = 0;
+    for (int dx = -1; dx <= 1; ++dx)
+        for (int dy = -1; dy <= 1; ++dy) {
+            const bool one = d.roll(2, 1) == 1;
+            if (!one && (dx || dy)) continue;
+            const int xx = x + dx, yy = y + dy;
+            if (!on_field(xx, yy)) continue;
+            const int g = b.ground[yy][xx];
+            if (g >= kGroundValues || t.ground[g][0] != 1) continue;
+            n += lay_acid(b, t, xx, yy, d);
+        }
+    return n;
 }
 
 bool on_acid(const Battle& b, int i)
