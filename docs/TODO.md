@@ -1625,7 +1625,7 @@ the Project as claude/TODO.md.
       items, 0 differ; the bare rating 1137): Darkness's target rules, no
       item effect tests, the plus unsigned, Secret's hands rule, and a
       weapon with a range 0 while game byte 0x3C - UNDERWATER - is set.
-- [ ] The Dark Queen's draconians dying - NOT in the engine (found round
+- [x] The Dark Queen's draconians dying (v0.196.23-25) - NOT in the engine before (found round
       22, 2026-11-13; Champions' are: mon.explode / stone_death /
       acid_pool). DQK.EXE's own (qhooks.py handler map; carriers.py):
       Enchanted Baaz (MONCHA 87) 0xBB "loses his weapon" (handler
@@ -1645,7 +1645,13 @@ the Project as claude/TODO.md.
       acid_spread: lay_acid_spread; 1d6 no save, kind 0x100 - the cloud
       harm routine 0x7F9B's flag, 0x83A2; the AI's try - StepCloud kind 4,
       under 7 Hit Dice and not driven no step; "The acid drains" DS
-      0x1E1; kGroundValues 0x47) - rules4 ONLY=qacid. The Bozak's 0x9A (0x509AE,
+      0x1E1; kGroundValues 0x47) - rules4 ONLY=qacid. v0.196.25 the
+      Bozak (mon.explode 0x9A, Facts::bozak_1d6): queued as it dies, then
+      after the blow / spell (0x48F:0x2AB8 = 0x97A8) "explodes." (DS
+      0x208), 1d6 to each within a square (not those exploding too), no
+      save, no stun - rules4 ONLY=qbozak. Not this monster: 0xA0 "rises in
+      a new form" (given at 0x5074C - the dragon's?) and 0xA5 / 0xA6 /
+      0xA7 (the Chromatic Dragon, MONCHA 74) - a later check. The Bozak's 0x9A (0x509AE,
       death event 0xD): not active (+0x18B 0) -> status word +0x64 = 10, put
       on a list (DS 0xC284, count [0xBD4C], up to 20), 0x9A taken off; the
       list's routine 0x50CF0: status word cleared, active again, a save

@@ -4156,10 +4156,11 @@ int bozak_burst(Battle& b, const Tables& t, int c, create::Dice& d, int* out, in
         const int j = near[i];
         if (j == c || !b.f[j].up()) continue;
         out[k] = j;
-        dmg[k] = d.roll(6, 3);
+        const bool q = b.fx && b.fx->bozak_1d6;
+        dmg[k] = d.roll(6, q ? 1 : 3);
         dn[k] = damage(b, j, dmg[k]);
         st[k] = false;
-        if (!dn[k] && !saving_throw(b.f[j], 4, 0, d) && b.fx && b.fx->sp.stun) {
+        if (!q && !dn[k] && !saving_throw(b.f[j], 4, 0, d) && b.fx && b.fx->sp.stun) {
             give_aff(b.f[j], b.fx->sp.stun, 0, 0xFF, false);
             st[k] = true;
         }

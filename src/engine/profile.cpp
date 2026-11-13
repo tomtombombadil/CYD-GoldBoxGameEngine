@@ -2044,7 +2044,7 @@ constexpr combat::Facts kQueenFightFacts = {.held = {0x33, 0x34, 0x35, 0x1F}, .b
                         .ghoul = 0x58, .lightning_breath = 0x5B, .no_fear = 0x5C,
                         // (its Enchanted Baaz: DQK.EXE 0x51DE8, Enchanted
                         // Kapak 0x50BC8 - round 22)
-                        .stone_death = 0xBB, .acid_pool = 0x9C},
+                        .explode = 0x9A, .stone_death = 0xBB, .acid_pool = 0x9C},
                 .sp = {.enlarge = 0x0C, .confuse = 0x23, .berserk = 0x4D, .evil_ward = 0x04, .hot = 0x32,
                        .cold = 0x36, .zap = 0x70, .slow_poison = 0x16, .poison_damage = 0x0F, .hammer = 0x17,
                        .con_regen = 0x3E, .shield = 0x11, .enfeeble = 0x1D, .ill = 0x22, .weak = 0x2B, .sick = 0x2C,
@@ -2061,6 +2061,9 @@ constexpr combat::Facts kQueenFightFacts = {.held = {0x33, 0x34, 0x35, 0x1F}, .b
                 // (its kapak's acid: ground 0x46, 1d6 no save on one standing
                 // in it - DQK.EXE 0x83A2, kind 0x100 - round 22)
                 .acid_ground = 0x46, .acid_spread = true,
+                // (its Bozak - 0x9A, DQK.EXE 0x509AE / 0x97A8: 1d6 to each within
+                // a square, no save, no stun)
+                .bozak_1d6 = true,
                 .dk = {.knives = 0x1B, .knife_n = 8, .knife_sides = 8, .dragon_fear = 0x64, .feared = 0x78}, .taunted = 0x8C, .feeble_lost = true, .feeble_direct = true,
                 // (taunted 0x8C - round 18: its Yell DQK.EXE 0x5FDB0 gives it,
                 // its finder's list 0x24550 and the finder 0x28BF8 ask it;
@@ -4236,7 +4239,7 @@ const Profile kProfiles[] = {
                  .fight_unswapped = true, .press_words = {qw(0x1D19), qw(0x1D33)},
                  // (its draconians: "explodes!", "is stunned", "loses his
                  // weapon" - DS 0x848B / 0x8495 / 0x8447; round 22)
-                 .burst_words = {qw(0x848B), qw(0x8495), qw(0x8447)},
+                 .burst_words = {qw(0x208), qw(0x8495), qw(0x8447)},   // ("explodes." - its Bozak's, DQK.EXE 0x97A8)
                  .acid_words = {qw(0x8458), qw(0x1E1)},     // ("dissolves into acid!", "The acid drains")
                  // (Knight New Order, DQK 0x487F2: its messages 64-70, "Exit"
                  // of the menu "Change Exit" (161) - one " is too

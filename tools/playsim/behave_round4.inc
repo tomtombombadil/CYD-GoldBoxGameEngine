@@ -697,6 +697,27 @@ void queen_acid()
            laid == want && burns && !weak && strong, "%d of %d lays, burns %d, weak %d, strong %d", laid, want, burns, weak, strong);
 }
 
+// The Dark Queen's Bozak (0x9A; DQK.EXE 0x509AE queues it, 0x97A8
+// "explodes."): 1d6 to each within a square, no save, no stun - round 22
+void queen_bozak()
+{
+    if (game() != 7 || !fight() || !fg->b.fx || !fg->b.fx->bozak_1d6) return;
+    combat::Battle& b = fg->b;
+    mx::put(0, 0, 10, 10, 90);
+    mx::put(B, 1, 11, 10, 90);
+    int ok = 0, n = 0;
+    for (int seed = 1; seed <= 30; ++seed) {
+        mx::put(0, 0, 10, 10, 90);
+        create::Dice dd(static_cast<uint32_t>(seed));
+        int who[combat::kMaxFighters], dmg[combat::kMaxFighters];
+        bool dn[combat::kMaxFighters], st[combat::kMaxFighters];
+        const int k = combat::bozak_burst(b, fg->t, B, dd, who, dmg, dn, st, combat::kMaxFighters);
+        ++n;
+        ok += k == 1 && who[0] == 0 && dmg[0] >= 1 && dmg[0] <= 6 && !st[0];
+    }
+    expect(P, "the Dark Queen's Bozak: 1d6 to the one beside it, no save, no stun (DQK.EXE 0x97A8)", ok == n, "%d of %d", ok, n);
+}
+
 void queen_moon_room();
 void moons()
 {
@@ -4164,6 +4185,7 @@ void run()
     if (want("barkskin")) barkskin_saves();
     if (want("sfeeble")) secret_feeble();
     if (want("qacid")) queen_acid();
+    if (want("qbozak")) queen_bozak();
     if (want("qhooks")) queen_hooks();
     if (want("statfx")) stat_effects();
     if (want("finder")) finder_check();

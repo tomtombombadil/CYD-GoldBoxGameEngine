@@ -499,6 +499,9 @@ struct Facts {
     // The Dark Queen's kapak (DQK.EXE 0x50BC8): its acid on its own square
     // and each of the 8 round it on a d2 of 1, on grounds of move cost 1
     bool    acid_spread = false;
+    // The Dark Queen's Bozak (DQK.EXE 0x97A8): 1d6 to each within a square,
+    // no save, no stun (Champions': 3d6, a save or stunned)
+    bool    bozak_1d6 = false;
     // The cleric's +10% experience from this Wisdom in use (0: AD&D's 16;
     // Secret's program 15 - GAME.OVR 0x6E04 - the original's mistake,
     // applied with rules::fixes() off)
