@@ -718,6 +718,91 @@ void queen_bozak()
     expect(P, "the Dark Queen's Bozak: 1d6 to the one beside it, no save, no stun (DQK.EXE 0x97A8)", ok == n, "%d of %d", ok, n);
 }
 
+// The Dark Queen's Aurak (DQK.EXE handlers 0x5070D, 0x50CF0, 0x50DF1,
+// 0x50F52, 0x50FFC, 0x5100F, 0x512D1): goes mad, reborn, energy form, blast
+void queen_aurak()
+{
+    if (game() != 7 || !fight() || !fg->b.fx || !fg->b.fx->q.mad) return;
+    combat::Battle& b = fg->b;
+    const combat::Facts::QueenFx& q = b.fx->q;
+    auto aff_of = [&](int i, uint8_t t) -> const uint8_t* {
+        combat::Fighter& f = F(i);
+        for (int k = 0; f.n_aff && k < *f.n_aff; ++k)
+            if (f.aff[k][0] == t) return f.aff[k];
+        return nullptr;
+    };
+    auto mins = [&](const uint8_t* a) { return a ? (a[1] | a[2] << 8) : -1; };
+    auto scene = [&]() {
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(0, 0, 10, 10, 200);
+        mx::put(B, 1, 11, 10, 40);
+        mx::add_aff(B, q.mad);
+    };
+    int bad = 0, n = 0;
+    auto chk = [&](bool ok, const char* what) {
+        ++n;
+        if (!ok && !bad++) printf("  (aurak: %s)\n", what);
+    };
+    for (int seed = 1; seed <= 20; ++seed) {
+        create::Dice dd(static_cast<uint32_t>(seed));
+        scene();
+        combat::Fighter& au = F(B);
+        // 1. its death: up with 20, mad
+        combat::damage(b, B, 200);
+        chk(au.up() && au.hp() == 20 && au.rise_how == 1, "up with 20 hit points, goes mad");
+        chk(!au.has(q.mad) && au.has(q.reborn) && au.has(q.immolate) && au.has(q.plus2), "0x98 gone; 0xA0 0xA1 0xA2 held");
+        const uint8_t* mt = aff_of(B, q.mad_time);
+        chk(mt && mins(mt) == 6 && mt[4] == 1, "0xA3: 6 rounds, called as it ends");
+        au.rise_how = 0;
+        // 2. its turn: immolates the foe beside it, 1d6, no save
+        int who[combat::kMaxFighters], dmg[combat::kMaxFighters], word = 0;
+        bool dn[combat::kMaxFighters], ends = false;
+        int k = combat::aurak_turn(b, fg->t, B, dd, who, dmg, dn, combat::kMaxFighters, &word, &ends);
+        chk(word == 1 && k == 1 && who[0] == 0 && dmg[0] >= 1 && dmg[0] <= 6 && !ends, "immolates: 1d6 to the foe beside it");
+        // 3. killed again: reborn - no harm, zaps, the blast in 3 (called: its 0xA3's removal)
+        combat::damage(b, B, 200);
+        chk(au.up() && au.hp() == 20 && au.rise_how == 2, "rises in a new form with 20");
+        chk(!au.has(q.reborn) && !au.has(q.immolate) && !au.has(q.plus2) && !au.has(q.mad_time), "0xA0 0xA1 0xA2 0xA3 gone");
+        const uint8_t* bu = aff_of(B, q.blows_up);
+        chk(au.has(q.no_harm) && au.has(q.zaps) && bu && mins(bu) == 3, "0xA5 0xA7, 0xA6 for 3");
+        bool called = false;
+        for (int j = 0; au.n_aff && j < *au.n_aff; ++j)
+            if (au.aff[j][0] == q.blows_up && au.aff[j][4]) called = true;
+        chk(called, "an 0xA6 called as it ends");
+        au.rise_how = 0;
+        k = combat::aurak_turn(b, fg->t, B, dd, who, dmg, dn, combat::kMaxFighters, &word, &ends);
+        chk(word == 2 && k == 1 && who[0] == 0 && dmg[0] >= 2 && dmg[0] <= 12 && ends, "zaps the foe beside it, 2d6, the turn over");
+        // 4. no harm from a spell
+        combat::Harm h;
+        h.spell = 1;
+        bool down = false;
+        chk(combat::harm(b, B, 15, h, dd, &down) == 0 && au.hp() == 20, "a spell's damage 0 in the energy form");
+        // 5. its time over: explodes, gone; the blast 3d6 to the one beside it
+        bool boom = false;
+        for (int r = 0; r < 4 && !boom; ++r) {
+            combat::Event ev[8];
+            const int ne = combat::tick(b, ev, 8);
+            for (int e = 0; e < ne; ++e) boom |= ev[e].ev == combat::Ev::AurakExplodes && ev[e].who == B;
+        }
+        chk(boom && au.status() == party::Gone, "explodes after 3 rounds, gone");
+        bool st[combat::kMaxFighters];
+        const int hp0 = F(0).hp();
+        k = combat::aurak_blast(b, fg->t, B, dd, who, dmg, dn, st, combat::kMaxFighters);
+        chk(k == 1 && who[0] == 0 && dmg[0] >= 3 && dmg[0] <= 18 && F(0).hp() == hp0 - dmg[0], "the blast: 3d6, no save");
+        // 6. its madness run out (not killed): the energy form, no zaps, turns over
+        scene();
+        combat::damage(b, B, 200);
+        for (int r = 0; r < 6; ++r) combat::tick(b, nullptr, 0);
+        const uint8_t* b2 = aff_of(B, q.blows_up);
+        chk(au.has(q.no_harm) && au.has(q.turn_over) && b2 && b2[4] && !au.has(q.immolate) && !au.has(q.zaps) &&
+                !au.has(q.reborn),
+            "madness over: 0xA5, 0xA6 called, 0xD5; no 0xA1 / 0xA7 / 0xA0");
+        au.rise_how = 0;
+    }
+    expect(P, "the Dark Queen's Aurak: goes mad (20 hp, immolates 1d6), reborn (no harm, zaps 2d6, the turn over), explodes (3d6) - DQK.EXE 0x5070D on",
+           bad == 0, "%d of %d wrong", bad, n);
+}
+
 void queen_moon_room();
 void moons()
 {
@@ -4186,6 +4271,7 @@ void run()
     if (want("sfeeble")) secret_feeble();
     if (want("qacid")) queen_acid();
     if (want("qbozak")) queen_bozak();
+    if (want("qaurak")) queen_aurak();
     if (want("qhooks")) queen_hooks();
     if (want("statfx")) stat_effects();
     if (want("finder")) finder_check();

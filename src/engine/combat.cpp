@@ -5,6 +5,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <initializer_list>
 
 namespace combat {
 
@@ -1261,6 +1262,41 @@ void fall(Battle& b, int c)
             return;
         }
     }
+    // The Dark Queen's Aurak at its death (0x5070D / 0x50CF0): up again in
+    // its square with 20 hit points (0x48F:0x26C1 - not when it doesn't fit)
+    const Facts::QueenFx& q = b.fx->q;
+    const int st = f.status();
+    if (q.mad && (st == party::Dead || st == party::Dying || st == party::Unconscious) &&
+        (f.has(q.mad) || f.has(q.reborn)) && stand_up(b, c, false)) {
+        f.rec[kHp] = 20;
+        auto drop = [&](uint8_t t) {
+            const int k = t ? find_aff(f, t) : -1;
+            if (k >= 0) drop_aff(f, k);
+        };
+        if (f.has(q.mad)) {
+            give_aff(f, q.reborn, 0, 0xFF, false);
+            give_aff(f, q.immolate, 0, 0xFF, false);
+            give_aff(f, q.plus2, 0, 0xFF, false);
+            give_aff(f, q.mad_time, 6, 0xFF, true);
+            drop(q.mad);
+            f.rise_how = 1;
+        } else {
+            give_aff(f, q.no_harm, 0, 0xFF, false);
+            give_aff(f, q.blows_up, 3, 0xFF, false);
+            give_aff(f, q.zaps, 0, 0xFF, false);
+            for (uint8_t t : {q.reborn, q.tag, q.immolate, q.plus2}) drop(t);
+            // (its mad_time taken away with its call flag: the energy form's
+            // ending runs - the blast in 3, called this time, the turns over)
+            const int mt = find_aff(f, q.mad_time);
+            if (mt >= 0) {
+                drop_aff(f, mt);
+                give_aff(f, q.blows_up, 3, 0xFF, true);
+                give_aff(f, q.turn_over, 0, 0xFF, false);
+            }
+            f.rise_how = 2;
+        }
+        return;
+    }
     if (hasx(f, m.troll_death) && m.troll_up && !(g_kind & 0x11) && f.status() != party::Stoned &&
         f.status() != party::Gone)
         give_aff(f, m.troll_up, g_dice ? g_dice->roll(6, 3) : 10, 0xFF, true);
@@ -1502,6 +1538,7 @@ int tick(Battle& b, Event* out, int cap)
     for (int i = 0; i < b.n; ++i) {
         Fighter& f = b.f[i];
         bool regen = false, rise = false, sting = false, slow_over = false, con_up = false, dies = false;
+        bool calm = false, blast = false;
         int weak_due = 0, sick_due = 0, ill_over = -1;
         for (int k = 0; f.n_aff && k < *f.n_aff;) {
             const int m = f.aff[k][1] | f.aff[k][2] << 8;
@@ -1523,6 +1560,9 @@ int tick(Battle& b, Event* out, int cap)
                 if (b.fx && b.fx->sp.slow_poison && f.aff[k][0] == b.fx->sp.slow_poison) slow_over = true;
                 if (b.fx && b.fx->sp.con_regen && f.aff[k][0] == b.fx->sp.con_regen) con_up = true;
                 if (b.fx && b.fx->gw.falls_dead && f.aff[k][0] == b.fx->gw.falls_dead) dies = true;
+                // (the Aurak's: run out with the call flag - its handler runs)
+                if (b.fx && b.fx->q.mad_time && ty == b.fx->q.mad_time && f.aff[k][4]) calm = true;
+                if (b.fx && b.fx->q.blows_up && ty == b.fx->q.blows_up && f.aff[k][4]) blast = true;
                 end_effect(b, f, k);
             } else {
                 f.aff[k][1] = static_cast<uint8_t>(m - 1);
@@ -1614,6 +1654,30 @@ int tick(Battle& b, Event* out, int cap)
                     out[n].who = static_cast<uint8_t>(i);
                     out[n++].ev = Ev::Regen;
                 }
+            }
+        }
+        // The Dark Queen's Aurak: its madness over (0x50F52) - the energy
+        // form (no harm, the blast in 3 rounds, its turns over)
+        if (calm) {
+            const Facts::QueenFx& q = b.fx->q;
+            give_aff(f, q.no_harm, 0, 0xFF, false);
+            give_aff(f, q.blows_up, 3, 0xFF, true);
+            give_aff(f, q.turn_over, 0, 0xFF, false);
+            for (uint8_t t : {q.tag, q.reborn, q.immolate, q.plus2}) {
+                const int k = t ? find_aff(f, t) : -1;
+                if (k >= 0) drop_aff(f, k);
+            }
+        }
+        // ... and that form's time over (0x5100F): gone - "explodes!" (the
+        // blast paged with it)
+        if (blast && f.up()) {
+            f.rec[kHp] = 0;
+            f.rec[kHealth] = party::Gone;
+            fall(b, i);
+            if (n < cap) {
+                out[n] = Event{};
+                out[n].who = static_cast<uint8_t>(i);
+                out[n++].ev = Ev::AurakExplodes;
             }
         }
         // Gateway's boar (0x5F, GAME.OVR - coab's sub_3BE06): its rounds over,
@@ -2876,6 +2940,8 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
                 if (b.fx->dk.blessed && hasx(tg, b.fx->dk.blessed) && item && item[0x2E] == b.fx->dk.blessed_type)
                     bolt_bane = true;
             }
+            // (the Dark Queen's Aurak in its energy form: event 5's 0xA5 - none)
+            if (b.fx && hasx(tg, b.fx->q.no_harm)) dmg = 0;
             h.damage = dmg;
             log_roll(c, RollKind::Damage, out.n, nat, dmg - nat, 0);
             out.any = true;
@@ -3259,6 +3325,9 @@ int harm(Battle& b, int c, int amount, const Harm& h, create::Dice& d, bool* dow
         }
         // Shield: Magic Missile stopped
         if (b.fx->sp.shield && h.spell == 0x0F && f.has(b.fx->sp.shield)) safe = true;
+        // (the Dark Queen's Aurak in its energy form: a spell's damage 0 -
+        // event 9's 0xA5)
+        if (h.spell > 0 && hasx(f, b.fx->q.no_harm)) safe = true;
         // The target's resistances, in the original's order
         if (hasx(f, m.efreet) && (h.kind & 1)) {
             dmg -= h.dice;
@@ -4165,6 +4234,78 @@ int bozak_burst(Battle& b, const Tables& t, int c, create::Dice& d, int* out, in
             st[k] = true;
         }
         ++k;
+    }
+    return k;
+}
+
+int aurak_blast(Battle& b, const Tables& t, int c, create::Dice& d, int* out, int* dmg, bool* dn, bool* st, int cap)
+{
+    if (!b.fx) return 0;
+    const Facts::QueenFx& q = b.fx->q;
+    const Fighter& au = b.f[c];
+    const bool big = hasx(au, q.greater);
+    int near[kMaxFighters];
+    const int n = in_area(b, t, au.x, au.y, 1, near, kMaxFighters);
+    int k = 0;
+    for (int i = 0; i < n && k < cap; ++i) {
+        const int j = near[i];
+        if (j == c || !b.f[j].up()) continue;
+        out[k] = j;
+        dmg[k] = big ? d.roll(8, 16) : d.roll(6, 3);
+        dn[k] = damage(b, j, dmg[k]);
+        st[k] = false;
+        Fighter& v = b.f[j];
+        if (!dn[k] && !saving_throw(v, 4, 0, d) && !hasx(v, q.mad) && !hasx(v, q.reborn) && !hasx(v, q.blows_up) &&
+            b.fx->mon.sleep && !v.has(b.fx->mon.sleep)) {
+            give_aff(v, b.fx->mon.sleep, 0, 0xFF, false);
+            st[k] = true;
+        }
+        ++k;
+    }
+    return k;
+}
+
+int aurak_turn(Battle& b, const Tables& t, int c, create::Dice& d, int* out, int* dmg, bool* dn, int cap, int* word, bool* ends)
+{
+    *word = 0;
+    *ends = false;
+    if (!b.fx || !b.fx->q.mad) return 0;
+    const Facts::QueenFx& q = b.fx->q;
+    const Fighter& au = b.f[c];
+    if (!au.up()) return 0;
+    int near[kMaxFighters];
+    const int n = in_area(b, t, au.x, au.y, 1, near, kMaxFighters);
+    int k = 0;
+    // 0xA1 (0x50DF1): each foe within a square, 1d6 fire (no save)
+    if (hasx(au, q.immolate)) {
+        *word = 1;
+        const int kind = g_kind;
+        g_kind = 1;
+        for (int i = 0; i < n && k < cap; ++i) {
+            const int j = near[i];
+            if (j == c || !b.f[j].up() || b.f[j].team() == au.team()) continue;
+            out[k] = j;
+            dmg[k] = d.roll(6, 1);
+            dn[k] = damage(b, j, dmg[k]);
+            ++k;
+        }
+        g_kind = kind;
+        return k;
+    }
+    // 0xA7 (0x512D1): the first foe in the scan, 2d6 (8d8 for the greater);
+    // one zapped - the turn over (0x1D99:0xEE1)
+    if (hasx(au, q.zaps)) {
+        for (int i = 0; i < n && k < cap; ++i) {
+            const int j = near[i];
+            if (j == c || !b.f[j].up() || b.f[j].team() == au.team()) continue;
+            *word = 2;
+            out[k] = j;
+            dmg[k] = hasx(au, q.greater) ? d.roll(8, 8) : d.roll(6, 2);
+            dn[k] = damage(b, j, dmg[k]);
+            ++k;
+            *ends = true;
+            break;
+        }
     }
     return k;
 }

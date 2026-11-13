@@ -187,6 +187,7 @@ struct Data {
     char           w_order[3][16] = {};        // Champions: " of the Crown" / Sword / Rose (variant.order_words)
     char           w_yell[8] = {}, w_wants[16] = {};
     char           w_burst[3][20] = {};
+    char           w_aurak[5][20] = {};        // the Dark Queen's Aurak (variant.aurak_words)
     char           w_acid[2][24] = {};         // Champions: "dissolves into acid!", "The acid drains away.." (variant.acid_words)
     char           w_knight[12][28] = {};
     char           w_undo_done[12] = {};       // Dark Queen: Move's "Undo Done" (variant.undo_done)
@@ -12569,6 +12570,11 @@ __attribute__((noinline)) void load_party_text(dax::ByteSource& exe, const exepa
             {d->prof->variant.burst_words[2], d->w_burst[2], sizeof d->w_burst[2]},
             {d->prof->variant.acid_words[0], d->w_acid[0], sizeof d->w_acid[0]},
             {d->prof->variant.acid_words[1], d->w_acid[1], sizeof d->w_acid[1]},
+            {d->prof->variant.aurak_words[0], d->w_aurak[0], sizeof d->w_aurak[0]},
+            {d->prof->variant.aurak_words[1], d->w_aurak[1], sizeof d->w_aurak[1]},
+            {d->prof->variant.aurak_words[2], d->w_aurak[2], sizeof d->w_aurak[2]},
+            {d->prof->variant.aurak_words[3], d->w_aurak[3], sizeof d->w_aurak[3]},
+            {d->prof->variant.aurak_words[4], d->w_aurak[4], sizeof d->w_aurak[4]},
             {d->prof->variant.knight_words[0], d->w_knight[0], sizeof d->w_knight[0]},
             {d->prof->variant.knight_words[1], d->w_knight[1], sizeof d->w_knight[1]},
             {d->prof->variant.knight_words[2], d->w_knight[2], sizeof d->w_knight[2]},

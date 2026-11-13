@@ -2421,6 +2421,7 @@ void end_turn(pic::Canvas& c)
 
 // Someone down: "goes down" / "and is Dying" / "is killed", the skull blinking on them
 void bozak_burst(int t);
+void aurak_rise(int t);
 void kapak_acid(int t);
 void damage_text(int amount, int kind, char* t, size_t cap);
 // The Dark Queen's fall after a damage text (DQK.EXE res 0x8F04): on the
@@ -2499,6 +2500,7 @@ void down_page(int t, bool after_hit = false)
     page_fx_set(1, skull_fx(t));
     bozak_burst(t);
     kapak_acid(t);
+    aurak_rise(t);
 }
 
 // Champions' kapak going down (GAME.OVR 0x12C1F): "dissolves into acid!",
@@ -2533,6 +2535,40 @@ void acid_page(int i)
     add_page(i, t);
     page_fx_set(1, hit_fx(i, false));
     if (dn) down_page(i);
+}
+
+// The Dark Queen's Aurak up again at its death (combat::fall): "goes mad!" /
+// "rises in a new form" (0x5070D / 0x50CF0), the field drawn again
+void aurak_rise(int t)
+{
+    combat::Fighter& f = fg->b.f[t];
+    if (!f.rise_how || f.rise_how > 2) return;
+    const char* w = d->w_aurak[f.rise_how - 1];
+    f.rise_how = 0;
+    if (!w[0]) return;
+    add_page(t, w);
+    Fx r;
+    r.kind = Fx::Redraw;
+    page_fx_set(1, r);
+}
+
+// Its blast (0x5100F): "explodes!", then each within a square: the damage,
+// down, or "is stunned"
+void aurak_blast(int t)
+{
+    add_page(t, d->w_aurak[4][0] ? d->w_aurak[4] : d->w_burst[0]);
+    page_fx_set(1, skull_fx(t));
+    int who[combat::kMaxFighters], dmg[combat::kMaxFighters];
+    bool dn[combat::kMaxFighters], st[combat::kMaxFighters];
+    const int n = combat::aurak_blast(fg->b, fg->t, t, rng, who, dmg, dn, st, combat::kMaxFighters);
+    char line[48];
+    for (int k = 0; k < n; ++k) {
+        damage_text(dmg[k], 0, line, sizeof line);
+        add_page(who[k], line);
+        page_fx_set(1, hit_fx(who[k], false));
+        if (dn[k]) down_page(who[k]);
+        else if (st[k]) add_page(who[k], d->w_burst[1]);
+    }
 }
 
 // Champions' bozak going down (krynn_facts; GAME.OVR 0x124A1): "explodes!",
@@ -2879,6 +2915,7 @@ void event_words(const combat::Event& e)
     case combat::Ev::Killed:
         fallen(profile::kIsKilled);
         bozak_burst(who);
+        aurak_rise(who);
         break;
     case combat::Ev::Suffocates: fallen(profile::kSuffocates); break;
     case combat::Ev::Damage:
@@ -2899,8 +2936,10 @@ void event_words(const combat::Event& e)
         else add_page(who, fw(profile::kGoesDownS));
         page_fx_set(1, skull_fx(who));
         bozak_burst(who);
+        aurak_rise(who);
         break;
     }
+    case combat::Ev::AurakExplodes: aurak_blast(who); break;
     case combat::Ev::StandsUp:
     case combat::Ev::GetsUp: {
         add_page(who, fw(e.ev == combat::Ev::StandsUp ? profile::kStandsUp : profile::kGetsBackUp));
@@ -3672,6 +3711,36 @@ void start_turn(pic::Canvas& c)
             say(c, f.up() ? FSt::Resume : FSt::Next);
             return;
         }
+        // The Dark Queen's Aurak (its turn's start, event 0xF): immolating
+        // (0xA1) or zapping (0xA7 - one zapped, the turn over)
+        if (const combat::Facts* qf = b.fx; qf && qf->q.mad && (f.has(qf->q.immolate) || f.has(qf->q.zaps))) {
+            int who[combat::kMaxFighters], dmg[combat::kMaxFighters], word = 0;
+            bool dn[combat::kMaxFighters], ends = false;
+            rolls_clear();
+            const int n = combat::aurak_turn(b, fg->t, fg->cur, rng, who, dmg, dn, combat::kMaxFighters, &word, &ends);
+            if (word) {
+                if (!on_screen(fg->cur)) focus(fg->cur, 3);
+                draw_fight(c);
+                char line[48];
+                if (word == 1) add_page(fg->cur, d->w_aurak[2]);
+                for (int k = 0; k < n; ++k) {
+                    if (word == 2) add_page(who[k], d->w_aurak[3]);
+                    damage_text(dmg[k], word == 1 ? 1 : 0, line, sizeof line);
+                    add_page(who[k], line);
+                    page_fx_set(1, hit_fx(who[k], false));
+                    if (dn[k]) down_page(who[k]);
+                }
+                draw_fight(c);
+                say(c, ends || !f.up() ? FSt::Next : FSt::Resume);
+                return;
+            }
+        }
+    }
+    // (the Dark Queen's 0xD5 - the Aurak's energy form: the computer's turn
+    // ends at once, DQK.EXE 0x2DE27)
+    if (b.fx && b.fx->q.turn_over && f.has(b.fx->q.turn_over) && ai_controls(f)) {
+        end_turn(c);
+        return;
     }
     // A spell begun earlier goes off now - the computer's (monsters, NPCs,
     // Quick) in Darkness, Treasures, Death Knights, the Dark Queen and
@@ -6273,6 +6342,7 @@ void spell_pages(int caster, const combat::SpellLine* l, int n, const combat::Fi
             else add_page(l[k].who, fw(profile::kGoesDownS));
             page_fx_set(1, skull_fx(l[k].who));
             bozak_burst(l[k].who);
+            aurak_rise(l[k].who);
             break;
         }
         }

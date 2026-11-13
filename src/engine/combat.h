@@ -603,6 +603,24 @@ struct Facts {
         // from the round's start 0x2336C): every effect a minute on as each
         // round STARTS - the first one too - not as it ends
         bool tick_at_start = false;
+        // The Aurak (MONCHA.GLB 77 / 91 - DQK.EXE handlers by DS 0xBEE8 + 4 x
+        // effect): `mad` (0x98, at its death 0x5070D) - up again with 20 hit
+        // points, "goes mad!": `reborn` (0xA0), `immolate` (0xA1: each turn's
+        // start "immolates", 1d6 fire, no save, to each foe within a square),
+        // plus2 (0xA2) for ever, `mad_time` (0xA3, 6 rounds, called as it
+        // ends: 0x50F52) - then the energy form: `no_harm` (0xA5: a blow's or
+        // spell's damage 0), `blows_up` (0xA6, 3 rounds, called as it ends:
+        // 0x5100F - gone, "explodes!", 3d6 / 16d8 with `greater` (0xBF) to
+        // each within a square, no save; then a save against spells or "is
+        // stunned" (mon.sleep for ever) unless it holds mad / reborn /
+        // blows_up / mon.sleep), `turn_over` (0xD5: the computer's turn ends -
+        // 0x2DE27). Reborn at its next death (0x50CF0): "rises in a new
+        // form", no_harm, blows_up, `zaps` (0xA7: each turn's start the first
+        // foe within a square "gets zapped!", 2d6 / 8d8, no save - the turn
+        // over); its mad_time's removal runs the same ending (the energy form,
+        // a blast in 3). `tag` (0x97) goes with them
+        uint8_t mad = 0, reborn = 0, immolate = 0, mad_time = 0, no_harm = 0, blows_up = 0, zaps = 0;
+        uint8_t greater = 0, turn_over = 0, tag = 0;
     } q{};
     // Gateway to the Savage Frontier's (its effect handlers DS 0x826A on, the
     // check lists of its work_on_00 - SPEC 6e; 0: none). `ways`: the deadly
@@ -782,6 +800,7 @@ struct Fighter {
     // turned undead and fear keep `fleeing` without it
     bool    panic = false;
     bool    escaped = false;            // turned gaseous and escaped (Pool's vampire): away, not down
+    uint8_t rise_how = 0;               // the Dark Queen's Aurak up again: 1 "goes mad!", 2 "rises in a new form" (to be said)
     uint8_t was_control = 0;            // its control byte before Animate Dead (back after the fight)
     uint8_t undead_turns = 0;           // Darkness: its Turn Undeads this fight (R13)
     uint8_t flee_last = 8, flee_back = 0;   // fleeing: this turn's last step (8 none), its steps back the way it came
@@ -995,6 +1014,9 @@ enum class Ev : uint8_t {
     // Gateway's: "drains blood from" / "constricts" (to: the victim),
     // "regenerates", "Falls dead"
     DrainsBlood, Constricts, Regenerates, FallsDead,
+    // The Dark Queen's Aurak: its last form's time over - "explodes!" (the
+    // blast is paged after: combat::aurak_blast)
+    AurakExplodes,
 };
 struct Event {
     uint8_t who = 0;
@@ -1480,6 +1502,13 @@ int bozak_burst(Battle& b, const Tables& t, int c, create::Dice& d, int* out, in
 // Champions' baaz slain by a blow (GAME.OVR 0x129AD): a d20 at least the
 // slayer's Dexterity - 3 and the weapon stays in the stone body
 bool baaz_keeps_weapon(const Fighter& slayer, create::Dice& d);
+// The Dark Queen's Aurak (QueenFx): its blast as its last form's time runs
+// out (each within a square of `c`: dmg, down, stunned); at its turn's start
+// the immolation (each foe within a square, 1d6 fire) or the zap (the first
+// foe, 2d6 / 8d8 - *ends: the turn over): the ones hurt and the word (1
+// immolates, 2 zaps; 0 none)
+int aurak_blast(Battle& b, const Tables& t, int c, create::Dice& d, int* out, int* dmg, bool* dn, bool* st, int cap);
+int aurak_turn(Battle& b, const Tables& t, int c, create::Dice& d, int* out, int* dmg, bool* dn, int cap, int* word, bool* ends);
 bool saving_throw(const Fighter& f, int type, int bonus, create::Dice& d);
 // Champions' Yell (its GAME.OVR ovl 0xDB +0x28): `kender` becomes the
 // taunter; each fighter of the other side that is okay, has Intelligence

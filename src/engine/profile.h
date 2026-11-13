@@ -803,6 +803,9 @@ struct Profile {
     // Champions: "dissolves into acid!" (a kapak's death), "The acid drains
     // away.." - GAME.OVR
     uint32_t acid_words[2] = {};
+    // The Dark Queen's Aurak: "goes mad!", "rises in a new form", "immolates",
+    // "gets zapped!", "explodes!" (combat QueenFx)
+    uint32_t aurak_words[5] = {};
     // Champions' Knight Change Classes (GAME.OVR): "Exit", "is petitioning to
     // become a", "sword", "rose", "Knight Of The ", " is too inexperienced.",
     // " does not qualify.", " may become a", "Knight Of The Sword", "Change

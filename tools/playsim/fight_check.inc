@@ -43,7 +43,8 @@
 //      FIGHTCAP rounds (default 120) with no fighter's hit points changed
 //      in the last 60 rounds (or past 4 x FIGHTCAP) it is reported as
 //      endless - a slow fight that still wears its fighters down (only a
-//      20 hitting, the Dark Queen's AC -10 heads) is not a stall
+//      20 hitting, the Dark Queen's AC -10 heads) is not a stall; nor a
+//      side the Dark Queen's 0xA5 makes unharmable (the original's)
 //  R11 a blow's target stands when the blow begins (no blows at the fallen)
 //  R12 the attacks left never below 0; moves never below 0
 
@@ -588,7 +589,21 @@ void tick()
         for (int i = 0; i < b.n; ++i) hp = hp * 7 + static_cast<unsigned long>(b.f[i].hp() + (b.f[i].up() ? 1000 : 0));
         if (hp != hp_seen) hp_seen = hp, hp_round = b.round;
     }
-    if (b.round > fight_cap && (b.round - hp_round > 60 || b.round > 4 * fight_cap) && !endless_told) {
+    // (the Dark Queen's: a side whose standing fighters all hold 0xA5 - no
+    // harm, as the Chromatic Dragon's body MONCHA.GLB 83, which also holds
+    // 0xD5: no turns - is the original's stalemate out of its scripted fight)
+    bool unharmable = false;
+    if (b.fx && b.fx->q.no_harm)
+        for (int side = 0; side < 2 && !unharmable; ++side) {
+            int up = 0, safe = 0;
+            for (int i = 0; i < b.n; ++i)
+                if (b.f[i].up() && b.f[i].size && (b.f[i].team() ? 1 : 0) == side) {
+                    ++up;
+                    safe += b.f[i].has(b.fx->q.no_harm);
+                }
+            unharmable = up > 0 && up == safe;
+        }
+    if (b.round > fight_cap && (b.round - hp_round > 60 || b.round > 4 * fight_cap) && !endless_told && !unharmable) {
         endless_told = true;
         std::string s = "the fight goes on past round " + std::to_string(fight_cap) + " (no action until " +
                         std::to_string(b.no_action) + ", hit points last changed in round " + std::to_string(hp_round) + "):";

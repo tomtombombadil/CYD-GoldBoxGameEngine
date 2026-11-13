@@ -1662,6 +1662,31 @@ the Project as claude/TODO.md.
       0x9C; 0xE 0x46; 0xF 0x44; 5 0x43. To port: read each handler's
       dice / saves / durations, then map onto the Champions machinery
       (bozak_burst, baaz_weapon, lay_acid) or Queen-specific variants.
+      v0.196.26 the Aurak (MONCHA 77 / 91; QueenFx mad ...; corrects the
+      reading above - events 0xD / 0xE hold 0x98 0xA0, 0xF 0xA1 0xA7, 5 /
+      6 / 9 0xA5): its death (0x5070D) - up in its square with 20, "goes
+      mad!", 0xA0 0xA1 0xA2 for ever, 0xA3 6 rounds with the call flag;
+      0xA1 at its turn's start "immolates", 1d6 fire, no save, each foe
+      within a square; 0xA3 run out (0x50F52): 0xA5 (blows' and spells'
+      damage 0), 0xA6 3 rounds called, 0xD5 (the computer's turn ends -
+      0x2DE46); killed again (0x50CF0): "rises in a new form", 0xA5, 0xA7
+      (the turn's start: the first foe in the scan "gets zapped!", 2d6 /
+      8d8 with 0xBF, the turn over - 0x1D99:0xEE1 = 0x247E1), 0xA6 for 3
+      (its 0xA3 taken off with the flag runs 0x50F52: the 0xA6 called);
+      0xA6 run out called (0x5100F): gone, "explodes!", 3d6 / 16d8 each
+      within a square, no save, then a save vs spells or "is stunned"
+      (0x35 for ever) unless holding 0x98 0xA0 0xA6 0x35. The remove
+      routine 0x48F:0x17D calls a handler only for an effect given with
+      the flag; 0x19C2 appends (no replace). rules4 ONLY=qaurak. The
+      Chromatic Dragon's body (MONCHA 83: 0xA5 0xD2 0xD5 innate) is now
+      unharmable and idle as the original's (fight_check R10 skips a side
+      that can't be harmed). Not followed: 0xD5's other readers (the
+      icon's facing 2; the free-attack list 0x259F0 with 0xD2); 0xA2's
+      record 0x18E / 0x18F + 2.
+- [ ] Queen fuzz (QAALL=1, seeds 12 / 13, 60 fights; there before v0.196.26):
+      R10 against the heads (MONCHA 65 / 71 - AC -10 / -11, moves 2) and
+      a Quick melee fighter - no hit points changed for 60 rounds, yet no
+      15 rounds without an attack. Find who attacks whom (FCACTLOG).
 - [ ] The Dark Queen underwater (found round 21): game byte 0x3C set =
       under water; DQK.EXE tests it in 24 places. v0.196.10 (round 22,
       the Project's rules_round21_facts.md 3): the fire spells (Burning

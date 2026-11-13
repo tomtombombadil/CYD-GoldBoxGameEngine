@@ -2073,7 +2073,8 @@ constexpr combat::Facts kQueenFightFacts = {.held = {0x33, 0x34, 0x35, 0x1F}, .b
                 // bite here, the dragons' fear 0x64 terrifies, 0x78)
                 .q = {.hooks = true, .race_plus = 0x1A, .giants = 0x2F, .animals = 0x45, .dance = 0x76, .highlight = 0x47,
                       .iron_skin = 0x7A, .plus2 = 0xA2, .minus2 = 0x94, .tgt_minus1 = 0xCF, .hoopak = 0x83,
-                      .tick_at_start = true}};
+                      .tick_at_start = true, .mad = 0x98, .reborn = 0xA0, .immolate = 0xA1, .mad_time = 0xA3,
+                      .no_harm = 0xA5, .blows_up = 0xA6, .zaps = 0xA7, .greater = 0xBF, .turn_over = 0xD5, .tag = 0x97}};
 // The Dark Queen's spells (queen_facts_4.md 8): Darkness's numbers 1-126 and
 // their workings (its handler table DS 0xAF45 + 4 x spell shares handlers as
 // Darkness's), its words found again among its C strings; "is " + an effect's
@@ -4241,6 +4242,9 @@ const Profile kProfiles[] = {
                  // weapon" - DS 0x848B / 0x8495 / 0x8447; round 22)
                  .burst_words = {qw(0x208), qw(0x8495), qw(0x8447)},   // ("explodes." - its Bozak's, DQK.EXE 0x97A8)
                  .acid_words = {qw(0x8458), qw(0x1E1)},     // ("dissolves into acid!", "The acid drains")
+                // (the Aurak: "goes mad!", "rises in a new form", "immolates",
+                // "gets zapped!", "explodes!" - DQK.EXE 0x5070D on)
+                .aurak_words = {qw(0x843D), qw(0x846D), qw(0x8481), qw(0x84A0), qw(0x848B)},
                  // (Knight New Order, DQK 0x487F2: its messages 64-70, "Exit"
                  // of the menu "Change Exit" (161) - one " is too
                  // inexperienced" for both orders; the order's name made of
