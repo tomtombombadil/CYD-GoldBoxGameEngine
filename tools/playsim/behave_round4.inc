@@ -916,6 +916,64 @@ void queen_pudding()
            a == 1 && l1 == 1 && r1 == 1 && z == 2 && r2 == 0, "+2: %d (plus %d, worn %d); +0: %d (worn %d)", a, l1, r1, z, r2);
 }
 
+// The Dark Queen's Gas Spore (DQK.EXE 0x51A6A, 0x51C06)
+void queen_spore()
+{
+    if (game() != 7 || !fight() || !fg->b.fx || !fg->b.fx->q.spore) return;
+    combat::Battle& b = fg->b;
+    const auto& q = b.fx->q;
+    int bad = 0, n = 0, halves = 0;
+    auto chk = [&](bool ok, const char* what) {
+        ++n;
+        if (!ok && !bad++) printf("  (spore: %s)\n", what);
+    };
+    for (int seed = 1; seed <= 30; ++seed) {
+        create::Dice dd(static_cast<uint32_t>(seed));
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(0, 0, 10, 10, 200);
+        mx::put(1, 0, 12, 10, 200);
+        mx::put(2, 0, 13, 10, 200);
+        mx::put(3, 0, 14, 10, 200);       // (3 away: out of it)
+        mx::put(B, 1, 11, 10, 20);
+        mx::add_aff(1, q.spore_proof);
+        int who[combat::kMaxFighters], dmg[combat::kMaxFighters];
+        bool dn[combat::kMaxFighters];
+        const int k = combat::spore_blast(b, fg->t, B, dd, who, dmg, dn, combat::kMaxFighters);
+        bool z = false, two = false, one = false;
+        for (int j = 0; j < k; ++j) {
+            if (who[j] == 0) z = dmg[j] >= 3 && dmg[j] <= 36;
+            if (who[j] == 2) two = dmg[j] >= 3 && dmg[j] <= 36;
+            if (who[j] == 1) one = true;
+        }
+        chk(k == 2 && z && two && !one, "6d6 (or half) to the two within 2; not the 0xB7 holder");
+        for (int j = 0; j < k; ++j) halves += dmg[j] <= 18;
+    }
+    // its touch: the one hit diseased (a day), the spore spent and dead
+    {
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(0, 0, 10, 10, 200);
+        mx::put(B, 1, 11, 10, 20);
+        mx::add_aff(B, q.spore_touch);
+        combat::Fighter& at = F(B);
+        at.rec[0x199] = 60;
+        at.attacks[0] = 1;
+        at.attacks[1] = 0;
+        at.rec[0x19E] = 1;
+        at.rec[0x1A0] = 4;
+        at.rec[0x1A2] = 0;
+        create::g_die_hook = [](int nn) { return nn == 20 ? 18 : -1; };
+        const combat::Attack r = combat::attack(b, B, 0, names, rng);
+        create::g_die_hook = nullptr;
+        int ill = -1;
+        for (int j = 0; F(0).n_aff && j < *F(0).n_aff; ++j)
+            if (F(0).aff[j][0] == q.spore_ill) ill = F(0).aff[j][1] | F(0).aff[j][2] << 8;
+        chk(r.n > 0 && r.hits[0].hit && ill == 1440, "the one hit: 0xB9 for 1440");
+        chk(!at.up() && at.has(q.spent), "the spore spent and down");
+    }
+    expect(P, "the Dark Queen's Gas Spore: its death 6d6 within 2 (a save for half, 0xB7 holders none), its touch a day's disease and its end - DQK.EXE 0x51A6A / 0x51C06",
+           bad == 0, "%d of %d wrong (%d halved or low)", bad, n, halves);
+}
+
 void queen_moon_room();
 void moons()
 {
@@ -4387,6 +4445,7 @@ void run()
     if (want("qaurak")) queen_aurak();
     if (want("qmummy")) queen_mummy();
     if (want("qpudding")) queen_pudding();
+    if (want("qspore")) queen_spore();
     if (want("qhooks")) queen_hooks();
     if (want("statfx")) stat_effects();
     if (want("finder")) finder_check();

@@ -1698,11 +1698,19 @@ the Project as claude/TODO.md.
       row byte 0 = 2 - a plus less, "is Disolving %s's armor!", or at its
       floor (0, -1 for types 0x23 0x24 0x26) "Dissolves %s's armor!" and
       gone; any such armour: the blow's damage 0 - party members' armour
-      only: a monster's items are its group's in the engine). Left: Gas Spore 0xB6 / 0xB7
-      (0x51A6A), the anemone / 2-headed troll 0xB5 (0x51A3A, 0x12 / 0x13),
+      only: a monster's items are its group's in the engine). v0.196.29 the
+      Gas Spore (0xB6 at death unless spent 0xC2: "explodes.", 6d6 to each
+      within 2, a save of type 2 for half - 0x2214's third argument 2 -
+      0xB7 holders none, the spore dead; 0xB8 on any hit, its list's other
+      specials first: the one hit unless 0x4C gets 0xB9 for a day - its end
+      "dies from disease", rules::death_clock - "is Diseased", the spore
+      spent and dead), the Enchanted Bozak 0xBC / Sivak 0xBD (queued at
+      death, then "explodes" and spell 0x57 Ice Storm / 0x7C Meteor Swarm
+      cast by the fallen one at all within its row's aim & 7 - 2 / 0: the
+      Sivak's reaches only its own square, nobody). Cure Disease and 0xB9:
+      not read. Left: the anemone / 2-headed troll 0xB5 (0x51A3A, 0x12 / 0x13),
       the shambling mound 0xAD-0xB0 with 0xB1-0xB3 (engulf / suffocate,
-      0x516D2 on), the Death Dragon 0xB4 (0x54A51), the Enchanted Bozak
-      0xBC (0x51FD7) and Sivak 0xBD (0x52037); 0xD7's own clock (0x52D77).
+      0x516D2 on), the Death Dragon 0xB4 (0x54A51); 0xD7's own clock (0x52D77).
       The Aurak's 0xA5 also blocks spell effects (event 9, 0x4DF31 with 0).
 - [x] Queen fuzz (QAALL=1, seeds 12 / 13, 60 fights; there before v0.196.26):
       R10 against the heads (MONCHA 65 / 71 - AC -10 / -11, moves 2) and

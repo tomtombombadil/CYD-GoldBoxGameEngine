@@ -808,6 +808,9 @@ struct Profile {
     uint32_t aurak_words[5] = {};
     // The Dark Queen's Black Pudding: "is Disolving %s's armor!", "Dissolves %s's armor!"
     uint32_t pudding_words[2] = {};
+    // The Dark Queen's Gas Spore "explodes.", Enchanted Bozak / Sivak
+    // "explodes", the spore's disease "dies from disease"
+    uint32_t qdeath_words[3] = {};
     // Champions' Knight Change Classes (GAME.OVR): "Exit", "is petitioning to
     // become a", "sword", "rose", "Knight Of The ", " is too inexperienced.",
     // " does not qualify.", " may become a", "Knight Of The Sword", "Change

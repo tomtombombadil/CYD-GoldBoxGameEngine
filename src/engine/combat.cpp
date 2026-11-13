@@ -2124,7 +2124,7 @@ Event* add_event(Attack& out, int who, Ev ev, int to = -1)
 
 // After a hit (monster_fx_facts 3): the attacker's on-hit specials - attack
 // 1's (slot 0) or attack 2's (slot 1) - while the target is in the fight
-void after_hit(Battle& b, int a, int c, int slot, int roll, int hits1, create::Dice& d, Attack& out)
+void after_hit_own(Battle& b, int a, int c, int slot, int roll, int hits1, create::Dice& d, Attack& out)
 {
     Fighter& at = b.f[a];
     Fighter& tg = b.f[c];
@@ -2356,6 +2356,27 @@ void after_hit(Battle& b, int a, int c, int slot, int roll, int hits1, create::D
     };
     if (hasx(at, m.petrify_hit) && tg.up() && !saving_throw(tg, 1, 0, d)) gone(party::Stoned, Ev::Stoned);
     if (hasx(at, m.swallow) && tg.up() && roll == 20) gone(party::Dead, Ev::Swallowed);
+}
+
+// (the Dark Queen's Gas Spore: its touch - 0x51C06, after any hit of either
+// attack, the hit's other specials first: the one hit diseased unless
+// warded, the spore spent and dead)
+void after_hit(Battle& b, int a, int c, int slot, int roll, int hits1, create::Dice& d, Attack& out)
+{
+    after_hit_own(b, a, c, slot, roll, hits1, d, out);
+    Fighter& at = b.f[a];
+    Fighter& tg = b.f[c];
+    const Facts::QueenFx& q = b.fx->q;
+    if (!q.spore_touch || !hasx(at, q.spore_touch) || !at.up()) return;
+    if (tg.up() && !hasx(tg, q.spore_ward)) {
+        give_aff(tg, q.spore_ill, 1440, 0xFF, true);
+        add_event(out, c, Ev::Diseased);
+    }
+    give_aff(at, q.spent, 0, 0xFF, true);
+    at.rec[kHp] = 0;
+    at.rec[kHealth] = party::Dead;
+    fall(b, a);
+    add_event(out, a, Ev::Down);
 }
 
 } // namespace
@@ -3061,6 +3082,7 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
                 if (!at.up()) break;
             }
             if (on_hit && tg.up()) after_hit(b, a, c, slot, roll, hits1, d, out);
+            if (!at.up()) break;                // (the Dark Queen's Gas Spore spent by its touch)
             if (out.rake) {
                 // Pool's tiger (its ovr14 routine): both claws hit - two
                 // rakes of 2d4 at once (the attack made again with them)
@@ -4324,6 +4346,29 @@ int aurak_blast(Battle& b, const Tables& t, int c, create::Dice& d, int* out, in
             give_aff(v, b.fx->mon.sleep, 0, 0xFF, false);
             st[k] = true;
         }
+        ++k;
+    }
+    return k;
+}
+
+int spore_blast(Battle& b, const Tables& t, int c, create::Dice& d, int* out, int* dmg, bool* dn, int cap)
+{
+    if (!b.fx) return 0;
+    const Facts::QueenFx& q = b.fx->q;
+    const Fighter& sp = b.f[c];
+    int near[kMaxFighters];
+    const int n = in_area(b, t, sp.x, sp.y, 2, near, kMaxFighters);
+    int k = 0;
+    for (int i = 0; i < n && k < cap; ++i) {
+        const int j = near[i];
+        if (j == c || !b.f[j].up()) continue;
+        const bool saved = saving_throw(b.f[j], 2, 0, d);
+        if (hasx(b.f[j], q.spore_proof)) continue;
+        int v = d.roll(6, 6);
+        if (saved) v /= 2;
+        out[k] = j;
+        dmg[k] = v;
+        dn[k] = damage(b, j, v);
         ++k;
     }
     return k;

@@ -2079,7 +2079,8 @@ constexpr combat::Facts kQueenFightFacts = {.held = {0x33, 0x34, 0x35, 0x1F}, .b
                       .tick_at_start = true, .mad = 0x98, .reborn = 0xA0, .immolate = 0xA1, .mad_time = 0xA3,
                       .no_harm = 0xA5, .blows_up = 0xA6, .zaps = 0xA7, .greater = 0xBF, .turn_over = 0xD5, .tag = 0x97,
                       .fire_dice = 0xA8, .magic_half = 0xA9, .fear_aura = 0xAB, .rot_guard = 0x32, .rot_shift = 5,
-                      .dissolve = 0xBA}};
+                      .dissolve = 0xBA, .spore = 0xB6, .spent = 0xC2, .spore_proof = 0xB7, .spore_touch = 0xB8,
+                      .spore_ward = 0x4C, .spore_ill = 0xB9, .death_cast = {0xBC, 0xBD}, .death_spell = {0x57, 0x7C}}};
 // The Dark Queen's spells (queen_facts_4.md 8): Darkness's numbers 1-126 and
 // their workings (its handler table DS 0xAF45 + 4 x spell shares handlers as
 // Darkness's), its words found again among its C strings; "is " + an effect's
@@ -4258,6 +4259,9 @@ const Profile kProfiles[] = {
                 .aurak_words = {qw(0x843D), qw(0x846D), qw(0x8481), qw(0x84A0), qw(0x848B)},
                 // (the Black Pudding: "is Disolving %s's armor!", "Dissolves %s's armor!" - 0x51CC6)
                 .pudding_words = {qw(0x8519), qw(0x8532)},
+                // ("explodes." - the Gas Spore's 0x51A6A, "explodes" - the
+                // Enchanted Bozak's / Sivak's 0x993F, "dies from disease" - 0x51CA5)
+                .qdeath_words = {qw(0x84FD), qw(0x212), qw(0x8507)},
                  // (Knight New Order, DQK 0x487F2: its messages 64-70, "Exit"
                  // of the menu "Change Exit" (161) - one " is too
                  // inexperienced" for both orders; the order's name made of

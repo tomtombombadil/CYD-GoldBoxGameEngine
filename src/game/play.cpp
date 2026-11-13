@@ -189,6 +189,7 @@ struct Data {
     char           w_burst[3][20] = {};
     char           w_aurak[5][20] = {};        // the Dark Queen's Aurak (variant.aurak_words)
     char           w_pudding[2][28] = {};      // the Dark Queen's Black Pudding (variant.pudding_words: a "%s" in each)
+    char           w_qdeath[3][20] = {};       // the Dark Queen's deaths (variant.qdeath_words)
     char           w_acid[2][24] = {};         // Champions: "dissolves into acid!", "The acid drains away.." (variant.acid_words)
     char           w_knight[12][28] = {};
     char           w_undo_done[12] = {};       // Dark Queen: Move's "Undo Done" (variant.undo_done)
@@ -12578,6 +12579,9 @@ __attribute__((noinline)) void load_party_text(dax::ByteSource& exe, const exepa
             {d->prof->variant.aurak_words[4], d->w_aurak[4], sizeof d->w_aurak[4]},
             {d->prof->variant.pudding_words[0], d->w_pudding[0], sizeof d->w_pudding[0]},
             {d->prof->variant.pudding_words[1], d->w_pudding[1], sizeof d->w_pudding[1]},
+            {d->prof->variant.qdeath_words[0], d->w_qdeath[0], sizeof d->w_qdeath[0]},
+            {d->prof->variant.qdeath_words[1], d->w_qdeath[1], sizeof d->w_qdeath[1]},
+            {d->prof->variant.qdeath_words[2], d->w_qdeath[2], sizeof d->w_qdeath[2]},
             {d->prof->variant.knight_words[0], d->w_knight[0], sizeof d->w_knight[0]},
             {d->prof->variant.knight_words[1], d->w_knight[1], sizeof d->w_knight[1]},
             {d->prof->variant.knight_words[2], d->w_knight[2], sizeof d->w_knight[2]},
@@ -18603,6 +18607,14 @@ void effects_clock(int m, pic::Canvas& c)
                 pt->m[i].name(nm, sizeof nm);
                 ow(d->prof->fight.words[profile::kDiesFromPoison], w, sizeof w);
                 snprintf(t, sizeof t, "%s %s", nm, w);
+                cv = &c;
+                note(c, t);
+            }
+            if (rules::death_clock(pt->m[i], m, d->prof->fight.facts.q.spore_ill) && d->w_qdeath[2][0]) {
+                // (the Dark Queen's Gas Spore disease run out: "NAME dies from disease")
+                char nm[20], t[48];
+                pt->m[i].name(nm, sizeof nm);
+                snprintf(t, sizeof t, "%s %s", nm, d->w_qdeath[2]);
                 cv = &c;
                 note(c, t);
             }

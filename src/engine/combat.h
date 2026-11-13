@@ -637,6 +637,18 @@ struct Facts {
         // or, at its floor (0; -1 for types 0x23 / 0x24 / 0x26), "Dissolves
         // %s's armor!" and gone; any armour so: the blow does no damage
         uint8_t dissolve = 0;
+        // The Gas Spore (MONCHA.GLB 6): `spore` (0xB6, 0x51A6A at its death,
+        // not with `spent` 0xC2): "explodes.", each within 2 not holding
+        // `spore_proof` (0xB7) 6d6, a save against type 2 for half (0x2214);
+        // `spore_touch` (0xB8, 0x51C06 - on any hit): the one hit, unless it
+        // holds `spore_ward` (0x4C), gets `spore_ill` (0xB9, a day, called:
+        // "dies from disease" - 0x51CA5) and "is Diseased"; the spore spent
+        // and dead. The Enchanted Bozak / Sivak (MONCHA 89 / 90): `death_cast`
+        // (0xBC / 0xBD, queued at death - 0x51FD7 / 0x52037, cast by 0x993F /
+        // 0x9A8B): "explodes", then spell `death_spell` (0x57 Ice Storm / 0x7C
+        // Meteor Swarm) at all within its area byte & 7 of the fallen one
+        uint8_t spore = 0, spent = 0, spore_proof = 0, spore_touch = 0, spore_ward = 0, spore_ill = 0;
+        uint8_t death_cast[2] = {}, death_spell[2] = {};
     } q{};
     // Gateway to the Savage Frontier's (its effect handlers DS 0x826A on, the
     // check lists of its work_on_00 - SPEC 6e; 0: none). `ways`: the deadly
@@ -1530,6 +1542,9 @@ bool baaz_keeps_weapon(const Fighter& slayer, create::Dice& d);
 // foe, 2d6 / 8d8 - *ends: the turn over): the ones hurt and the word (1
 // immolates, 2 zaps; 0 none)
 int aurak_blast(Battle& b, const Tables& t, int c, create::Dice& d, int* out, int* dmg, bool* dn, bool* st, int cap);
+// The Dark Queen's Gas Spore at its death (QueenFx spore): each within 2 -
+// the damage (6d6, half on a save), down
+int spore_blast(Battle& b, const Tables& t, int c, create::Dice& d, int* out, int* dmg, bool* dn, int cap);
 int aurak_turn(Battle& b, const Tables& t, int c, create::Dice& d, int* out, int* dmg, bool* dn, int cap, int* word, bool* ends);
 bool saving_throw(const Fighter& f, int type, int bonus, create::Dice& d);
 // Champions' Yell (its GAME.OVR ovl 0xDB +0x28): `kender` becomes the

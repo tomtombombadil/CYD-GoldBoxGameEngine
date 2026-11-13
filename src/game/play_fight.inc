@@ -2423,6 +2423,7 @@ void end_turn(pic::Canvas& c)
 // Someone down: "goes down" / "and is Dying" / "is killed", the skull blinking on them
 void bozak_burst(int t);
 void aurak_rise(int t);
+void queen_death(int t);
 void kapak_acid(int t);
 void damage_text(int amount, int kind, char* t, size_t cap);
 // The Dark Queen's fall after a damage text (DQK.EXE res 0x8F04): on the
@@ -2502,6 +2503,7 @@ void down_page(int t, bool after_hit = false)
     bozak_burst(t);
     kapak_acid(t);
     aurak_rise(t);
+    queen_death(t);
 }
 
 // Champions' kapak going down (GAME.OVR 0x12C1F): "dissolves into acid!",
@@ -2551,6 +2553,58 @@ void aurak_rise(int t)
     Fx r;
     r.kind = Fx::Redraw;
     page_fx_set(1, r);
+}
+
+const combat::FightSpell* fight_spell(int sp);
+void spell_pages(int caster, const combat::SpellLine* l, int n, const combat::FightSpell& fs, bool each);
+// The Dark Queen's deaths (QueenFx): the Gas Spore's blast (0x51A6A) - not
+// a spent one; the Enchanted Bozak's / Sivak's spell at its square's area
+// (0x993F / 0x9A8B: "explodes", then the spell cast by the fallen one)
+void queen_death(int t)
+{
+    combat::Battle& b = fg->b;
+    if (!b.fx || !b.fx->q.hooks || (fg->burst[t / 8] >> (t % 8) & 1)) return;
+    const auto& q = b.fx->q;
+    combat::Fighter& f = b.f[t];
+    if (f.up()) return;
+    char line[48];
+    if (q.spore && f.has(q.spore) && !f.has(q.spent)) {
+        fg->burst[t / 8] |= static_cast<uint8_t>(1 << (t % 8));
+        add_page(t, d->w_qdeath[0]);
+        f.rec[0x195] = party::Dead;           // (status 6, off the field - 0x51BEB)
+        int who[combat::kMaxFighters], dmg[combat::kMaxFighters];
+        bool dn[combat::kMaxFighters];
+        const int n = combat::spore_blast(b, fg->t, t, rng, who, dmg, dn, combat::kMaxFighters);
+        for (int k = 0; k < n; ++k) {
+            damage_text(dmg[k], 0, line, sizeof line);
+            add_page(who[k], line);
+            page_fx_set(1, hit_fx(who[k], false));
+            if (dn[k]) down_page(who[k]);
+        }
+        return;
+    }
+    for (int k = 0; k < 2; ++k) {
+        if (!q.death_cast[k] || !f.has(q.death_cast[k])) continue;
+        fg->burst[t / 8] |= static_cast<uint8_t>(1 << (t % 8));
+        add_page(t, d->w_qdeath[1]);
+        f.rec[0x195] = party::Dead;           // (status 6 after its spell, off the field - 0x9A3D)
+        const int sp = q.death_spell[k];
+        if (!load_magic()) return;
+        const combat::FightSpell* fs = fight_spell(sp);
+        if (!fs) return;
+        const spells::Entry e = spells::entry(mrules->tables, sp);
+        int near[combat::kMaxFighters], tg[combat::kMaxFighters], nt = 0;
+        const int n = combat::in_area(b, fg->t, f.x, f.y, e.aim & 7, near, combat::kMaxFighters);
+        for (int j = 0; j < n; ++j)
+            if (near[j] != t && b.f[near[j]].up()) tg[nt++] = near[j];
+        if (nt <= 0) return;
+        const int pw = combat::power_of(f, mrules->tables, sp, false);
+        combat::SpellLine lines[24];
+        rolls_clear();
+        const int nl = combat::cast(b, mrules->tables, t, sp, *fs, tg, nt, rng, lines, 24, pw);
+        spell_pages(t, lines, nl, *fs, false);
+        return;
+    }
 }
 
 // Its blast (0x5100F): "explodes!", then each within a square: the damage,
@@ -2917,6 +2971,7 @@ void event_words(const combat::Event& e)
         fallen(profile::kIsKilled);
         bozak_burst(who);
         aurak_rise(who);
+        queen_death(who);
         break;
     case combat::Ev::Suffocates: fallen(profile::kSuffocates); break;
     case combat::Ev::Damage:
@@ -2938,6 +2993,7 @@ void event_words(const combat::Event& e)
         page_fx_set(1, skull_fx(who));
         bozak_burst(who);
         aurak_rise(who);
+        queen_death(who);
         break;
     }
     case combat::Ev::AurakExplodes: aurak_blast(who); break;
@@ -6373,6 +6429,7 @@ void spell_pages(int caster, const combat::SpellLine* l, int n, const combat::Fi
             page_fx_set(1, skull_fx(l[k].who));
             bozak_burst(l[k].who);
             aurak_rise(l[k].who);
+            queen_death(l[k].who);
             break;
         }
         }

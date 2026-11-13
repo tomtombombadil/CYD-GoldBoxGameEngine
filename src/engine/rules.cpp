@@ -1288,6 +1288,21 @@ int con_regen(party::Character& c, int minutes, const ItemFacts& f)
     return healed;
 }
 
+bool death_clock(party::Character& c, int minutes, uint8_t type)
+{
+    if (minutes <= 0 || !type) return false;
+    const int k = find_effect(c, type);
+    if (k < 0) return false;
+    const int left = c.affects[k][1] | c.affects[k][2] << 8;
+    if (left <= 0 || minutes < left) return false;
+    remove_affects(c, type);
+    if (c.rec[0x195] == party::Dead || c.rec[0x195] == party::Stoned || c.rec[0x195] == party::Gone) return false;
+    c.rec[0x1A4] = 0;
+    c.rec[0x195] = party::Dead;
+    c.rec[0x196] = 0;
+    return true;
+}
+
 bool poison_clock(party::Character& c, int minutes, const CureFacts& f)
 {
     if (minutes <= 0 || !f.slow_poison) return false;

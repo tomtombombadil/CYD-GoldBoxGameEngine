@@ -251,6 +251,9 @@ struct RotStep {
     bool dies = false;
 };
 RotStep rot_clock(party::Character& c, int minutes, uint8_t rot, uint8_t clock, int shift = 4);
+// An effect whose end kills (the Dark Queen's Gas Spore disease 0xB9 -
+// DQK.EXE 0x51CA5 "dies from disease"): true when it ran out in these minutes
+bool death_clock(party::Character& c, int minutes, uint8_t type);
 // Pool's Manual of Bodily Health (poolrad_combat_facts.md 3.2, handlers
 // 0x04 / 0x07) as `minutes` pass: the reading running out "starts to train"
 // - 30 days of training (its effect); that running out "is hardier":
