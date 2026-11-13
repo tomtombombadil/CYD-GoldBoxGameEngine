@@ -806,6 +806,8 @@ struct Profile {
     // The Dark Queen's Aurak: "goes mad!", "rises in a new form", "immolates",
     // "gets zapped!", "explodes!" (combat QueenFx)
     uint32_t aurak_words[5] = {};
+    // The Dark Queen's Black Pudding: "is Disolving %s's armor!", "Dissolves %s's armor!"
+    uint32_t pudding_words[2] = {};
     // Champions' Knight Change Classes (GAME.OVR): "Exit", "is petitioning to
     // become a", "sword", "rose", "Knight Of The ", " is too inexperienced.",
     // " does not qualify.", " may become a", "Knight Of The Sword", "Change

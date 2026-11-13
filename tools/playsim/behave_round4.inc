@@ -859,6 +859,63 @@ void queen_mummy()
            bad == 0, "%d of %d wrong (%d feared, %d saved)", bad, n, para, saved);
 }
 
+// The Dark Queen's Black Pudding (DQK.EXE 0x51CC6)
+void queen_pudding()
+{
+    if (game() != 7 || !fight() || !fg->b.fx || !fg->b.fx->q.dissolve || !names || !pt) return;
+    combat::Battle& b = fg->b;
+    int arm = -1, plain = -1;
+    for (int t = 1; t < 0x80 && (arm < 0 || plain < 0); ++t) {
+        const int sl = names->type(t).slot;
+        if (sl == items::kSlotArmour && t != 0x23 && t != 0x24 && t != 0x26 && arm < 0) arm = t;
+        if (sl == items::kSlotWeapon && plain < 0) plain = t;
+    }
+    if (arm < 0) {
+        expect(P, "the Dark Queen's Black Pudding: an armour type", false, "none");
+        return;
+    }
+    party::Character& ch = pt->m[F(0).member >= 0 ? F(0).member : 0];
+    const party::Character keep = ch;
+    auto blow = [&](int plus, int* left, int* items_after) {
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(0, 0, 10, 10, 200);
+        mx::put(B, 1, 11, 10, 200);
+        combat::Fighter& tg = F(0);
+        memset(ch.items[0], 0, items::kRecordSize);
+        ch.items[0][0x2E] = static_cast<uint8_t>(arm);
+        ch.items[0][0x34] = 1;
+        ch.items[0][0x32] = static_cast<uint8_t>(plus);
+        memset(ch.items[1], 0, items::kRecordSize);
+        ch.items[1][0x2E] = static_cast<uint8_t>(plain);
+        ch.items[1][0x34] = 1;
+        ch.n_items = 2;
+        tg.items = ch.items;
+        tg.n_items = 2;
+        combat::Fighter& at = F(B);
+        mx::add_aff(B, b.fx->q.dissolve);
+        at.rec[0x199] = 60;
+        at.attacks[0] = 1;
+        at.attacks[1] = 0;
+        at.rec[0x19E] = 1;
+        at.rec[0x1A0] = 8;
+        at.rec[0x1A2] = 3;
+        create::g_die_hook = [](int nn) { return nn == 20 ? 18 : nn == 8 ? 8 : -1; };
+        const combat::Attack r = combat::attack(b, B, 0, names, rng);
+        create::g_die_hook = nullptr;
+        int ev = -1;
+        for (int j = 0; j < r.n_ev; ++j)
+            if (r.ev[j].ev == combat::Ev::Dissolving || r.ev[j].ev == combat::Ev::Dissolves) ev = r.ev[j].ev == combat::Ev::Dissolves ? 1 : 0;
+        *left = static_cast<int8_t>(ch.items[0][0x32]);
+        *items_after = ch.items[0][0x34];
+        return r.n > 0 && r.hits[0].hit ? r.hits[0].damage * 10 + ev + 1 : -100;
+    };
+    int l1, r1, l2, r2;
+    const int a = blow(2, &l1, &r1), z = blow(0, &l2, &r2);
+    ch = keep;
+    expect(P, "the Dark Queen's Black Pudding: a hit on armour +2 - +1, \"is Disolving\", no damage; on +0 - \"Dissolves\", taken off",
+           a == 1 && l1 == 1 && r1 == 1 && z == 2 && r2 == 0, "+2: %d (plus %d, worn %d); +0: %d (worn %d)", a, l1, r1, z, r2);
+}
+
 void queen_moon_room();
 void moons()
 {
@@ -4329,6 +4386,7 @@ void run()
     if (want("qbozak")) queen_bozak();
     if (want("qaurak")) queen_aurak();
     if (want("qmummy")) queen_mummy();
+    if (want("qpudding")) queen_pudding();
     if (want("qhooks")) queen_hooks();
     if (want("statfx")) stat_effects();
     if (want("finder")) finder_check();

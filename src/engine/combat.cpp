@@ -2978,6 +2978,26 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
             // (the Dark Queen's mummy: magic fire a point more a die (0xA8 -
             // its flame weapons), a magic weapon half (0xA9); the Aurak in its
             // energy form: event 5's 0xA5 - none)
+            // (the Dark Queen's Black Pudding: the armour it eats - the
+            // items from the last, so each index stays good as they go)
+            int8_t eaten[4];
+            bool eaten_gone[4];
+            int n_eaten = 0;
+            if (b.fx && hasx(at, b.fx->q.dissolve) && tg.member >= 0 && tg.items && names) {
+                for (int k = tg.n_items - 1; k >= 0 && n_eaten < 4; --k) {
+                    uint8_t* it = tg.items[k];
+                    if (!it[0x34] || names->type(it[0x2E]).slot != items::kSlotArmour) continue;
+                    const int ty = it[0x2E];
+                    const int floor = (ty == 0x23 || ty == 0x24 || ty == 0x26) ? -1 : 0;
+                    const int pl = static_cast<int8_t>(it[0x32]);
+                    eaten[n_eaten] = static_cast<int8_t>(k);
+                    eaten_gone[n_eaten] = pl <= floor;
+                    if (pl > floor) it[0x32] = static_cast<uint8_t>(pl - 1);
+                    else it[0x34] = 0;          // (gone after the pages: taken off meanwhile)
+                    ++n_eaten;
+                }
+                if (n_eaten) dmg = 0;
+            }
             if (b.fx && flame && hasx(tg, b.fx->q.fire_dice)) dmg += n;
             if (b.fx && item && plus > 0 && hasx(tg, b.fx->q.magic_half)) dmg /= 2;
             if (b.fx && hasx(tg, b.fx->q.no_harm)) dmg = 0;
@@ -3010,6 +3030,8 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
             }
             if (blow_kind) g_kind = 0;
             out.hits[out.n++] = h;
+            for (int k = 0; k < n_eaten; ++k)
+                if (Event* e = add_event(out, a, eaten_gone[k] ? Ev::Dissolves : Ev::Dissolving, c)) e->amount = eaten[k];
             if (bolt_bane) add_event(out, c, Ev::SlainBolt);
             // Darkness's vorpal blow (0x73, ovr 0x1D8C0 - after attack 1's hit):
             // a d20 of 17 or more beheads it, but not one with flags 2 & 0x20

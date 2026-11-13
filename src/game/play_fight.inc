@@ -2941,6 +2941,29 @@ void event_words(const combat::Event& e)
         break;
     }
     case combat::Ev::AurakExplodes: aurak_blast(who); break;
+    case combat::Ev::Dissolving:
+    case combat::Ev::Dissolves: {
+        // (the Black Pudding, said by it with the one hit's name in it; the
+        // armour gone after the attack's pages)
+        const int to = e.to >= 0 ? e.to : who;
+        char nm[20];
+        fighter_name(fg->b.f[to], nm, sizeof nm);
+        const char* w = d->w_pudding[e.ev == combat::Ev::Dissolves ? 1 : 0];
+        const char* ps = strstr(w, "%s");
+        if (ps) snprintf(t, sizeof t, "%.*s%s%s", static_cast<int>(ps - w), w, nm, ps + 2);
+        else snprintf(t, sizeof t, "%s", w);
+        add_page(who, t);
+        combat::Fighter& tf = fg->b.f[to];
+        if (tf.member >= 0 && pt && names) {
+            party::Character& ch = pt->m[tf.member];
+            if (e.ev == combat::Ev::Dissolves && e.amount >= 0 && e.amount < ch.n_items) {
+                rules::remove_item(ch, e.amount);
+                tf.n_items = ch.n_items;
+            }
+            rules::recalc(ch, *names, d->facts);
+        }
+        break;
+    }
     case combat::Ev::StandsUp:
     case combat::Ev::GetsUp: {
         add_page(who, fw(e.ev == combat::Ev::StandsUp ? profile::kStandsUp : profile::kGetsBackUp));

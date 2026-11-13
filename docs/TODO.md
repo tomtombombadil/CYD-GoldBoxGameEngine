@@ -1693,11 +1693,12 @@ the Project as claude/TODO.md.
       "Dies rots away" via rules::rot_clock shift 5, 0xAB the set-up fear -
       0x5156B: save +2 human +1 for a side of 6 or more, 1d4 rounds of 0x34,
       "is Unaffected" when made, 0x9E holders immune) and the zombie (37:
-      0x9E immune to 0x34 - 0x50CE3; 0x9F a marker). Left: Black Pudding
-      0xBA (0x51CC6, event 4: each worn armour of the target's - type row
-      byte 0 = 2 - a plus less, "is Disolving %s's armor!", or at its floor
-      (0, -1 for types 0x23 0x24 0x26) "Dissolves %s's armor!" and gone;
-      any such armour: the blow's damage 0), Gas Spore 0xB6 / 0xB7
+      0x9E immune to 0x34 - 0x50CE3; 0x9F a marker). v0.196.28 the Black
+      Pudding 0xBA (0x51CC6, event 4: each worn armour of the target's - type
+      row byte 0 = 2 - a plus less, "is Disolving %s's armor!", or at its
+      floor (0, -1 for types 0x23 0x24 0x26) "Dissolves %s's armor!" and
+      gone; any such armour: the blow's damage 0 - party members' armour
+      only: a monster's items are its group's in the engine). Left: Gas Spore 0xB6 / 0xB7
       (0x51A6A), the anemone / 2-headed troll 0xB5 (0x51A3A, 0x12 / 0x13),
       the shambling mound 0xAD-0xB0 with 0xB1-0xB3 (engulf / suffocate,
       0x516D2 on), the Death Dragon 0xB4 (0x54A51), the Enchanted Bozak

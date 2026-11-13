@@ -631,6 +631,12 @@ struct Facts {
         // one holding `rot_guard` 0x32 or the clock 0xD7) - the rot's data
         // d6 << 5 + 0x1F, a month off at each 0x20 (rot_shift 5)
         uint8_t fire_dice = 0, magic_half = 0, fear_aura = 0, rot_guard = 0, rot_shift = 0;
+        // The Black Pudding (MONCHA.GLB 1): `dissolve` (0xBA, 0x51CC6 - the
+        // attacker's damage, event 4): each readied armour (its type's slot
+        // 2) of the one it hits a plus less - "is Disolving %s's armor!" -
+        // or, at its floor (0; -1 for types 0x23 / 0x24 / 0x26), "Dissolves
+        // %s's armor!" and gone; any armour so: the blow does no damage
+        uint8_t dissolve = 0;
     } q{};
     // Gateway to the Savage Frontier's (its effect handlers DS 0x826A on, the
     // check lists of its work_on_00 - SPEC 6e; 0: none). `ways`: the deadly
@@ -1027,6 +1033,9 @@ enum class Ev : uint8_t {
     // The Dark Queen's Aurak: its last form's time over - "explodes!" (the
     // blast is paged after: combat::aurak_blast)
     AurakExplodes,
+    // The Dark Queen's Black Pudding (`to`: the one hit; amount: its item):
+    // "is Disolving %s's armor!" (a plus less), "Dissolves %s's armor!" (gone)
+    Dissolving, Dissolves,
 };
 struct Event {
     uint8_t who = 0;
