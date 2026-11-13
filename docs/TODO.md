@@ -1593,8 +1593,9 @@ the Project as claude/TODO.md.
 - [ ] Round 20 left (2026-11-10): the by-priority games' area finder
       (Darkness GAME.OVR 0x22976, 550 lines - where an area spell is
       centred; the engine centres on the finder's pick); the Dark Queen's
-      spells 138-140 (class 4, 8th level rows past the engine's 138) and
-      whether any monster / item casts them; the computer's weapon choice
+      spells 138-140 (class 4, 8th level rows past the engine's 138) -
+      read (round 22): their name pointers (DS 0x25CB) are null, the last
+      named is 137 - no spells there; the computer's weapon choice
       per game - DONE round 21 (v0.196.8): each DAX game's rating routine
       RUN in Unicorn (oracles/wrate_emu.py, 3000 random items a game;
       rules4 ONLY=wrate: 0 differ in all eight, the bare rating 414-1123)
