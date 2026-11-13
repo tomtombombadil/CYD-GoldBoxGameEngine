@@ -1708,9 +1708,15 @@ the Project as claude/TODO.md.
       death, then "explodes" and spell 0x57 Ice Storm / 0x7C Meteor Swarm
       cast by the fallen one at all within its row's aim & 7 - 2 / 0: the
       Sivak's reaches only its own square, nobody). Cure Disease and 0xB9:
-      not read. Left: the anemone / 2-headed troll 0xB5 (0x51A3A, 0x12 / 0x13),
-      the shambling mound 0xAD-0xB0 with 0xB1-0xB3 (engulf / suffocate,
-      0x516D2 on), the Death Dragon 0xB4 (0x54A51); 0xD7's own clock (0x52D77).
+      not read. v0.196.30 the shambling mound (39: 0xAD electricity + 8 as
+      absorb_elec - 0x516D2; 0xAE fire / cold half, none on a save against
+      spells from a spell that can be saved - 0x516FC; 0xAF blows half -
+      0x51754; 0xB0 engulfs on both hits unless 0x96 - 0x51765: 0xB2 held,
+      0xB1 suffocating 2d4 turns - 0x518AF, the mound 0xB3; its turn a blow
+      at the one inside, the turn over - 0x518DD; the engine's Curse-type
+      engulf / holding machinery; the original's special blow dice - record
+      0x190-0x194 - not followed). Left: the anemone / 2-headed troll 0xB5 (0x51A3A, 0x12 / 0x13),
+      the Death Dragon 0xB4 (0x54A51); 0xD7's own clock (0x52D77).
       The Aurak's 0xA5 also blocks spell effects (event 9, 0x4DF31 with 0).
 - [x] Queen fuzz (QAALL=1, seeds 12 / 13, 60 fights; there before v0.196.26):
       R10 against the heads (MONCHA 65 / 71 - AC -10 / -11, moves 2) and

@@ -2192,7 +2192,7 @@ void after_hit_own(Battle& b, int a, int c, int slot, int roll, int hits1, creat
         // while it engulfs one already - Curse's both hits)
         const bool engulf_ok = hasx(at, m.engulf) && (gw.ways ? d.roll(10, 1) <= 4 && !at.has(m.engulfing) : hits1 == 2);
         if (engulf_ok && tg.up() && m.held_fast && m.suffocate && m.engulfing &&
-            !tg.has(m.held_fast) && !tg.has(m.suffocate)) {
+            !tg.has(m.held_fast) && !tg.has(m.suffocate) && !hasx(tg, b.fx->q.engulf_not)) {
             add_event(out, a, Ev::Engulfs, c);
             hold(m.engulfing);
             give_aff(tg, m.suffocate, 0, d.roll(4, 2), false);
@@ -3021,6 +3021,9 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
             }
             if (b.fx && flame && hasx(tg, b.fx->q.fire_dice)) dmg += n;
             if (b.fx && item && plus > 0 && hasx(tg, b.fx->q.magic_half)) dmg /= 2;
+            // (the shambling mound's: a blow half - 0xAF; fire or cold half - 0xAE)
+            if (b.fx && hasx(tg, b.fx->q.blow_half)) dmg /= 2;
+            if (b.fx && flame && hasx(tg, b.fx->q.fire_cold)) dmg /= 2;
             if (b.fx && hasx(tg, b.fx->q.no_harm)) dmg = 0;
             h.damage = dmg;
             log_roll(c, RollKind::Damage, out.n, nat, dmg - nat, 0);
@@ -3414,6 +3417,12 @@ int harm(Battle& b, int c, int amount, const Harm& h, create::Dice& d, bool* dow
         // event 6's 0xA5; the mummy: magic fire a point more a die - 0xA8)
         if (h.spell > 0 && hasx(f, b.fx->q.no_harm)) safe = true;
         if ((h.kind & 1) && (h.kind & 8) && hasx(f, b.fx->q.fire_dice)) dmg += h.dice;
+        // (the shambling mound: fire or cold half; a save against spells made -
+        // none, for a spell that can be saved against - 0x516FC)
+        if ((h.kind & 3) && hasx(f, b.fx->q.fire_cold)) {
+            if (saving_throw(f, 4, 0, d) && h.save >= 0) safe = true;
+            else dmg /= 2;
+        }
         // The target's resistances, in the original's order
         if (hasx(f, m.efreet) && (h.kind & 1)) {
             dmg -= h.dice;

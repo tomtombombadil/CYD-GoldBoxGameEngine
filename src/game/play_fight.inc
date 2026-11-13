@@ -3788,7 +3788,8 @@ void start_turn(pic::Canvas& c)
                 attack_pages(fg->cur, bite, at, false, false, Fx{});
             }
             draw_fight(c);
-            say(c, f.up() ? FSt::Resume : FSt::Next);
+            // (the Dark Queen's shambling mound: its blow at the one inside, the turn over - 0x519E2)
+            say(c, f.up() && !(bite >= 0 && b.fx && b.fx->q.hold_ends) ? FSt::Resume : FSt::Next);
             return;
         }
         // The Dark Queen's Aurak (its turn's start, event 0xF): immolating

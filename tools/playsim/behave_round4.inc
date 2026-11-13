@@ -974,6 +974,92 @@ void queen_spore()
            bad == 0, "%d of %d wrong (%d halved or low)", bad, n, halves);
 }
 
+// The Dark Queen's shambling mound (DQK.EXE 0x516D2 - 0x518DD)
+void queen_mound()
+{
+    if (game() != 7 || !fight() || !fg->b.fx || !fg->b.fx->q.blow_half) return;
+    combat::Battle& b = fg->b;
+    const auto& q = b.fx->q;
+    const auto& m = b.fx->mon;
+    int bad = 0, n = 0;
+    auto chk = [&](bool ok, const char* what) {
+        ++n;
+        if (!ok && !bad++) printf("  (mound: %s)\n", what);
+    };
+    auto scene = [&]() {
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(0, 0, 10, 10, 200);
+        mx::put(B, 1, 11, 10, 100);
+        for (uint8_t t : {m.absorb_elec, q.fire_cold, q.blow_half, m.engulf}) mx::add_aff(B, t);
+    };
+    // a blow at it: half (8 + 3 = 11 -> 5)
+    scene();
+    {
+        combat::Fighter& at = F(0);
+        at.rec[0x199] = 60;
+        at.attacks[0] = 1;
+        at.attacks[1] = 0;
+        at.rec[0x19E] = 1;
+        at.rec[0x1A0] = 8;
+        at.rec[0x1A2] = 3;
+        create::g_die_hook = [](int nn) { return nn == 20 ? 18 : nn == 8 ? 8 : -1; };
+        const combat::Attack r = combat::attack(b, 0, B, nullptr, rng);
+        create::g_die_hook = nullptr;
+        chk(r.n > 0 && r.hits[0].hit && r.hits[0].damage == 5, "a blow 11 -> 5");
+    }
+    // electricity: + 8, no harm; fire: half or none on a save
+    {
+        create::Dice dd(3);
+        scene();
+        combat::Harm h;
+        h.kind = 4;
+        h.spell = 1;
+        bool down = false;
+        chk(combat::harm(b, B, 20, h, dd, &down) == 0 && F(B).hp() == 108, "electricity: + 8");
+        int half = 0, none = 0;
+        for (int sd = 1; sd <= 30; ++sd) {
+            create::Dice d2(static_cast<uint32_t>(sd));
+            scene();
+            combat::Harm f;
+            f.kind = 1;
+            f.spell = 1;
+            f.save = 3;
+            const int got = combat::harm(b, B, 20, f, d2, &down);
+            half += got == 10 || got == 5;
+            none += got == 0;
+        }
+        chk(half > 0 && none > 0 && half + none == 30, "fire: half, or none on a save");
+    }
+    // engulfed by both attacks hitting; its blow at the one inside at its turn
+    {
+        scene();
+        combat::Fighter& at = F(B);
+        at.rec[0x199] = 60;
+        at.attacks[0] = 2;
+        at.attacks[1] = 0;
+        at.rec[0x19E] = 1;
+        at.rec[0x1A0] = 4;
+        at.rec[0x1A2] = 0;
+        create::g_die_hook = [](int nn) { return nn == 20 ? 18 : -1; };
+        const combat::Attack r = combat::attack(b, B, 0, names, rng);
+        create::g_die_hook = nullptr;
+        bool eng = false;
+        for (int j = 0; j < r.n_ev; ++j) eng |= r.ev[j].ev == combat::Ev::Engulfs;
+        int suff = -1;
+        for (int j = 0; F(0).n_aff && j < *F(0).n_aff; ++j)
+            if (F(0).aff[j][0] == m.suffocate) suff = F(0).aff[j][3];
+        chk(eng && F(0).has(m.held_fast) && suff >= 2 && suff <= 8 && at.has(m.engulfing), "engulfs: held, suffocating 2d4, the mound holding");
+        int bite = -1;
+        bool go_on = false;
+        combat::Event ev[4];
+        create::Dice dd(5);
+        combat::turn_holds(b, B, dd, ev, 4, &bite, &go_on);
+        chk(bite == 0, "its turn: a blow at the one inside");
+    }
+    expect(P, "the Dark Queen's shambling mound: blows half, electricity + 8, fire half / none on a save, engulfing on both hits - DQK.EXE 0x516D2 on",
+           bad == 0, "%d of %d wrong", bad, n);
+}
+
 void queen_moon_room();
 void moons()
 {
@@ -4446,6 +4532,7 @@ void run()
     if (want("qmummy")) queen_mummy();
     if (want("qpudding")) queen_pudding();
     if (want("qspore")) queen_spore();
+    if (want("qmound")) queen_mound();
     if (want("qhooks")) queen_hooks();
     if (want("statfx")) stat_effects();
     if (want("finder")) finder_check();

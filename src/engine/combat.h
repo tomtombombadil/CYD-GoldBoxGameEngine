@@ -637,6 +637,16 @@ struct Facts {
         // or, at its floor (0; -1 for types 0x23 / 0x24 / 0x26), "Dissolves
         // %s's armor!" and gone; any armour so: the blow does no damage
         uint8_t dissolve = 0;
+        // The shambling mound (MONCHA.GLB 39 - mon.engulf 0xB0, absorb_elec
+        // 0xAD, suffocate / held_fast / engulfing / holding 0xB1-0xB3):
+        // `fire_cold` (0xAE, 0x516FC - events 5 / 6): fire or cold half; a
+        // save against spells made - none from a spell its row lets save;
+        // `blow_half` (0xAF, 0x51754): a blow's damage half; `hold_ends`:
+        // its blow at the one inside at its turn ends the turn (0x519E2);
+        // `engulf_not`: not one holding 0x96
+        uint8_t fire_cold = 0, blow_half = 0;
+        bool    hold_ends = false;
+        uint8_t engulf_not = 0;
         // The Gas Spore (MONCHA.GLB 6): `spore` (0xB6, 0x51A6A at its death,
         // not with `spent` 0xC2): "explodes.", each within 2 not holding
         // `spore_proof` (0xB7) 6d6, a save against type 2 for half (0x2214);
