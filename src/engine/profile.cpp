@@ -2041,7 +2041,9 @@ constexpr combat::Facts kQueenFightFacts = {.held = {0x33, 0x34, 0x35, 0x1F}, .b
                         .no_elec = 0, .globe = 0x3F, .elf_sleep = 0x5F, .detect = 0x18, .prot_evil_near = 0x2D,
                         .acid_breath = 0x60, .fire_breath = 0x54,
                         .paralyzed = 0x34, .poisoned = 0x37, .sleep = 0x35, .drain1 = 0x65, .drain2 = 0x66,
-                        .ghoul = 0x58, .lightning_breath = 0x5B, .no_fear = 0x5C},
+                        .ghoul = 0x58, .lightning_breath = 0x5B, .no_fear = 0x5C,
+                        // (its Enchanted Baaz: DQK.EXE 0x51DE8 - round 22)
+                        .stone_death = 0xBB},
                 .sp = {.enlarge = 0x0C, .confuse = 0x23, .berserk = 0x4D, .evil_ward = 0x04, .hot = 0x32,
                        .cold = 0x36, .zap = 0x70, .slow_poison = 0x16, .poison_damage = 0x0F, .hammer = 0x17,
                        .con_regen = 0x3E, .shield = 0x11, .enfeeble = 0x1D, .ill = 0x22, .weak = 0x2B, .sick = 0x2C,
@@ -4226,6 +4228,9 @@ const Profile kProfiles[] = {
                  .appraise_div = 2, .jewel41_span = 1500,
                  // ("Press        to continue." with the button "Return" in its gap)
                  .fight_unswapped = true, .press_words = {qw(0x1D19), qw(0x1D33)},
+                 // (its draconians: "explodes!", "is stunned", "loses his
+                 // weapon" - DS 0x848B / 0x8495 / 0x8447; round 22)
+                 .burst_words = {qw(0x848B), qw(0x8495), qw(0x8447)},
                  // (Knight New Order, DQK 0x487F2: its messages 64-70, "Exit"
                  // of the menu "Change Exit" (161) - one " is too
                  // inexperienced" for both orders; the order's name made of

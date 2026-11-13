@@ -2553,13 +2553,16 @@ void bozak_burst(int t)
 // Champions' baaz slain by a party member's blow (GAME.OVR 0x129AD): a d20
 // at least the slayer's Dexterity - 3 leaves the weapon in the stone body -
 // "loses his weapon" - till the fight's end
-void baaz_weapon(int a, int t)
+void baaz_weapon(int a, int t, int dmg)
 {
     combat::Battle& b = fg->b;
     const uint8_t sd = b.fx ? b.fx->mon.stone_death : 0;
     combat::Fighter& f = b.f[a];
     if (!sd || !b.f[t].has(sd) || f.member < 0 || !names || fg->n_lost >= 6 || !d->w_burst[2][0]) return;
     const int w = combat::weapon(f, *names);
+    // (the Dark Queen's Enchanted Baaz, DQK.EXE 0x51DE8: only when the last
+    // blow's damage is a multiple of 3, and never a cursed weapon)
+    if (b.fx->q.hooks && (dmg <= 0 || dmg % 3 != 0 || (w >= 0 && pt->m[f.member].items[w][0x36]))) return;
     if (w < 0 || !combat::baaz_keeps_weapon(f, rng)) return;
     party::Character& ch = pt->m[f.member];
     // (one kind of weapon never stays: type 6 with word 0x79 - 0x12A61)
@@ -3093,7 +3096,10 @@ void attack_pages(int a, int t, const combat::Attack& at, bool behind, bool shot
     for (int j = 0; j < at.n_ev; ++j) swallowed = swallowed || at.ev[j].ev == combat::Ev::Swallowed;
     if (at.down && !swallowed) {
         down_page(t, hit_pg >= 0 && hit_pg == fg->pages - 1);
-        if (!shot) baaz_weapon(a, t);
+        int last = 0;
+        for (int k = 0; k < at.n; ++k)
+            if (at.hits[k].hit) last = at.hits[k].damage;
+        if (!shot) baaz_weapon(a, t, last);
     }
 }
 
