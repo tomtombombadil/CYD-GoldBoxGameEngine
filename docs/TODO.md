@@ -1632,8 +1632,10 @@ the Project as claude/TODO.md.
       effect" (0x57DE0 - in fights and camp, the spell spent; the cold one
       as on land); an item of spell 64 "Nothing Happens", not used
       (0x5EDBD). v0.196.13: the melee refusal's "Can't use that
-      underwater" before "Not with that weapon" (0x239CC). Left: 0x5BA58 / 0x5BA89 (a choice of 0x1D99:0xF3B's arguments, set
-      3 for 2 - its meaning not read). The scripts do
+      underwater" before "Not with that weapon" (0x239CC). Left: 0x5BA58 / 0x5BA89 - read (round 22): the area spells'
+      picture routine (spells 0x22 0x2F 0x33 0x57 0x5B 0x73 0x85) picks
+      another burst picture set under water (3 for 2) and adds one (9,
+      0x14, 2) - pictures only, not followed. The scripts do
       set it: sweep events VMWATCH=3c (Queen, 44 of its blocks swept) -
       ECL.GLB blocks 1, 2, 3, 14, 15. the Dark Queen's ground 0x46 - laid by effect 0x9A's
       handler (DQK.EXE 0x50A77) as a cloud record of 1d6 at the holder's
