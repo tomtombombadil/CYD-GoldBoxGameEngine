@@ -1,6 +1,7 @@
 #include "pdfview.h"
 
 #include <Arduino.h>
+#include <esp_heap_caps.h>
 #include <cstring>
 #include <new>
 
@@ -19,8 +20,10 @@ constexpr int kMaxCols = 8;
 
 struct State {
     fs::File  file;
+    // (its 512-byte cache in internal memory: the State is over 4 KB, so on
+    // the S3 / C5 it lands in PSRAM, and the card's SD/MMC DMA must never
+    // read into PSRAM - CLAUDE.md's S3 rules)
     library::FileSource* src = nullptr;
-    alignas(library::FileSource) uint8_t src_mem[sizeof(library::FileSource)];
     pdf::Doc  doc;
     int       page_obj[pdf::kMaxPages];
     int       n = 0;
@@ -378,7 +381,12 @@ bool open(const char* path)
         close();
         return false;
     }
-    st->src = new (st->src_mem) library::FileSource(st->file);
+    void* mem = heap_caps_malloc(sizeof(library::FileSource), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    if (!mem) {
+        close();
+        return false;
+    }
+    st->src = new (mem) library::FileSource(st->file);
     if (!pdf::open(*st->src, st->doc)) {
         close();
         return false;
@@ -413,7 +421,10 @@ bool open(const char* path)
 void close()
 {
     if (!st) return;
-    if (st->src) st->src->~FileSource();
+    if (st->src) {
+        st->src->~FileSource();
+        heap_caps_free(st->src);
+    }
     if (st->file) st->file.close();
     delete st;
     st = nullptr;

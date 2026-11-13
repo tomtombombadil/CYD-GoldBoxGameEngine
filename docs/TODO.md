@@ -888,8 +888,12 @@ the Project as claude/TODO.md.
       board_5inch_facts_2.md (scratch -> Project).
 - [ ] Secret J45's piece takes in the "Journal Entry 47" heading (the
       map overlaps it; a rectangle can't separate them).
-- [ ] Check: pdfview's State (FileSource cache, >4 KB) lands in PSRAM on
+- [x] Check: pdfview's State (FileSource cache, >4 KB) lands in PSRAM on
       the S3 - its card reads must go through the internal bounce.
+      v0.196.21: it did (fs::File reads straight into the FileSource's
+      cache inside the State); the FileSource now in internal memory
+      (heap_caps_malloc MALLOC_CAP_INTERNAL). viewer.cpp's are static,
+      on the stack or under 4 KB (internal) - fine.
 - [ ] Tom's tests 2026-10-24 (12:14): Treasures' party menu shows no
       highlighted character (View then shows whom?); the C5's sound still
       distorted, harsh, like static (v0.145.1's fix didn't cure it); the
