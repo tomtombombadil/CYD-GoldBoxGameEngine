@@ -1725,8 +1725,13 @@ the Project as claude/TODO.md.
       kind - the Queen's breath words were empty before), the troll /
       anemone 0xB5 (a hit point at each round's start and each turn's
       start - events 0x13 / 0x12 - while monsters stand, "is fully /
-      partially healed"). The Queen's monster effects all read now (the
-      0xD7 clock 0x52D77 and Cure Disease left). The Aurak's 0xA5 also blocks spell effects (event 9, 0x4DF31 with 0).
+      partially healed"). v0.196.34: the rot's clock 0xD7 - nothing that
+      heals with the heal routine's flag 0 (cure spells, rest, the temple -
+      0x48F:0x25F7) heals its holder, a point at each 10-day renewal
+      (0x52D77); its Cure Disease (0x56480) takes 0x22, 0x2B with 0x2C /
+      0x1F, the spore's 0xB9 and 0xD7 with the rot 0xAC (spells::Facts 4
+      diseases, the temple's list too); the troll's heal ignores 0xD7 (flag
+      1). Every Queen monster effect is read now. The Aurak's 0xA5 also blocks spell effects (event 9, 0x4DF31 with 0).
 - [x] Empty fight words (v0.196.32, fx_check's new E1: a page of the names
       alone): Champions' turn effects (runs away, is confused, goes berserk,
       is enraged - GAME.OVR 0x11936 on), "is Paralyzed" (0x10BE8), "Avoids

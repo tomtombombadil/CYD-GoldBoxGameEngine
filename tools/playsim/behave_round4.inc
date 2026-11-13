@@ -855,7 +855,38 @@ void queen_mummy()
         h.kind = 1;
         chk(combat::harm(b, B, 10, h, dd, &down) == 10, "plain fire 10");
     }
-    expect(P, "the Dark Queen's mummy: fear at the set-up (save, 1d4 paralysis, 0x9E immune, once), magic fire + a die - DQK.EXE 0x5156B / 0x5145A",
+    // the rot's clock 0xD7: no healing by rules::heal; a point at each 10-day
+    // renewal (0x52D77); its Cure Disease takes 0xD7 and the rot, and 0xB9
+    if (pt && pt->count > 0) {
+        party::Character ch = pt->m[0];
+        ch.rec[0x195] = party::Okay;
+        ch.rec[0x1A4] = 5;
+        ch.n_affects = 0;
+        auto put = [&](uint8_t t, int mn, uint8_t data) {
+            uint8_t* a = ch.affects[ch.n_affects++];
+            memset(a, 0, party::kAffectSize);
+            a[0] = t;
+            a[1] = static_cast<uint8_t>(mn);
+            a[2] = static_cast<uint8_t>(mn >> 8);
+            a[3] = data;
+            a[4] = 1;
+        };
+        put(fx.mon.rot_clock, 14400, 0xFF);
+        put(fx.mon.rot, 43200, (3 << 5) + 0x1F);
+        rules::set_no_heal(fx.q.no_heal);
+        chk(!rules::heal(ch, 4) && ch.hp() == 5, "no healing with 0xD7");
+        rules::rot_clock(ch, 14400, fx.mon.rot, fx.mon.rot_clock, fx.q.rot_shift);
+        chk(ch.hp() == 6, "a point at the clock's 10 days");
+        const auto& mf = d->prof->magic.facts;
+        bool d7 = false, ac = false, b9 = false;
+        for (int i = 0; i < 4; ++i) {
+            if (mf.disease[i] == fx.mon.rot_clock) d7 = mf.disease_with[i][0] == fx.mon.rot;
+            if (mf.disease[i] == fx.q.spore_ill) b9 = true;
+        }
+        for (uint8_t t : d->prof->cures.disease) ac |= t == fx.mon.rot;
+        chk(d7 && b9 && ac, "Cure Disease: 0xD7 with the rot, 0xB9; the temple's too");
+    }
+    expect(P, "the Dark Queen's mummy: fear at the set-up (save, 1d4 paralysis, 0x9E immune, once), magic fire + a die, the rot's no healing / 10-day point / cure - DQK.EXE 0x5156B / 0x5145A / 0x52D77 / 0x56480",
            bad == 0, "%d of %d wrong (%d feared, %d saved)", bad, n, para, saved);
 }
 

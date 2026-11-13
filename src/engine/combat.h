@@ -656,8 +656,11 @@ struct Facts {
         // (0xB5, 0x51A3A - events 0x13, each round's start, and 0x12, the
         // attacks counted at each turn): a hit point back while the monsters'
         // side has any standing (DS 0xB7F3) - okay, animated, unconscious or
-        // dying, under its most, not holding 0xD7 - "is fully / partially healed"
-        uint8_t regen1 = 0;
+        // dying, under its most (its heal with flag 1: even with 0xD7) - "is
+        // fully / partially healed". `no_heal` (0xD7, the mummy rot's clock):
+        // healed by nothing that heals with flag 0 - cure spells, rest, the
+        // temple (0x25F7); a point every 10 days (0x52D77)
+        uint8_t regen1 = 0, no_heal = 0;
         bool    hold_ends = false;
         uint8_t engulf_not = 0;
         // The Gas Spore (MONCHA.GLB 6): `spore` (0xB6, 0x51A6A at its death,

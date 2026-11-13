@@ -109,7 +109,7 @@ struct Line {
 // diseases Cure Disease takes away and what goes with each
 struct Facts {
     uint8_t elf_race, slow;
-    uint8_t disease[3], disease_with[3][2];
+    uint8_t disease[4], disease_with[4][2];     // (the Dark Queen's 4: 0x56480)
     uint8_t enlarge;                    // Enlarge's effect (Reduce takes it away)
     uint8_t hammer;                     // Spiritual Hammer's effect
     uint8_t hot, cold, zap;             // Fire Shield's effects (spell_facts.md 0x55)

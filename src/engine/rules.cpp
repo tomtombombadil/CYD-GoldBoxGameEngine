@@ -1129,8 +1129,15 @@ bool cursed_item(const party::Character& c)
 
 } // namespace
 
+namespace {
+uint8_t g_no_heal = 0;
+}
+
+void set_no_heal(uint8_t type) { g_no_heal = type; }
+
 bool heal(party::Character& c, int amount)
 {
+    if (g_no_heal && c.has_affect(g_no_heal)) return false;
     const int h = c.health();
     if (!(h == party::Okay || h == party::Animated || h == party::Unconscious || h == party::Dying)) return false;
     int hp = c.hp() + (amount > 0 ? amount : 0);
@@ -1185,7 +1192,15 @@ RotStep rot_clock(party::Character& c, int minutes, uint8_t rot, uint8_t clock, 
     RotStep out;
     if (minutes <= 0 || !rot) return out;
     const int ck = clock ? find_effect(c, clock) : -1;
-    if (ck >= 0) repeat_clock(c.affects[ck], minutes, 14400);
+    // (the Dark Queen's clock 0xD7 renewing: a hit point each time - 0x52D77,
+    // its heal with flag 1)
+    const int renew = ck >= 0 ? repeat_clock(c.affects[ck], minutes, 14400) : 0;
+    if (shift == 5 && renew > 0) {
+        const uint8_t keep = g_no_heal;
+        g_no_heal = 0;
+        heal(c, renew);
+        g_no_heal = keep;
+    }
     const int k = find_effect(c, rot);
     if (k < 0) return out;
     for (int n = repeat_clock(c.affects[k], minutes, 43200); n > 0; --n) {

@@ -336,7 +336,7 @@ int cast(party::Party& p, int caster, int target, const CampSpell& cs, const cla
         for (int k = 0; k < n; ++k) {
             party::Character& c = p.m[who[k]];
             bool any = false;
-            for (int i = 0; i < 3; ++i) {
+            for (int i = 0; i < 4; ++i) {
                 if (!f.disease[i] || !cure(c, f.disease[i])) continue;
                 any = true;
                 o.say(who[k], Said::Cured);
@@ -493,7 +493,7 @@ int cast(party::Party& p, int caster, int target, const CampSpell& cs, const cla
                 // Darkness (GAME.OVR 0x2CA54): its cure says "is Cured" for each
                 // effect it takes away (0x32E1B) - the diseases (Cure Disease's
                 // helper 0x2C99B), blindness, feeblemind - then the word
-                for (int i = 0; i < 3; ++i) {
+                for (int i = 0; i < 4; ++i) {
                     if (!f.disease[i] || !cure(c, f.disease[i])) continue;
                     ill = true;
                     o.say(who[k], Said::Cured);

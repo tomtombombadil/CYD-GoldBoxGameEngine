@@ -12385,6 +12385,7 @@ __attribute__((noinline)) void load_party_text(dax::ByteSource& exe, const exepa
         d->facts.sell_secret = pi.sell_secret;
         d->facts.sell_keep = pi.sell_keep;
         rules::set_berserk_fx(pi.berserk);
+        rules::set_no_heal(d->prof->fight.facts.q.no_heal);
         items::set_passive(pi.passive);
         items::set_flame_fix(&pi.flame, CYD_ITEM_FIXES && opts.item_fixes);
         rules::set_fixes(CYD_ITEM_FIXES && opts.item_fixes);

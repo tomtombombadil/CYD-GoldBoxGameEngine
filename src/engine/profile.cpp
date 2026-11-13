@@ -2091,7 +2091,7 @@ constexpr combat::Facts kQueenFightFacts = {.held = {0x33, 0x34, 0x35, 0x1F}, .b
                       .tick_at_start = true, .mad = 0x98, .reborn = 0xA0, .immolate = 0xA1, .mad_time = 0xA3,
                       .no_harm = 0xA5, .blows_up = 0xA6, .zaps = 0xA7, .greater = 0xBF, .turn_over = 0xD5, .tag = 0x97,
                       .fire_dice = 0xA8, .magic_half = 0xA9, .fear_aura = 0xAB, .rot_guard = 0x32, .rot_shift = 5,
-                      .dissolve = 0xBA, .fire_cold = 0xAE, .blow_half = 0xAF, .regen1 = 0xB5, .hold_ends = true, .engulf_not = 0x96,
+                      .dissolve = 0xBA, .fire_cold = 0xAE, .blow_half = 0xAF, .regen1 = 0xB5, .no_heal = 0xD7, .hold_ends = true, .engulf_not = 0x96,
                       .spore = 0xB6, .spent = 0xC2, .spore_proof = 0xB7, .spore_touch = 0xB8,
                       .spore_ward = 0x4C, .spore_ill = 0xB9, .death_cast = {0xBC, 0xBD}, .death_spell = {0x57, 0x7C}}};
 // The Dark Queen's spells (queen_facts_4.md 8): Darkness's numbers 1-126 and
@@ -4227,7 +4227,9 @@ const Profile kProfiles[] = {
                     qw(0x4ECD), qw(0x5160), qw1(0x5156), qw(0x4C58), qw(0x4C77), qw(0x51B2)},
      // The effects its cures take away: Darkness's (its effect numbers)
      .cures = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-               0x21, {0x1F, 0x22, 0x2B, 0x2C, 0, 0}, 0x44, 0x37, 0x16, 0x0F, 0, 0x24, 0x22, 0x2B, 0x2C, 0x1F},
+               // (its Cure Disease, 0x56480: also the Gas Spore's 0xB9 and the
+               // mummy's rot clock 0xD7 with the rot 0xAC)
+               0x21, {0x1F, 0x22, 0x2B, 0x2C, 0xB9, 0xD7, 0xAC, 0}, 0x44, 0x37, 0x16, 0x0F, 0, 0x24, 0x22, 0x2B, 0x2C, 0x1F},
      // (its Magic words: queen_facts_4.md 8)
      .magic = {.menu = qw(0x51F9), .levels = {qw(0x8B57), 41, 9}, .names = {kQueenDs + 0x25CB - 4, 4, 139},
                .words = {qw(0x8D67), qw(0x8D12), qw(0x8D1C), qw(0x8D51), qw(0x4DAB), qw1(0x4F07), qw(0x4E49), 0, 0,
@@ -4243,7 +4245,7 @@ const Profile kProfiles[] = {
                .camp = kQueenCamp, .n_camp = sizeof kQueenCamp / sizeof kQueenCamp[0],
                // (Darkness's effects; its timed ones at its numbers: the potion
                // of speed 127, the wand of paralyzation 130, frost 128)
-               .facts = {2, 0x2A, {0x22, 0x2B, 0}, {{0, 0}, {0x2C, 0x1F}, {0, 0}}, 0x0C, 0x17, 0x32, 0x36, 0x70, 0x71,
+               .facts = {2, 0x2A, {0x22, 0x2B, 0xB9, 0xD7}, {{0, 0}, {0x2C, 0x1F}, {0, 0}, {0xAC, 0}}, 0x0C, 0x17, 0x32, 0x36, 0x70, 0x71,
                          {{0x7F, 5, 4, 0, 1}, {0x82, 5, 4, 0, 1}, {0x80, 1, 4, 4, 10}, {0x1A, 0, 0, 3780, 1},
                           {0x7A, 0, 0, 1440, 1}, {0x79, 1, 4, 1, 1}},
                          0x2B, 0x14},

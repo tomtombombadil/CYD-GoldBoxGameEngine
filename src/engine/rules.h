@@ -214,7 +214,7 @@ enum Cure : uint8_t {
 };
 struct CureFacts {
     uint16_t cost[kCures];            // gold
-    uint8_t  blinded, disease[6], feeblemind, poisoned, slow_poison, poison_damage, animate_dead, curse;
+    uint8_t  blinded, disease[8], feeblemind, poisoned, slow_poison, poison_damage, animate_dead, curse;
     // Cause Disease's course (combat.h SpellFx): the disease, weakness, sickness; helpless
     uint8_t  ill, weak, sick, helpless;
 };
@@ -279,6 +279,9 @@ void apply_cure(party::Character& c, Cure cure, const CureFacts& f, create::Dice
 // outside a fight the dying come round and the unconscious wake (able to
 // fight again). False if they can't be healed (dead, stoned ...).
 bool heal(party::Character& c, int amount);
+// An effect whose holders heal by none of rules::heal (the Dark Queen's 0xD7,
+// its heal routine's flag 0 - DQK.EXE 0x48F:0x25F7); 0 none. Set at a game's start
+void set_no_heal(uint8_t type);
 
 // ---- Appraising gems and jewellery (the games' tables; gold). Secret's
 // are Curse's halved (div 2: its gems 5 ... 2500, its jewels' ranges and

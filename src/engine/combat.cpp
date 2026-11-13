@@ -1738,7 +1738,7 @@ bool queen_regen(Battle& b, int i)
     int side = 0;
     for (int j = 0; j < b.n; ++j) side += b.f[j].team() && b.f[j].up() && b.f[j].size;
     const int st = f.status();
-    if (side == 0 || f.hp() >= f.hp_max() || hasx(f, b.fx->mon.rot_clock) ||
+    if (side == 0 || f.hp() >= f.hp_max() ||
         !(st == party::Okay || st == party::Animated || st == party::Unconscious || st == party::Dying))
         return false;
     f.rec[kHp] = static_cast<uint8_t>(f.hp() + 1);
@@ -4951,6 +4951,9 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
             const int st2 = f.status();
             if (st2 != party::Okay && st2 != party::Animated && st2 != party::Unconscious && st2 != party::Dying) continue;
             const int amount = (fs.n && fs.sides ? d.roll(fs.sides, fs.n) : 0) + fs.plus;
+            // (the Dark Queen's mummy rot clock 0xD7: no healing - its heal
+            // routine 0x48F:0x25F7 with the cure spells' flag 0; dice rolled)
+            if (b.fx && b.fx->q.no_heal && hasx(f, b.fx->q.no_heal)) continue;
             int hp = f.hp() + amount;
             if (hp > f.hp_max()) hp = f.hp_max();
             f.rec[kHp] = static_cast<uint8_t>(hp);
