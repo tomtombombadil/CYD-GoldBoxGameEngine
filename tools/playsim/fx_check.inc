@@ -102,7 +102,7 @@ void hook(play::FxEv ev, uint32_t wait, int n)
         if (!said && p.lines > 0) {
             std::string line;
             for (int k = 0; k < p.lines; ++k) line += std::string(fg->ptext + p.line_at[k]) + " / ";
-            snprintf(t, sizeof t, "a page of names only (an empty word? made at %p, base %p): %s", play::g_test_empty_at, (void*)&fx_hook_base_mark, line.c_str());
+            snprintf(t, sizeof t, "a page of names only (an empty word? made at %p, base %p, Ev %d): %s", play::g_test_empty_at, (void*)&fx_hook_base_mark, play::g_test_ev, line.c_str());
             bad("E1", t);
         }
     }

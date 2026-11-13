@@ -6773,6 +6773,7 @@ static int turn_undead_dk(Battle& b, const Tables& t, int cleric, create::Dice& 
         } else {
             f.rec[kHealth] = party::Gone;
             f.rec[kInCombat] = 0;
+            if (f.size) f.down_size = f.size;   // (its skull on every square it stood on)
             f.size = 0;
             occupancy(b);
             out[n++] = best + 1000;
@@ -6825,6 +6826,7 @@ static int turn_undead_ck(Battle& b, const Tables& t, int cleric, create::Dice& 
         } else {
             f.rec[kHealth] = party::Gone;
             f.rec[kInCombat] = 0;
+            if (f.size) f.down_size = f.size;   // (its skull on every square it stood on)
             f.size = 0;
             occupancy(b);
             out[n++] = best + 1000;
@@ -6900,6 +6902,7 @@ int turn_undead(Battle& b, const Tables& t, int cleric, create::Dice& d, int* ou
         } else {
             f.rec[kHealth] = party::Gone;
             f.rec[kInCombat] = 0;
+            if (f.size) f.down_size = f.size;   // (its skull on every square it stood on)
             f.size = 0;
             occupancy(b);
             out[n++] = best + 1000;

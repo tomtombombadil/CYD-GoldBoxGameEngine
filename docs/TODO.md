@@ -1739,8 +1739,11 @@ the Project as claude/TODO.md.
       page, as its program says nothing): Secret's "is silenced", Darkness's
       / the Queen's stinking-cloud line, the Krynn DAX games' "ages"
       (profile::duel_word's kMore list; FXCHECK fuzz of all nine clean of E1).
-- [ ] Darkness FXCHECK fuzz (seeds 32 / 33): F1 breaks (the skull / field /
-      sweep order) - not looked at yet.
+      v0.196.33: "is weakened" (Cause Disease's weakness) in Darkness
+      (0x2C55B), Champions (0x12045), Death Knights (image 0xDD6B) and
+      Treasures (0x35713) - Secret has none: no page.
+- [x] Darkness FXCHECK fuzz (seeds 32 / 33): F1 - a big undead destroyed by
+      Turn Undead kept no down_size, its skull on one square (v0.196.33).
 - [x] Queen fuzz (QAALL=1, seeds 12 / 13, 60 fights; there before v0.196.26):
       R10 against the heads (MONCHA 65 / 71 - AC -10 / -11, moves 2) and
       a lone Quick archer needing a natural 20 (need 35 at +11): 60 rounds

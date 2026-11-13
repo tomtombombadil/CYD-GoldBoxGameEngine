@@ -4412,6 +4412,11 @@ uint32_t duel_word(const Profile& p, int word)
         {games::Game::SecretOfTheSilverBlades, kIsParalyzedC, 0x10CCB},
         // Death Knights: its lightning breath's "breathes " alone (GAME.OVR 0x2ED06)
         {games::Game::DeathKnightsOfKrynn, kBreathesB, kP | 0xDFB8},
+        // Cause Disease's weakness at its time (combat tick): "is weakened"
+        {games::Game::PoolsOfDarkness, kIsWeakened, 0x2C55B},
+        {games::Game::ChampionsOfKrynn, kIsWeakened, 0x12045},
+        {games::Game::DeathKnightsOfKrynn, kIsWeakened, kP | 0xDD6B},
+        {games::Game::TreasuresOfTheSavageFrontier, kIsWeakened, 0x35713},
     };
     for (const More& m : kMore)
         if (m.g == p.game && m.word == word) return m.at;

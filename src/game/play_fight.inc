@@ -3107,7 +3107,9 @@ void event_words(const combat::Event& e)
     case combat::Ev::Breathes: said(profile::kBreathesB); break;
     case combat::Ev::FearParalyzed: said(profile::kFearParalyzed); break;
     case combat::Ev::FearWeakened: said(profile::kFearWeakened); break;
-    case combat::Ev::Weakened: said(profile::kIsWeakened); break;
+    case combat::Ev::Weakened:
+        if (fw(profile::kIsWeakened)[0]) said(profile::kIsWeakened);       // (Secret's program has no such words)
+        break;
     case combat::Ev::Regenerates: said(profile::kRegeneratesGw); break;
     case combat::Ev::FallsDead: fallen(profile::kFallsDeadGw); break;
     case combat::Ev::Ages:
