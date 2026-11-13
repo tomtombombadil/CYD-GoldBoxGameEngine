@@ -1354,6 +1354,57 @@ constexpr TitleStep kPoolTitle[] = {
     {0, 0, 0, true, 10000, 0},
 };
 
+// Pool's fight facts (poolrad_combat_facts.md 2); then what the round 22
+// effects sweep found unnamed (its handlers, GAME.OVR - the same ids and
+// handlers as Gateway's, which is built on Pool's engine): 0x5D / 0x72 / 0x76
+// fire / electricity / cold half (0x111FD / 0x116C8 / 0x117BE), 0x6F no
+// poison or paralysis and their saves made (0x1164B), 0x73 edged half
+// (0x116E2), 0x74 a weapon of plus 1 or more half (0x11741 - the mummy), 0x75
+// holy water 1d6 + 1 (0x1177B), 0x78 boulders dodged (0x11823), 0x63 the
+// boar fighting on (0x1138B) and 0x5F its fall (0x1126B)
+constexpr combat::Facts kPoolFacts = [] {
+    combat::Facts f = {{0x33, 0x34, 0x35, 0x1F}, 0x01, 0x02, 0x31, 0x27, 0x2A, 0x19, 0x08, 0x09, 0x1C,
+                    {0x07, 0x08, 0x23, 0x24, 0x25, 0}, 0x0B, 0, 0x1E,
+                    {9, 21, 28, 31, 73, 0}, {2, 7, 20}, {85, 86}, {0, 0, 0},
+                    0x24, 0x25, 0, 0x15, 0, 0, 0, 0x21, 0, 0,
+                    {0x40, 0x46, 0x43, 0, 0, 0x4F, 0x50, 0, 0, 0, {0, 0, 0},
+                     0, 0x77, 0, 0, 0, 0x29, 0x68,
+                     0x70, 0x6E, 0x5B, 0, 0, 0x71, 0x0A, 0x14, 0,
+                     0x69, 0x6A, 0, 0, 0x6B, 0x6C, 0x6D, 0x7D,
+                     0x65, 0x3B, 0x62, 0x64, 0x66,
+                     0, 0x18, 0x2D,
+                     0, 0, 0, 0, 0, 0x79, 0x53, 0x7F, 0,
+                     0, 0x3A, 0, 0, 0x34, 0x37, 0x35,
+                     0x76, 0, {0, 0, 0},
+                     // Pool's own (poolrad_combat_facts.md 4): drains, the mummy's disease, paralysis,
+                     // the stirge, the mantis, the tiger; silver, oil; the vampire's gaze, the
+                     // dragon's breath, the vampire's escape; the fear auras; its magic resistance
+                     0x55, 0x56, 0x57, 0x32, 0x39, 0x44, 0x45,
+                     0x4C, 0x4B, 0x4D, 0x4A, 0x49,
+                     0x60, 0x7B, 0xB1, 0x7A, 0x56,
+                     0x54, 0x58, 0x67,
+                     0x51, 0x52,
+                     1, 0x41, 0x42},
+                    {0x0C, 0, 0, 0, 0, 0, 0, 0, 0x16, 0x0F, 0x17, 0x20, 0x3E, 0, 0x11, 0x1D, 0x22, 0x2B, 0x2C},
+                    {0x61, 0x7C, 0x1A, 0x12, 0x2F, 0x30, 0},
+                    {0x06, 0, 0, 0x59, 0x38, 0, 0x03, 0x48},
+                    0, true, 0x32, true, true};
+    f.mon.half_fire = 0x5D;
+    f.mon.half_elec = 0x72;
+    f.mon.half_cold = 0x76;
+    f.mon.no_poison = 0x6F;
+    f.q.magic_half = 0x74;
+    f.gw.half_edged = 0x73;
+    f.gw.holy = 0x75;
+    f.gw.holy_water = 0x55;
+    f.gw.boulder_dodge = 0x78;
+    f.gw.boulder[0] = 0x57;
+    f.gw.boulder[1] = 0x58;
+    f.gw.fights_on = 0x63;
+    f.gw.falls_dead = 0x5F;
+    return f;
+}();
+
 constexpr ecl::OpSet kPoolEcl = [] {
     ecl::OpSet s = kCurseEcl;
     for (int i = 0x3E; i < 0x41; ++i) s.sizes[i] = ecl::kUnknown;
@@ -1691,6 +1742,7 @@ constexpr combat::Facts kGatewayFacts = [] {
        0x4D};                                           // berserk (the Berserker sword's)
     f.mon.no_poison = 0x6F;             // the mummy's: poison and paralysis (their saves made)
     f.mon.no_breath = 0x49;             // the fire giant's: dragon breath "is unaffected"
+    f.mon.half_fire = 0x5D;             // fire half (GAME.OVR 0x13F81 - the round 22 effects sweep)
     combat::Facts::GateFx& g = f.gw;
     g.ways = true;
     g.stirge = 0x95;
@@ -2723,32 +2775,7 @@ const Profile kProfiles[] = {
                 0x10D4A, 0x10D42, 0x10D3A, 0x10D56, 0x1103B, 0x103B9, 0x10583, 0x161C4, 0x10ABE, 0x10AC7,
                 0x2A0E7, 0x11500, 0x106DA, 0x106F1, 0xFFDD, 0xFFE5, 0xFEC3, 0xFECB},
                {},                                       // (no list of effects a fight's end takes away)
-               {{0x33, 0x34, 0x35, 0x1F}, 0x01, 0x02, 0x31, 0x27, 0x2A, 0x19, 0x08, 0x09, 0x1C,
-                {0x07, 0x08, 0x23, 0x24, 0x25, 0}, 0x0B, 0, 0x1E,
-                {9, 21, 28, 31, 73, 0}, {2, 7, 20}, {85, 86}, {0, 0, 0},
-                0x24, 0x25, 0, 0x15, 0, 0, 0, 0x21, 0, 0,
-                {0x40, 0x46, 0x43, 0, 0, 0x4F, 0x50, 0, 0, 0, {0, 0, 0},
-                 0, 0x77, 0, 0, 0, 0x29, 0x68,
-                 0x70, 0x6E, 0x5B, 0, 0, 0x71, 0x0A, 0x14, 0,
-                 0x69, 0x6A, 0, 0, 0x6B, 0x6C, 0x6D, 0x7D,
-                 0x65, 0x3B, 0x62, 0x64, 0x66,
-                 0, 0x18, 0x2D,
-                 0, 0, 0, 0, 0, 0x79, 0x53, 0x7F, 0,
-                 0, 0x3A, 0, 0, 0x34, 0x37, 0x35,
-                 0x76, 0, {0, 0, 0},
-                 // Pool's own (poolrad_combat_facts.md 4): drains, the mummy's disease, paralysis,
-                 // the stirge, the mantis, the tiger; silver, oil; the vampire's gaze, the
-                 // dragon's breath, the vampire's escape; the fear auras; its magic resistance
-                 0x55, 0x56, 0x57, 0x32, 0x39, 0x44, 0x45,
-                 0x4C, 0x4B, 0x4D, 0x4A, 0x49,
-                 0x60, 0x7B, 0xB1, 0x7A, 0x56,
-                 0x54, 0x58, 0x67,
-                 0x51, 0x52,
-                 1, 0x41, 0x42},
-                {0x0C, 0, 0, 0, 0, 0, 0, 0, 0x16, 0x0F, 0x17, 0x20, 0x3E, 0, 0x11, 0x1D, 0x22, 0x2B, 0x2C},
-                {0x61, 0x7C, 0x1A, 0x12, 0x2F, 0x30, 0},
-                {0x06, 0, 0, 0x59, 0x38, 0, 0x03, 0x48},
-                0, true, 0x32, true, true},
+               kPoolFacts,
                kPoolFight, sizeof kPoolFight / sizeof kPoolFight[0]},
      .script_words = {0x2C1A, 0x2C2B, 0x9554, 0x955C, 0x9569, 0x347C},
      .random_items = &kPoolRandom, .random_rows = 0x0972,
@@ -4442,6 +4469,8 @@ uint32_t duel_word(const Profile& p, int word)
         {games::Game::ChampionsOfKrynn, kIsCharmedG, 0x31EF3},
         {games::Game::ChampionsOfKrynn, kBreathesB, 0x32698},
         {games::Game::ChampionsOfKrynn, kBreathesAcid, 0x32E24},
+        // PoolRad: its boar's "Falls dead" (0x5F's handler, GAME.OVR 0x1126B)
+        {games::Game::PoolOfRadiance, kFallsDeadGw, 0x11260},
         // Secret: the paralysing bite's "paralyzed by poison" (GAME.OVR 0x10CDF's)
         {games::Game::SecretOfTheSilverBlades, kIsParalyzedC, 0x10CCB},
         // Death Knights: its lightning breath's "breathes " alone (GAME.OVR 0x2ED06)

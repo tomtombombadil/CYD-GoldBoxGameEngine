@@ -1091,6 +1091,43 @@ void queen_mound()
            bad == 0, "%d of %d wrong", bad, n);
 }
 
+// PoolRad's halving effects (the round 22 effects sweep, GAME.OVR's
+// handlers): 0x5D fire, 0x72 electricity, 0x76 cold halved; 0x6F poison
+// proof. Gateway's 0x5D the same (GAME.OVR 0x13F81).
+void pool_halves()
+{
+    if ((game() != 1 && game() != 8) || !fight() || !fg->b.fx || !fg->b.fx->mon.half_fire) return;
+    combat::Battle& b = fg->b;
+    const auto& m = b.fx->mon;
+    int bad = 0, n = 0;
+    auto chk = [&](bool ok, const char* what) {
+        ++n;
+        if (!ok && !bad++) printf("  (halves: %s)\n", what);
+    };
+    struct Row { uint8_t t; int kind; const char* what; };
+    const Row rows[] = {{m.half_fire, 1, "fire"}, {m.half_elec, 4, "electricity"}, {m.half_cold, 2, "cold"}};
+    for (const Row& r : rows) {
+        if (!r.t) continue;
+        for (int other = 0; other < 2; ++other) {
+            for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+            mx::put(0, 0, 10, 10, 200);
+            mx::put(B, 1, 11, 10, 200);
+            mx::add_aff(B, r.t);
+            create::Dice dd(7);
+            combat::Harm h;
+            h.kind = other ? (r.kind == 1 ? 2 : 1) : r.kind;
+            h.spell = 1;
+            bool down = false;
+            const int got = combat::harm(b, B, 20, h, dd, &down);
+            char w[64];
+            snprintf(w, sizeof w, "%s: %s", r.what, other ? "other kinds whole" : "20 -> 10");
+            chk(got == (other ? 20 : 10), w);
+        }
+    }
+    expect(P, "PoolRad / Gateway halving effects: fire 0x5D, electricity 0x72, cold 0x76 - GAME.OVR's handlers",
+           bad == 0, "%d of %d wrong", bad, n);
+}
+
 // The Dark Queen's breaths (0x54A51: 0xB4 death, 0xCA paralysis / cold,
 // 0x55 cold, 0x53 the big fire) and its troll's regeneration (0x51A3A)
 void queen_breath()
@@ -4698,6 +4735,7 @@ void run()
     if (want("qpudding")) queen_pudding();
     if (want("qspore")) queen_spore();
     if (want("qmound")) queen_mound();
+    if (want("halves")) pool_halves();
     if (want("qbreath")) queen_breath();
     if (want("qsweep22")) queen_sweep22();
     if (want("qhooks")) queen_hooks();

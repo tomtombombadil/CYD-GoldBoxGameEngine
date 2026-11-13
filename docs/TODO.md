@@ -1749,7 +1749,15 @@ the Project as claude/TODO.md.
       0xC3 (0x527D9, set-up), 0xC5 (0x52426), 0xC6 / 0xD1 (event 0xE),
       0xC7 / 0xCE / 0xD0 / 0xD3 / 0xD4 (on-hit), 0xC9 (attacker's damage);
       0x84 on the first attack only (the engine's kreen bite). The other
-      eight games: not swept yet.
+      eight games swept (v0.196.36): Secret none; PoolRad's mapped from
+      GAME.OVR's handlers (tools/devkit/tools/fxtab.py, table DS 0x682C):
+      0x5D fire / 0x72 electricity / 0x76 cold halved, 0x6F poison proof,
+      0x73 edged half, 0x74 magic weapons half, 0x75 holy water 1d6+1,
+      0x78 boulders dodged, 0x63 / 0x5F the boar fighting on; Gateway's
+      0x5D fire half (0x13F81) - rules4 `halves`. Left: PoolRad 0x7E (the
+      vampire's mirror), Curse 0x7E, Darkness 0x2E, Champions 0x4F / 0x53 /
+      0x60, Death Knights 18 (0x41-0x63), Treasures 29 (0x29, 0x5E,
+      0x80-0x9B).
 - [x] Empty fight words (v0.196.32, fx_check's new E1: a page of the names
       alone): Champions' turn effects (runs away, is confused, goes berserk,
       is enraged - GAME.OVR 0x11936 on), "is Paralyzed" (0x10BE8), "Avoids

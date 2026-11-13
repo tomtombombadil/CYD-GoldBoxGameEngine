@@ -3449,6 +3449,9 @@ int harm(Battle& b, int c, int amount, const Harm& h, create::Dice& d, bool* dow
         // none, for a spell that can be saved against - 0x516FC)
         // (the round 22 sweep's: cold double / a fifth more, fire four fifths,
         // magic fire healing - events 6)
+        if ((h.kind & 1) && hasx(f, m.half_fire)) dmg /= 2;
+        if ((h.kind & 4) && hasx(f, m.half_elec)) dmg /= 2;
+        if ((h.kind & 2) && hasx(f, m.half_cold)) dmg /= 2;
         if ((h.kind & 2) && hasx(f, b.fx->q.cold_x2)) dmg *= 2;
         if ((h.kind & 2) && hasx(f, b.fx->q.cold_more)) dmg += dmg / 5;
         if ((h.kind & 1) && hasx(f, b.fx->q.fire_less)) dmg = dmg / 5 * 4;

@@ -361,6 +361,9 @@ struct MonFx {
     uint8_t death_breath = 0, para_breath = 0;
     // its 0xCC: the poison breath's handler (0x5466F) with "breathes steam"
     uint8_t steam_breath = 0;
+    // A spell's / element's damage halved by its kind (PoolRad's 0x5D fire,
+    // 0x72 electricity, 0x76 cold - Gateway's 0x5D; events of group 6)
+    uint8_t half_fire = 0, half_elec = 0, half_cold = 0;
 };
 
 // More spells' effects (spell_facts.md 2): Enlarge, Confusion (and going
