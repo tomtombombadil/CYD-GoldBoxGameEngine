@@ -1091,6 +1091,98 @@ void queen_mound()
            bad == 0, "%d of %d wrong", bad, n);
 }
 
+// The stench (Champions' ghast 0x4F GAME.OVR 0x13747, the Dark Queen's 0x89
+// DQK.EXE 0x50221): "emits an evil stench"; each foe within a square a save
+// against spells or "is affected" - the -2 to hit (Champions 0x76, the
+// Queen 0x94) on the holder (the originals), on the one affected with Game
+// Fixes; the far foe and its own side untouched
+void stench()
+{
+    if (!fight() || !fg->b.fx || !fg->b.fx->mon.stench) return;
+    combat::Battle& b = fg->b;
+    const auto& m = b.fx->mon;
+    int bad = 0, n = 0;
+    auto chk = [&](bool ok, const char* what) {
+        ++n;
+        if (!ok && !bad++) printf("  (stench: %s)\n", what);
+    };
+    const bool was = rules::fixes();
+    for (int fix = 0; fix < 2; ++fix) {
+        rules::set_fixes(fix != 0);
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        const int A = b.party_size > 1 ? 1 : 0;
+        mx::put(0, 0, 10, 10, 50);
+        if (A) mx::put(A, 0, 11, 11, 50);
+        if (A) F(A).size = 1;
+        mx::put(B, 1, 11, 10, 50);
+        mx::add_aff(B, m.stench);
+        create::g_die_hook = [](int nn) { return nn == 20 ? 2 : -1; };
+        create::Dice dd(3);
+        combat::Event ev[16];
+        bool ends = false;
+        const int k = combat::special(b, fg->t, B, dd, ev, 16, &ends);
+        create::g_die_hook = nullptr;
+        int emits = 0, aff = 0;
+        for (int j = 0; j < k; ++j) {
+            emits += ev[j].ev == combat::Ev::EmitsStench;
+            aff += ev[j].ev == combat::Ev::StenchAffected;
+        }
+        chk(emits == 1, "emits an evil stench");
+        chk(aff == (A ? 2 : 1), "each foe next to it affected");
+        if (fix) chk(F(0).has(m.stenched) && !F(B).has(m.stenched), "Game Fixes: the one affected gets the -2");
+        else chk(F(B).has(m.stenched) && !F(0).has(m.stenched), "the original: its holder gets the -2");
+        // a far foe isn't
+        for (int kk = 0; kk < b.n; ++kk) b.f[kk].size = 0;
+        mx::put(0, 0, 10, 10, 50);
+        mx::put(B, 1, 13, 10, 50);
+        mx::add_aff(B, m.stench);
+        create::g_die_hook = [](int nn) { return nn == 20 ? 2 : -1; };
+        const int k2 = combat::special(b, fg->t, B, dd, ev, 16, &ends);
+        create::g_die_hook = nullptr;
+        int aff2 = 0;
+        for (int j = 0; j < k2; ++j) aff2 += ev[j].ev == combat::Ev::StenchAffected;
+        chk(aff2 == 0, "a foe 3 squares off untouched");
+    }
+    rules::set_fixes(was);
+    expect(P, "the stench: Champions' ghast 0x4F (GAME.OVR 0x13747), the Dark Queen's 0x89 (DQK.EXE 0x50221)",
+           bad == 0, "%d of %d wrong", bad, n);
+}
+
+// Champions' breaths (GAME.OVR 0x33079: fire 0x68, cold 0x53): the path
+// checked - one of its own side on it, no breath
+void champ_breath()
+{
+    if (game() != 5 || !fight() || !fg->b.fx || !fg->b.fx->mon.breath_check) return;
+    combat::Battle& b = fg->b;
+    const auto& m = b.fx->mon;
+    int bad = 0, n = 0;
+    auto chk = [&](bool ok, const char* what) {
+        ++n;
+        if (!ok && !bad++) printf("  (breath: %s)\n", what);
+    };
+    for (uint8_t ty : {m.fire_breath, m.cold_breath}) {
+        for (int friend_in = 0; friend_in < 2; ++friend_in) {
+            for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+            mx::put(0, 0, 10, 10, 250);
+            mx::put(B, 1, 14, 10, 40);
+            mx::add_aff(B, ty);
+            if (friend_in && B + 1 < b.n) mx::put(B + 1, 1, 12, 10, 40);
+            create::Dice dd(5);
+            combat::Event ev[16];
+            bool ends = false;
+            const int k = combat::special(b, fg->t, B, dd, ev, 16, &ends);
+            bool said = false;
+            for (int j = 0; j < k; ++j)
+                said |= ev[j].ev == combat::Ev::BreathesFire || ev[j].ev == combat::Ev::BreathesCold;
+            const int lost = 250 - F(0).hp();
+            if (friend_in && B + 1 < b.n) chk(!said && lost == 0, "its own side on the path: no breath");
+            else if (!friend_in) chk(said && (lost == 40 || lost == 20) && ends, "a breath: its hit points or half");
+        }
+    }
+    expect(P, "Champions' breaths: fire 0x68 / cold 0x53, the path checked (GAME.OVR 0x33079)",
+           bad == 0, "%d of %d wrong", bad, n);
+}
+
 // PoolRad's halving effects (the round 22 effects sweep, GAME.OVR's
 // handlers): 0x5D fire, 0x72 electricity, 0x76 cold halved; 0x6F poison
 // proof. Gateway's 0x5D the same (GAME.OVR 0x13F81).
@@ -1123,6 +1215,31 @@ void pool_halves()
             snprintf(w, sizeof w, "%s: %s", r.what, other ? "other kinds whole" : "20 -> 10");
             chk(got == (other ? 20 : 10), w);
         }
+    }
+    // the vampire (0x7E) shuns a readied mirror / word 0x98 + 0xFC
+    if (m.shuns) {
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(0, 0, 10, 10, 200);
+        mx::put(B, 1, 11, 10, 200);
+        mx::add_aff(B, m.shuns);
+        static uint8_t mir[1][items::kRecordSize];
+        combat::Fighter& tg = F(0);
+        uint8_t (*keep)[items::kRecordSize] = tg.items;
+        const int kn = tg.n_items;
+        tg.items = mir;
+        tg.n_items = 1;
+        const uint8_t rows[][5] = {{0x76, 0, 0, 1, 1}, {0x76, 0, 0, 0, 0}, {0x98, 0, 0xFC, 1, 1}, {0x98, 0, 0x10, 1, 0}, {0x10, 0, 0, 1, 0}};
+        for (const auto& r : rows) {
+            memset(mir[0], 0, sizeof mir[0]);
+            mir[0][0x2F] = r[0];
+            mir[0][0x30] = r[1];
+            mir[0][0x31] = r[2];
+            mir[0][0x34] = r[3];
+            chk(combat::hidden(b, B, 0) == (r[4] != 0), "the vampire shuns a readied mirror / 0x98 + 0xFC only");
+        }
+        chk(!combat::hidden(b, 0, B), "shunning is the vampire's own");
+        tg.items = keep;
+        tg.n_items = kn;
     }
     expect(P, "PoolRad / Gateway halving effects: fire 0x5D, electricity 0x72, cold 0x76 - GAME.OVR's handlers",
            bad == 0, "%d of %d wrong", bad, n);
@@ -4736,6 +4853,8 @@ void run()
     if (want("qspore")) queen_spore();
     if (want("qmound")) queen_mound();
     if (want("halves")) pool_halves();
+    if (want("stench")) stench();
+    if (want("cbreath")) champ_breath();
     if (want("qbreath")) queen_breath();
     if (want("qsweep22")) queen_sweep22();
     if (want("qhooks")) queen_hooks();

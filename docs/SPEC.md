@@ -3126,12 +3126,20 @@ the game's Settings (As Original: all of them).
   byte compared unsigned, so a total below 0 wraps round to a save made -
   a 2 rolled with -4 (blinded, a bestowed curse) saves. With Game Fixes
   on a total below 0 is a save failed (`combat::saving_throw`).
+- **The stench** (Game Fixes; Champions' ghast 0x4F, the Dark Queen's 0x89,
+  the effects sweep 2026-11-13): both originals give the -2 to hit
+  (Champions 0x76, the Queen 0x94) to the stench's holder each time a foe
+  fails its save - the ghast fights worse, its victims not at all. With
+  Game Fixes on the one affected gets it, as AD&D's ghast
+  (`combat::special`).
 - **Protection from Evil / Good against blows** (Game Fixes, every game;
   the rule tests, 2026-11-01): the originals work the spell's -2 to hit
   out before the attack roll and then drop it - only its +2 to the saves
   counts. With Game Fixes on an evil (good) attacker is -2 to hit one
   warded (the spell, or next to a 10' radius one), as AD&D's spell says
-  (`combat::attack`).
+  (`combat::attack`); the 10' radius one's +2 to the saves of those next
+  to it also only with Game Fixes (the originals' 10' radius effect, 0x2D,
+  runs 0x08's handler - its holder's alone; Darkness's 0x2E is 0x09's).
 - **Saving throws worse at a higher level** (Game Fixes; the level rule
   tests, 2026-11-01): the originals' save tables have rows worse than the
   level before - the paladin's 8th level poison 9 after 8 at 7th (Curse,

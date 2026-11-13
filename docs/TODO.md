@@ -1754,10 +1754,25 @@ the Project as claude/TODO.md.
       0x5D fire / 0x72 electricity / 0x76 cold halved, 0x6F poison proof,
       0x73 edged half, 0x74 magic weapons half, 0x75 holy water 1d6+1,
       0x78 boulders dodged, 0x63 / 0x5F the boar fighting on; Gateway's
-      0x5D fire half (0x13F81) - rules4 `halves`. Left: PoolRad 0x7E (the
-      vampire's mirror), Curse 0x7E, Darkness 0x2E, Champions 0x4F / 0x53 /
-      0x60, Death Knights 18 (0x41-0x63), Treasures 29 (0x29, 0x5E,
-      0x80-0x9B).
+      0x5D fire half (0x13F81) - rules4 `halves`. v0.196.37: PoolRad 0x7E
+      the vampire never targets one with a readied mirror (word 0x76) or
+      word 0x98 + 0xFC (0x11A92 in the may-target test 0x13880); Curse 0x7E
+      inert (the dracolich gaze never finds a target - monster_fx_facts);
+      Darkness 0x2E = Protection from Good (0x09's handler); Champions 0x60
+      charm / sleep proof, 0x61 paralysis proof, 0x53 the white dragon's
+      cold breath and its breaths' path check (0x33079: one of its side on
+      it - no breath), 0x4F the ghast's stench (0x13747) and the Queen's
+      0x89 (0x50221): "emits an evil stench", a save against spells or "is
+      affected" - the -2 to hit put on the HOLDER by both originals (their
+      mistake; Game Fixes: on the one affected - SPEC 12). The 10' radius
+      Protection from Evil's +2 to the saves of those next to it now only
+      with Game Fixes (the originals' 0x2D runs 0x08's handler - its
+      holder's). E1 (FX fuzz): Champions' "gets zapped", "lost an image",
+      "Gains an item"; "stands up and grins" / "gets back up" said only
+      where the program has them (not the Krynn games). Left: Death
+      Knights 18 (0x41-0x63), Treasures 29 (0x29, 0x5E, 0x80-0x9B), the
+      Queen's 0x75, 0x85, 0xC3, 0xC5, 0xC6, 0xD1, 0xC7, 0xCE, 0xD0, 0xD3,
+      0xD4, 0xC9.
 - [x] Empty fight words (v0.196.32, fx_check's new E1: a page of the names
       alone): Champions' turn effects (runs away, is confused, goes berserk,
       is enraged - GAME.OVR 0x11936 on), "is Paralyzed" (0x10BE8), "Avoids

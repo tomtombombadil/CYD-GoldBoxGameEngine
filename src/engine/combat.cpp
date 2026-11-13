@@ -1099,6 +1099,13 @@ bool hidden(const Battle& b, int viewer, int target)
     if (b.fx->animals_blind && viewer >= 0 && viewer < b.n && b.f[viewer].rec[0x11A] == 19 &&
         t.has(b.fx->animals_blind) && !sees)
         return true;
+    if (b.fx->mon.shuns && viewer >= 0 && viewer < b.n && hasx(b.f[viewer], b.fx->mon.shuns))
+        for (int k = 0; t.items && k < t.n_items; ++k) {
+            const uint8_t* it = t.items[k];
+            if (!it[0x34]) continue;
+            for (int w = 0x2F; w <= 0x31; ++w)
+                if (it[w] == 0x76 || (it[w] == 0x98 && it[0x31] == 0xFC)) return true;
+        }
     if (!hasx(t, b.fx->invisible)) return false;
     return !sees;
 }
@@ -2689,6 +2696,7 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
         if (!qh) {
         if (at.has(fx.bless)) ++side;
         if (at.has(fx.curse)) --side;
+        if (fx.mon.stenched && at.has(fx.mon.stenched)) side -= 2;     // (the stench's: Champions' 0x76)
         // A prayer helps its caster's side and hinders the other
         for (int i = 0; i < b.n; ++i) {
             const int k = find_aff(b.f[i], fx.prayer);
@@ -2780,7 +2788,7 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
         if (rules::fixes()) {
             const int al = at.rec[0x11B];
             bool warded = false;
-            if ((al == 0 || al == 3 || al == 6) && hasx(tg, fx.prot_good)) warded = true;
+            if ((al == 0 || al == 3 || al == 6) && (hasx(tg, fx.prot_good) || hasx(tg, fx.mon.prot_good_too))) warded = true;
             if (!warded && (al == 2 || al == 5 || al == 8)) {
                 warded = hasx(tg, fx.prot_evil) || hasx(tg, fx.mon.prot_evil_near);
                 for (int k = 0; !warded && fx.mon.prot_evil_near && k < b.n; ++k) {
@@ -4571,10 +4579,12 @@ bool saving_throw(const Fighter& f, int type, int bonus, create::Dice& d)
         // Protection from evil / good: +2 when the one acting is evil / good
         if (g_b && g_actor >= 0 && g_actor < g_b->n) {
             const int al = g_b->f[g_actor].rec[0x11B];
-            if ((al == 0 || al == 3 || al == 6) && hasx(f, fx.prot_good)) bonus += 2;
+            if ((al == 0 || al == 3 || al == 6) && (hasx(f, fx.prot_good) || hasx(f, fx.mon.prot_good_too))) bonus += 2;
             if (al == 2 || al == 5 || al == 8) {
                 bool warded = hasx(f, fx.prot_evil) || hasx(f, fx.mon.prot_evil_near);
-                for (int c = 0; !warded && fx.mon.prot_evil_near && c < g_b->n; ++c) {
+                // (next to a 10' radius one: Game Fixes - the originals' 0x2D is the
+                // holder's own, the handler of 0x08: Curse GAME.OVR 0x1010B, Darkness 0x1ACC0)
+                for (int c = 0; !warded && fx.mon.prot_evil_near && rules::fixes() && c < g_b->n; ++c) {
                     const Fighter& o = g_b->f[c];
                     if (&o == &f || !o.size || !f.size || !o.has(fx.mon.prot_evil_near)) continue;
                     const int ddx = o.x - f.x, ddy = o.y - f.y;
@@ -7752,6 +7762,25 @@ int special(Battle& b, const Tables& t, int i, create::Dice& d, Event* out, int 
         return false;
     };
 
+    // The stench (Champions' ghast, the Dark Queen's 0x89): every foe within
+    // a square saves against spells or is affected - the -2 to hit given to
+    // the stench's holder as the originals do, to the one affected with the
+    // Game Fixes
+    if (m.stench && hasx(f, m.stench)) {
+        ev(i, Ev::EmitsStench);
+        const bool fix = rules::fixes();
+        for (int c = 0; c < b.n; ++c) {
+            Fighter& v = b.f[c];
+            if (c == i || !v.size || !v.up() || v.team() == f.team()) continue;
+            const int ddx = v.x - f.x, ddy = v.y - f.y;
+            if (ddx < -1 || ddx > 1 || ddy < -1 || ddy > 1) continue;
+            if (saving_throw(v, 4, 0, d)) continue;
+            if (v.has(fix ? m.stenched : m.stench_skip)) continue;
+            ev(c, Ev::StenchAffected);
+            if (m.stenched) give_aff(fix ? v : f, m.stenched, 0, 0xFF, false);
+        }
+        if (!f.up()) return n;
+    }
     // The stone gaze (the hooded medusa): a save against petrification or
     // stoned; a readied mirror sends it back at the medusa
     if (hasx(f, m.stone_gaze)) {
@@ -7995,7 +8024,7 @@ int special(Battle& b, const Tables& t, int i, create::Dice& d, Event* out, int 
             const int k = cone(b, t, i, b.f[tg].x, b.f[tg].y, 9, 3, on, kMaxFighters);
             // (Secret's: none on its path, or one of its own side - no breath; GAME.OVR 0x328D5;
             // the Dark Queen's the same - 0x54C1F)
-            if (!(m.secret_ways || b.fx->q.hooks) || (k && !friend_on(on, k))) {
+            if (!(m.secret_ways || b.fx->q.hooks || m.breath_check) || (k && !friend_on(on, k))) {
                 ev(i, Ev::BreathesFire);
                 fly(i, b.f[tg].x, b.f[tg].y, 5, 1, 30);
                 Harm h = breath;
@@ -8100,7 +8129,7 @@ int special(Battle& b, const Tables& t, int i, create::Dice& d, Event* out, int 
             int on[kMaxFighters];
             const int k = cone(b, t, i, b.f[tg].x, b.f[tg].y, 7, 3, on, kMaxFighters);
             // (Secret's: none on its path, or one of its own side - no breath; GAME.OVR 0x328D5)
-            if (!(m.secret_ways || b.fx->q.hooks) || (k && !friend_on(on, k))) {
+            if (!(m.secret_ways || b.fx->q.hooks || m.breath_check) || (k && !friend_on(on, k))) {
                 ev(i, Ev::BreathesCold);
                 fly(i, b.f[tg].x, b.f[tg].y, 5, 1, 30);
                 Harm h = breath;

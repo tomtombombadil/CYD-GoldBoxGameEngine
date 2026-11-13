@@ -1390,6 +1390,7 @@ constexpr combat::Facts kPoolFacts = [] {
                     {0x06, 0, 0, 0x59, 0x38, 0, 0x03, 0x48},
                     0, true, 0x32, true, true};
     f.mon.half_fire = 0x5D;
+    f.mon.shuns = 0x7E;
     f.mon.half_elec = 0x72;
     f.mon.half_cold = 0x76;
     f.mon.no_poison = 0x6F;
@@ -2409,6 +2410,8 @@ constexpr auto kQueenFight = [] {
     f.words[kBreathesLightning] = qw(0x873A);
     f.words[kBreathesPoison] = qw(0x872A);
     f.words[kBreathesSteam] = qw(0x871B);
+    f.words[kEmitsStench] = qw(0x41FF);       // (the stench 0x89: 0x50221)
+    f.words[kStenchAffected] = qw(0x41F6);
     // (words its fights can say that the list had empty: the shambling
     // mound's "Suffocates" 0x84F2 - 0x518BD, Cause Disease's "is weakened"
     // 0x835E, "dies from poison" 0x8322, a sweep's "sweeps" 0x5D03)
@@ -2439,6 +2442,9 @@ constexpr auto kQueenFight = [] {
     // heals, electricity slows, nothing else harms; Globe of Invulnerability
     // 0x39 - 0x4E9A1; a gaze saved 0x7E - 0x4FFA7; 2d6 fire on a hit 0x6C -
     // 0x54289; the poison breath 0x5A and its steam 0xCC - 0x5466F)
+    f.facts.mon.stench = 0x89;          // (the stench: 0x50221 - its -2 to hit 0x94 = q.minus2, on the holder)
+    f.facts.mon.stenched = 0x94;
+    f.facts.mon.stench_skip = 0x76;
     f.facts.mon.missile_proof = 0x29;   // (a missile of plus 0 avoided - 0x4E6C2 with 0x4E5FE)
     f.facts.mon.need_plus3 = 0x3C;
     f.facts.mon.need_plus2 = 0x7D;
@@ -3183,11 +3189,12 @@ const Profile kProfiles[] = {
                 .bestow = 0x24, .blink = 0x25, .fumbling = 0x1B, .silence = 0x15, .entangle = 0, .sticks = 0x03,
                 .faerie = 0, .blinded = 0x21, .animals_blind = 0, .feeble = 0,
                 .mon = {.poison = 0x40, .kreen_bite = 0x45, .need_magic = 0x67, .no_cold = 0x62, .no_elec = 0x06,
-                        .globe = 0x3F, .elf_sleep = 0x5F, .detect = 0x18, .prot_evil_near = 0x2D,
+                        .globe = 0x3F, .elf_sleep = 0x5F, .charm_sleep = 0x60, .no_paralyze = 0x61, .detect = 0x18, .prot_evil_near = 0x2D,
                         .acid_breath = 0x5A, .fire_breath = 0x68,
                         .paralyzed = 0x34, .poisoned = 0x37, .sleep = 0x35,
-                        .ghoul = 0x58, .lightning_breath = 0x55, .poison_p4 = 0x41, .no_fear = 0x5C,
-                        .explode = 0x44, .stone_death = 0x43, .acid_pool = 0x46},
+                        .ghoul = 0x58, .lightning_breath = 0x55, .poison_p4 = 0x41, .cold_breath = 0x53, .no_fear = 0x5C,
+                        .explode = 0x44, .stone_death = 0x43, .acid_pool = 0x46,
+                        .stench = 0x4F, .stenched = 0x76, .stench_skip = 0x76, .breath_check = true},
                 .sp = {.enlarge = 0x0C, .confuse = 0x23, .berserk = 0x4D, .evil_ward = 0x04, .hot = 0x32,
                        .cold = 0x36, .zap = 0x70, .slow_poison = 0x16, .poison_damage = 0x0F, .hammer = 0x17,
                        .con_regen = 0x3E, .shield = 0x11, .enfeeble = 0x1D, .ill = 0x22, .weak = 0x2B, .sick = 0x2C,
@@ -3710,7 +3717,8 @@ const Profile kProfiles[] = {
                         // its blows' rules (F10)
                         .need_plus1 = 0x67, .need_plus2 = 0x7D, .half_under3 = 0x50, .half_under4 = 0x51,
                         .half_pierce = 0x42, .half_crush = 0x43, .ward8 = 0x28, .plus_hd = true,
-                        .fire2d6_hit = 0x79, .fire4d6_2 = 0x68, .fire2d6_2 = 0x6C, .dk_ways = true},
+                        .fire2d6_hit = 0x79, .fire4d6_2 = 0x68, .fire2d6_2 = 0x6C, .dk_ways = true,
+                        .prot_good_too = 0x2E},
                 .sp = {.enlarge = 0x0C, .confuse = 0x23, .berserk = 0x4D, .evil_ward = 0x04, .evil_bane = 0x20,
                        .hot = 0x32, .cold = 0x36, .zap = 0x70, .slow_poison = 0x16, .poison_damage = 0x0F,
                        .hammer = 0x17, .animated = 0, .con_regen = 0x3E, .giant = 0x71, .shield = 0x11,
@@ -4469,6 +4477,13 @@ uint32_t duel_word(const Profile& p, int word)
         {games::Game::ChampionsOfKrynn, kIsCharmedG, 0x31EF3},
         {games::Game::ChampionsOfKrynn, kBreathesB, 0x32698},
         {games::Game::ChampionsOfKrynn, kBreathesAcid, 0x32E24},
+        {games::Game::ChampionsOfKrynn, kEmitsStench, 0x13726},     // (the ghast's stench 0x4F: 0x13747)
+        {games::Game::ChampionsOfKrynn, kStenchAffected, 0x1373B},
+        // (Champions' fire shield 0x70 "gets zapped" 0x142C9, Mirror Image's
+        // "lost an image", Spiritual Hammer's "Gains an item" - E1)
+        {games::Game::ChampionsOfKrynn, kGetsZapped, 0x142BD},
+        {games::Game::ChampionsOfKrynn, kLostImage, 0x11609},
+        {games::Game::ChampionsOfKrynn, kGainsItem, 0x1138F},
         // PoolRad: its boar's "Falls dead" (0x5F's handler, GAME.OVR 0x1126B)
         {games::Game::PoolOfRadiance, kFallsDeadGw, 0x11260},
         // Secret: the paralysing bite's "paralyzed by poison" (GAME.OVR 0x10CDF's)

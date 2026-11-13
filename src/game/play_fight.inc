@@ -2888,6 +2888,7 @@ void event_page(const combat::Event& e)
 }
 #ifdef CYD_TEST_HOOKS
 int g_test_ev = -1;                     // (tests: the event whose words came last - fx_check's E1)
+int g_test_word = -1;                   // (tests: the fight word said() said last)
 #endif
 void event_words(const combat::Event& e)
 {
@@ -2896,7 +2897,12 @@ void event_words(const combat::Event& e)
 #endif
     char t[48];
     const int who = e.who;
-    auto said = [&](int word) { add_page(who, fw(word)); };
+    auto said = [&](int word) {
+#ifdef CYD_TEST_HOOKS
+        g_test_word = word;
+#endif
+        add_page(who, fw(word));
+    };
     auto fallen = [&](int word) {
         add_page(who, fw(word));
         page_fx_set(1, skull_fx(who));
@@ -2935,6 +2941,8 @@ void event_words(const combat::Event& e)
         break;
     case combat::Ev::BreathesDeath: add_page(who, d->w_qbreath[3]); break;
     case combat::Ev::BreathesSteam: said(profile::kBreathesSteam); break;
+    case combat::Ev::EmitsStench: said(profile::kEmitsStench); break;
+    case combat::Ev::StenchAffected: said(profile::kStenchAffected); break;
     case combat::Ev::BreathesPara: add_page(who, d->w_qbreath[4]); break;
     case combat::Ev::HoundFire: said(profile::kBreathesFireH); break;
     case combat::Ev::ThrowsLightning: said(profile::kThrowsLightning); break;
@@ -3047,7 +3055,9 @@ void event_words(const combat::Event& e)
     }
     case combat::Ev::StandsUp:
     case combat::Ev::GetsUp: {
-        add_page(who, fw(e.ev == combat::Ev::StandsUp ? profile::kStandsUp : profile::kGetsBackUp));
+        const char* up = fw(e.ev == combat::Ev::StandsUp ? profile::kStandsUp : profile::kGetsBackUp);
+        if (!up[0]) break;              // (no such words in the program: nothing said)
+        add_page(who, up);
         Fx r;
         r.kind = Fx::Redraw;
         page_fx_set(1, r);
@@ -6441,7 +6451,10 @@ void spell_pages(int caster, const combat::SpellLine* l, int n, const combat::Fi
             break;
         case combat::Did::Risen: {
             // Back on its feet: "gets back up" (the party's side) / "stands up and grins"
-            add_page(l[k].who, fw(f.team() ? profile::kStandsUp : profile::kGetsBackUp));
+            // (the Krynn games have no such words: nothing said - the E1 check)
+            const char* up = fw(f.team() ? profile::kStandsUp : profile::kGetsBackUp);
+            if (!up[0]) break;
+            add_page(l[k].who, up);
             Fx r;
             r.kind = Fx::Redraw;
             page_fx_set(1, r);

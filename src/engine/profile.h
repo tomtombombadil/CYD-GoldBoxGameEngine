@@ -234,6 +234,8 @@ enum FightWord {
     kCantWaterQ,            // "Can't use that underwater"
     kWaterClearsGw,         // Gateway under water: "The water clears a little..." (GAME.OVR 0x129B6)
     kBreathesSteam,         // the Dark Queen's 0xCC: "breathes steam" (DQK.EXE 0x5466F)
+    kEmitsStench,           // "emits an evil stench" (Champions GAME.OVR 0x13726, the Queen DS 0x41FF)
+    kStenchAffected,        // "is affected" (Champions 0x1373B) / "Affected" (the Queen DS 0x41F6)
     kFightWords
 };
 

@@ -364,6 +364,25 @@ struct MonFx {
     // A spell's / element's damage halved by its kind (PoolRad's 0x5D fire,
     // 0x72 electricity, 0x76 cold - Gateway's 0x5D; events of group 6)
     uint8_t half_fire = 0, half_elec = 0, half_cold = 0;
+    // PoolRad's vampire (0x7E, GAME.OVR 0x11A92, in the may-it-target test
+    // 0x13880): never takes as its target one with a readied item named
+    // with word 0x76 ("Mirror") or with word 0x98 and third word 0xFC
+    uint8_t shuns = 0;
+    // a second Protection from Good (Darkness's 0x2E, the same handler as
+    // 0x09 - GAME.OVR 0x1ACFB; Marcus)
+    uint8_t prot_good_too = 0;
+    // The stench (Champions' ghast 0x4F, GAME.OVR 0x13747; the Dark Queen's
+    // 0x89, DQK.EXE 0x50221) at its turn: "emits an evil stench", then each
+    // foe within a square a save against spells (+0) - failed and without
+    // `stench_skip`: "is affected" and `stenched` (time 0) given - to the
+    // STENCH'S HOLDER in the originals (their mistake: the ghast -2 to hit);
+    // with Game Fixes to the one affected, as AD&D's ghast. `stenched`: -2
+    // to hit (Champions' 0x76, GAME.OVR 0x14452; the Queen's 0x94 = q.minus2)
+    uint8_t stench = 0, stenched = 0, stench_skip = 0;
+    // The breaths' handler checks its path as Secret's (Champions' fire 0x68
+    // and cold 0x53, GAME.OVR 0x33079): none on it, or one of its own side
+    // - no breath
+    bool breath_check = false;
 };
 
 // More spells' effects (spell_facts.md 2): Enlarge, Confusion (and going
@@ -1094,6 +1113,9 @@ enum class Ev : uint8_t {
     Dissolving, Dissolves,
     // The Dark Queen's "breathes death" / "breathes paralysis"
     BreathesDeath, BreathesPara, BreathesSteam,
+    // the stench (Champions' ghast 0x4F, the Dark Queen's 0x89): "emits an
+    // evil stench"; `to` failed its save: "is affected" / "Affected"
+    EmitsStench, StenchAffected,
 };
 struct Event {
     uint8_t who = 0;
