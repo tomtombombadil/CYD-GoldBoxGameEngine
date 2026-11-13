@@ -1024,8 +1024,10 @@ the Project as claude/TODO.md.
       handlers) in the engine for all three (behave secret: 5415 / 0).
       v0.196.18 the Dark Queen's too (DQK.EXE 0x4E0AD in its save event
       0xC - [0xB2E7] the save's d20, [0xBEBD] the kind); rules4
-      ONLY=barkskin (4 games). Left: the Curse-family games' and
-      Champions' / Knights' 0x0D handlers not found by shape.
+      ONLY=barkskin. v0.196.22 Death Knights' (its effect 0x30, handler
+      GAME.OVR 0x1CB11 in events 0xB / 0xC): AC 1 better against blows
+      and a save + 1 unless the spell cast is of class 4. PoolRad, Curse,
+      Gateway, Champions have no Barkskin (no such spell / name).
 - [ ] Tom: try the new library page (v0.103.0) on a board - the art,
       the header keys, the thirds and the triangles.
 - [ ] Tom: when you have a moment, Secret's Screen Test and Walk Test

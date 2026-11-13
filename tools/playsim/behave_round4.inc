@@ -615,7 +615,8 @@ void queen_moons()
 // DQK.EXE 0x4E0AD in its save event 0xC; round 22)
 void barkskin_saves()
 {
-    if (!fight() || !fg->b.fx || !fg->b.fx->items.barkskin) return;
+    if (!fight() || !fg->b.fx || !(fg->b.fx->items.barkskin || fg->b.fx->items.barkskin_k)) return;
+    const uint8_t eff = fg->b.fx->items.barkskin ? fg->b.fx->items.barkskin : fg->b.fx->items.barkskin_k;
     mx::put(0, 0, 10, 10, 50);
     combat::Fighter& f = F(0);
     auto lowest = [&] {
@@ -628,7 +629,7 @@ void barkskin_saves()
         return lo;
     };
     const int base = lowest();
-    mx::add_aff(0, 0x0D);
+    mx::add_aff(0, eff);
     const int bark = lowest();
     expect(P, "Barkskin (0x0D): a save 1 easier (not against magic)", base > 2 && bark == base - 1, "from %d, with it %d",
            base, bark);

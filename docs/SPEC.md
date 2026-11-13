@@ -2910,7 +2910,9 @@ the game's Settings (As Original: all of them).
   routine for it (hit points, cures, no effect); fixed: no healing, its
   effect 0x0D for 4 + the caster's level rounds. Effect 0x0D itself (in
   Secret, Darkness, Treasures - GAME.OVR 0x11277 / 0x1AE48 / 0x20927, the
-  saves' phase; the Dark Queen DQK.EXE 0x4E0AD): + 1 to a save not against magic, as the originals (its d20
+  saves' phase; the Dark Queen DQK.EXE 0x4E0AD): + 1 to a save not against magic
+  (Death Knights' 0x30, GAME.OVR 0x1CB11: AC 1 better and + 1 to a save
+  not against an item's / monster's spell), as the originals (its d20
   - 1 for blows at it is lost there - not followed).
 - **Side-steps** (ours, every game; Tom, 2026-11-06): a side-step's step
   script (entry 0, before the move) sees the party facing the way it

@@ -3330,7 +3330,7 @@ const Profile kProfiles[] = {
                        .con_regen = 0x3E, .shield = 0x11, .enfeeble = 0x1D, .ill = 0x22, .weak = 0x2B, .sick = 0x2C,
                        .stun = 0x06},
                 .race = {0x5E, 0x12, 0x1A, 0x07, 0x2F, 0x30, 0x69, true},
-                .items = {.displace = 0x59, .ring_invisible = 0x38, .fire_ring = 0x3D},
+                .items = {.displace = 0x59, .ring_invisible = 0x38, .fire_ring = 0x3D, .barkskin_k = 0x30},
                 .berserk = 0x6B, .taunted = 0x5B,
                 // (its Feeblemind - GAME.OVR 0x2E610: the row's effect 0x44 is its
                 // drain-2, its handler 0x1D3F8 called at once - round 15)

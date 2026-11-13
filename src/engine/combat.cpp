@@ -1053,6 +1053,7 @@ const Battle* g_b = nullptr;         // the fight (saving throws: protection fro
 create::Dice* g_dice = nullptr;      // (a troll's fall: its rounds before it gets up)
 int g_kind = 0;                      // the damage's kind now (saving throws: resist fire / cold)
 int g_actor = -1;                    // whose turn it is (saving throws: protection from evil / good)
+int g_spell_cls = -1;                // the spell being cast's class code as stored (-1: none)
 
 bool hasx(const Fighter& f, uint8_t type) { return type && f.has(type); }
 
@@ -2621,6 +2622,7 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
         if (fx.dk.dancing && tg.has(fx.dk.dancing)) ac -= 4;
         if (fx.dk.feared && at.has(fx.dk.feared)) side -= 2;
         if (fx.sp.shield && tg.has(fx.sp.shield) && ac < 0x39) ac = 0x39;   // Shield: AC 3 at worst
+        if (hasx(tg, fx.items.barkskin_k)) ++ac;                     // (Death Knights' Barkskin: AC 1 better)
         // Faerie Fire: the stored AC + 2 (to AC 0 at most) - the original's
         // own rule, which makes the target harder to hit
         if (fx.faerie && tg.has(fx.faerie)) {
@@ -4257,6 +4259,7 @@ bool saving_throw(const Fighter& f, int type, int bonus, create::Dice& d)
         if ((g_kind & 1) && hasx(f, fx.items.fire_ring)) bonus += 4;      // (Secret's ring of fire resistance)
         if (hasx(f, fx.items.luck)) ++bonus;                              // (Secret's luck stone)
         if (!(g_kind & 8) && hasx(f, fx.items.barkskin)) ++bonus;         // (Barkskin: not against magic)
+        if (g_spell_cls != 4 && hasx(f, fx.items.barkskin_k)) ++bonus;    // (Death Knights': not an item's spell)
         if ((g_kind & 2) && hasx(f, fx.sp.hot)) bonus += 2;           // the fire shields
         if ((g_kind & 1) && hasx(f, fx.sp.cold)) bonus += 2;
         // Protection from evil / good: +2 when the one acting is evil / good
@@ -4476,6 +4479,12 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
          int n, create::Dice& d, SpellLine* out, int cap, int pw)
 {
     CYD_TEST_ACT(b, caster, Cast, n > 0 && targets ? targets[0] : -1, spell);
+    // (the spell's class code while it is cast - Death Knights' Barkskin)
+    struct ClsGuard {
+        int was;
+        ~ClsGuard() { g_spell_cls = was; }
+    } cls_guard{g_spell_cls};
+    g_spell_cls = spell > 0 && spell < st.lay.spell_count ? st.u8(st.spell_row(spell)) : -1;
     int lines = 0;
     b.n_bolt = 0;
     auto say = [&](int who, Did did, int amount) {

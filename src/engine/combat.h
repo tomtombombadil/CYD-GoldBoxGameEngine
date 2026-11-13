@@ -413,6 +413,11 @@ struct ItemFx {
     // 0x20927 - the saves' phase; the Dark Queen DQK.EXE 0x4E0AD - its save
     // event 0xC): a save + 1 unless the kind is magic (8)
     uint8_t barkskin = 0;
+    // Death Knights' (its effect 0x30, handler GAME.OVR 0x1CB11 in events
+    // 0xB and 0xC): AC 1 better against blows (record 0xCC / 0xCD), and a
+    // save + 1 unless the spell cast is one of class 4 (the items' /
+    // monsters' - [0xBE70]'s row byte 0)
+    uint8_t barkskin_k = 0;
 };
 
 // The effects the fights' rules look at (per game, from the profile)
