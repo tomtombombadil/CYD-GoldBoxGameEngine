@@ -1362,6 +1362,49 @@ constexpr TitleStep kPoolTitle[] = {
 // (0x116E2), 0x74 a weapon of plus 1 or more half (0x11741 - the mummy), 0x75
 // holy water 1d6 + 1 (0x1177B), 0x78 boulders dodged (0x11823), 0x63 the
 // boar fighting on (0x1138B) and 0x5F its fall (0x1126B)
+constexpr combat::Facts kKnightsFacts = [] {
+    combat::Facts f = {.held = {0x33, 0x34, 0x35, 0x1F}, .bless = 0x01, .curse = 0x02, .prayer = 0x31, .haste = 0x27,
+                .slow = 0x2A, .invisible = 0x19, .prot_evil = 0x08, .prot_good = 0, .mirror = 0x1C,
+                .backstab_weapons = {0x07, 0x08, 0x23, 0x24, 0x25, 0x61}, .charm = 0x0B, .fear = 0x6F, .cough = 0x1E,
+                .shot_pointed = {9, 21, 100, 28, 31, 73}, .shot_spinning = {2, 7, 20}, .shot_flask = {85, 86},
+                .shot_sling = {47, 98, 101},
+                .bestow = 0x24, .blink = 0x25, .fumbling = 0x1B, .silence = 0x15, .entangle = 0x06, .sticks = 0x03,
+                .faerie = 0, .blinded = 0x21, .animals_blind = 0, .feeble = 0,
+                .mon = {.poison = 0x40, .poison_m2 = 0x56, .kreen_bite = 0x45, .need_magic = 0x67, .no_cold = 0x62,
+                        .no_elec = 0, .globe = 0x3F, .elf_sleep = 0x5F, .detect = 0x18, .prot_evil_near = 0x2D,
+                        .acid_breath = 0x5A, .fire_breath = 0x68,
+                        .paralyzed = 0x34, .poisoned = 0x37, .sleep = 0x35, .drain1 = 0x43, .drain2 = 0x44,
+                        .ghoul = 0x58, .lightning_breath = 0x55, .no_fear = 0x5C},
+                .sp = {.enlarge = 0x0C, .confuse = 0x23, .berserk = 0x4D, .evil_ward = 0x04, .hot = 0x32,
+                       .cold = 0x36, .zap = 0x70, .slow_poison = 0x16, .poison_damage = 0x0F, .hammer = 0x17,
+                       .con_regen = 0x3E, .shield = 0x11, .enfeeble = 0x1D, .ill = 0x22, .weak = 0x2B, .sick = 0x2C,
+                       .stun = 0x06},
+                .race = {0x5E, 0x12, 0x1A, 0x07, 0x2F, 0x30, 0x69, true},
+                .items = {.displace = 0x59, .ring_invisible = 0x38, .fire_ring = 0x3D, .barkskin_k = 0x30},
+                .berserk = 0x6B, .taunted = 0x5B,
+                // (its Feeblemind - GAME.OVR 0x2E610: the row's effect 0x44 is its
+                // drain-2, its handler 0x1D3F8 called at once - round 15)
+                .feeble_drain = true, .hit_needs_damage = true, .yell_unheld = 0x33};
+    // (the round 22 effects sweep - GAME.OVR's handlers, table DS 0xBE82)
+    f.mon.no_elec = 0x41;               // the lich's: no electricity (0x1CDEA)
+    f.mon.charm_sleep = 0x60;           // charm / sleep proof (0x1DE23, Champions' 0x60)
+    f.mon.no_poison = 0x63;             // poison / paralysis proof, poison saves made (0x1DE5D)
+    f.mon.half_pierce = 0x5D;           // a blow of a weapon type byte <= 1: half (0x1DD32)
+    f.mon.half_elec = 0x53;             // the vampire's: electricity or cold half (0x1DB3B)
+    f.mon.half_cold = 0x53;
+    f.mon.need_plus3m = 0x42;           // the iron golem: +3, or a monster of 4+ Hit Dice (0x1CDFF)
+    f.q.immune[0] = {0x50, {0x23}};     // the skeleton warriors: no confusion (0x1DB2D)
+    f.q.cold_x2 = 0x4B;                 // the fire minion: cold double (0x1D826)
+    f.q.fire_heal = 0x4C;               // ... fire none, magic fire heals (0x1D840)
+    f.mon.regen = 0x54;                 // the vampire: 3 hit points at each round's end (0x1DB5E)
+    f.dk.vamp_gaze = 0x51;              // ... its charming gaze: "gazes!", Charm Person (0x2EBDF)
+    f.mon.golem = 0x57;                 // the iron golem: Secret's (0x1DBC7)
+    f.mon.stench = 0x4F;                // the ghast's stench (0x1DA09: -2 0x76 to its holder - SPEC 12)
+    f.mon.stenched = 0x76;
+    f.mon.stench_skip = 0x76;
+    return f;
+}();
+
 constexpr combat::Facts kPoolFacts = [] {
     combat::Facts f = {{0x33, 0x34, 0x35, 0x1F}, 0x01, 0x02, 0x31, 0x27, 0x2A, 0x19, 0x08, 0x09, 0x1C,
                     {0x07, 0x08, 0x23, 0x24, 0x25, 0}, 0x0B, 0, 0x1E,
@@ -3429,28 +3472,7 @@ const Profile kProfiles[] = {
                },
                // (the effects a fight's end takes away: DS 0x0686, 16 - Darkness's list)
                {0x03, 0x06, 0x0B, 0x15, 0x17, 0x1B, 0x1E, 0x1F, 0x23, 0x34, 0x35, 0x4D, 0x6A, 0x6B, 0x6F, 0x76},
-               {.held = {0x33, 0x34, 0x35, 0x1F}, .bless = 0x01, .curse = 0x02, .prayer = 0x31, .haste = 0x27,
-                .slow = 0x2A, .invisible = 0x19, .prot_evil = 0x08, .prot_good = 0, .mirror = 0x1C,
-                .backstab_weapons = {0x07, 0x08, 0x23, 0x24, 0x25, 0x61}, .charm = 0x0B, .fear = 0x6F, .cough = 0x1E,
-                .shot_pointed = {9, 21, 100, 28, 31, 73}, .shot_spinning = {2, 7, 20}, .shot_flask = {85, 86},
-                .shot_sling = {47, 98, 101},
-                .bestow = 0x24, .blink = 0x25, .fumbling = 0x1B, .silence = 0x15, .entangle = 0x06, .sticks = 0x03,
-                .faerie = 0, .blinded = 0x21, .animals_blind = 0, .feeble = 0,
-                .mon = {.poison = 0x40, .poison_m2 = 0x56, .kreen_bite = 0x45, .need_magic = 0x67, .no_cold = 0x62,
-                        .no_elec = 0, .globe = 0x3F, .elf_sleep = 0x5F, .detect = 0x18, .prot_evil_near = 0x2D,
-                        .acid_breath = 0x5A, .fire_breath = 0x68,
-                        .paralyzed = 0x34, .poisoned = 0x37, .sleep = 0x35, .drain1 = 0x43, .drain2 = 0x44,
-                        .ghoul = 0x58, .lightning_breath = 0x55, .no_fear = 0x5C},
-                .sp = {.enlarge = 0x0C, .confuse = 0x23, .berserk = 0x4D, .evil_ward = 0x04, .hot = 0x32,
-                       .cold = 0x36, .zap = 0x70, .slow_poison = 0x16, .poison_damage = 0x0F, .hammer = 0x17,
-                       .con_regen = 0x3E, .shield = 0x11, .enfeeble = 0x1D, .ill = 0x22, .weak = 0x2B, .sick = 0x2C,
-                       .stun = 0x06},
-                .race = {0x5E, 0x12, 0x1A, 0x07, 0x2F, 0x30, 0x69, true},
-                .items = {.displace = 0x59, .ring_invisible = 0x38, .fire_ring = 0x3D, .barkskin_k = 0x30},
-                .berserk = 0x6B, .taunted = 0x5B,
-                // (its Feeblemind - GAME.OVR 0x2E610: the row's effect 0x44 is its
-                // drain-2, its handler 0x1D3F8 called at once - round 15)
-                .feeble_drain = true, .hit_needs_damage = true, .yell_unheld = 0x33},
+               kKnightsFacts,
                kDeathKnightsFight, sizeof kDeathKnightsFight / sizeof kDeathKnightsFight[0],
                // COMSPR (22 blocks, + 0x80 the second pictures): 0-2 arrows, 3
                // the axe, 4 the flask, 5 the spell, 6 lightning, 7 a rock, 8 a
@@ -4484,6 +4506,9 @@ uint32_t duel_word(const Profile& p, int word)
         {games::Game::ChampionsOfKrynn, kGetsZapped, 0x142BD},
         {games::Game::ChampionsOfKrynn, kLostImage, 0x11609},
         {games::Game::ChampionsOfKrynn, kGainsItem, 0x1138F},
+        {games::Game::DeathKnightsOfKrynn, kGazesCharm, kP | 0xDFAD},     // (the vampire's 0x51: DS 0x22CD)
+        {games::Game::DeathKnightsOfKrynn, kEmitsStench, kP | 0xDC1B},   // (the stench 0x4F: DS 0x1F3B / 0x4580)
+        {games::Game::DeathKnightsOfKrynn, kStenchAffected, kP | 0x10260},
         // PoolRad: its boar's "Falls dead" (0x5F's handler, GAME.OVR 0x1126B)
         {games::Game::PoolOfRadiance, kFallsDeadGw, 0x11260},
         // Secret: the paralysing bite's "paralyzed by poison" (GAME.OVR 0x10CDF's)

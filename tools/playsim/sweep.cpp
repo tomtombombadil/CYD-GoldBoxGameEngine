@@ -1371,7 +1371,11 @@ static bool (*monkey_modify)() = nullptr;   // (navcheck: into Modify from a hal
 static bool monkey_boot()
 {
     using namespace play;
-    if (!boot()) return false;
+    // (a save that opens into a fight - Death Knights' - may lose it: the
+    // dice go on, so boot again)
+    bool booted = false;
+    for (int t = 0; t < 6 && !booted; ++t) booted = boot();
+    if (!booted) return false;
     // (navcheck NMODIFY: every boot starts in the Trainer - a game whose save
     // walks into a fight at once never explores long enough to open it)
     if (monkey_modify && getenv("NMODIFY") && !getenv("MAREA") && play::cheats_ready()) play::cheat_open(3, C);

@@ -383,6 +383,9 @@ struct MonFx {
     // and cold 0x53, GAME.OVR 0x33079): none on it, or one of its own side
     // - no breath
     bool breath_check = false;
+    // Death Knights' iron golem (0x42, GAME.OVR 0x1CDFF): a blow of no +3
+    // weapon does nothing - but a monster's (race 7) of 4+ Hit Dice
+    uint8_t need_plus3m = 0;
 };
 
 // More spells' effects (spell_facts.md 2): Enlarge, Confusion (and going

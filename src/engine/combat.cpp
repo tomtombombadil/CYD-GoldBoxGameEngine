@@ -2992,6 +2992,7 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
                     return m.plus_hd && at.rec[0x74] == 0 && at.rec[kHd] >= (need - 1) * 2 + 5;
                 };
                 if (hasx(tg, m.need_plus3) && !plus_ok(3)) dmg = 0;
+                if (hasx(tg, m.need_plus3m) && (!item || plus < 3) && (at.rec[0x74] > 0 || at.rec[kHd] < 4)) dmg = 0;
                 if (hasx(tg, m.need_plus2) && !plus_ok(2)) dmg = 0;
                 if (hasx(tg, m.need_plus1) && !plus_ok(1)) dmg = 0;
                 if (hasx(tg, m.half_under3) && item && plus < 3) dmg /= 2;
@@ -3459,12 +3460,14 @@ int harm(Battle& b, int c, int amount, const Harm& h, create::Dice& d, bool* dow
         // magic fire healing - events 6)
         if ((h.kind & 1) && hasx(f, m.half_fire)) dmg /= 2;
         if ((h.kind & 4) && hasx(f, m.half_elec)) dmg /= 2;
-        if ((h.kind & 2) && hasx(f, m.half_cold)) dmg /= 2;
+        if ((h.kind & 2) && hasx(f, m.half_cold) && !((h.kind & 4) && m.half_cold == m.half_elec)) dmg /= 2;
         if ((h.kind & 2) && hasx(f, b.fx->q.cold_x2)) dmg *= 2;
         if ((h.kind & 2) && hasx(f, b.fx->q.cold_more)) dmg += dmg / 5;
         if ((h.kind & 1) && hasx(f, b.fx->q.fire_less)) dmg = dmg / 5 * 4;
-        if (hasx(f, b.fx->q.fire_heal)) {
-            if ((h.kind & 1) && (h.kind & 8)) {
+        // (fire only: none, magic fire heals - the Queen's 0x87 DQK.EXE
+        // 0x500B8, Death Knights' 0x4C GAME.OVR 0x1D840)
+        if ((h.kind & 1) && hasx(f, b.fx->q.fire_heal)) {
+            if (h.kind & 8) {
                 const int hp = f.hp() + dmg;
                 f.rec[kHp] = static_cast<uint8_t>(hp > f.hp_max() ? f.hp_max() : hp);
             }

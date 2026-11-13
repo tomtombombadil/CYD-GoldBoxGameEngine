@@ -3126,7 +3126,7 @@ the game's Settings (As Original: all of them).
   byte compared unsigned, so a total below 0 wraps round to a save made -
   a 2 rolled with -4 (blinded, a bestowed curse) saves. With Game Fixes
   on a total below 0 is a save failed (`combat::saving_throw`).
-- **The stench** (Game Fixes; Champions' ghast 0x4F, the Dark Queen's 0x89,
+- **The stench** (Game Fixes; Champions' / Death Knights' ghast 0x4F, the Dark Queen's 0x89,
   the effects sweep 2026-11-13): both originals give the -2 to hit
   (Champions 0x76, the Queen 0x94) to the stench's holder each time a foe
   fails its save - the ghast fights worse, its victims not at all. With

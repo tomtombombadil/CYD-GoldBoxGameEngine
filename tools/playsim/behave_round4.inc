@@ -1183,6 +1183,54 @@ void champ_breath()
            bad == 0, "%d of %d wrong", bad, n);
 }
 
+// The round 22 sweep's damage rules (Death Knights GAME.OVR 0x1D826 /
+// 0x1D840 / 0x1DB3B, the Queen's 0x87 DQK.EXE 0x500B8): cold double; fire
+// none, magic fire heals - other kinds hurt as usual; electricity or cold
+// half (once for both)
+void dmg22()
+{
+    if (!fight() || !fg->b.fx) return;
+    combat::Battle& b = fg->b;
+    const auto& fx = *b.fx;
+    if (!fx.q.fire_heal && !fx.q.cold_x2 && !(fx.mon.half_elec && fx.mon.half_elec == fx.mon.half_cold)) return;
+    int bad = 0, n = 0;
+    auto chk = [&](bool ok, const char* what) {
+        ++n;
+        if (!ok && !bad++) printf("  (dmg22: %s)\n", what);
+    };
+    auto hit = [&](uint8_t eff, int kind, int amount, int* hp_after) {
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(0, 0, 10, 10, 50);
+        mx::put(B, 1, 12, 10, 100);
+        b.f[B].rec[0x78] = 120;
+        b.f[B].rec[0x1A4] = 100;
+        mx::add_aff(B, eff);
+        create::Dice dd(3);
+        combat::Harm h;
+        h.kind = kind;
+        h.spell = 1;
+        bool down = false;
+        const int got = combat::harm(b, B, amount, h, dd, &down);
+        if (hp_after) *hp_after = F(B).hp();
+        return got;
+    };
+    int hp = 0;
+    if (fx.q.fire_heal) {
+        chk(hit(fx.q.fire_heal, 1, 20, &hp) == 0 && hp == 100, "fire: none");
+        chk(hit(fx.q.fire_heal, 9, 20, &hp) == 0 && hp > 100, "magic fire: heals");
+        chk(hit(fx.q.fire_heal, 2, 20, &hp) > 0, "cold: hurts (not fire)");
+        chk(hit(fx.q.fire_heal, 0, 20, &hp) > 0, "a plain harm: hurts");
+    }
+    if (fx.q.cold_x2) chk(hit(fx.q.cold_x2, 2, 10, nullptr) == 20, "cold: double");
+    if (fx.mon.half_elec && fx.mon.half_elec == fx.mon.half_cold) {
+        chk(hit(fx.mon.half_elec, 4, 20, nullptr) == 10, "electricity: half");
+        chk(hit(fx.mon.half_elec, 2, 20, nullptr) == 10, "cold: half");
+        chk(hit(fx.mon.half_elec, 6, 20, nullptr) == 10, "both: half once");
+    }
+    expect(P, "the round 22 damage rules: cold double, fire none / magic fire heals, electricity or cold half",
+           bad == 0, "%d of %d wrong", bad, n);
+}
+
 // PoolRad's halving effects (the round 22 effects sweep, GAME.OVR's
 // handlers): 0x5D fire, 0x72 electricity, 0x76 cold halved; 0x6F poison
 // proof. Gateway's 0x5D the same (GAME.OVR 0x13F81).
@@ -4854,6 +4902,7 @@ void run()
     if (want("qmound")) queen_mound();
     if (want("halves")) pool_halves();
     if (want("stench")) stench();
+    if (want("dmg22")) dmg22();
     if (want("cbreath")) champ_breath();
     if (want("qbreath")) queen_breath();
     if (want("qsweep22")) queen_sweep22();

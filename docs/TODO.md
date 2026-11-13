@@ -1769,8 +1769,19 @@ the Project as claude/TODO.md.
       with Game Fixes (the originals' 0x2D runs 0x08's handler - its
       holder's). E1 (FX fuzz): Champions' "gets zapped", "lost an image",
       "Gains an item"; "stands up and grins" / "gets back up" said only
-      where the program has them (not the Krynn games). Left: Death
-      Knights 18 (0x41-0x63), Treasures 29 (0x29, 0x5E, 0x80-0x9B), the
+      where the program has them (not the Krynn games). v0.196.38 Death
+      Knights (table DS 0xBE82): 0x41 no electricity, 0x42 the iron golem's
+      +3 (or a monster of 4+ Hit Dice), 0x4B cold double, 0x4C fire none /
+      magic fire heals, 0x4F the ghast's stench, 0x50 no confusion, 0x51
+      the vampire's charming gaze, 0x53 electricity / cold half, 0x54 its
+      3 hit points a round, 0x57 the iron golem (Secret's), 0x5D blows of
+      type byte <= 1 half, 0x60 charm / sleep proof, 0x63 poison /
+      paralysis proof; the Queen's 0x87 (and Knights' 0x4C) took no damage
+      of ANY kind - fire only now (rules4 dmg22). Left: Death Knights 0x46
+      (the fire minion's 1d6 fire round it, 0x1D430), 0x4A (its on-hit
+      2d6, 0x1D7C1), 0x47 / 0x48 / 0x4E (the death knights: 0x1D502 a d10
+      power, 0x1D63B a fear aura - save against spells or 0x6F, unless
+      0x5C -, 0x2EBA3 a spell 0x2F once), Treasures 29 (0x29, 0x5E, 0x80-0x9B), the
       Queen's 0x75, 0x85, 0xC3, 0xC5, 0xC6, 0xD1, 0xC7, 0xCE, 0xD0, 0xD3,
       0xD4, 0xC9.
 - [x] Empty fight words (v0.196.32, fx_check's new E1: a page of the names
