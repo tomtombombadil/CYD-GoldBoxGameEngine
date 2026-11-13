@@ -1561,6 +1561,9 @@ void palette_fight(bool on, bool editor = false)
 {
     fight_palette_on = !on ? 0 : editor && d->prof->variant.eight_black ? 2
                      : d->prof->variant.fight_unswapped || d->prof->variant.field_swap ? 0 : 1;
+    // (Gateway under water: colour 8 blue - EGA 1, VGA 0,0,0x29; GAME.OVR
+    // 0x49714, back by 0x49769)
+    if (on && !editor && fg && fg->b.gw_water) fight_palette_on = 3;
     // (Gateway: the field's pictures swap 0 and 8, the panel beside them
     // stays black - DOSBox)
     blit_swap = on && !editor && d->prof->variant.field_swap;

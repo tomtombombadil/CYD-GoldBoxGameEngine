@@ -164,7 +164,7 @@ static void shot(const char* tag)
         if (getenv("COMPANION")) panel_shot(name);
         return;
     }
-    for (uint8_t v : (getenv("LCD") ? lcd : all)) { int k = v & 15; if (swap == 1 && (k == 0 || k == 8)) k ^= 8; else if (swap == 2 && k == 8) k = 0; const pic::Rgb& c = pic::kEga[k]; fputc(c.r, f); fputc(c.g, f); fputc(c.b, f); }
+    for (uint8_t v : (getenv("LCD") ? lcd : all)) { int k = v & 15; if (swap == 1 && (k == 0 || k == 8)) k ^= 8; else if (swap == 2 && k == 8) k = 0; else if (swap == 3 && k == 8) k = 1; const pic::Rgb& c = pic::kEga[k]; fputc(c.r, f); fputc(c.g, f); fputc(c.b, f); }
     fclose(f);
     if (getenv("COMPANION")) panel_shot(name);
 }
@@ -178,6 +178,7 @@ static pic::Rgb sim_colour(int v)
     int k = v & 15;
     if (swap == 1 && (k == 0 || k == 8)) k ^= 8;
     else if (swap == 2 && k == 8) k = 0;
+    else if (swap == 3 && k == 8) k = 1;
     return pic::kEga[k];
 }
 struct SimPainter final : companion::Painter {

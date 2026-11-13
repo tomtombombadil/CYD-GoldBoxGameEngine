@@ -200,7 +200,7 @@ void take_dirty(int& y0, int& y1);
 void set_present_now(void (*fn)());
 // While a fight (or the icon editor) is on screen, the games' combat
 // palette: 1 colours 0 and 8 swap; 2 colour 8 shows black (Gateway's -
-// DOSBox); 0 none
+// DOSBox); 3 colour 8 shows blue (Gateway under water); 0 none
 int fight_colours();
 // The VGA palette (a VGA game on a 256-colour canvas): true when it
 // changed since the last call (all: whenever there is one - a redraw),

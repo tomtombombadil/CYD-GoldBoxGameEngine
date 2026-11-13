@@ -5553,6 +5553,8 @@ void present_play()
             frame::set_palette(8, pic::kEga[0]);
         } else if (fight_colours == 2) {
             frame::set_palette(8, pic::kEga[0]);
+        } else if (fight_colours == 3) {
+            frame::set_palette(8, pic::kEga[1]);
         }
         frame::present();
         big_force = true;

@@ -1600,9 +1600,11 @@ the Project as claude/TODO.md.
       before ECL2's fights 2 / 82; "The water clears a little" 0x12987) -
       v0.196.13 (b.gw_water, rules4 ONLY=gwater): its chooser no missile
       weapon (0xEB39), nothing shoots (0x42318), Fireball / the item
-      fireball "Nothing Happens." (0x385FB). Left: its other tests
-      (0xF852 skips 0xEF50, 0x49723 / 0x49778 with [0x5DB6], the cloud's
-      "water clears" word 0x129B6) not followed; the Dark
+      fireball "Nothing Happens." (0x385FB); v0.196.14 colour 8 blue in
+      its fights (0x49714 / 0x49769: EGA 1, VGA 0,0,0x29 - fight_colours
+      3). Left: 0xF852 skips 0xEF50 (the field's sides [0x58D0-3] ->
+      [0x58D8]), the cloud's "The water clears a little..." (0x129B6) -
+      not followed; the Dark
       Queen's rating (DQK.EXE 0x2F081, chooser 0x2F1A6) RUN too (3000
       items, 0 differ; the bare rating 1137): Darkness's target rules, no
       item effect tests, the plus unsigned, Secret's hands rule, and a
