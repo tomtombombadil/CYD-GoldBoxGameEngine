@@ -1781,7 +1781,20 @@ the Project as claude/TODO.md.
       (the fire minion's 1d6 fire round it, 0x1D430), 0x4A (its on-hit
       2d6, 0x1D7C1), 0x47 / 0x48 / 0x4E (the death knights: 0x1D502 a d10
       power, 0x1D63B a fear aura - save against spells or 0x6F, unless
-      0x5C -, 0x2EBA3 a spell 0x2F once), Treasures 29 (0x29, 0x5E, 0x80-0x9B), the
+      0x5C -, 0x2EBA3 a spell 0x2F once). v0.196.39 Treasures (table DS
+      0x9E34): 0x29 missiles of plus 0 avoided, 0x5E the dwarves'
+      Constitution bonus with poison too (also Darkness's 0x5E), 0x84 the
+      harpy's charm (Gateway's 0x9A), 0x85 / 0x8D the stone guardian (magic,
+      cold, fire, electricity half; piercing a quarter, flag-0x10 weapons
+      nothing), 0x86 inert, 0x87 / 0x88 / 0x8B Gateway's glacier / name-word
+      doubles (words 0x80 / 0x7F / 0x81 - a word, not a byte), 0x99 the
+      yetis' fire half again, 0x9B the remorhaz's swallow (rules4 dmg22).
+      Left in Treasures: 0x80-0x82 (the Zhentil captain's, the Hosttower
+      sorceress's, the kraken master's: game block +0x3C set - +0x3D = 0 /
+      1 / 2, +0x3B bits 1 / 2 / 4, [0xF2A0] = 1, the effect off, 0x23CDE;
+      when, not read), 0x89, 0x8A, 0x8C, 0x8E (none in some event), 0x8F,
+      0x90, 0x91, 0x92 (x2 of [0x9E1C]), 0x93, 0x94, 0x95-0x97 (the yetis:
+      0x251A0 with 8/2, 5/4, 4/6), 0x98, 0x9A (the ice hound); the
       Queen's 0x75, 0x85, 0xC3, 0xC5, 0xC6, 0xD1, 0xC7, 0xCE, 0xD0, 0xD3,
       0xD4, 0xC9.
 - [x] Empty fight words (v0.196.32, fx_check's new E1: a page of the names

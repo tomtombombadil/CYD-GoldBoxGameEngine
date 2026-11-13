@@ -1362,6 +1362,69 @@ constexpr TitleStep kPoolTitle[] = {
 // (0x116E2), 0x74 a weapon of plus 1 or more half (0x11741 - the mummy), 0x75
 // holy water 1d6 + 1 (0x1177B), 0x78 boulders dodged (0x11823), 0x63 the
 // boar fighting on (0x1138B) and 0x5F its fall (0x1126B)
+constexpr combat::Facts kTreasuresFacts = [] {
+    combat::Facts f = {.held = {0x33, 0x34, 0x35, 0x1F}, .bless = 0x01, .curse = 0x02, .prayer = 0x31, .haste = 0x27,
+                .slow = 0x2A, .invisible = 0x19, .prot_evil = 0x08, .prot_good = 0x09, .mirror = 0x1C,
+                .backstab_weapons = {3, 4, 17, 18, 19, 0}, .charm = 0x0B, .fear = 0x6F, .cough = 0x1E,
+                .shot_pointed = {5, 7, 12, 30, 4, 0x42}, .shot_spinning = {2, 3, 6}, .shot_flask = {0xFF, 0xFF},
+                .shot_sling = {28, 29, 0x43},
+                .bestow = 0x24, .blink = 0x25, .fumbling = 0x1B, .silence = 0x15, .entangle = 0, .sticks = 0x03,
+                .faerie = 0x47, .blinded = 0x21, .animals_blind = 0x45, .feeble = 0x44,
+                .mon = {.poison = 0x40, .poison_m2 = 0x56, .kreen_bite = 0x58,
+                        
+                        .no_fire = 0x5D, .no_cold = 0x62, .no_elec = 0x06,
+                        .no_magic = 0x4F, .globe = 0x3F, .elf_sleep = 0x5F,
+                        .detect = 0x18, .prot_evil_near = 0x2D,
+                        .acid_breath = 0x60, .fire_breath = 0x54, .stone_gaze = 0x3A, .mirror_gaze = 0x3B,
+                        // the beholder (R14: 0x75 - its rays as Curse's, then Fear, Slow, Sleep)
+                        .rays = 0x75,
+                        .paralyzed = 0x34, .poisoned = 0x37, .sleep = 0x35, .ray_spells = {0x54, 0x37, 0x15},
+                        .drain1 = 0x65, .drain2 = 0x66,
+                        .need_plus3 = 0x3C, .petrify_hit = 0x41, .confuse_gaze = 0x46, .cold_breath = 0x55, .no_fear = 0x5C,
+                        .no_breath = 0x49, .golem = 0x4F, .reflect = 0x48,
+                        .far_reach = 6, .near_reach = 1, .para_rounds = 10, .secret_ways = true,
+                        // its dragons (F9): red 0x54, white 0x55, black 0x60 (breath only, 0x20), big red
+                        // 0x53, green 0x5A, blue 0x5B
+                        .big_fire = 0x53, .poison_breath = 0x5A, .dk_lightning = 0x5B, .acid_kind = 0x20,
+                        // its blows' rules (F10)
+                        .need_plus1 = 0x67, .need_plus2 = 0x7D, .half_under3 = 0x50, .half_under4 = 0x51,
+                        .half_pierce = 0x42, .half_crush = 0x43, .ward8 = 0x28, .plus_hd = true,
+                        .fire2d6_hit = 0x79, .fire4d6_2 = 0x68, .fire2d6_2 = 0x6C, .dk_ways = true},
+                .sp = {.enlarge = 0x0C, .confuse = 0x23, .berserk = 0x4D, .evil_ward = 0x04, .evil_bane = 0x20,
+                       .hot = 0x32, .cold = 0x36, .zap = 0x70, .slow_poison = 0x16, .poison_damage = 0x0F,
+                       .hammer = 0x17, .animated = 0, .con_regen = 0x3E, .giant = 0x71, .shield = 0x11,
+                       .enfeeble = 0x1D, .ill = 0x22, .weak = 0x2B, .sick = 0x2C, .stun = 0x6A},
+                .race = {0x61, 0x12, 0x1A, 0x07, 0x2F, 0x30, 0x69, true, 0x5E},
+                .items = {.displace = 0x59, .ring_invisible = 0x38, .giant_slayer = 0x4B, .luck = 0x4E, .fire_ring = 0x3D,
+                          .boots = 0x4A, .no_disease = 0x4C, .displace_unused = true,
+                          .scrolls = {39, 40}, .barkskin = 0x0D},
+                .berserk = 0x6B, .secret = true, .globe_major = 0x39,
+                // (its clouds: Stinking Cloud 0x1D, Cloudkill 0x1C, Blade Barrier 0x1B - GAME.OVR 0x2C617)
+                .cloud_ground = 0x1D, .poison_ground = 0x1C, .cleric_xp_wis = 15, .plat_xp = 2, .shot_pointed2 = 0x4A,
+                // its own (the fights' rules facts R2-R14)
+                .dk = {.knives = 0x1B, .knife_n = 8, .knife_sides = 8, .dancing = 0x76, .dragon_fear = 0x64,
+                       .feared = 0x78, .para_gaze = 0x72, .gaze_proof = 0x7E, .vamp_gaze = 0x7C, .beholder = 0x75,
+                       .vorpal = 0x73, .kalistes = 0x74, .rake = 0x63, .blessed = 0x52, .blessed_type = 0x4A,
+                       .no_disease = 0x4C, .disease = 0x22, .gaze_pic = 6},
+                // (its Feeblemind - GAME.OVR Darkness 0x2E902 / effect 0x44's handler
+                // 0x1C2F3, Treasures 0x37E08 / 0x21F6x - as the Dark Queen's: round 15)
+                .feeble_lost = true, .feeble_direct = true, .hit_needs_damage = true};
+    // (the round 22 effects sweep - GAME.OVR's handlers, table DS 0x9E34)
+    f.mon.missile_proof = 0x29;         // a missile of plus 0 avoided (0x215D5)
+    f.gw.harpy = 0x84;                  // the harpy's charm on a hit - Gateway's 0x9A (0x240ED)
+    f.mon.fire_more = 0x99;             // the yetis: fire half again (0x25612)
+    f.mon.half_magic = 0x85;            // the stone guardian: magic / cold / fire / electricity half (0x241ED)
+    f.gw.ice = 0x88;                    // a blow of a weapon named with word 0x7F: double (0x242BE)
+    f.gw.ice_word = 0x7F;
+    f.gw.stone = 0x8B;                  // ... with word 0x81: double (0x2457B)
+    f.gw.stone_word = 0x81;
+    f.mon.swallow = 0x9B;               // the remorhaz: a roll of 20 swallows (0x25749)
+    f.mon.quarter_pierce = 0x8D;        // the stone guardian: piercing a quarter, 0x10 types nothing (0x24814)
+    f.gw.glacier = 0x87;                // a blow at one whose armour has word 0x80: half (0x2423F)
+    f.gw.glacier_word = 0x80;
+    return f;
+}();
+
 constexpr combat::Facts kKnightsFacts = [] {
     combat::Facts f = {.held = {0x33, 0x34, 0x35, 0x1F}, .bless = 0x01, .curse = 0x02, .prayer = 0x31, .haste = 0x27,
                 .slow = 0x2A, .invisible = 0x19, .prot_evil = 0x08, .prot_good = 0, .mirror = 0x1C,
@@ -3745,7 +3808,7 @@ const Profile kProfiles[] = {
                        .hot = 0x32, .cold = 0x36, .zap = 0x70, .slow_poison = 0x16, .poison_damage = 0x0F,
                        .hammer = 0x17, .animated = 0, .con_regen = 0x3E, .giant = 0x71, .shield = 0x11,
                        .enfeeble = 0x1D, .ill = 0x22, .weak = 0x2B, .sick = 0x2C, .stun = 0x6A},
-                .race = {0x61, 0x12, 0x1A, 0x07, 0x2F, 0x30, 0x69, true},
+                .race = {0x61, 0x12, 0x1A, 0x07, 0x2F, 0x30, 0x69, true, 0x5E},
                 .items = {.displace = 0x59, .ring_invisible = 0x38, .giant_slayer = 0x4B, .luck = 0x4E, .fire_ring = 0x3D,
                           .boots = 0x4A, .no_disease = 0x4C, .displace_unused = true,
                           .scrolls = {39, 40}, .barkskin = 0x0D},
@@ -4121,52 +4184,7 @@ const Profile kProfiles[] = {
                0x22C75
                },
                {0x03, 0x06, 0x0B, 0x15, 0x17, 0x1B, 0x1E, 0x1F, 0x23, 0x34, 0x35, 0x4D, 0x6A, 0x6B, 0x6F, 0x76},
-               {.held = {0x33, 0x34, 0x35, 0x1F}, .bless = 0x01, .curse = 0x02, .prayer = 0x31, .haste = 0x27,
-                .slow = 0x2A, .invisible = 0x19, .prot_evil = 0x08, .prot_good = 0x09, .mirror = 0x1C,
-                .backstab_weapons = {3, 4, 17, 18, 19, 0}, .charm = 0x0B, .fear = 0x6F, .cough = 0x1E,
-                .shot_pointed = {5, 7, 12, 30, 4, 0x42}, .shot_spinning = {2, 3, 6}, .shot_flask = {0xFF, 0xFF},
-                .shot_sling = {28, 29, 0x43},
-                .bestow = 0x24, .blink = 0x25, .fumbling = 0x1B, .silence = 0x15, .entangle = 0, .sticks = 0x03,
-                .faerie = 0x47, .blinded = 0x21, .animals_blind = 0x45, .feeble = 0x44,
-                .mon = {.poison = 0x40, .poison_m2 = 0x56, .kreen_bite = 0x58,
-                        
-                        .no_fire = 0x5D, .no_cold = 0x62, .no_elec = 0x06,
-                        .no_magic = 0x4F, .globe = 0x3F, .elf_sleep = 0x5F,
-                        .detect = 0x18, .prot_evil_near = 0x2D,
-                        .acid_breath = 0x60, .fire_breath = 0x54, .stone_gaze = 0x3A, .mirror_gaze = 0x3B,
-                        // the beholder (R14: 0x75 - its rays as Curse's, then Fear, Slow, Sleep)
-                        .rays = 0x75,
-                        .paralyzed = 0x34, .poisoned = 0x37, .sleep = 0x35, .ray_spells = {0x54, 0x37, 0x15},
-                        .drain1 = 0x65, .drain2 = 0x66,
-                        .need_plus3 = 0x3C, .petrify_hit = 0x41, .confuse_gaze = 0x46, .cold_breath = 0x55, .no_fear = 0x5C,
-                        .no_breath = 0x49, .golem = 0x4F, .reflect = 0x48,
-                        .far_reach = 6, .near_reach = 1, .para_rounds = 10, .secret_ways = true,
-                        // its dragons (F9): red 0x54, white 0x55, black 0x60 (breath only, 0x20), big red
-                        // 0x53, green 0x5A, blue 0x5B
-                        .big_fire = 0x53, .poison_breath = 0x5A, .dk_lightning = 0x5B, .acid_kind = 0x20,
-                        // its blows' rules (F10)
-                        .need_plus1 = 0x67, .need_plus2 = 0x7D, .half_under3 = 0x50, .half_under4 = 0x51,
-                        .half_pierce = 0x42, .half_crush = 0x43, .ward8 = 0x28, .plus_hd = true,
-                        .fire2d6_hit = 0x79, .fire4d6_2 = 0x68, .fire2d6_2 = 0x6C, .dk_ways = true},
-                .sp = {.enlarge = 0x0C, .confuse = 0x23, .berserk = 0x4D, .evil_ward = 0x04, .evil_bane = 0x20,
-                       .hot = 0x32, .cold = 0x36, .zap = 0x70, .slow_poison = 0x16, .poison_damage = 0x0F,
-                       .hammer = 0x17, .animated = 0, .con_regen = 0x3E, .giant = 0x71, .shield = 0x11,
-                       .enfeeble = 0x1D, .ill = 0x22, .weak = 0x2B, .sick = 0x2C, .stun = 0x6A},
-                .race = {0x61, 0x12, 0x1A, 0x07, 0x2F, 0x30, 0x69, true},
-                .items = {.displace = 0x59, .ring_invisible = 0x38, .giant_slayer = 0x4B, .luck = 0x4E, .fire_ring = 0x3D,
-                          .boots = 0x4A, .no_disease = 0x4C, .displace_unused = true,
-                          .scrolls = {39, 40}, .barkskin = 0x0D},
-                .berserk = 0x6B, .secret = true, .globe_major = 0x39,
-                // (its clouds: Stinking Cloud 0x1D, Cloudkill 0x1C, Blade Barrier 0x1B - GAME.OVR 0x2C617)
-                .cloud_ground = 0x1D, .poison_ground = 0x1C, .cleric_xp_wis = 15, .plat_xp = 2, .shot_pointed2 = 0x4A,
-                // its own (the fights' rules facts R2-R14)
-                .dk = {.knives = 0x1B, .knife_n = 8, .knife_sides = 8, .dancing = 0x76, .dragon_fear = 0x64,
-                       .feared = 0x78, .para_gaze = 0x72, .gaze_proof = 0x7E, .vamp_gaze = 0x7C, .beholder = 0x75,
-                       .vorpal = 0x73, .kalistes = 0x74, .rake = 0x63, .blessed = 0x52, .blessed_type = 0x4A,
-                       .no_disease = 0x4C, .disease = 0x22, .gaze_pic = 6},
-                // (its Feeblemind - GAME.OVR Darkness 0x2E902 / effect 0x44's handler
-                // 0x1C2F3, Treasures 0x37E08 / 0x21F6x - as the Dark Queen's: round 15)
-                .feeble_lost = true, .feeble_direct = true, .hit_needs_damage = true},
+               kTreasuresFacts,
                kTreasuresFight, sizeof kTreasuresFight / sizeof kTreasuresFight[0],
                {0, 1, 2, 3, 6, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15}, {15, 9, 14},
                {kP | 0xF9DF, kP | 0xF98B, kP | 0xF9B5, kP | 0xF94C, kP | 0xF88F, kP | 0xF961, kP | 0x10195}},
@@ -4497,6 +4515,8 @@ uint32_t duel_word(const Profile& p, int word)
         {games::Game::ChampionsOfKrynn, kIsParalyzedC, 0x10BE8},
         {games::Game::ChampionsOfKrynn, kAvoidsIt, 0x11F0E},
         {games::Game::ChampionsOfKrynn, kIsCharmedG, 0x31EF3},
+        {games::Game::TreasuresOfTheSavageFrontier, kIsCharmedG, 0x240E2},   // (its harpy's 0x84: 0x240ED)
+        {games::Game::TreasuresOfTheSavageFrontier, kSwallowed, 0x2573C},    // (its remorhaz's 0x9B: 0x25749)
         {games::Game::ChampionsOfKrynn, kBreathesB, 0x32698},
         {games::Game::ChampionsOfKrynn, kBreathesAcid, 0x32E24},
         {games::Game::ChampionsOfKrynn, kEmitsStench, 0x13726},     // (the ghast's stench 0x4F: 0x13747)

@@ -552,6 +552,7 @@ static void sweep_effects()
     static const int inert[][2] = {
         {2, 0x7E},      // Curse's dracolich gaze (GAME.OVR 0x34259): the picker's row
                         // 0x24 targets itself, so it never has a target - monster_fx_facts.md
+        {9, 0x86},      // Treasures' stone guardian: an empty handler (GAME.OVR 0x24231)
     };
     for (const auto& r : inert)
         if (r[0] == (getenv("GAME") ? atoi(getenv("GAME")) : 2)) known.insert(r[1]);

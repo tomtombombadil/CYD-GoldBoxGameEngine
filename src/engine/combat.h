@@ -386,6 +386,14 @@ struct MonFx {
     // Death Knights' iron golem (0x42, GAME.OVR 0x1CDFF): a blow of no +3
     // weapon does nothing - but a monster's (race 7) of 4+ Hit Dice
     uint8_t need_plus3m = 0;
+    // Treasures' yetis (0x99, GAME.OVR 0x25612): fire damage half again
+    uint8_t fire_more = 0;
+    // Treasures' stone guardian (0x85, GAME.OVR 0x241ED): magic, cold, fire
+    // or electricity damage half (once)
+    uint8_t half_magic = 0;
+    // ... and its 0x8D (0x24814): a blow of a weapon type byte <= 1 a
+    // quarter; of a type flagged 0x10 nothing
+    uint8_t quarter_pierce = 0;
 };
 
 // More spells' effects (spell_facts.md 2): Enlarge, Confusion (and going
@@ -495,6 +503,9 @@ struct Facts {
     struct RaceFx {
         uint8_t con_save, halfelf, dwarf_orc, gnome_foe, giants, gnome_extra, ranger_giant;
         bool    secret_flags = false;
+        // the dwarves' Constitution bonus with poison too (Darkness's /
+        // Treasures' 0x5E: saves of type 0, 2, 4 - GAME.OVR 0x1CABA / 0x227D8)
+        uint8_t con_save_p = 0;
     } race{};
     ItemFx  items;
     // Berserk (the Berserker sword's effect, the listing's spl_berzerk): at

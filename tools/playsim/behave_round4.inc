@@ -1192,7 +1192,8 @@ void dmg22()
     if (!fight() || !fg->b.fx) return;
     combat::Battle& b = fg->b;
     const auto& fx = *b.fx;
-    if (!fx.q.fire_heal && !fx.q.cold_x2 && !(fx.mon.half_elec && fx.mon.half_elec == fx.mon.half_cold)) return;
+    if (!fx.q.fire_heal && !fx.q.cold_x2 && !fx.mon.fire_more && !fx.mon.half_magic &&
+        !(fx.mon.half_elec && fx.mon.half_elec == fx.mon.half_cold)) return;
     int bad = 0, n = 0;
     auto chk = [&](bool ok, const char* what) {
         ++n;
@@ -1222,6 +1223,15 @@ void dmg22()
         chk(hit(fx.q.fire_heal, 0, 20, &hp) > 0, "a plain harm: hurts");
     }
     if (fx.q.cold_x2) chk(hit(fx.q.cold_x2, 2, 10, nullptr) == 20, "cold: double");
+    if (fx.mon.fire_more) {
+        chk(hit(fx.mon.fire_more, 1, 20, nullptr) == 30, "the yetis: fire half again");
+        chk(hit(fx.mon.fire_more, 2, 20, nullptr) == 20, "the yetis: cold as it is");
+    }
+    if (fx.mon.half_magic) {
+        for (int kind : {1, 2, 4, 8, 9})
+            chk(hit(fx.mon.half_magic, kind, 20, nullptr) == 10, "the stone guardian: magic / cold / fire / electricity half");
+        chk(hit(fx.mon.half_magic, 0x20, 20, nullptr) == 20, "the stone guardian: breath as it is");
+    }
     if (fx.mon.half_elec && fx.mon.half_elec == fx.mon.half_cold) {
         chk(hit(fx.mon.half_elec, 4, 20, nullptr) == 10, "electricity: half");
         chk(hit(fx.mon.half_elec, 2, 20, nullptr) == 10, "cold: half");

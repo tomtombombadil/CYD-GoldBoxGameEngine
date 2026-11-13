@@ -2236,6 +2236,13 @@ void after_hit_own(Battle& b, int a, int c, int slot, int roll, int hits1, creat
             add_event(out, c, Ev::ParalyzedLow);
         }
         if (hasx(at, m.chill)) touch(d.roll(8, 2), 0x0A);
+        // Treasures' harpy (0x84, GAME.OVR 0x240ED): Gateway's charm
+        if (!gw.ways && hasx(at, gw.harpy) && tg.up() && b.fx->charm && !tg.has(b.fx->charm) && !saving_throw(tg, 4, 0, d)) {
+            give_aff(tg, b.fx->charm, 0, (at.team() ? 0x80 : 0) | 3, true);
+            tg.rec[kTeam] = static_cast<uint8_t>(at.team());
+            tg.target = -1;
+            add_event(out, c, Ev::Charmed);
+        }
         // Gateway's after attack 1's hit (its list 4F 50 91 39 60 7A 7B 95 9A
         // 9B 40 43 9F): the stirge's and the squid's holds (a d10 of 4 or
         // less), the harpy's charm, the deadly poison, the paralysing bite,
@@ -2998,14 +3005,20 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
                 if (hasx(tg, m.half_under3) && item && plus < 3) dmg /= 2;
                 if (hasx(tg, m.half_under4) && item && plus < 4) dmg /= 2;
                 if (hasx(tg, m.half_pierce) && item && names && names->type(item[0x2E]).blow <= 1) dmg /= 2;
+                if (hasx(tg, m.quarter_pierce) && item && names) {
+                    if (names->type(item[0x2E]).blow <= 1) dmg /= 4;
+                    if (names->type(item[0x2E]).flags & 0x10) dmg = 0;
+                }
                 if (hasx(tg, m.half_crush) && item && names && names->type(item[0x2E]).blow > 0x7F) dmg /= 2;
                 // Secret's giant slug: a blunt weapon's blow (its type's byte 7 & 0x80) nothing
                 if (hasx(tg, m.blunt_proof) && item && names && (names->type(item[0x2E]).blow & 0x80)) dmg = 0;
                 if (hasx(tg, m.pierce_one) && item && names && names->type(item[0x2E]).blow == 1) dmg = 1;
                 // Gateway's (0x97 / 0x99, GAME.OVR 0x14F82 / 0x15052 - the target's
                 // list's last): twice from a weapon with that name word (a byte)
-                if (hasx(tg, gw.ice) && item && has_word(item, gw.ice_word)) dmg = (dmg * 2) & 0xFF;
-                if (hasx(tg, gw.stone) && item && has_word(item, gw.stone_word)) dmg = (dmg * 2) & 0xFF;
+                // (Treasures' 0x88 / 0x8B, GAME.OVR 0x242BE / 0x2457B: a word)
+                const int dbl_mask = gw.ways ? 0xFF : 0xFFFF;
+                if (hasx(tg, gw.ice) && item && has_word(item, gw.ice_word)) dmg = (dmg * 2) & dbl_mask;
+                if (hasx(tg, gw.stone) && item && has_word(item, gw.stone_word)) dmg = (dmg * 2) & dbl_mask;
                 // Pool's undead: only magic (any plus) or silver hurts the
                 // wight; the wraith takes half from +0 silver, nothing from
                 // other +0 weapons or none; a flask of oil burns the mummy
@@ -3459,6 +3472,8 @@ int harm(Battle& b, int c, int amount, const Harm& h, create::Dice& d, bool* dow
         // (the round 22 sweep's: cold double / a fifth more, fire four fifths,
         // magic fire healing - events 6)
         if ((h.kind & 1) && hasx(f, m.half_fire)) dmg /= 2;
+        if ((h.kind & 1) && hasx(f, m.fire_more)) dmg += dmg / 2;
+        if ((h.kind & 0x0F) && hasx(f, m.half_magic)) dmg /= 2;
         if ((h.kind & 4) && hasx(f, m.half_elec)) dmg /= 2;
         if ((h.kind & 2) && hasx(f, m.half_cold) && !((h.kind & 4) && m.half_cold == m.half_elec)) dmg /= 2;
         if ((h.kind & 2) && hasx(f, b.fx->q.cold_x2)) dmg *= 2;
@@ -4567,6 +4582,11 @@ bool saving_throw(const Fighter& f, int type, int bonus, create::Dice& d)
         // (Secret's program never applies it - 0x61 is in no effect phase;
         // only with the rules fixes there)
         if ((type == 4 || type == 2) && hasx(f, fx.race.con_save) && (!fx.race.secret_flags || rules::fixes())) {
+            const int con = f.rec[0x19];
+            bonus += con >= 4 && con <= 6 ? 1 : con >= 7 && con <= 10 ? 2 : con >= 11 && con <= 13 ? 3 : con >= 14 && con <= 17 ? 4
+                     : con >= 18 && con <= 20 ? 5 : 0;
+        }
+        if ((type == 4 || type == 2 || type == 0) && hasx(f, fx.race.con_save_p)) {
             const int con = f.rec[0x19];
             bonus += con >= 4 && con <= 6 ? 1 : con >= 7 && con <= 10 ? 2 : con >= 11 && con <= 13 ? 3 : con >= 14 && con <= 17 ? 4
                      : con >= 18 && con <= 20 ? 5 : 0;
