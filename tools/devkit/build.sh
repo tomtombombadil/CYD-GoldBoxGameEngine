@@ -15,6 +15,10 @@ objs=()
 # know", 2026-11-12, twice)
 stamp=$O/.stamp
 if [ -f "$stamp" ] && [ -n "$(find src tools/host -name '*.h' -newer "$stamp" -print -quit)" ]; then REBUILD=1; fi
+# (objects from before the stamp existed: no stamp, so rebuild them too -
+# an old bin/sim said "a release the engine doesn't know" for the GAME.EXE
+# games, 2026-11-13)
+if [ ! -f "$stamp" ] && ls "$O"/*.o > /dev/null 2>&1; then REBUILD=1; fi
 for f in src/engine/*.cpp tools/host/*.cpp "$@"; do
   o=$O/$(echo "$f" | tr '/' '_').o
   objs+=("$o")
