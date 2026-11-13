@@ -2047,7 +2047,7 @@ constexpr combat::Facts kQueenFightFacts = {.held = {0x33, 0x34, 0x35, 0x1F}, .b
                        .con_regen = 0x3E, .shield = 0x11, .enfeeble = 0x1D, .ill = 0x22, .weak = 0x2B, .sick = 0x2C,
                        .stun = 0x6A},
                 .race = {0x5E, 0x12, 0x1A, 0x07, 0x2F, 0x30, 0x69, true},
-                .items = {.displace = 0x59, .ring_invisible = 0x38, .fire_ring = 0x3D},
+                .items = {.displace = 0x59, .ring_invisible = 0x38, .fire_ring = 0x3D, .barkskin = 0x0D},   // (Barkskin: DQK.EXE 0x4E0AD, saves' event 0xC)
                 .berserk = 0x6B,
                 // (its clouds - round 19: Darkness's grounds, Stinking Cloud 0x1D,
                 // Cloudkill 0x1C, Blade Barrier 0x1B - its handler DQK.EXE

@@ -1016,9 +1016,10 @@ the Project as claude/TODO.md.
       healing, effect 0x0D for 4 + level rounds; 0x0D's own rule (+1 to a
       save not against magic - Secret / Darkness / Treasures, their
       handlers) in the engine for all three (behave secret: 5415 / 0).
-      Left: the Curse-family games' and Champions' / Knights' / the
-      Queen's 0x0D handlers not read (the Queen's 0x4E0AD: [0xB2E7] + 1
-      unless [0xBEBD] & 8 - its save event list not read).
+      v0.196.18 the Dark Queen's too (DQK.EXE 0x4E0AD in its save event
+      0xC - [0xB2E7] the save's d20, [0xBEBD] the kind); rules4
+      ONLY=barkskin (4 games). Left: the Curse-family games' and
+      Champions' / Knights' 0x0D handlers not found by shape.
 - [ ] Tom: try the new library page (v0.103.0) on a board - the art,
       the header keys, the thirds and the triangles.
 - [ ] Tom: when you have a moment, Secret's Screen Test and Walk Test

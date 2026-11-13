@@ -610,6 +610,30 @@ void queen_moons()
            bad == 0, "%d of %d wrong (%s)", bad, n, first);
 }
 
+// Barkskin (0x0D) at a save: the lowest d20 that saves one point lower
+// (Secret / Darkness / Treasures GAME.OVR handlers, the Dark Queen's
+// DQK.EXE 0x4E0AD in its save event 0xC; round 22)
+void barkskin_saves()
+{
+    if (!fight() || !fg->b.fx || !fg->b.fx->items.barkskin) return;
+    mx::put(0, 0, 10, 10, 50);
+    combat::Fighter& f = F(0);
+    auto lowest = [&] {
+        int lo = 0;
+        for (int r = 1; r <= 20 && !lo; ++r) {
+            dice(0, r);
+            if (combat::saving_throw(f, 4, 0, play::rng)) lo = r;
+            dice_off();
+        }
+        return lo;
+    };
+    const int base = lowest();
+    mx::add_aff(0, 0x0D);
+    const int bark = lowest();
+    expect(P, "Barkskin (0x0D): a save 1 easier (not against magic)", base > 2 && bark == base - 1, "from %d, with it %d",
+           base, bark);
+}
+
 void queen_moon_room();
 void moons()
 {
@@ -4074,6 +4098,7 @@ void run()
     if (want("qlost")) queen_lost();
     if (want("qwater")) queen_water();
     if (want("gwater")) gateway_water();
+    if (want("barkskin")) barkskin_saves();
     if (want("qhooks")) queen_hooks();
     if (want("statfx")) stat_effects();
     if (want("finder")) finder_check();

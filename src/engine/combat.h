@@ -410,7 +410,8 @@ struct ItemFx {
     bool    displace_unused = false;        // Secret: displacement only with rules::fixes()
     uint8_t scrolls[2] = {};                // Secret's scrolls are these types (not slots 11-13)
     // Barkskin (0x0D; Secret GAME.OVR 0x11277, Darkness 0x1AE48, Treasures
-    // 0x20927 - the saves' phase): a save + 1 unless the kind is magic (8)
+    // 0x20927 - the saves' phase; the Dark Queen DQK.EXE 0x4E0AD - its save
+    // event 0xC): a save + 1 unless the kind is magic (8)
     uint8_t barkskin = 0;
 };
 
