@@ -686,9 +686,10 @@ the Project as claude/TODO.md.
 - [ ] Memory, next cuts (measure each with heapprof): the party's unused
       member slots (1.7 KB each), Data's words read on demand, the spell
       names' 4 KB read buffer in pieces.
-- [ ] The plain C5's scan: "The Unlimited Adventures journal couldn't be
-      processed (card full, or not enough memory)" (the Companion's) - look
-      at why (8 MB free there, so the card or the file).
+- [x] The plain C5's scan: "The Unlimited Adventures journal couldn't be
+      processed (card full, or not enough memory)" (the Companion's) - moot
+      since 2026-10-24: the scan passes Unlimited Adventures' folder over
+      (library.cpp), so its journal is never made.
 - [ ] S3 / C5 follow-ups once Tom has run them: fix what his reports show
       (colours, touch direction, sound level - the codec's volume is
       0 dB); then the 8-bit canvas for the VGA games there.
