@@ -1730,6 +1730,21 @@ int tick(Battle& b, Event* out, int cap)
     return n;
 }
 
+bool queen_regen(Battle& b, int i)
+{
+    if (!b.fx || !b.fx->q.regen1 || i < 0 || i >= b.n) return false;
+    Fighter& f = b.f[i];
+    if (!f.has(b.fx->q.regen1)) return false;
+    int side = 0;
+    for (int j = 0; j < b.n; ++j) side += b.f[j].team() && b.f[j].up() && b.f[j].size;
+    const int st = f.status();
+    if (side == 0 || f.hp() >= f.hp_max() || hasx(f, b.fx->mon.rot_clock) ||
+        !(st == party::Okay || st == party::Animated || st == party::Unconscious || st == party::Dying))
+        return false;
+    f.rec[kHp] = static_cast<uint8_t>(f.hp() + 1);
+    return true;
+}
+
 int queen_fear(Battle& b, create::Dice& d, Event* out, int cap)
 {
     if (!b.fx || !b.fx->q.fear_aura || !b.fx->mon.paralyzed) return 0;
@@ -2019,6 +2034,13 @@ int start_round(Battle& b, create::Dice& d, Event* out, int cap)
                 }
             }
     }
+    // (the Dark Queen's troll / anemone at the round's start - event 0x13)
+    for (int i = 0; b.fx && b.fx->q.regen1 && i < b.n; ++i)
+        if (queen_regen(b, i) && out && n_ev < cap) {
+            out[n_ev] = Event{};
+            out[n_ev].who = static_cast<uint8_t>(i);
+            out[n_ev++].ev = Ev::Regen;
+        }
     return n_ev;
 }
 
@@ -7943,8 +7965,9 @@ int special(Battle& b, const Tables& t, int i, create::Dice& d, Event* out, int 
         if (tg >= 0) {
             int on[kMaxFighters];
             const int k = cone(b, t, i, b.f[tg].x, b.f[tg].y, 9, 3, on, kMaxFighters);
-            // (Secret's: none on its path, or one of its own side - no breath; GAME.OVR 0x328D5)
-            if (!m.secret_ways || (k && !friend_on(on, k))) {
+            // (Secret's: none on its path, or one of its own side - no breath; GAME.OVR 0x328D5;
+            // the Dark Queen's the same - 0x54C1F)
+            if (!(m.secret_ways || b.fx->q.hooks) || (k && !friend_on(on, k))) {
                 ev(i, Ev::BreathesFire);
                 fly(i, b.f[tg].x, b.f[tg].y, 5, 1, 30);
                 Harm h = breath;
@@ -8047,7 +8070,7 @@ int special(Battle& b, const Tables& t, int i, create::Dice& d, Event* out, int 
             int on[kMaxFighters];
             const int k = cone(b, t, i, b.f[tg].x, b.f[tg].y, 7, 3, on, kMaxFighters);
             // (Secret's: none on its path, or one of its own side - no breath; GAME.OVR 0x328D5)
-            if (!m.secret_ways || (k && !friend_on(on, k))) {
+            if (!(m.secret_ways || b.fx->q.hooks) || (k && !friend_on(on, k))) {
                 ev(i, Ev::BreathesCold);
                 fly(i, b.f[tg].x, b.f[tg].y, 5, 1, 30);
                 Harm h = breath;
@@ -8059,6 +8082,43 @@ int special(Battle& b, const Tables& t, int i, create::Dice& d, Event* out, int 
                 return n;
             }
         }
+    }
+    // The Dark Queen's death breath (0xB4) and Baldric's paralysis or cold
+    // (0xCA) - its breath handler 0x54A51
+    for (int kind = 0; kind < 2; ++kind) {
+        const uint8_t ty = kind ? m.para_breath : m.death_breath;
+        if (!hasx(f, ty)) continue;
+        uint8_t* left = breaths(ty);
+        const int tg = left && *left ? special_target(b, t, i, 6, true, d) : -1;
+        if (tg < 0) continue;
+        const bool para = kind && d.roll(2, 1) == 2;      // (random(2) = 1)
+        int on[kMaxFighters];
+        const int k = kind == 0 ? cone(b, t, i, b.f[tg].x, b.f[tg].y, 8, 1, on, kMaxFighters)
+                      : para    ? cone(b, t, i, b.f[tg].x, b.f[tg].y, 5, 3, on, kMaxFighters)
+                                : cone(b, t, i, b.f[tg].x, b.f[tg].y, 7, 3, on, kMaxFighters);
+        if (!k || friend_on(on, k)) continue;
+        ev(i, kind == 0 ? Ev::BreathesDeath : para ? Ev::BreathesPara : Ev::BreathesCold);
+        fly(i, b.f[tg].x, b.f[tg].y, 5, 1, 30);
+        if (para) {
+            for (int j = 0; j < k; ++j) {
+                Fighter& v = b.f[on[j]];
+                const bool saved = saving_throw(v, 3, 0, d);
+                if (hasx(v, m.no_paralyze) || !m.paralyzed) continue;
+                if (saved) ev(on[j], Ev::Unaffected);
+                else {
+                    give_aff(v, m.paralyzed, 10, 12, false);
+                    ev(on[j], Ev::Paralyzed);
+                }
+            }
+        } else {
+            Harm h = breath;
+            h.kind = kind == 0 ? 0x60 : 0x22;
+            const int amount = f.hp_max();
+            for (int j = 0; j < k; ++j) hurt(on[j], amount, h);
+        }
+        --*left;
+        *ends_turn = true;
+        return n;
     }
     // Secret's pyrohydra (GAME.OVR 0x12D5F): while the round is within its
     // attacks byte, at one next to it: "Breathes Fire", 8 (a save for half)

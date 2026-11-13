@@ -1060,6 +1060,65 @@ void queen_mound()
            bad == 0, "%d of %d wrong", bad, n);
 }
 
+// The Dark Queen's breaths (0x54A51: 0xB4 death, 0xCA paralysis / cold,
+// 0x55 cold, 0x53 the big fire) and its troll's regeneration (0x51A3A)
+void queen_breath()
+{
+    if (game() != 7 || !fight() || !fg->b.fx || !fg->b.fx->mon.death_breath) return;
+    combat::Battle& b = fg->b;
+    const auto& m = b.fx->mon;
+    int bad = 0, n = 0, para = 0, cold = 0;
+    auto chk = [&](bool ok, const char* what) {
+        ++n;
+        if (!ok && !bad++) printf("  (breath: %s)\n", what);
+    };
+    for (uint8_t ty : {m.death_breath, m.para_breath, m.cold_breath, m.big_fire}) {
+        for (int seed = 1; seed <= 12; ++seed) {
+            create::Dice dd(static_cast<uint32_t>(seed));
+            for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+            mx::put(0, 0, 10, 10, 250);
+            mx::put(B, 1, 13, 10, 40);
+            mx::add_aff(B, ty);
+            combat::Event ev[16];
+            bool ends = false;
+            const int k = combat::special(b, fg->t, B, dd, ev, 16, &ends);
+            combat::Ev said = combat::Ev::Down;
+            for (int j = 0; j < k; ++j)
+                if (ev[j].ev == combat::Ev::BreathesDeath || ev[j].ev == combat::Ev::BreathesPara ||
+                    ev[j].ev == combat::Ev::BreathesCold || ev[j].ev == combat::Ev::BreathesFire)
+                    said = ev[j].ev;
+            const int lost = 250 - F(0).hp();
+            if (ty == m.death_breath) chk(said == combat::Ev::BreathesDeath && (lost == 40 || lost == 20) && ends, "death: its hit points or half");
+            if (ty == m.para_breath) {
+                if (said == combat::Ev::BreathesPara) ++para;
+                if (said == combat::Ev::BreathesCold) ++cold;
+                chk(ends && (said == combat::Ev::BreathesPara ? lost == 0 : (lost == 40 || lost == 20)), "Baldric: paralysis (no harm) or cold");
+            }
+            if (ty == m.cold_breath) chk(said == combat::Ev::BreathesCold && (lost == 40 || lost == 20), "cold: its hit points or half");
+            if (ty == m.big_fire) chk(said == combat::Ev::BreathesFire && lost >= 18 && lost <= 252 && ends, "the big fire: 24d10 + 12 or half");
+        }
+    }
+    chk(para > 0 && cold > 0, "Baldric: both kinds");
+    // the troll: a hit point back at the round's start while monsters stand
+    {
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(0, 0, 10, 10, 50);
+        mx::put(B, 1, 12, 10, 40);
+        mx::add_aff(B, b.fx->q.regen1);
+        F(B).rec[0x1A4] = 30;
+        create::Dice dd(4);
+        combat::Event ev[16];
+        const int k = combat::start_round(b, dd, ev, 16);
+        bool rg = false;
+        for (int j = 0; j < k; ++j) rg |= ev[j].ev == combat::Ev::Regen && ev[j].who == B;
+        chk(rg && F(B).hp() == 31, "the troll + 1 at the round's start");
+        F(B).rec[0x1A4] = 40;
+        chk(!combat::queen_regen(b, B), "none at its most");
+    }
+    expect(P, "the Dark Queen's breaths (death, Baldric's paralysis / cold, cold, the big fire) and its troll's + 1 - DQK.EXE 0x54A51 / 0x51A3A",
+           bad == 0, "%d of %d wrong (Baldric %d paralysis, %d cold)", bad, n, para, cold);
+}
+
 void queen_moon_room();
 void moons()
 {
@@ -4533,6 +4592,7 @@ void run()
     if (want("qpudding")) queen_pudding();
     if (want("qspore")) queen_spore();
     if (want("qmound")) queen_mound();
+    if (want("qbreath")) queen_breath();
     if (want("qhooks")) queen_hooks();
     if (want("statfx")) stat_effects();
     if (want("finder")) finder_check();

@@ -2051,10 +2051,15 @@ constexpr combat::Facts kQueenFightFacts = {.held = {0x33, 0x34, 0x35, 0x1F}, .b
                         .suffocate = 0xB1, .held_fast = 0xB2, .engulfing = 0xB3,
                         .paralyzed = 0x34, .poisoned = 0x37, .sleep = 0x35, .drain1 = 0x65, .drain2 = 0x66,
                         .rot_touch = 0xAA, .rot_clock = 0xD7, .rot = 0xAC,      // (the mummy: 0x514B0)
-                        .ghoul = 0x58, .holding = 0xB3, .lightning_breath = 0x5B, .no_fear = 0x5C,
+                        .ghoul = 0x58, .holding = 0xB3, .lightning_breath = 0x5B,
+                        .cold_breath = 0x55,        // (its breath handler 0x54A51: Darkness's 0x53 / 0x55, acid kind 0x20)
+                        .no_fear = 0x5C,
+                        .big_fire = 0x53, .acid_kind = 0x20,
                         // (its Enchanted Baaz: DQK.EXE 0x51DE8, Enchanted
                         // Kapak 0x50BC8 - round 22)
-                        .explode = 0x9A, .stone_death = 0xBB, .acid_pool = 0x9C},
+                        .explode = 0x9A, .stone_death = 0xBB, .acid_pool = 0x9C,
+                        // (its breath handler 0x54A51: its own 0xB4 / 0xCA)
+                        .death_breath = 0xB4, .para_breath = 0xCA},
                 .sp = {.enlarge = 0x0C, .confuse = 0x23, .berserk = 0x4D, .evil_ward = 0x04, .hot = 0x32,
                        .cold = 0x36, .zap = 0x70, .slow_poison = 0x16, .poison_damage = 0x0F, .hammer = 0x17,
                        .con_regen = 0x3E, .shield = 0x11, .enfeeble = 0x1D, .ill = 0x22, .weak = 0x2B, .sick = 0x2C,
@@ -2086,7 +2091,7 @@ constexpr combat::Facts kQueenFightFacts = {.held = {0x33, 0x34, 0x35, 0x1F}, .b
                       .tick_at_start = true, .mad = 0x98, .reborn = 0xA0, .immolate = 0xA1, .mad_time = 0xA3,
                       .no_harm = 0xA5, .blows_up = 0xA6, .zaps = 0xA7, .greater = 0xBF, .turn_over = 0xD5, .tag = 0x97,
                       .fire_dice = 0xA8, .magic_half = 0xA9, .fear_aura = 0xAB, .rot_guard = 0x32, .rot_shift = 5,
-                      .dissolve = 0xBA, .fire_cold = 0xAE, .blow_half = 0xAF, .hold_ends = true, .engulf_not = 0x96,
+                      .dissolve = 0xBA, .fire_cold = 0xAE, .blow_half = 0xAF, .regen1 = 0xB5, .hold_ends = true, .engulf_not = 0x96,
                       .spore = 0xB6, .spent = 0xC2, .spore_proof = 0xB7, .spore_touch = 0xB8,
                       .spore_ward = 0x4C, .spore_ill = 0xB9, .death_cast = {0xBC, 0xBD}, .death_spell = {0x57, 0x7C}}};
 // The Dark Queen's spells (queen_facts_4.md 8): Darkness's numbers 1-126 and
@@ -2344,6 +2349,10 @@ constexpr auto kQueenFight = [] {
     f.words[kNoEffectWaterQ] = qw(0x87C9);
     f.words[kCantWaterQ] = qw(0x5939);
     if (!f.words[kNothingHappens]) f.words[kNothingHappens] = qw(0x8FE5);      // (an item's: DQK.EXE 0x5EDCB)
+    // (its breaths: "breathes lightning" 0x873A, "Breathes!" 0x8412 - the
+    // others "breathes %s" with the kind: Data's w_qbreath)
+    f.words[kBreathesLightning] = qw(0x873A);
+    f.words[kBreathesB] = qw(0x8412);
     // (the mummy's - DQK.EXE 0x514B0 / 0x5156B / 0x5163A)
     f.words[kIsDiseased] = qw(0x84AD);
     f.words[kFearParalyzed] = qw(0x84B9);
@@ -4270,6 +4279,8 @@ const Profile kProfiles[] = {
                 // ("explodes." - the Gas Spore's 0x51A6A, "explodes" - the
                 // Enchanted Bozak's / Sivak's 0x993F, "dies from disease" - 0x51CA5)
                 .qdeath_words = {qw(0x84FD), qw(0x212), qw(0x8507)},
+                // ("breathes %s" and its kinds: Fire, cold, acid, death, paralysis - 0x54A51)
+                .qbreath_words = {qw(0x8772), qw(0x8753), qw(0x8762), qw(0x8767), qw(0x876C), qw(0x8758)},
                  // (Knight New Order, DQK 0x487F2: its messages 64-70, "Exit"
                  // of the menu "Change Exit" (161) - one " is too
                  // inexperienced" for both orders; the order's name made of

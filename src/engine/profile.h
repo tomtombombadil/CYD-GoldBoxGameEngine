@@ -811,6 +811,8 @@ struct Profile {
     // The Dark Queen's Gas Spore "explodes.", Enchanted Bozak / Sivak
     // "explodes", the spore's disease "dies from disease"
     uint32_t qdeath_words[3] = {};
+    // The Dark Queen's "breathes %s" and its kinds (Fire, cold, acid, death, paralysis)
+    uint32_t qbreath_words[6] = {};
     // Champions' Knight Change Classes (GAME.OVR): "Exit", "is petitioning to
     // become a", "sword", "rose", "Knight Of The ", " is too inexperienced.",
     // " does not qualify.", " may become a", "Knight Of The Sword", "Change

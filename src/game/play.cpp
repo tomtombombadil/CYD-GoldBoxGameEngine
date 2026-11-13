@@ -190,6 +190,7 @@ struct Data {
     char           w_aurak[5][20] = {};        // the Dark Queen's Aurak (variant.aurak_words)
     char           w_pudding[2][28] = {};      // the Dark Queen's Black Pudding (variant.pudding_words: a "%s" in each)
     char           w_qdeath[3][20] = {};       // the Dark Queen's deaths (variant.qdeath_words)
+    char           w_qbreath[5][20] = {};      // the Dark Queen's "breathes Fire" ... (variant.qbreath_words)
     char           w_acid[2][24] = {};         // Champions: "dissolves into acid!", "The acid drains away.." (variant.acid_words)
     char           w_knight[12][28] = {};
     char           w_undo_done[12] = {};       // Dark Queen: Move's "Undo Done" (variant.undo_done)
@@ -12582,6 +12583,11 @@ __attribute__((noinline)) void load_party_text(dax::ByteSource& exe, const exepa
             {d->prof->variant.qdeath_words[0], d->w_qdeath[0], sizeof d->w_qdeath[0]},
             {d->prof->variant.qdeath_words[1], d->w_qdeath[1], sizeof d->w_qdeath[1]},
             {d->prof->variant.qdeath_words[2], d->w_qdeath[2], sizeof d->w_qdeath[2]},
+            {d->prof->variant.qbreath_words[1], d->w_qbreath[0], sizeof d->w_qbreath[0]},
+            {d->prof->variant.qbreath_words[2], d->w_qbreath[1], sizeof d->w_qbreath[1]},
+            {d->prof->variant.qbreath_words[3], d->w_qbreath[2], sizeof d->w_qbreath[2]},
+            {d->prof->variant.qbreath_words[4], d->w_qbreath[3], sizeof d->w_qbreath[3]},
+            {d->prof->variant.qbreath_words[5], d->w_qbreath[4], sizeof d->w_qbreath[4]},
             {d->prof->variant.knight_words[0], d->w_knight[0], sizeof d->w_knight[0]},
             {d->prof->variant.knight_words[1], d->w_knight[1], sizeof d->w_knight[1]},
             {d->prof->variant.knight_words[2], d->w_knight[2], sizeof d->w_knight[2]},
@@ -12599,6 +12605,18 @@ __attribute__((noinline)) void load_party_text(dax::ByteSource& exe, const exepa
         };
         for (auto& wd : words)
             if (wd.at) read_word(src, wd.at, wd.out, wd.cap);
+        if (d->prof->variant.qbreath_words[0]) {
+            // (the Dark Queen's "breathes %s" with each kind)
+            char fm[20] = {};
+            read_word(src, d->prof->variant.qbreath_words[0], fm, sizeof fm);
+            const char* ps = strstr(fm, "%s");
+            for (auto& w : d->w_qbreath) {
+                if (!w[0] || !ps) continue;
+                char kind[20];
+                snprintf(kind, sizeof kind, "%s", w);
+                snprintf(w, sizeof w, "%.*s%s%s", static_cast<int>(ps - fm), fm, kind, ps + 2);
+            }
+        }
         if (hl()) {
             // (its list keys are words of longer strings: their spaces before them)
             for (char* w : {d->w_next, d->w_prev, d->w_exit})

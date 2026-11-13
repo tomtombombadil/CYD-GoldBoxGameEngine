@@ -352,6 +352,13 @@ struct MonFx {
     // ... and the kapak dissolves into acid (0x46; GAME.OVR 0x12C1F): its
     // square becomes an acid pool for a while (lay_acid)
     uint8_t acid_pool = 0;
+    // The Dark Queen's breaths (its breath handler DQK.EXE 0x54A51, Darkness's
+    // with two more): `death_breath` (0xB4, the Death Dragon) a line of 8,
+    // "breathes death", kind 0x60, its maximum hit points (a save for half);
+    // `para_breath` (0xCA, Baldric) one time in 2 "breathes paralysis" (a
+    // spread of 5 - its shape 4: 3 lines here - a save against breath or 10
+    // rounds paralysed, "is Unaffected" when made), else its cold
+    uint8_t death_breath = 0, para_breath = 0;
 };
 
 // More spells' effects (spell_facts.md 2): Enlarge, Confusion (and going
@@ -645,6 +652,12 @@ struct Facts {
         // its blow at the one inside at its turn ends the turn (0x519E2);
         // `engulf_not`: not one holding 0x96
         uint8_t fire_cold = 0, blow_half = 0;
+        // The 2-headed troll / giant anemone (MONCHA.GLB 42 / 16): `regen1`
+        // (0xB5, 0x51A3A - events 0x13, each round's start, and 0x12, the
+        // attacks counted at each turn): a hit point back while the monsters'
+        // side has any standing (DS 0xB7F3) - okay, animated, unconscious or
+        // dying, under its most, not holding 0xD7 - "is fully / partially healed"
+        uint8_t regen1 = 0;
         bool    hold_ends = false;
         uint8_t engulf_not = 0;
         // The Gas Spore (MONCHA.GLB 6): `spore` (0xB6, 0x51A6A at its death,
@@ -1058,6 +1071,8 @@ enum class Ev : uint8_t {
     // The Dark Queen's Black Pudding (`to`: the one hit; amount: its item):
     // "is Disolving %s's armor!" (a plus less), "Dissolves %s's armor!" (gone)
     Dissolving, Dissolves,
+    // The Dark Queen's "breathes death" / "breathes paralysis"
+    BreathesDeath, BreathesPara,
 };
 struct Event {
     uint8_t who = 0;
@@ -1075,6 +1090,9 @@ int tick(Battle& b, Event* out = nullptr, int cap = 0);
 // The fight's start: those invisible from the start become so (the dice:
 // the elves' stealth, 95 in 100; none - the fight's last dice)
 void battle_start(Battle& b, create::Dice* d = nullptr);
+// The Dark Queen's troll / anemone (QueenFx regen1): fighter i a hit point
+// back - true when it was
+bool queen_regen(Battle& b, int i);
 // The Dark Queen's mummy at the fight's set-up (QueenFx fear_aura): each
 // one feared - Ev::FearParalyzed, or Ev::Unaffected for a save made
 int queen_fear(Battle& b, create::Dice& d, Event* out, int cap);

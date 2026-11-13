@@ -2912,14 +2912,26 @@ void event_words(const combat::Event& e)
         }
         break;
     }
-    case combat::Ev::BreathesAcid: said(profile::kBreathesAcid); break;
-    case combat::Ev::BreathesFire: said(profile::kBreathesFire); break;
+    // (the Dark Queen's "breathes %s": Fire, cold, acid, death, paralysis - 0x54C50)
+    case combat::Ev::BreathesAcid:
+        if (hl() && d->w_qbreath[2][0]) add_page(who, d->w_qbreath[2]);
+        else said(profile::kBreathesAcid);
+        break;
+    case combat::Ev::BreathesFire:
+        if (hl() && d->w_qbreath[0][0]) add_page(who, d->w_qbreath[0]);
+        else said(profile::kBreathesFire);
+        break;
+    case combat::Ev::BreathesDeath: add_page(who, d->w_qbreath[3]); break;
+    case combat::Ev::BreathesPara: add_page(who, d->w_qbreath[4]); break;
     case combat::Ev::HoundFire: said(profile::kBreathesFireH); break;
     case combat::Ev::ThrowsLightning: said(profile::kThrowsLightning); break;
     case combat::Ev::SpitsAcid: said(profile::kSpitsAcid); break;
     case combat::Ev::SpitsMisses: said(profile::kSpitsMisses); break;
     case combat::Ev::Gazes: said(profile::kGazes); break;
-    case combat::Ev::BreathesCold: said(profile::kBreathesCold); break;
+    case combat::Ev::BreathesCold:
+        if (hl() && d->w_qbreath[1][0]) add_page(who, d->w_qbreath[1]);
+        else said(profile::kBreathesCold);
+        break;
     case combat::Ev::BreathesPoison: said(profile::kBreathesPoison); break;
     case combat::Ev::BreathesLightning: said(profile::kBreathesLightning); break;
     case combat::Ev::Swallowed:
@@ -3790,6 +3802,17 @@ void start_turn(pic::Canvas& c)
             draw_fight(c);
             // (the Dark Queen's shambling mound: its blow at the one inside, the turn over - 0x519E2)
             say(c, f.up() && !(bite >= 0 && b.fx && b.fx->q.hold_ends) ? FSt::Resume : FSt::Next);
+            return;
+        }
+        // The Dark Queen's troll / anemone: a hit point back as its attacks
+        // are counted (event 0x12 - DQK.EXE 0x24E6B)
+        if (combat::queen_regen(b, fg->cur)) {
+            combat::Event re{};
+            re.who = static_cast<uint8_t>(fg->cur);
+            re.ev = combat::Ev::Regen;
+            event_page(re);
+            draw_fight(c);
+            say(c, FSt::Resume);
             return;
         }
         // The Dark Queen's Aurak (its turn's start, event 0xF): immolating

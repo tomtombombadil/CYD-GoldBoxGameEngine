@@ -1715,9 +1715,18 @@ the Project as claude/TODO.md.
       0xB1 suffocating 2d4 turns - 0x518AF, the mound 0xB3; its turn a blow
       at the one inside, the turn over - 0x518DD; the engine's Curse-type
       engulf / holding machinery; the original's special blow dice - record
-      0x190-0x194 - not followed). Left: the anemone / 2-headed troll 0xB5 (0x51A3A, 0x12 / 0x13),
-      the Death Dragon 0xB4 (0x54A51); 0xD7's own clock (0x52D77).
-      The Aurak's 0xA5 also blocks spell effects (event 9, 0x4DF31 with 0).
+      0x190-0x194 - not followed). v0.196.31 its breaths (the breath
+      handler 0x54A51 is Darkness's: 0x53 the big fire 24d10 + 12, 0x54
+      fire, 0x55 cold - the white heads, 0x60 acid of kind 0x20; its own
+      0xB4 the Death Dragon's death - a line of 8, kind 0x60 - and 0xCA
+      Baldric's: one in 2 paralysis - 10 rounds, a save against breath,
+      "is Unaffected" - its shape 4 of 5 made 3 lines - else cold; none
+      with its own side on the path, as Secret's; "breathes %s" with the
+      kind - the Queen's breath words were empty before), the troll /
+      anemone 0xB5 (a hit point at each round's start and each turn's
+      start - events 0x13 / 0x12 - while monsters stand, "is fully /
+      partially healed"). The Queen's monster effects all read now (the
+      0xD7 clock 0x52D77 and Cure Disease left). The Aurak's 0xA5 also blocks spell effects (event 9, 0x4DF31 with 0).
 - [x] Queen fuzz (QAALL=1, seeds 12 / 13, 60 fights; there before v0.196.26):
       R10 against the heads (MONCHA 65 / 71 - AC -10 / -11, moves 2) and
       a lone Quick archer needing a natural 20 (need 35 at +11): 60 rounds
