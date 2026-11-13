@@ -684,8 +684,9 @@ the Project as claude/TODO.md.
       library, logs - `ui/viewer.cpp` etc. draw with LovyanGFX). For a
       PortMaster port: draw them through ui:: primitives a port supplies.
 - [ ] Memory, next cuts (measure each with heapprof): the party's unused
-      member slots (1.7 KB each), Data's words read on demand, the spell
-      names' 4 KB read buffer in pieces.
+      member slots (1.7 KB each), Data's words read on demand (the spell
+      names' read buffer: already in 1 KB pieces - load_magic, checked
+      2026-11-13).
 - [x] The plain C5's scan: "The Unlimited Adventures journal couldn't be
       processed (card full, or not enough memory)" (the Companion's) - moot
       since 2026-10-24: the scan passes Unlimited Adventures' folder over
