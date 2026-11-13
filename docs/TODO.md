@@ -1635,7 +1635,14 @@ the Project as claude/TODO.md.
       0x50F81), handler 0x5100F "explodes!" / "is stunned"; Gas Spore 0xB6
       (0x51A6A "explodes." / "dies from"). v0.196.23: the Enchanted Baaz
       (mon.stone_death 0xBB; its extra tests - the last blow's damage a
-      multiple of 3, the weapon not cursed). Death event 0xD lists 0x9A 0x99
+      multiple of 3, the weapon not cursed). The Bozak's 0x9A (0x509AE,
+      death event 0xD): not active (+0x18B 0) -> status word +0x64 = 10, put
+      on a list (DS 0xC284, count [0xBD4C], up to 20), 0x9A taken off; the
+      list's routine 0x50CF0: status word cleared, active again, a save
+      (0x48F:0x26C1 with "rises in a new form" DS 0x846D) - failed: gets
+      0xA5, 0xD2, 0xA6 (3), 0xA7, loses 0xA0 0x97 0xA1-0xA3; then 0x50DF0
+      "immolates" (DS 0x8481) round it ... (not read further; "explodes!" /
+      "is stunned" in 0xA6's handler 0x5100F). Death event 0xD lists 0x9A 0x99
       0x9C; 0xE 0x46; 0xF 0x44; 5 0x43. To port: read each handler's
       dice / saves / durations, then map onto the Champions machinery
       (bozak_burst, baaz_weapon, lay_acid) or Queen-specific variants.
