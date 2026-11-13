@@ -1880,8 +1880,14 @@ void status_line(pic::Canvas& c, const char* t)
 }
 
 // ---- Messages: pages in the panel from row 10, a game delay each
+#ifdef CYD_TEST_HOOKS
+void* g_test_empty_at = nullptr;       // (tests: where the last page of names only was made - fx_check's E1)
+#endif
 void add_page(int who, const char* a, const char* b2 = nullptr, int whom = -1, const char* c2 = nullptr)
 {
+#ifdef CYD_TEST_HOOKS
+    if ((!a || !a[0]) && (!b2 || !b2[0]) && (!c2 || !c2[0])) g_test_empty_at = __builtin_return_address(0);
+#endif
     // (dropped when the pages or their text pool are full: 5 longest lines' room)
     fg->page_dropped = fg->pages >= kPages || fg->ptext_used > kPageText - 5 * 48;
     if (fg->page_dropped) return;
@@ -2880,8 +2886,14 @@ void event_page(const combat::Event& e)
     // (the Dark Queen: a caster hurt loses the spell under way - res 0x8F04)
     if (e.ev == combat::Ev::Damage && fg->pages != before) q_lost_spell(e.who, false);
 }
+#ifdef CYD_TEST_HOOKS
+int g_test_ev = -1;                     // (tests: the event whose words came last - fx_check's E1)
+#endif
 void event_words(const combat::Event& e)
 {
+#ifdef CYD_TEST_HOOKS
+    g_test_ev = static_cast<int>(e.ev);
+#endif
     char t[48];
     const int who = e.who;
     auto said = [&](int word) { add_page(who, fw(word)); };
@@ -2914,11 +2926,11 @@ void event_words(const combat::Event& e)
     }
     // (the Dark Queen's "breathes %s": Fire, cold, acid, death, paralysis - 0x54C50)
     case combat::Ev::BreathesAcid:
-        if (hl() && d->w_qbreath[2][0]) add_page(who, d->w_qbreath[2]);
+        if (d->w_qbreath[2][0]) add_page(who, d->w_qbreath[2]);
         else said(profile::kBreathesAcid);
         break;
     case combat::Ev::BreathesFire:
-        if (hl() && d->w_qbreath[0][0]) add_page(who, d->w_qbreath[0]);
+        if (d->w_qbreath[0][0]) add_page(who, d->w_qbreath[0]);
         else said(profile::kBreathesFire);
         break;
     case combat::Ev::BreathesDeath: add_page(who, d->w_qbreath[3]); break;
@@ -2929,7 +2941,7 @@ void event_words(const combat::Event& e)
     case combat::Ev::SpitsMisses: said(profile::kSpitsMisses); break;
     case combat::Ev::Gazes: said(profile::kGazes); break;
     case combat::Ev::BreathesCold:
-        if (hl() && d->w_qbreath[1][0]) add_page(who, d->w_qbreath[1]);
+        if (d->w_qbreath[1][0]) add_page(who, d->w_qbreath[1]);
         else said(profile::kBreathesCold);
         break;
     case combat::Ev::BreathesPoison: said(profile::kBreathesPoison); break;
@@ -3099,7 +3111,7 @@ void event_words(const combat::Event& e)
     case combat::Ev::Regenerates: said(profile::kRegeneratesGw); break;
     case combat::Ev::FallsDead: fallen(profile::kFallsDeadGw); break;
     case combat::Ev::Ages:
-        said(profile::kAges);
+        if (fw(profile::kAges)[0]) said(profile::kAges);        // (none in the Krynn DAX games' programs)
         age_check = true;               // (old age is looked at when the fight ends - Treasures' [0x9318])
         break;
     case combat::Ev::Regen: {
@@ -3741,7 +3753,8 @@ void start_turn(pic::Canvas& c)
     if (!fg->fx_done) {
         fg->fx_done = true;                     // (once a turn, whatever was said before it)
         const combat::TurnFx tf = combat::turn_effects(b, fg->cur);
-        if (tf == combat::TurnFx::Silenced) {
+        if (tf == combat::TurnFx::Silenced && fw(profile::kIsSilenced)[0]) {
+            // (a game with no such words says nothing - Secret's)
             add_page(fg->cur, fw(profile::kIsSilenced));
             say(c, FSt::Resume);
             return;
@@ -6748,10 +6761,13 @@ void cast_now(pic::Canvas& c, bool forgotten)
         const bool poison = fs->does == combat::SpellDoes::Poison;
         const int rounds = from_item ? pw : combat::power_of(f, mrules->tables, sp, false);
         if (combat::lay_cloud(b, fg->t, ax, ay, rounds, poison)) {
-            add_page(i, fw(poison ? profile::kPoisonCloud : profile::kNoxiousCloud));
-            Fx e;
-            e.kind = Fx::Redraw;
-            page_fx_set(1, e);
+            // (Darkness and the Dark Queen have no such words: no page of them)
+            if (fw(poison ? profile::kPoisonCloud : profile::kNoxiousCloud)[0]) {
+                add_page(i, fw(poison ? profile::kPoisonCloud : profile::kNoxiousCloud));
+                Fx e;
+                e.kind = Fx::Redraw;
+                page_fx_set(1, e);
+            }
         }
         fg->sp_n = combat::cloud_fighters(b, ax, ay, fg->sp_t, combat::kMaxFighters, poison);
     }

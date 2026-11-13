@@ -41,6 +41,7 @@ bool pool = false;
 std::string ctx;
 bool on = false;                            // (inside a fuzzed fight: the clock at FUZZTICK)
 
+void fx_hook_base_mark() {}
 void bad(const char* rule, const std::string& what)
 {
     if (broken[rule]++ < 6) printf("!! FX %s %s: %s\n", rule, ctx.c_str(), what.c_str());
@@ -90,6 +91,21 @@ void hook(play::FxEv ev, uint32_t wait, int n)
         if (fg->b.f[i].up() && fg->b.f[i].size) last_size[i] = fg->b.f[i].size;
     Ev e{ev, g_now, wait, n, fg->fx.kind, fg->fx.who, fg->fx_step - 1};
     char t[160];
+    // E1 (2026-11-13: the Dark Queen's breaths had empty words): every page
+    // says something besides the names - a word left unread shows nothing
+    if (ev == FxEv::Page && n >= 0 && n < fg->pages) {
+        const Page& p = fg->page[n];
+        bool said = false;
+        for (int k = 0; k < p.lines && !said; ++k)
+            if (!(p.names & (1u << k)) && fg->ptext[p.line_at[k]]) said = true;
+        ++seen["E1 page words"];
+        if (!said && p.lines > 0) {
+            std::string line;
+            for (int k = 0; k < p.lines; ++k) line += std::string(fg->ptext + p.line_at[k]) + " / ";
+            snprintf(t, sizeof t, "a page of names only (an empty word? made at %p, base %p): %s", play::g_test_empty_at, (void*)&fx_hook_base_mark, line.c_str());
+            bad("E1", t);
+        }
+    }
     if (ev == FxEv::Page) {
         if (pause_on) {
             ++seen["W2 attack pause"];

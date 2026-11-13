@@ -1727,6 +1727,20 @@ the Project as claude/TODO.md.
       start - events 0x13 / 0x12 - while monsters stand, "is fully /
       partially healed"). The Queen's monster effects all read now (the
       0xD7 clock 0x52D77 and Cure Disease left). The Aurak's 0xA5 also blocks spell effects (event 9, 0x4DF31 with 0).
+- [x] Empty fight words (v0.196.32, fx_check's new E1: a page of the names
+      alone): Champions' turn effects (runs away, is confused, goes berserk,
+      is enraged - GAME.OVR 0x11936 on), "is Paralyzed" (0x10BE8), "Avoids
+      it" (0x11F0E), "is charmed" (0x31EF3), "Breathes!" (0x32698), "breathes
+      acid" (0x32E24), "breathes " + Fire / cold (0x3306F); Death Knights'
+      "breathes " + fire / acid / death and its lightning's "breathes " alone
+      (START.EXE image 0xDFB8 on; GAME.OVR 0x2ED06); Secret's "paralyzed by
+      poison" (0x10CCB); the Dark Queen's breaths (above), "Suffocates", "is
+      weakened", "dies from poison", "sweeps". Words a game has none of (no
+      page, as its program says nothing): Secret's "is silenced", Darkness's
+      / the Queen's stinking-cloud line, the Krynn DAX games' "ages"
+      (profile::duel_word's kMore list; FXCHECK fuzz of all nine clean of E1).
+- [ ] Darkness FXCHECK fuzz (seeds 32 / 33): F1 breaks (the skull / field /
+      sweep order) - not looked at yet.
 - [x] Queen fuzz (QAALL=1, seeds 12 / 13, 60 fights; there before v0.196.26):
       R10 against the heads (MONCHA 65 / 71 - AC -10 / -11, moves 2) and
       a lone Quick archer needing a natural 20 (need 35 at +11): 60 rounds

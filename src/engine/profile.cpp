@@ -2349,10 +2349,17 @@ constexpr auto kQueenFight = [] {
     f.words[kNoEffectWaterQ] = qw(0x87C9);
     f.words[kCantWaterQ] = qw(0x5939);
     if (!f.words[kNothingHappens]) f.words[kNothingHappens] = qw(0x8FE5);      // (an item's: DQK.EXE 0x5EDCB)
-    // (its breaths: "breathes lightning" 0x873A, "Breathes!" 0x8412 - the
-    // others "breathes %s" with the kind: Data's w_qbreath)
+    // (its breaths: "breathes lightning" 0x873A - the others "breathes %s"
+    // with the kind: Data's w_qbreath)
     f.words[kBreathesLightning] = qw(0x873A);
-    f.words[kBreathesB] = qw(0x8412);
+    // (words its fights can say that the list had empty: the shambling
+    // mound's "Suffocates" 0x84F2 - 0x518BD, Cause Disease's "is weakened"
+    // 0x835E, "dies from poison" 0x8322, a sweep's "sweeps" 0x5D03)
+    f.words[kSuffocates] = qw(0x84F2);
+    f.words[kIsWeakened] = qw(0x835E);
+    f.words[kDiesFromPoison] = qw(0x8322);
+    f.words[kSweeps] = qw(0x5D03);
+    f.words[kBreathesB] = qw(0x873A);      // (Ev::Breathes is its lightning: 0x548D0)
     // (the mummy's - DQK.EXE 0x514B0 / 0x5156B / 0x5163A)
     f.words[kIsDiseased] = qw(0x84AD);
     f.words[kFearParalyzed] = qw(0x84B9);
@@ -3151,6 +3158,8 @@ const Profile kProfiles[] = {
                  .press_words = {0x1A8E, 0x1AB2}, .order_words = {0x26DB3, 0x26DC1, 0x26DCF},
                  .yell_words = {0xB5DE, 0x33FBF},
                  .burst_words = {0x1248C, 0x12496, 0x1299C}, .acid_words = {0x12C0A, 0x1387E},
+                 // ("breathes " + "Fire" / "cold" - its breath handler, GAME.OVR 0x33065 on)
+                 .qbreath_words = {0x3306F, 0x3306A, 0x33065, 0, 0, 0},
                  .knight_words = {0x2595F, 0x25964, 0x2597F, 0x25985, 0x2598A, 0x25999, 0x259B0, 0x259C3, 0x259D1,
                                   0x259E5, 0x259F1, 0x25A07}},
      .overland = nullptr},
@@ -3401,6 +3410,8 @@ const Profile kProfiles[] = {
                  .order_words = {0x23CB1, 0x23CBF, 0x23CCD}, .yell_words = {0, kP | 0xD8D1},
                  // (Knight Change Order, GAME.OVR 061:4F31: the order's name
                  // made of "knight of the " + "sword" / "rose" - 8 / 11 none)
+                 // ("breathes " + "fire" / "acid" / "death" - START.EXE's, the image 0xDFB8 on)
+                 .qbreath_words = {kP | 0xDFB8, kP | 0xDFD9, 0, kP | 0xDFC3, kP | 0xDFCE, 0},
                  .knight_words = {kP | 0xF128, kP | 0xD17A, kP | 0xD199, kP | 0xD1A4, kP | 0xD1AF, kP | 0xD1C4,
                                   kP | 0xD1D9, kP | 0xD1EE, 0, kP | 0xF041, kP | 0xD1C4, 0},
                  .dkk = true},
@@ -4377,6 +4388,33 @@ uint32_t duel_word(const Profile& p, int word)
 {
     // (Pool's NPC share: ovr6 +0x12A9, the string its +0x1468 adds to the name)
     if (word == kNpcShare) return p.game == games::Game::PoolOfRadiance ? 0x6827 : 0;
+    // Words their fight lists left empty that their fights say (fx_check E1,
+    // 2026-11-13: pages of the name alone) - each from the game's own strings
+    struct More {
+        games::Game g;
+        uint8_t     word;
+        uint32_t    at;
+    };
+    static constexpr More kMore[] = {
+        // Champions (GAME.OVR): the turn's start effects (0x11936 on - Secret's
+        // 0x11A8A's), its kapak / spider paralysis, a missile avoided, the
+        // charming gaze, the lightning and acid breaths
+        {games::Game::ChampionsOfKrynn, kRunsAway, 0x11936},
+        {games::Game::ChampionsOfKrynn, kIsConfusedT, 0x11940},
+        {games::Game::ChampionsOfKrynn, kGoesBerserk, 0x1194C},
+        {games::Game::ChampionsOfKrynn, kIsEnraged, 0x11959},
+        {games::Game::ChampionsOfKrynn, kIsParalyzedC, 0x10BE8},
+        {games::Game::ChampionsOfKrynn, kAvoidsIt, 0x11F0E},
+        {games::Game::ChampionsOfKrynn, kIsCharmedG, 0x31EF3},
+        {games::Game::ChampionsOfKrynn, kBreathesB, 0x32698},
+        {games::Game::ChampionsOfKrynn, kBreathesAcid, 0x32E24},
+        // Secret: the paralysing bite's "paralyzed by poison" (GAME.OVR 0x10CDF's)
+        {games::Game::SecretOfTheSilverBlades, kIsParalyzedC, 0x10CCB},
+        // Death Knights: its lightning breath's "breathes " alone (GAME.OVR 0x2ED06)
+        {games::Game::DeathKnightsOfKrynn, kBreathesB, kP | 0xDFB8},
+    };
+    for (const More& m : kMore)
+        if (m.g == p.game && m.word == word) return m.at;
     if (word < kDuelLost || word > kDuelistReceives) return 0;
     // (GAME.OVR ovr6's strings, before "Each character receives ")
     static constexpr uint32_t kCurse[3] = {0x6673, 0x668C, 0x66D4};    // ("You have lost the fight.")

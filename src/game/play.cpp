@@ -12609,12 +12609,14 @@ __attribute__((noinline)) void load_party_text(dax::ByteSource& exe, const exepa
             // (the Dark Queen's "breathes %s" with each kind)
             char fm[20] = {};
             read_word(src, d->prof->variant.qbreath_words[0], fm, sizeof fm);
+            // (or, the Krynn games', "breathes " with the kind after it)
             const char* ps = strstr(fm, "%s");
             for (auto& w : d->w_qbreath) {
-                if (!w[0] || !ps) continue;
+                if (!w[0]) continue;
                 char kind[20];
                 snprintf(kind, sizeof kind, "%s", w);
-                snprintf(w, sizeof w, "%.*s%s%s", static_cast<int>(ps - fm), fm, kind, ps + 2);
+                if (ps) snprintf(w, sizeof w, "%.*s%s%s", static_cast<int>(ps - fm), fm, kind, ps + 2);
+                else snprintf(w, sizeof w, "%s%s", fm, kind);
             }
         }
         if (hl()) {
