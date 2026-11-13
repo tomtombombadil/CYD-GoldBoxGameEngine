@@ -1728,6 +1728,13 @@ the scripts' changed ops, the rule tables, fights, the rest.
 
 ## 6e. Gateway to the Savage Frontier (Tom, 2026-10-23: started after Darkness)
 
+**Under water** (v0.196.13-16; the Dark Queen has its own, its game byte
+0x3C - `Battle::underwater`): Gateway's script word 0x4CF7 (its game
+block's +0x3EE, set by ECL2's fights) = `Battle::gw_water` - nothing
+shoots, the computer never readies a missile weapon, Fireball / the item
+fireball "Nothing Happens.", colour 8 blue, "The water clears a
+little...", no tables and chairs (GAME.OVR's eight tests).
+
 Facts in the Project's claude/gateway_facts.md (from the player's GOG
 files, its program and the original in DOSBox, EGA; nothing from the game
 in the repo). Its program is Curse's one step on: GAME.EXE (EXEPACK, data
