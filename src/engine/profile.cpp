@@ -2038,9 +2038,12 @@ constexpr combat::Facts kQueenFightFacts = {.held = {0x33, 0x34, 0x35, 0x1F}, .b
                 .bestow = 0x24, .blink = 0x25, .fumbling = 0x1B, .silence = 0x15, .entangle = 0x1B, .sticks = 0x03,
                 .faerie = 0, .blinded = 0x21, .animals_blind = 0, .feeble = 0x44,
                 .mon = {.poison = 0x40, .poison_m2 = 0x56, .need_magic = 0x67, .no_cold = 0x62,
-                        .no_elec = 0, .globe = 0x3F, .elf_sleep = 0x5F, .detect = 0x18, .prot_evil_near = 0x2D,
+                        .no_elec = 0, .globe = 0x3F, .elf_sleep = 0x5F,
+                        .no_paralyze = 0x9E,        // (the zombie's / mummy's 0x9E: event 9's 0x34 - 0x50CE3)
+                        .detect = 0x18, .prot_evil_near = 0x2D,
                         .acid_breath = 0x60, .fire_breath = 0x54,
                         .paralyzed = 0x34, .poisoned = 0x37, .sleep = 0x35, .drain1 = 0x65, .drain2 = 0x66,
+                        .rot_touch = 0xAA, .rot_clock = 0xD7, .rot = 0xAC,      // (the mummy: 0x514B0)
                         .ghoul = 0x58, .lightning_breath = 0x5B, .no_fear = 0x5C,
                         // (its Enchanted Baaz: DQK.EXE 0x51DE8, Enchanted
                         // Kapak 0x50BC8 - round 22)
@@ -2074,7 +2077,8 @@ constexpr combat::Facts kQueenFightFacts = {.held = {0x33, 0x34, 0x35, 0x1F}, .b
                 .q = {.hooks = true, .race_plus = 0x1A, .giants = 0x2F, .animals = 0x45, .dance = 0x76, .highlight = 0x47,
                       .iron_skin = 0x7A, .plus2 = 0xA2, .minus2 = 0x94, .tgt_minus1 = 0xCF, .hoopak = 0x83,
                       .tick_at_start = true, .mad = 0x98, .reborn = 0xA0, .immolate = 0xA1, .mad_time = 0xA3,
-                      .no_harm = 0xA5, .blows_up = 0xA6, .zaps = 0xA7, .greater = 0xBF, .turn_over = 0xD5, .tag = 0x97}};
+                      .no_harm = 0xA5, .blows_up = 0xA6, .zaps = 0xA7, .greater = 0xBF, .turn_over = 0xD5, .tag = 0x97,
+                      .fire_dice = 0xA8, .magic_half = 0xA9, .fear_aura = 0xAB, .rot_guard = 0x32, .rot_shift = 5}};
 // The Dark Queen's spells (queen_facts_4.md 8): Darkness's numbers 1-126 and
 // their workings (its handler table DS 0xAF45 + 4 x spell shares handlers as
 // Darkness's), its words found again among its C strings; "is " + an effect's
@@ -2330,6 +2334,12 @@ constexpr auto kQueenFight = [] {
     f.words[kNoEffectWaterQ] = qw(0x87C9);
     f.words[kCantWaterQ] = qw(0x5939);
     if (!f.words[kNothingHappens]) f.words[kNothingHappens] = qw(0x8FE5);      // (an item's: DQK.EXE 0x5EDCB)
+    // (the mummy's - DQK.EXE 0x514B0 / 0x5156B / 0x5163A)
+    f.words[kIsDiseased] = qw(0x84AD);
+    f.words[kFearParalyzed] = qw(0x84B9);
+    f.words[kRotsW] = qw(0x84D0);
+    f.words[kRotsAway] = qw(0x84D8);
+    if (!f.words[kIsUnaffectedS]) f.words[kIsUnaffectedS] = qw(0x1B5);
     // (its gaze sent back, "reflects it!" 0x8373; "engulfs %s" 0x84E7,
     // "constricts %s" 0x85F8 - the target's name after them: DQK.EXE
     // 0x4EAEF, 0x5181C, 0x529E9)

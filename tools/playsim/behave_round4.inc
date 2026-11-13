@@ -803,6 +803,62 @@ void queen_aurak()
            bad == 0, "%d of %d wrong", bad, n);
 }
 
+// The Dark Queen's mummy (DQK.EXE 0x5145A, 0x5156B; the zombie's 0x50CE3)
+void queen_mummy()
+{
+    if (game() != 7 || !fight() || !fg->b.fx || !fg->b.fx->q.fear_aura) return;
+    combat::Battle& b = fg->b;
+    const combat::Facts& fx = *b.fx;
+    int bad = 0, n = 0, para = 0, saved = 0;
+    auto chk = [&](bool ok, const char* what) {
+        ++n;
+        if (!ok && !bad++) printf("  (mummy: %s)\n", what);
+    };
+    for (int seed = 1; seed <= 40; ++seed) {
+        create::Dice dd(static_cast<uint32_t>(seed));
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(0, 0, 10, 10, 60);
+        mx::put(1, 0, 10, 12, 60);
+        mx::put(B, 1, 12, 10, 60);
+        mx::add_aff(B, fx.q.fear_aura);
+        mx::add_aff(1, fx.mon.no_paralyze);
+        combat::Event ev[8];
+        const int k = combat::queen_fear(b, dd, ev, 8);
+        chk(!F(B).has(fx.q.fear_aura), "0xAB taken off");
+        chk(k == 1 && ev[0].who == 0, "only the one without 0x9E");
+        if (k == 1 && ev[0].ev == combat::Ev::FearParalyzed) {
+            ++para;
+            int m = -1;
+            for (int j = 0; F(0).n_aff && j < *F(0).n_aff; ++j)
+                if (F(0).aff[j][0] == fx.mon.paralyzed) m = F(0).aff[j][1];
+            chk(m >= 1 && m <= 4, "paralyzed 1d4 rounds");
+        } else if (k == 1) {
+            ++saved;
+            chk(ev[0].ev == combat::Ev::Unaffected && !F(0).has(fx.mon.paralyzed), "made: unaffected");
+        }
+        chk(combat::queen_fear(b, dd, ev, 8) == 0, "once a fight");
+    }
+    chk(para > 0 && saved > 0, "some feared, some not");
+    // magic fire a point more a die; others not
+    {
+        create::Dice dd(7);
+        mx::put(B, 1, 12, 10, 100);
+        mx::add_aff(B, fx.q.fire_dice);
+        combat::Harm h;
+        h.kind = 9;
+        h.dice = 3;
+        h.spell = 1;
+        bool down = false;
+        chk(combat::harm(b, B, 10, h, dd, &down) == 13, "magic fire 10 + 3 dice = 13");
+        mx::put(B, 1, 12, 10, 100);
+        mx::add_aff(B, fx.q.fire_dice);
+        h.kind = 1;
+        chk(combat::harm(b, B, 10, h, dd, &down) == 10, "plain fire 10");
+    }
+    expect(P, "the Dark Queen's mummy: fear at the set-up (save, 1d4 paralysis, 0x9E immune, once), magic fire + a die - DQK.EXE 0x5156B / 0x5145A",
+           bad == 0, "%d of %d wrong (%d feared, %d saved)", bad, n, para, saved);
+}
+
 void queen_moon_room();
 void moons()
 {
@@ -4272,6 +4328,7 @@ void run()
     if (want("qacid")) queen_acid();
     if (want("qbozak")) queen_bozak();
     if (want("qaurak")) queen_aurak();
+    if (want("qmummy")) queen_mummy();
     if (want("qhooks")) queen_hooks();
     if (want("statfx")) stat_effects();
     if (want("finder")) finder_check();

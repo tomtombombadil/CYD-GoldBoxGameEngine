@@ -621,6 +621,16 @@ struct Facts {
         // a blast in 3). `tag` (0x97) goes with them
         uint8_t mad = 0, reborn = 0, immolate = 0, mad_time = 0, no_harm = 0, blows_up = 0, zaps = 0;
         uint8_t greater = 0, turn_over = 0, tag = 0;
+        // The mummy (MONCHA.GLB 38): `fire_dice` (0xA8, 0x5145A: fire with
+        // magic - a blow's or a spell's - a point more a die), `magic_half`
+        // (0xA9, 0x51478: a weapon of plus 1 or more does half), `fear_aura`
+        // (0xAB, 0x5156B at the fight's set-up, then taken off: each foe a
+        // save against paralysis, +2 for humans, +1 when its side has 6 or
+        // more - else "is paralyzed with fear", mon.paralyzed for 1d4; made:
+        // "is Unaffected"); its rot by mon.rot_touch (0xAA, 0x514B0: not on
+        // one holding `rot_guard` 0x32 or the clock 0xD7) - the rot's data
+        // d6 << 5 + 0x1F, a month off at each 0x20 (rot_shift 5)
+        uint8_t fire_dice = 0, magic_half = 0, fear_aura = 0, rot_guard = 0, rot_shift = 0;
     } q{};
     // Gateway to the Savage Frontier's (its effect handlers DS 0x826A on, the
     // check lists of its work_on_00 - SPEC 6e; 0: none). `ways`: the deadly
@@ -1034,6 +1044,9 @@ int tick(Battle& b, Event* out = nullptr, int cap = 0);
 // The fight's start: those invisible from the start become so (the dice:
 // the elves' stealth, 95 in 100; none - the fight's last dice)
 void battle_start(Battle& b, create::Dice* d = nullptr);
+// The Dark Queen's mummy at the fight's set-up (QueenFx fear_aura): each
+// one feared - Ev::FearParalyzed, or Ev::Unaffected for a save made
+int queen_fear(Battle& b, create::Dice& d, Event* out, int cap);
 
 // The footprint's squares: size 1 one, 2 one wide two tall, 3 two wide
 // one tall, 4 two by two

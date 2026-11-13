@@ -1683,6 +1683,26 @@ the Project as claude/TODO.md.
       that can't be harmed). Not followed: 0xD5's other readers (the
       icon's facing 2; the free-attack list 0x259F0 with 0xD2); 0xA2's
       record 0x18E / 0x18F + 2.
+- [ ] The Dark Queen's monsters' own effects (round 22, carriers.py + the
+      qhooks handler map; events 2 / 3 on-hit by attack, 4 the attacker's
+      damage, 5 a blow's damage taken, 6 a spell's, 8 the set-up, 9 a spell
+      effect given, 0xD death, 0xE the move step, 0xF turn start, 0x12 /
+      0x13): v0.196.27 the mummy (MONCHA 38: 0xA8 magic fire + a die - 0x5145A,
+      0xA9 a magic weapon half - 0x51478, 0xAA the rot - 0x514B0: not with
+      0x32 or 0xD7, data d6 << 5 + 0x1F, the month clock 0x5163A "Rots..." /
+      "Dies rots away" via rules::rot_clock shift 5, 0xAB the set-up fear -
+      0x5156B: save +2 human +1 for a side of 6 or more, 1d4 rounds of 0x34,
+      "is Unaffected" when made, 0x9E holders immune) and the zombie (37:
+      0x9E immune to 0x34 - 0x50CE3; 0x9F a marker). Left: Black Pudding
+      0xBA (0x51CC6, event 4: each worn armour of the target's - type row
+      byte 0 = 2 - a plus less, "is Disolving %s's armor!", or at its floor
+      (0, -1 for types 0x23 0x24 0x26) "Dissolves %s's armor!" and gone;
+      any such armour: the blow's damage 0), Gas Spore 0xB6 / 0xB7
+      (0x51A6A), the anemone / 2-headed troll 0xB5 (0x51A3A, 0x12 / 0x13),
+      the shambling mound 0xAD-0xB0 with 0xB1-0xB3 (engulf / suffocate,
+      0x516D2 on), the Death Dragon 0xB4 (0x54A51), the Enchanted Bozak
+      0xBC (0x51FD7) and Sivak 0xBD (0x52037); 0xD7's own clock (0x52D77).
+      The Aurak's 0xA5 also blocks spell effects (event 9, 0x4DF31 with 0).
 - [x] Queen fuzz (QAALL=1, seeds 12 / 13, 60 fights; there before v0.196.26):
       R10 against the heads (MONCHA 65 / 71 - AC -10 / -11, moves 2) and
       a lone Quick archer needing a natural 20 (need 35 at +11): 60 rounds

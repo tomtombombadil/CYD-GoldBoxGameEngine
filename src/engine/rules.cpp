@@ -1180,7 +1180,7 @@ int repeat_clock(uint8_t* a, int minutes, int period)
 }
 } // namespace
 
-RotStep rot_clock(party::Character& c, int minutes, uint8_t rot, uint8_t clock)
+RotStep rot_clock(party::Character& c, int minutes, uint8_t rot, uint8_t clock, int shift)
 {
     RotStep out;
     if (minutes <= 0 || !rot) return out;
@@ -1195,8 +1195,9 @@ RotStep rot_clock(party::Character& c, int minutes, uint8_t rot, uint8_t clock)
         if (cha < 3) cha = 3;
         c.rec[0x1A] = c.rec[0x1B] = static_cast<uint8_t>(cha);
         uint8_t& data = c.affects[k][3];
-        if ((data >> 4) > 1) {
-            data = static_cast<uint8_t>(data - 0x10);
+        // (the Dark Queen's: months in the top three bits - 0x5163A)
+        if ((data >> shift) > 1) {
+            data = static_cast<uint8_t>(data - (1 << shift));
             continue;
         }
         out.dies = true;

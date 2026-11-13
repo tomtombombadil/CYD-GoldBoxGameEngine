@@ -479,6 +479,8 @@ void tick()
             for (auto& [type, wl] : was_t) {
                 // (the stirge's / leech's hold keeps its blood in its time)
                 if (mf && (type == mf->sucking || type == mf->blood)) continue;
+                // (the Dark Queen's mummy's fear: taken off at the set-up, before the first round)
+                if (b.fx && b.fx->q.fear_aura && type == b.fx->q.fear_aura) continue;
                 std::vector<int> nl = now_t.count(type) ? now_t[type] : std::vector<int>{};
                 // the expected: the lasting ones as they were, each timed one a minute less, those at 1 gone
                 std::multiset<int> want, got(nl.begin(), nl.end());

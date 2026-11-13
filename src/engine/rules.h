@@ -250,7 +250,7 @@ struct RotStep {
     int  rots = 0;
     bool dies = false;
 };
-RotStep rot_clock(party::Character& c, int minutes, uint8_t rot, uint8_t clock);
+RotStep rot_clock(party::Character& c, int minutes, uint8_t rot, uint8_t clock, int shift = 4);
 // Pool's Manual of Bodily Health (poolrad_combat_facts.md 3.2, handlers
 // 0x04 / 0x07) as `minutes` pass: the reading running out "starts to train"
 // - 30 days of training (its effect); that running out "is hardier":

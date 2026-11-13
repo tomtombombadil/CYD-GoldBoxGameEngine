@@ -904,6 +904,7 @@ struct Fight {
     int8_t   lost_who[6] = {};
     int      n_lost = 0;
     uint8_t  burst[(combat::kMaxFighters + 7) / 8] = {};
+    bool     set_up_done = false;           // (the Dark Queen's fight set-up hooks - event 8: the mummy's fear)
     // Secret's Delayed Blast Fireballs set to go off (secret_facts_2.md 26)
     struct Blast { int8_t caster = -1; uint8_t x = 0, y = 0, area = 0, rounds = 0, pw = 0; };
     Blast    blast[4];
@@ -3802,6 +3803,12 @@ void begin_round(pic::Canvas& c)
         vm->advance_clock(1, 1);
         vm->take_minutes();
         nev = combat::tick(fg->b, ev, 8);
+    }
+    if (!fg->set_up_done) {
+        // (the Dark Queen's set-up, event 8 at 0x2DBA9: the mummy's fear -
+        // before the first round's initiative)
+        fg->set_up_done = true;
+        nev += combat::queen_fear(fg->b, rng, ev + nev, 16 - 8 - nev);
     }
     nev += combat::start_round(fg->b, rng, ev + nev, 8);
     vm->set(0x7ECB, 0);                 // (the surprise word: cleared after the initiative, as the original)

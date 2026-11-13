@@ -1730,6 +1730,39 @@ int tick(Battle& b, Event* out, int cap)
     return n;
 }
 
+int queen_fear(Battle& b, create::Dice& d, Event* out, int cap)
+{
+    if (!b.fx || !b.fx->q.fear_aura || !b.fx->mon.paralyzed) return 0;
+    const Facts& fx = *b.fx;
+    int n = 0;
+    for (int h = 0; h < b.n; ++h) {
+        Fighter& hd = b.f[h];
+        const int k = find_aff(hd, fx.q.fear_aura);
+        if (k < 0) continue;
+        drop_aff(hd, k);
+        const bool hs = hd.team();
+        for (int i = 0; i < b.n; ++i) {
+            Fighter& f = b.f[i];
+            if (!f.up() || !f.size || f.team() == hs) continue;
+            int side = 0;
+            for (int j = 0; j < b.n; ++j) side += b.f[j].up() && b.f[j].size && b.f[j].team() == f.team();
+            int bonus = (side >= 6 ? 1 : 0) + (f.rec[0x74] == 7 ? 2 : 0);   // (Krynn's race 6: human)
+            if (hasx(f, fx.mon.no_paralyze)) continue;                     // (event 9: the zombie's / mummy's 0x9E)
+            Ev e = Ev::Unaffected;
+            if (!saving_throw(f, 0, bonus, d)) {
+                give_aff(f, fx.mon.paralyzed, d.roll(4, 1), 12, false);
+                e = Ev::FearParalyzed;
+            }
+            if (out && n < cap) {
+                out[n] = Event{};
+                out[n].who = static_cast<uint8_t>(i);
+                out[n++].ev = e;
+            }
+        }
+    }
+    return n;
+}
+
 void battle_start(Battle& b, create::Dice* d)
 {
     g_b = &b;
@@ -2136,9 +2169,11 @@ void after_hit(Battle& b, int a, int c, int slot, int roll, int hits1, create::D
     auto pool_hit = [&]() {
         if (hasx(at, m.drain1) && tg.up()) drain(b, c, 1, out.ev, 8, &out.n_ev, out.n - 1);
         if (hasx(at, m.drain2) && tg.up()) drain(b, c, 2, out.ev, 8, &out.n_ev, out.n - 1);
-        if (hasx(at, m.rot_touch) && m.rot_clock && m.rot && tg.up() && !tg.has(m.rot_clock)) {
+        if (hasx(at, m.rot_touch) && m.rot_clock && m.rot && tg.up() && !tg.has(m.rot_clock) &&
+            !hasx(tg, b.fx->q.rot_guard)) {
+            const int sh = b.fx->q.rot_shift ? b.fx->q.rot_shift : 4;
             give_aff(tg, m.rot_clock, 14400, 0xFF, true);
-            give_aff(tg, m.rot, 43200, (d.roll(6, 1) << 4) + 0x0F, true);
+            give_aff(tg, m.rot, 43200, (d.roll(6, 1) << sh) + ((1 << sh) - 1), true);
             add_event(out, c, Ev::Diseased);
         }
         auto paralyze = [&](int rounds, int bonus) {
@@ -2940,7 +2975,11 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
                 if (b.fx->dk.blessed && hasx(tg, b.fx->dk.blessed) && item && item[0x2E] == b.fx->dk.blessed_type)
                     bolt_bane = true;
             }
-            // (the Dark Queen's Aurak in its energy form: event 5's 0xA5 - none)
+            // (the Dark Queen's mummy: magic fire a point more a die (0xA8 -
+            // its flame weapons), a magic weapon half (0xA9); the Aurak in its
+            // energy form: event 5's 0xA5 - none)
+            if (b.fx && flame && hasx(tg, b.fx->q.fire_dice)) dmg += n;
+            if (b.fx && item && plus > 0 && hasx(tg, b.fx->q.magic_half)) dmg /= 2;
             if (b.fx && hasx(tg, b.fx->q.no_harm)) dmg = 0;
             h.damage = dmg;
             log_roll(c, RollKind::Damage, out.n, nat, dmg - nat, 0);
@@ -3267,6 +3306,8 @@ bool resists(Battle& b, int c, int effect, const Harm& h, create::Dice& d)
     // Darkness's 0x4C (GAME.OVR 0x1C661, phase 9): the disease does nothing (R14)
     if (fx.dk.no_disease && hasx(f, fx.dk.no_disease) && effect > 0 && effect == fx.dk.disease) return true;
     if (hasx(f, m.no_paralyze) && paralysis) return true;
+    // (the Dark Queen's Aurak in its energy form: event 9's 0xA5 - nothing given)
+    if (hasx(f, fx.q.no_harm) && effect > 0) return true;
     if (hasx(f, m.no_cold) && (h.kind & 2)) return true;
     if (hasx(f, m.no_fire) && (h.kind & 1)) return true;
     if (hasx(f, m.mind) && (sleep_charm || paralysis || (effect > 0 && m.poisoned && effect == m.poisoned))) return true;
@@ -3326,8 +3367,9 @@ int harm(Battle& b, int c, int amount, const Harm& h, create::Dice& d, bool* dow
         // Shield: Magic Missile stopped
         if (b.fx->sp.shield && h.spell == 0x0F && f.has(b.fx->sp.shield)) safe = true;
         // (the Dark Queen's Aurak in its energy form: a spell's damage 0 -
-        // event 9's 0xA5)
+        // event 6's 0xA5; the mummy: magic fire a point more a die - 0xA8)
         if (h.spell > 0 && hasx(f, b.fx->q.no_harm)) safe = true;
+        if ((h.kind & 1) && (h.kind & 8) && hasx(f, b.fx->q.fire_dice)) dmg += h.dice;
         // The target's resistances, in the original's order
         if (hasx(f, m.efreet) && (h.kind & 1)) {
             dmg -= h.dice;

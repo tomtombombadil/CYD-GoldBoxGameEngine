@@ -18606,7 +18606,8 @@ void effects_clock(int m, pic::Canvas& c)
             {
                 // Pool's mummy rot: "NAME Rots..." each month, "NAME Dies rots away"
                 const combat::MonFx& mf = d->prof->fight.facts.mon;
-                const rules::RotStep rs = rules::rot_clock(pt->m[i], m, mf.rot, mf.rot_clock);
+                const rules::RotStep rs = rules::rot_clock(pt->m[i], m, mf.rot, mf.rot_clock,
+                                                                 d->prof->fight.facts.q.rot_shift ? d->prof->fight.facts.q.rot_shift : 4);
                 for (int k = 0; k < rs.rots + (rs.dies ? 1 : 0); ++k) {
                     char nm[20], w[24], t[48];
                     pt->m[i].name(nm, sizeof nm);
