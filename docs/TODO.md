@@ -1602,9 +1602,9 @@ the Project as claude/TODO.md.
       weapon (0xEB39), nothing shoots (0x42318), Fireball / the item
       fireball "Nothing Happens." (0x385FB); v0.196.14 colour 8 blue in
       its fights (0x49714 / 0x49769: EGA 1, VGA 0,0,0x29 - fight_colours
-      3). Left: 0xF852 skips 0xEF50 (the field's sides [0x58D0-3] ->
-      [0x58D8]) - not followed; v0.196.15 a cloud gone "The water clears
-      a little..." (0x129B6); the Dark
+      3); v0.196.15 a cloud gone "The water clears a little..." (0x129B6);
+      v0.196.16 no tables and chairs (0xF852 skips the rooms' furniture
+      0xEF50 - the engine's draw_block step 5); the Dark
       Queen's rating (DQK.EXE 0x2F081, chooser 0x2F1A6) RUN too (3000
       items, 0 differ; the bare rating 1137): Darkness's target rules, no
       item effect tests, the plus unsigned, Secret's hands rule, and a

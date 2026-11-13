@@ -5042,7 +5042,11 @@ void fight_start(pic::Canvas& c)
     // (coab sub_370D3), Secret's GAME.OVR 0xEC85, Gateway's, Champions',
     // Death Knights'; not Pool's ovr11, nor Darkness's 0xBD45 / Treasures'
     // 0xCC56 indoor builders - no dice at all)
-    if (b.indoors) combat::build_indoors(b, fg->t, d->map, d->gs.x, d->gs.y, rng, !pool_files() && !d->prof->variant.vga);
+    // (Gateway under water - its script word 0x4CF7: no tables and chairs,
+    // GAME.OVR 0xF852 skips 0xEF50)
+    const bool gw_under = d->prof->game == games::Game::GatewayToTheSavageFrontier && vm && vm->get(0x4CF7) != 0;
+    if (b.indoors)
+        combat::build_indoors(b, fg->t, d->map, d->gs.x, d->gs.y, rng, !pool_files() && !d->prof->variant.vga && !gw_under);
     else if (d->prof->variant.overland_map) combat::build_outdoors_pool(b, pool_place_flags(), rng);
     else if (darkness_files() || hl()) {
         combat::build_outdoors_dk(b, fg->t, vm->get(0x33) != 0, rng);   // (its own: facts L9)
