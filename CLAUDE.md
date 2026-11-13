@@ -506,8 +506,11 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   2026-11-09): ticked, Quick casts that character's memorized spells.
   The column is "Move" (Tom), never "Advance". Missile ticked (Tom,
   2026-11-11): the player's own Quick characters ready their best loaded
-  bow / crossbow / sling whenever no foe is next to them, at every step
-  (`Fighter::qa_shoot`, choose_weapon; fight_check R19). Engine: `Fighter::qa`,
+  bow / crossbow / sling whenever no foe is next to them, at every step,
+  when it can hurt a foe in sight (the turn's target or another - then
+  only such foes are shot; v0.196.13) (`Fighter::qa_shoot`, choose_weapon;
+  fight_check R19). Archers so differ from the originals by design
+  (qa_verify's defaults-vs-off DIFFERENT there). Engine: `Fighter::qa`,
   `think` / `choose_weapon`, `ai_step`, `play_quick.inc`.
 - The computer's step (round 15, 2026-11-10, from the originals' code):
   every DAX game steps by its mood rows (combat::Tables mood / flee_inc /
