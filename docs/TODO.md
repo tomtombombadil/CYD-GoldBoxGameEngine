@@ -1651,8 +1651,10 @@ the Project as claude/TODO.md.
       place 84 (Darkness 41, Treasures 20), and the party's are packed into
       the first 84 (party.cpp pack_memorized) - only an 85th memorized
       spell is out of the computer's reach (Quick);
-      Secret's chooser gate on effect 0x44 (feeblemind - the engine's
-      own can_cast assumed the same).
+      Secret's chooser gate on effect 0x44 - read (round 22): the AI's
+      chooser 0xD4C6 (0xD4F0) returns no spell for one with 0x44, as its
+      cast (0x2DB00) - v0.196.20: can_cast off at each round's start
+      for a feebleminded one in Secret (rules4 ONLY=sfeeble).
 - [x] Round 19 left (round 20, 2026-11-10: "moves / 2" the same test;
       the Queen's morale figure kept; ground 0x46 and Gateway's distance
       moved on to Round 20 left): the Dark Queen's ground 0x46 (laid by

@@ -634,6 +634,20 @@ void barkskin_saves()
            base, bark);
 }
 
+// Secret: a feebleminded one (0x44) casts nothing - the player's cast
+// (GAME.OVR 0x2DB00) and the computer's chooser (0xD4F0) - round 22
+void secret_feeble()
+{
+    if (game() != 3 || !fight() || !fg->b.fx || !fg->b.fx->feeble) return;
+    mx::put(0, 0, 10, 10, 50);
+    combat::start_round(fg->b, play::rng);
+    const bool before = F(0).can_cast;
+    mx::add_aff(0, fg->b.fx->feeble);
+    combat::start_round(fg->b, play::rng);
+    expect(P, "Secret: a feebleminded one casts nothing (GAME.OVR 0x2DB00, the AI's 0xD4F0)", before && !F(0).can_cast,
+           "before %d, feebleminded %d", before, F(0).can_cast);
+}
+
 void queen_moon_room();
 void moons()
 {
@@ -4099,6 +4113,7 @@ void run()
     if (want("qwater")) queen_water();
     if (want("gwater")) gateway_water();
     if (want("barkskin")) barkskin_saves();
+    if (want("sfeeble")) secret_feeble();
     if (want("qhooks")) queen_hooks();
     if (want("statfx")) stat_effects();
     if (want("finder")) finder_check();

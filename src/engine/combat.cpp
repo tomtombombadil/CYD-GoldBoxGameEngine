@@ -1786,7 +1786,9 @@ int start_round(Battle& b, create::Dice& d, Event* out, int cap)
         f.spell = f.spell_n = 0;                // a spell begun last round is gone (the original's)
         f.attacked = false;
         f.swept = false;
-        f.can_cast = true;
+        // (Secret: a feebleminded one casts nothing - its cast GAME.OVR
+        // 0x2DB00 and the computer's chooser 0xD4F0 both test effect 0x44)
+        f.can_cast = !(b.fx && b.fx->secret && !b.fx->feeble_direct && hasx(f, b.fx->feeble));
         f.can_use = true;
         f.coughed = false;
         if (!f.up() || !f.size) {
