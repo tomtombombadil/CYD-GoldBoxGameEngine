@@ -1732,6 +1732,24 @@ the Project as claude/TODO.md.
       0x1F, the spore's 0xB9 and 0xD7 with the rot 0xAC (spells::Facts 4
       diseases, the temple's list too); the troll's heal ignores 0xD7 (flag
       1). Every Queen monster effect is read now. The Aurak's 0xA5 also blocks spell effects (event 9, 0x4DF31 with 0).
+- [ ] Monsters' effects with no engine fact (v0.196.35, sweep mode
+      `effects`: every monster's effect list against every byte of the
+      fight / magic / cure facts). The Dark Queen: 36 found; mapped as
+      Darkness's (same handlers): 0x06 no electricity, 0x5D no fire, 0x3C /
+      0x7D a +3 / +2 weapon, 0x42 edged half, 0x4F the iron golem, 0x39 the
+      major globe, 0x7E gazes saved, 0x6C 2d6 fire on a hit, 0x5A poison
+      breath and 0xCC "breathes steam", 0x29 missiles of plus 0 avoided,
+      0x84 paralysis on a hit (10 rounds); its own: 0x7B / 0x8A / 0x8D
+      effects not taken, 0x86 cold double, 0xC0 cold + a fifth, 0x87
+      magic fire heals (its "is healed" not said), 0xCD fire four fifths
+      and + 4 saves, 0xC1 no blow harms. Left (DQK.EXE handlers): 0x75
+      (0x4EF83, event 0xE, 0x22 not taken), 0x85 (0x4FFE2, no event), 0x89
+      the stench (0x50221 at its turn: each foe within a square a save
+      against spells or 0x1D99:0xF09 "Affected", unless 0x76; it gets 0x94),
+      0xC3 (0x527D9, set-up), 0xC5 (0x52426), 0xC6 / 0xD1 (event 0xE),
+      0xC7 / 0xCE / 0xD0 / 0xD3 / 0xD4 (on-hit), 0xC9 (attacker's damage);
+      0x84 on the first attack only (the engine's kreen bite). The other
+      eight games: not swept yet.
 - [x] Empty fight words (v0.196.32, fx_check's new E1: a page of the names
       alone): Champions' turn effects (runs away, is confused, goes berserk,
       is enraged - GAME.OVR 0x11936 on), "is Paralyzed" (0x10BE8), "Avoids

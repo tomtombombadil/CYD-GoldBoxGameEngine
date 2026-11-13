@@ -1860,6 +1860,7 @@ int main(int argc, char** argv)
         sweep_monkey(argc > 4 ? atoi(argv[4]) : 20000);
     }
 #ifdef CYD_TEST_HOOKS
+    else if (mode == "effects") sweep_effects();
     else if (mode == "fightfuzz") sweep_fightfuzz(static_cast<unsigned>(arg ? arg : 1), argc > 4 ? atoi(argv[4]) : 1000);
     else if (mode == "behave") {
         // (each part: a function of its own .inc; argv[3] = one part's name, or all)

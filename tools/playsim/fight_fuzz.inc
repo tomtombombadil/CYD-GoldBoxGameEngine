@@ -507,3 +507,55 @@ static void sweep_fightfuzz(unsigned seed, int fights)
     fc::report();
     if (getenv("FXCHECK")) fxc::report();
 }
+
+// ---- effects (2026-11-13: the Dark Queen's monsters' own effects had no
+// engine facts): every monster of the game loaded once; each effect its
+// record carries, against every byte of the fight's facts (Facts - MonFx,
+// QueenFx ...), the magic facts and the cures. An effect no fact byte names
+// is listed with its monsters: a special ability maybe not followed (or a
+// marker / a picture's - look at the game's handler). EFFALL=1 lists all.
+static void sweep_effects()
+{
+    using namespace play;
+    ff::list_monsters();
+    printf("  %zu monsters\n", ff::mons.size());
+    std::map<int, std::vector<std::string>> carriers;
+    std::set<int> known;
+    bool have_known = false;
+    for (const ff::Mon& m : ff::mons) {
+        g_now = 1000;
+        if (!monkey_boot() || !start_fight(m.area, m.id, 1) || !fg) continue;
+        combat::Battle& b = fg->b;
+        if (!have_known && b.fx) {
+            const uint8_t* p = reinterpret_cast<const uint8_t*>(b.fx);
+            for (size_t i = 0; i < sizeof *b.fx; ++i) known.insert(p[i]);
+            const uint8_t* q = reinterpret_cast<const uint8_t*>(&d->prof->magic.facts);
+            for (size_t i = 0; i < sizeof d->prof->magic.facts; ++i) known.insert(q[i]);
+            const uint8_t* c = reinterpret_cast<const uint8_t*>(&d->prof->cures);
+            for (size_t i = 0; i < sizeof d->prof->cures; ++i) known.insert(c[i]);
+            have_known = true;
+        }
+        for (int i = b.party_size; i < b.n; ++i) {
+            const combat::Fighter& f = b.f[i];
+            if (!f.size || !f.n_aff) continue;
+            char nm[24];
+            snprintf(nm, sizeof nm, "MON%d #%d", m.area, m.id);
+            for (int k = 0; k < *f.n_aff; ++k) {
+                auto& v = carriers[f.aff[k][0]];
+                if (std::find(v.begin(), v.end(), nm) == v.end()) v.push_back(nm);
+            }
+            break;
+        }
+    }
+    int unknown = 0;
+    for (auto& [ty, v] : carriers) {
+        const bool k = known.count(ty) > 0;
+        if (k && !getenv("EFFALL")) continue;
+        if (!k) ++unknown;
+        printf("  effect 0x%02X%s:", ty, k ? "" : " (no fact)");
+        for (size_t i = 0; i < v.size() && i < 8; ++i) printf(" %s", v[i].c_str());
+        if (v.size() > 8) printf(" (+%zu)", v.size() - 8);
+        printf("\n");
+    }
+    printf("== %d effects carried, %d with no fact\n", static_cast<int>(carriers.size()), unknown);
+}

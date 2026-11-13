@@ -2934,6 +2934,7 @@ void event_words(const combat::Event& e)
         else said(profile::kBreathesFire);
         break;
     case combat::Ev::BreathesDeath: add_page(who, d->w_qbreath[3]); break;
+    case combat::Ev::BreathesSteam: said(profile::kBreathesSteam); break;
     case combat::Ev::BreathesPara: add_page(who, d->w_qbreath[4]); break;
     case combat::Ev::HoundFire: said(profile::kBreathesFireH); break;
     case combat::Ev::ThrowsLightning: said(profile::kThrowsLightning); break;

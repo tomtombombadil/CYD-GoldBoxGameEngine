@@ -1150,6 +1150,81 @@ void queen_breath()
            bad == 0, "%d of %d wrong (Baldric %d paralysis, %d cold)", bad, n, para, cold);
 }
 
+// The round 22 effects sweep's Queen effects (DQK.EXE handlers 0x4E014 on)
+void queen_sweep22()
+{
+    if (game() != 7 || !fight() || !fg->b.fx || !fg->b.fx->q.cold_x2) return;
+    combat::Battle& b = fg->b;
+    const auto& fx = *b.fx;
+    int bad = 0, n = 0;
+    auto chk = [&](bool ok, const char* what) {
+        ++n;
+        if (!ok && !bad++) printf("  (sweep22: %s)\n", what);
+    };
+    auto one = [&](uint8_t ty, int kind, int amount) {
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(B, 1, 12, 10, 200);
+        if (ty) mx::add_aff(B, ty);
+        combat::Harm h;
+        h.kind = kind;
+        h.spell = 1;
+        create::Dice dd(3);
+        bool down = false;
+        return combat::harm(b, B, amount, h, dd, &down);
+    };
+    chk(one(fx.q.cold_x2, 2, 10) == 20, "0x86 cold double");
+    chk(one(fx.q.cold_more, 2, 10) == 12, "0xC0 cold a fifth more");
+    chk(one(fx.q.fire_less, 1, 10) == 8, "0xCD fire four fifths");
+    chk(one(fx.mon.no_elec, 4, 10) == 0, "0x06 no electricity");
+    chk(one(fx.mon.no_fire, 1, 10) == 0, "0x5D no fire");
+    chk(one(0, 1, 10) == 10, "nothing: fire 10");
+    {
+        mx::put(B, 1, 12, 10, 50);
+        mx::add_aff(B, fx.q.fire_heal);
+        F(B).rec[0x1A4] = 30;
+        combat::Harm h;
+        h.kind = 9;
+        h.spell = 1;
+        create::Dice dd(3);
+        bool down = false;
+        combat::harm(b, B, 10, h, dd, &down);
+        chk(F(B).hp() == 40, "0x87 magic fire heals");
+    }
+    // spell effects not taken
+    for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+    mx::put(B, 1, 12, 10, 50);
+    mx::add_aff(B, fx.q.immune[0].type);
+    combat::Harm h;
+    h.spell = 1;
+    create::Dice dd(4);
+    chk(combat::resists(b, B, fx.mon.paralyzed, h, dd) && combat::resists(b, B, 0x0B, h, dd), "0x7B: paralysis, charm");
+    mx::put(B, 1, 12, 10, 50);
+    mx::add_aff(B, fx.q.immune[2].type);
+    chk(combat::resists(b, B, 0x35, h, dd) && !combat::resists(b, B, fx.mon.paralyzed, h, dd), "0x8D: sleep, not paralysis");
+    // no blow harms 0xC1; a +3 needed (0x3C)
+    auto blow = [&](uint8_t ty) {
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(0, 0, 10, 10, 60);
+        mx::put(B, 1, 11, 10, 100);
+        mx::add_aff(B, ty);
+        combat::Fighter& at = F(0);
+        at.rec[0x199] = 60;
+        at.attacks[0] = 1;
+        at.attacks[1] = 0;
+        at.rec[0x19E] = 1;
+        at.rec[0x1A0] = 8;
+        at.rec[0x1A2] = 3;
+        create::g_die_hook = [](int nn) { return nn == 20 ? 18 : nn == 8 ? 8 : -1; };
+        const combat::Attack r = combat::attack(b, 0, B, nullptr, rng);
+        create::g_die_hook = nullptr;
+        return r.n > 0 && r.hits[0].hit ? r.hits[0].damage : -1;
+    };
+    chk(blow(fx.q.no_blows) == 0, "0xC1 no blow harms");
+    chk(blow(0) == 11, "none: 11");
+    expect(P, "the Dark Queen's round 22 sweep effects: cold double / more, fire less, magic fire heals, immunities, no blows - DQK.EXE 0x4E014 on",
+           bad == 0, "%d of %d wrong", bad, n);
+}
+
 void queen_moon_room();
 void moons()
 {
@@ -4624,6 +4699,7 @@ void run()
     if (want("qspore")) queen_spore();
     if (want("qmound")) queen_mound();
     if (want("qbreath")) queen_breath();
+    if (want("qsweep22")) queen_sweep22();
     if (want("qhooks")) queen_hooks();
     if (want("statfx")) stat_effects();
     if (want("finder")) finder_check();

@@ -3045,6 +3045,7 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
             if (b.fx && item && plus > 0 && hasx(tg, b.fx->q.magic_half)) dmg /= 2;
             // (the shambling mound's: a blow half - 0xAF; fire or cold half - 0xAE)
             if (b.fx && hasx(tg, b.fx->q.blow_half)) dmg /= 2;
+            if (b.fx && hasx(tg, b.fx->q.no_blows)) dmg = 0;
             if (b.fx && flame && hasx(tg, b.fx->q.fire_cold)) dmg /= 2;
             if (b.fx && hasx(tg, b.fx->q.no_harm)) dmg = 0;
             h.damage = dmg;
@@ -3377,6 +3378,11 @@ bool resists(Battle& b, int c, int effect, const Harm& h, create::Dice& d)
     if (hasx(f, m.no_paralyze) && paralysis) return true;
     // (the Dark Queen's Aurak in its energy form: event 9's 0xA5 - nothing given)
     if (hasx(f, fx.q.no_harm) && effect > 0) return true;
+    // (the Dark Queen's lists of effects not taken - event 9)
+    for (const auto& r : fx.q.immune)
+        if (r.type && effect > 0 && hasx(f, r.type))
+            for (uint8_t e : r.eff)
+                if (e && e == effect) return true;
     if (hasx(f, m.no_cold) && (h.kind & 2)) return true;
     if (hasx(f, m.no_fire) && (h.kind & 1)) return true;
     if (hasx(f, m.mind) && (sleep_charm || paralysis || (effect > 0 && m.poisoned && effect == m.poisoned))) return true;
@@ -3441,6 +3447,18 @@ int harm(Battle& b, int c, int amount, const Harm& h, create::Dice& d, bool* dow
         if ((h.kind & 1) && (h.kind & 8) && hasx(f, b.fx->q.fire_dice)) dmg += h.dice;
         // (the shambling mound: fire or cold half; a save against spells made -
         // none, for a spell that can be saved against - 0x516FC)
+        // (the round 22 sweep's: cold double / a fifth more, fire four fifths,
+        // magic fire healing - events 6)
+        if ((h.kind & 2) && hasx(f, b.fx->q.cold_x2)) dmg *= 2;
+        if ((h.kind & 2) && hasx(f, b.fx->q.cold_more)) dmg += dmg / 5;
+        if ((h.kind & 1) && hasx(f, b.fx->q.fire_less)) dmg = dmg / 5 * 4;
+        if (hasx(f, b.fx->q.fire_heal)) {
+            if ((h.kind & 1) && (h.kind & 8)) {
+                const int hp = f.hp() + dmg;
+                f.rec[kHp] = static_cast<uint8_t>(hp > f.hp_max() ? f.hp_max() : hp);
+            }
+            safe = true;
+        }
         if ((h.kind & 3) && hasx(f, b.fx->q.fire_cold)) {
             if (saving_throw(f, 4, 0, d) && h.save >= 0) safe = true;
             else dmg /= 2;
@@ -3510,7 +3528,8 @@ int harm(Battle& b, int c, int amount, const Harm& h, create::Dice& d, bool* dow
         }
     }
     bool saved = false;
-    if (dmg > 0 && h.save >= 0 && h.on_save && saving_throw(f, h.save, h.bonus, d)) {
+    const int save_more = b.fx && (h.kind & 1) && hasx(f, b.fx->q.fire_less) ? 4 : 0;   // (0xCD's event 0xC)
+    if (dmg > 0 && h.save >= 0 && h.on_save && saving_throw(f, h.save, h.bonus + save_more, d)) {
         saved = true;
         if (h.on_save == 1) dmg = 0;
         else if (h.on_save == 2) dmg /= 2;
@@ -8011,8 +8030,9 @@ int special(Battle& b, const Tables& t, int i, create::Dice& d, Event* out, int 
     // 3 squares toward its pick (pseudo-spell 0x3D's reach), then all within
     // 3 squares of the line's end but itself; its maximum hit points, a
     // breath save for half
-    if (hasx(f, m.poison_breath)) {
-        uint8_t* left = breaths(m.poison_breath);
+    for (const uint8_t pty : {m.poison_breath, m.steam_breath}) {
+    if (pty && hasx(f, pty)) {
+        uint8_t* left = breaths(pty);
         const int tg = left && *left ? special_target(b, t, i, 6, true, d) : -1;
         if (tg >= 0) {
             int line[kMaxFighters];
@@ -8026,7 +8046,7 @@ int special(Battle& b, const Tables& t, int i, create::Dice& d, Event* out, int 
                 const int ey = steps > 3 ? f.y + dy * 3 / steps : b.f[tg].y;
                 int on[kMaxFighters];
                 const int k = in_area(b, t, ex, ey, 3, on, kMaxFighters);
-                ev(i, Ev::BreathesPoison);
+                ev(i, pty == m.poison_breath ? Ev::BreathesPoison : Ev::BreathesSteam);
                 fly(i, ex, ey, 12, 1, 30);
                 Harm h = breath;
                 h.kind = 0x20;
@@ -8038,6 +8058,7 @@ int special(Battle& b, const Tables& t, int i, create::Dice& d, Event* out, int 
                 return n;
             }
         }
+    }
     }
     // Darkness's blue dragon and electric spider (GAME.OVR 0x3045C):
     // lightning - a bolt (Lightning Bolt's reach, 10 squares) at its pick,

@@ -2038,9 +2038,12 @@ constexpr combat::Facts kQueenFightFacts = {.held = {0x33, 0x34, 0x35, 0x1F}, .b
                 .bestow = 0x24, .blink = 0x25, .fumbling = 0x1B, .silence = 0x15, .entangle = 0x1B, .sticks = 0x03,
                 .faerie = 0, .blinded = 0x21, .animals_blind = 0, .feeble = 0x44,
                 .mon = {.poison = 0x40, .poison_m2 = 0x56,
-                        .engulf = 0xB0,             // (the shambling mound: both attacks hit - 0x51765)
-                        .need_magic = 0x67, .no_cold = 0x62,
-                        .no_elec = 0, .absorb_elec = 0xAD,   // (the mound: electricity + 8 - 0x516D2)
+                        .engulf = 0xB0,
+                        // (Darkness's, the same effects and handlers - the round 22
+                        // effects sweep: 0x42 0x3C 0x7D 0x5D 0x06 0x4F 0x39 0x7E 0x6C 0x5A)             // (the shambling mound: both attacks hit - 0x51765)
+                        .need_magic = 0x67, 
+                        .no_fire = 0x5D, .no_cold = 0x62,
+                        .no_elec = 0x06, .absorb_elec = 0xAD,   // (the mound: electricity + 8 - 0x516D2)
                         .globe = 0x3F, .elf_sleep = 0x5F,
                         .no_paralyze = 0x9E,        // (the zombie's / mummy's 0x9E: event 9's 0x34 - 0x50CE3)
                         .detect = 0x18, .prot_evil_near = 0x2D,
@@ -2352,6 +2355,8 @@ constexpr auto kQueenFight = [] {
     // (its breaths: "breathes lightning" 0x873A - the others "breathes %s"
     // with the kind: Data's w_qbreath)
     f.words[kBreathesLightning] = qw(0x873A);
+    f.words[kBreathesPoison] = qw(0x872A);
+    f.words[kBreathesSteam] = qw(0x871B);
     // (words its fights can say that the list had empty: the shambling
     // mound's "Suffocates" 0x84F2 - 0x518BD, Cause Disease's "is weakened"
     // 0x835E, "dies from poison" 0x8322, a sweep's "sweeps" 0x5D03)
@@ -2376,6 +2381,33 @@ constexpr auto kQueenFight = [] {
     const uint8_t ends[16] = {0x03, 0x06, 0x0B, 0x15, 0x17, 0x1B, 0x1E, 0x1F, 0x23, 0x34, 0x35, 0x4D, 0x6A, 0x6B, 0x6F, 0x76};
     for (int i = 0; i < 16; ++i) f.ends[i] = ends[i];
     f.facts = kQueenFightFacts;
+    // (Darkness's effects it shares, handler for handler - the round 22
+    // effects sweep: a +3 / +2 weapon needed 0x3C / 0x7D - 0x4EBC5; edged
+    // blows half 0x42 - 0x4ED28; the iron golem 0x4F - 0x4EFA5: magic fire
+    // heals, electricity slows, nothing else harms; Globe of Invulnerability
+    // 0x39 - 0x4E9A1; a gaze saved 0x7E - 0x4FFA7; 2d6 fire on a hit 0x6C -
+    // 0x54289; the poison breath 0x5A and its steam 0xCC - 0x5466F)
+    f.facts.mon.missile_proof = 0x29;   // (a missile of plus 0 avoided - 0x4E6C2 with 0x4E5FE)
+    f.facts.mon.need_plus3 = 0x3C;
+    f.facts.mon.need_plus2 = 0x7D;
+    f.facts.mon.half_pierce = 0x42;
+    f.facts.mon.golem = 0x4F;
+    f.facts.mon.no_magic = 0x4F;
+    f.facts.mon.fire2d6_2 = 0x6C;
+    f.facts.mon.poison_breath = 0x5A;
+    f.facts.mon.steam_breath = 0xCC;
+    f.facts.globe_major = 0x39;
+    f.facts.dk.gaze_proof = 0x7E;
+    f.facts.q.immune[0] = {0x7B, {0x0B, 0x23, 0x34, 0x44, 0x6F}};
+    f.facts.q.immune[1] = {0x8A, {0x23}};
+    f.facts.q.immune[2] = {0x8D, {0x0B, 0x35}};
+    f.facts.q.cold_x2 = 0x86;
+    f.facts.q.cold_more = 0xC0;
+    f.facts.q.fire_heal = 0x87;
+    f.facts.q.fire_less = 0xCD;
+    f.facts.q.no_blows = 0xC1;
+    f.facts.mon.kreen_bite = 0x84;      // (paralysis on a hit, a save: "paralyzed by poison" - 0x4FFCA / 0x4DE90)
+    f.facts.mon.para_rounds = 10;
     f.spells = kQueenFightSpells;
     f.n_spells = sizeof kQueenFightSpells / sizeof kQueenFightSpells[0];
     // COMSPR: Death Knights' numbers (its 23 pictures in the same order)

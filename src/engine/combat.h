@@ -359,6 +359,8 @@ struct MonFx {
     // spread of 5 - its shape 4: 3 lines here - a save against breath or 10
     // rounds paralysed, "is Unaffected" when made), else its cold
     uint8_t death_breath = 0, para_breath = 0;
+    // its 0xCC: the poison breath's handler (0x5466F) with "breathes steam"
+    uint8_t steam_breath = 0;
 };
 
 // More spells' effects (spell_facts.md 2): Enlarge, Confusion (and going
@@ -661,6 +663,19 @@ struct Facts {
         // healed by nothing that heals with flag 0 - cure spells, rest, the
         // temple (0x25F7); a point every 10 days (0x52D77)
         uint8_t regen1 = 0, no_heal = 0;
+        // The round 22 effects sweep's simple ones: spell effects not taken
+        // (event 9 - 0x4FF6D 0x7B: charm, 0x23, paralysis, feeblemind, fear;
+        // 0x50331 0x8A: 0x23; 0x50358 0x8D: charm, sleep); `cold_x2` (0x86,
+        // 0x500A4) cold double; `cold_more` (0xC0, 0x52097) cold a fifth more;
+        // `fire_heal` (0x87, 0x500B8): magic fire heals ("is healed"), then
+        // nothing harms; `fire_less` (0xCD, 0x52852): fire four fifths, saves
+        // against it + 4; `no_blows` (0xC1, 0x520B3): no blow harms (its
+        // weapon test of plus 255 - and no magic, none either)
+        struct Immune {
+            uint8_t type, eff[5];
+        };
+        Immune  immune[3] = {};
+        uint8_t cold_x2 = 0, cold_more = 0, fire_heal = 0, fire_less = 0, no_blows = 0;
         bool    hold_ends = false;
         uint8_t engulf_not = 0;
         // The Gas Spore (MONCHA.GLB 6): `spore` (0xB6, 0x51A6A at its death,
@@ -1075,7 +1090,7 @@ enum class Ev : uint8_t {
     // "is Disolving %s's armor!" (a plus less), "Dissolves %s's armor!" (gone)
     Dissolving, Dissolves,
     // The Dark Queen's "breathes death" / "breathes paralysis"
-    BreathesDeath, BreathesPara,
+    BreathesDeath, BreathesPara, BreathesSteam,
 };
 struct Event {
     uint8_t who = 0;
