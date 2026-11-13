@@ -2316,6 +2316,7 @@ constexpr auto kQueenFight = [] {
     f.words[kGoesDownS] = qw(0x19B);
     f.words[kGoesDownDyingQ] = qw(0x1A5);
     f.words[kNoEffectWaterQ] = qw(0x87C9);
+    f.words[kCantWaterQ] = qw(0x5939);
     if (!f.words[kNothingHappens]) f.words[kNothingHappens] = qw(0x8FE5);      // (an item's: DQK.EXE 0x5EDCB)
     // (its gaze sent back, "reflects it!" 0x8373; "engulfs %s" 0x84E7,
     // "constricts %s" 0x85F8 - the target's name after them: DQK.EXE
@@ -3784,7 +3785,8 @@ const Profile kProfiles[] = {
                0x3AD99, 0x3AF2E, 0x3B053, 0x3E8A7, 0x3E8BB, 0x39835, 0x126E2, 0x126F8, 0x12705, 0x14E6F, 0x14E7C,
                0x14DD8, 0x39C45, 0x39C52, 0x39C69, 0x39C77, 0x12205, 0x125B5, 0x12185, 0x36A1D, 0x123EF, 0x12E10,
                0x12901, 0x136C2, 0, 0, 0, 0, 0x15297, 0, 0, 0, 0, 0x150A8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-               0, 0, 0, kJ | 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x1AE05, 0x1A5CB, 0x15359, 0x13FF4},
+               0, 0, 0, kJ | 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x1AE05, 0x1A5CB, 0x15359, 0x13FF4,
+               0, 0, 0, 0, 0, 0x385D6},   // (kNoEffectWaterQ: its under-water "Nothing Happens.")
               {0x03, 0x0B, 0x0D, 0x15, 0x17, 0x1B, 0x23, 0x28, 0x33, 0x34, 0x35, 0x3A, 0x5B, 0x88, 0x89, 0x8B, 0x8E,
                0x90, 0x1F, 0x96},
               kGatewayFacts, kGatewayFight.s, kGatewayFightN},

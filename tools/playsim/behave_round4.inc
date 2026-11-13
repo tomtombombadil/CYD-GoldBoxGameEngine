@@ -1921,6 +1921,41 @@ void q_add(combat::Fighter& f, uint8_t t, int minutes)
 // nothing done; Lightning Bolt (0x57183) goes to Fireball's routine, which
 // takes everyone within 2 of the square aimed at (0x1D99:0xE9B with 2,
 // 0xFF); Ice Storm (0x57FBB) 1d10 for 3d10
+// Gateway under water (round 22: script word 0x4CF7 = its game block's
+// +0x3EE, set by ECL2's fights): Fireball and the item fireball (0x2F /
+// 0x40) "Nothing Happens." (their handler GAME.OVR 0x385FB), no harm done
+void gateway_water()
+{
+    if (game() != 8 || !fight()) return;
+    combat::Battle& b = fg->b;
+    if (!mrules) load_magic();
+    if (!mrules) return;
+    mx::put(0, 0, 10, 10, 200);
+    mx::put(B, 1, 13, 10, 200);
+    b.gw_water = true;
+    int ok = 0, n = 0;
+    for (int sp : {0x2F, 0x40}) {
+        const combat::FightSpell* fs = fight_spell(sp);
+        if (!fs || fs->does != combat::SpellDoes::Damage) continue;
+        ++n;
+        combat::SpellLine lines[8];
+        const int tg[1] = {B};
+        b.aim_x = b.f[B].x;
+        b.aim_y = b.f[B].y;
+        const int hp = b.f[B].hp();
+        const int k = combat::cast(b, mrules->tables, 0, sp, *fs, tg, 1, rng, lines, 8, 9);
+        if (k == 1 && lines[0].did == combat::Did::Water && b.f[B].hp() == hp) ++ok;
+    }
+    int ammo = 0;
+    const int shot = combat::missile(b, b.f[0], &ammo);
+    b.gw_water = false;
+    const std::string word = fw(profile::kNoEffectWaterQ);
+    expect(P, "Gateway under water: Fireball and the item fireball \"Nothing Happens.\" (GAME.OVR 0x385FB), nothing shoots "
+              "(0x42318)",
+           n > 0 && ok == n && word == "Nothing Happens." && shot == 0, "%d of %d, the word \"%s\", missile %d", ok, n,
+           word.c_str(), shot);
+}
+
 void queen_water()
 {
     if (game() != 7 || !fight()) return;
@@ -4038,6 +4073,7 @@ void run()
     if (want("qpages")) queen_pages();
     if (want("qlost")) queen_lost();
     if (want("qwater")) queen_water();
+    if (want("gwater")) gateway_water();
     if (want("qhooks")) queen_hooks();
     if (want("statfx")) stat_effects();
     if (want("finder")) finder_check();

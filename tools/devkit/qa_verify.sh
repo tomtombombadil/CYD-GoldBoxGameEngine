@@ -4,7 +4,8 @@
 #      on Quick; fight_check R13) - 3 seeds x 40 fights a game: rule breaks, sanitizer errors
 #   (QANPC=1: the party's last member an NPC in every fight - round 14)
 #   2. the defaults against the switch off (QAOFF=1): the same seed's fightfuzz action logs
-#      (FCACTLOG=1, every action) must be identical - 2 seeds x 25 fights a game
+#      (FCACTLOG=1, every action) - identical but where a Quick member has a launcher (Missile ticked
+#      shoots when no foe is next to it - Tom, 2026-11-11: DIFFERENT there by design) - 2 seeds x 25 a game
 # Logs in $LOGS (default /tmp/claude-0/agq/qv); TAGP=qv run folders.
 L=${LOGS:-/tmp/claude-0/agq/qv}
 mkdir -p "$L"

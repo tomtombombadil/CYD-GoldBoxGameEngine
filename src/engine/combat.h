@@ -861,6 +861,12 @@ struct Battle {
     // at, both sides; Ice Storm (87) 1d10 for 3d10, over 3 round the aim;
     // nothing shoots (0x24CA1); moves a third without effect 0x96 (0xA767)
     bool    underwater = false;
+    // Gateway under water (script word 0x4CF7 = its game block's +0x3EE,
+    // set by ECL2's fights; round 22, GAME.OVR's 8 tests): nothing shoots
+    // (0x42318), the computer never readies a missile weapon (0xEB39),
+    // Fireball and the item fireball (0x2F / 0x40) "Nothing Happens."
+    // (their handler 0x385FB, the spell spent)
+    bool    gw_water = false;
     int     morale_base = 0;            // the script's morale word (0x7EC6)
     // The morale routine's last figure (Curse DS 0x6FBC, Darkness 0xA7E1,
     // the Dark Queen 0xC2DE - round 19): 100 as a fighter is set up (Curse

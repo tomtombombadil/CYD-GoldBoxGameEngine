@@ -4032,6 +4032,12 @@ void try_step(pic::Canvas& c, int dir)
             return;
         }
         if (pure_missile(f)) {          // (the original's "Not with that weapon")
+            // (the Dark Queen under water: "Can't use that underwater" first)
+            if (fg->b.underwater && d->prof->fight.words[profile::kCantWaterQ]) {
+                note(c, fw(profile::kCantWaterQ));
+                snprintf(note_next, sizeof note_next, "%s", fw(profile::kNotWithWeapon));
+                return;
+            }
             note(c, fw(profile::kNotWithWeapon));
             return;
         }
@@ -5138,6 +5144,7 @@ void fight_start(pic::Canvas& c)
             b.rate.no_ranged = vm && vm->get(0x3C) != 0;      // (its game block's byte 0x3C: underwater)
             b.underwater = b.rate.no_ranged;
         }
+        b.gw_water = g == G::GatewayToTheSavageFrontier && vm && vm->get(0x4CF7) != 0;
     }
     // Darkness's Turn Undead (R13): the undead its LOAD MONSTERs loaded (each
     // cleric turns as many times), the script's penalty (block +0x0E)

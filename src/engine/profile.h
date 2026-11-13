@@ -231,6 +231,7 @@ enum FightWord {
     kGoesDownDyingQ,
     // The Dark Queen under water: "That has no effect underwater!"
     kNoEffectWaterQ,
+    kCantWaterQ,            // "Can't use that underwater"
     kFightWords
 };
 

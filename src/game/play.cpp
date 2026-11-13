@@ -348,6 +348,10 @@ struct PickList {
 
 // A message on the menu line ("Not enough Money."), then the menu again
 uint32_t note_until = 0;
+// A second message after the note on the menu line (the originals print two
+// in a row, each with its delay - the Dark Queen's "Can't use that
+// underwater" then "Not with that weapon", DQK.EXE 0x239A3)
+char note_next[48] = "";
 bool     note_held = false;      // an error: stays until a tap (Tom, 2026-10-09)
 bool     resume_after_note = false;  // the script goes on once that error is tapped away
 bool     items_after_note = false;   // Pool: the items screen again once the shop's word has had its time
@@ -3464,8 +3468,16 @@ bool fight_moving();
 void fight_move_prompt(pic::Canvas& c);
 
 void back_to_items(pic::Canvas& c);
+void note(pic::Canvas& c, const char* t);
 void redraw_menu(pic::Canvas& c)
 {
+    if (note_next[0]) {
+        char t[sizeof note_next];
+        snprintf(t, sizeof t, "%s", note_next);
+        note_next[0] = 0;
+        note(c, t);
+        return;
+    }
     note_until = 0;
     note_held = false;
     if (items_after_note) {

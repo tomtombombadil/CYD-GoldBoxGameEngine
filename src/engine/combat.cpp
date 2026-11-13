@@ -3419,6 +3419,7 @@ int missile(const Battle& b, const Fighter& f, int* ammo)
     *ammo = -1;
     if (!b.names) return 0;
     if (b.underwater) return 0;         // (the Dark Queen: nothing shoots under water - DQK.EXE 0x24CA1)
+    if (b.gw_water) return 0;           // (Gateway's: GAME.OVR 0x42318)
     const int w = weapon(f, *b.names);
     if (w < 0) return 0;
     const items::TypeInfo& ti = b.names->type(f.items[w][0x2E]);
@@ -3989,8 +3990,12 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
                 shot = f.target;
             } else {
                 int cand[kMaxFighters], n = 0;
+                // (Quick Actions' Missile: only foes the weapon can hurt)
+                const int w = f.qa_shoot && b.names && f.items ? weapon(f, *b.names) : -1;
                 for (int c = 0; c < b.n; ++c)
-                    if (enemy(c) && range(b, t, i, c, false, &sq) && sq <= reach) cand[n++] = c;
+                    if (enemy(c) && range(b, t, i, c, false, &sq) && sq <= reach &&
+                        (w < 0 || ai_rating(b, i, f.items[w], 0, c) > 0))
+                        cand[n++] = c;
                 if (n) shot = cand[d.roll(n, 1) - 1];
             }
             if (shot >= 0) {
@@ -4473,6 +4478,10 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
     auto say = [&](int who, Did did, int amount) {
         if (lines < cap) out[lines++] = SpellLine{static_cast<uint8_t>(who), did, amount};
     };
+    if (b.gw_water && (spell == 0x2F || spell == 0x40) && fs.does == SpellDoes::Damage) {
+        say(caster, Did::Water, 0);
+        return lines;
+    }
     if (b.underwater) {
         static const uint8_t kNone[] = {9, 64, 47, 74, 115, 118, 124, 133};
         for (uint8_t k : kNone)
@@ -6848,12 +6857,15 @@ int choose_weapon(const Battle& b, int i)
     }
     int want = best_melee;
     // (Quick Actions: Missile unticked - no missile weapon readied; Melee
-    // unticked - the missile weapon whenever it can shoot)
-    if (!(f.qa & quickacts::kMissile)) best_missile = -1;
+    // unticked - the missile weapon whenever it can shoot; Gateway under
+    // water: none - its chooser GAME.OVR 0xEB39)
+    if (!(f.qa & quickacts::kMissile) || b.gw_water) best_missile = -1;
     // (Quick Actions, Missile ticked for one of the player's own: the best
     // loaded launcher or sling - not a thrown item, oil and holy water among
     // them - whenever no foe is next to it; the games' rating otherwise)
-    if (f.qa_shoot && best_missile >= 0 && !enemy_next_to(b, i)) {
+    // (not only when the best missile by its target's rating hurts it:
+    // that target out of sight, one in sight the launcher can hurt)
+    if (f.qa_shoot && !b.gw_water && !enemy_next_to(b, i)) {
         int best_l = -1, l_r = 0;
         for (int k = 0; k < f.n_items; ++k) {
             const items::TypeInfo& ti = n.type(f.items[k][0x2E]);
@@ -6864,7 +6876,12 @@ int choose_weapon(const Battle& b, int i)
                 const int t = f.items[j][0x2E];
                 if (((ti.flags & 0x01) && t == b.arrow) || ((ti.flags & 0x80) && t == b.quarrel)) loaded = true;
             }
-            const int rating = ai_rating(b, i, f.items[k], hands);
+            int rating = ai_rating(b, i, f.items[k], hands);
+            // (its target one it can't hurt - Darkness's iron golem, a foe
+            // needing a better plus, out of sight - another foe in sight it
+            // can: it shoots that one, think below)
+            for (int c = 0; c < b.n && rating <= 0; ++c)
+                if (seen_enemy(b, i, c)) rating = ai_rating(b, i, f.items[k], hands, c);
             if (loaded && rating > 0 && (best_l < 0 || rating > l_r)) {
                 best_l = k;
                 l_r = rating;

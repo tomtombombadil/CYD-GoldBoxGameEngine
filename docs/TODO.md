@@ -1596,9 +1596,13 @@ the Project as claude/TODO.md.
       and the paralysing gaze 0, byte sums, Secret's hands rule (>= 3),
       Darkness / Treasures' target (the plus it needs, halving by blow);
       the choosers read (oracles/wrating.py: the same decision in all
-      eight). Left: Gateway's chooser never takes the missile weapon while
-      its game block's word +0x3EE (DS 0x5D68's block) is set - not known
-      what sets it (a script variable?), not in the engine; the Dark
+      eight). Gateway's +0x3EE = script word 0x4CF7 = UNDER WATER (SAVE 1
+      before ECL2's fights 2 / 82; "The water clears a little" 0x12987) -
+      v0.196.13 (b.gw_water, rules4 ONLY=gwater): its chooser no missile
+      weapon (0xEB39), nothing shoots (0x42318), Fireball / the item
+      fireball "Nothing Happens." (0x385FB). Left: its other tests
+      (0xF852 skips 0xEF50, 0x49723 / 0x49778 with [0x5DB6], the cloud's
+      "water clears" word 0x129B6) not followed; the Dark
       Queen's rating (DQK.EXE 0x2F081, chooser 0x2F1A6) RUN too (3000
       items, 0 differ; the bare rating 1137): Darkness's target rules, no
       item effect tests, the plus unsigned, Secret's hands rule, and a
@@ -1618,9 +1622,8 @@ the Project as claude/TODO.md.
       the original's code has it). v0.196.12: Fire Shield's hot flame "no
       effect" (0x57DE0 - in fights and camp, the spell spent; the cold one
       as on land); an item of spell 64 "Nothing Happens", not used
-      (0x5EDBD). Left: the melee refusal's extra "Can't use that
-      underwater" (0x239CC, before "Not with that weapon" - a message
-      only); 0x5BA58 / 0x5BA89 (a choice of 0x1D99:0xF3B's arguments, set
+      (0x5EDBD). v0.196.13: the melee refusal's "Can't use that
+      underwater" before "Not with that weapon" (0x239CC). Left: 0x5BA58 / 0x5BA89 (a choice of 0x1D99:0xF3B's arguments, set
       3 for 2 - its meaning not read). The scripts do
       set it: sweep events VMWATCH=3c (Queen, 44 of its blocks swept) -
       ECL.GLB blocks 1, 2, 3, 14, 15. the Dark Queen's ground 0x46 - laid by effect 0x9A's
