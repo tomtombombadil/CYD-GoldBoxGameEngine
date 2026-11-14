@@ -3796,6 +3796,11 @@ void fire_pending(pic::Canvas& c)
             end_turn(c);
             return;
         }
+        if (f.spell_ax >= 0) {              // (the square its area finder chose)
+            fg->aim_x = f.spell_ax;
+            fg->aim_y = f.spell_ay;
+        }
+        f.spell_ax = f.spell_ay = -1;
         cast_now(c, true);
         return;
     }
@@ -5064,6 +5069,8 @@ void ai_step(pic::Canvas& c)
                     f.spell = sp;
                     f.spell_n = 0;
                     for (int k = 0; k < nt && k < 24; ++k) f.spell_t[f.spell_n++] = static_cast<uint8_t>(tg[k]);
+                    f.spell_ax = b.ai_cx;
+                    f.spell_ay = b.ai_cy;
                     f.delay = f.delay > delay ? delay : 1;
                     add_page(i, fw(profile::kBeginsCasting));
                     say(c, FSt::Begin);

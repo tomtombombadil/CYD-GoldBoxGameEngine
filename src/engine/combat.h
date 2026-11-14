@@ -1070,6 +1070,7 @@ struct Fighter {
     // foe is next to it, whatever the games' rating says (choose_weapon)
     bool    qa_shoot = false;
     uint8_t spell_t[24] = {};
+    int8_t  spell_ax = -1, spell_ay = -1;   // (the computer's area spell begun: the square its area finder chose)
     int     team() const { return rec[0x197]; }
     bool    up() const { return rec[0x196] != 0; }          // able to fight
     int     hp() const { return rec[0x1A4]; }

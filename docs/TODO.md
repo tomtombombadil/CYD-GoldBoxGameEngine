@@ -1627,8 +1627,8 @@ the Project as claude/TODO.md.
       DQK.EXE 0x2960A (word sums, a word table DS 0x5A40, one set {0x22,
       0x65}, under water Ice Storm radius 3 / Lightning 2) - each RUN in
       Unicorn (oracles/areafind.py, 3000 random fields a game) and
-      `combat::ai_area_centre` 0 differ in all four (rules4 aicast). Left:
-      a spell with a casting time goes off round its first target. The Dark Queen's
+      `combat::ai_area_centre` 0 differ in all four (rules4 aicast); a
+      spell with a casting time keeps its square (v0.196.51). The Dark Queen's
       spells 138-140 (class 4, 8th level rows past the engine's 138) -
       read (round 22): their name pointers (DS 0x25CB) are null, the last
       named is 137 - no spells there; the computer's weapon choice
