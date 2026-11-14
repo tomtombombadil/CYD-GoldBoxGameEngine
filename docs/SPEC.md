@@ -3645,9 +3645,13 @@ the game's Settings (As Original: all of them).
   test. The targets: the finder at the spell's reach (not the target
   kept), twice 20 tries (Darkness / Treasures a scan from a random
   place, the Queen its own); the by-priority games' single target must
-  pass the use test, else aborted; aim 15 is one target. Ours: a spell
-  with a casting time that finds no target aborts at once (the
-  originals abort as it goes off); the by-priority games' area spells
-  still centre on the finder's pick (their area finder, Darkness
-  GAME.OVR 0x22976, not followed - TODO); the Dark Queen's morale figure
-  is kept from fight to fight (0 at the start, as its BSS) - follows.
+  pass the use test, else aborted; aim 15 is one target; their area
+  spells (aim 9-14) centre where their area finder puts them (Darkness
+  GAME.OVR 0x22976 = Treasures 0x2AC37, Death Knights 0x23207, DQK.EXE
+  0x2960A): the square within reach whose area sums the most use tests
+  (a friend -10, the Queen's -40), checked against the originals run
+  (`combat::ai_area_centre`). Ours: a spell with a casting time that
+  finds no target aborts at once (the originals abort as it goes off);
+  such a spell's area goes off round its first target, not the square
+  chosen; the Dark Queen's morale figure is kept from fight to fight (0
+  at the start, as its BSS) - follows.

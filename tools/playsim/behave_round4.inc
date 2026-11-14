@@ -12,6 +12,7 @@
 // address, and the reference reads it there.
 
 #include <fstream>
+#include <sstream>
 #include <iterator>
 
 namespace r4 {

@@ -111,6 +111,23 @@ struct Tables {
     // the list from one random place (GAME.OVR 0x22191 / 0x2A422), the
     // others pick at random up to 20 times
     bool    finder_scan;                // (set by read_tables)
+    // The computer's area spells' centre (Darkness GAME.OVR 0x22976 =
+    // Treasures 0x2AC37): a square's sum of the use test over the fighters
+    // its area would take, read through each row's half-width (DS 0xA9E /
+    // 0xBD6: index dy x 3 + radius, -12..24); two spell sets of its own
+    // (code-segment sets: the window's low side the range alone / a
+    // quarter of the shape)
+    bool    area_known;
+    int8_t  area_shape[37];
+    uint8_t area_lo[2], area_quarter[2];
+    // (its window's half: 18 squares - Death Knights' 9, GAME.OVR 0x23207;
+    // the fireballs a square smaller outside: 0x2F and 0x73 - Death
+    // Knights' 0x2F and 0x6C)
+    uint8_t area_cap, area_fire[2];
+    // (the Dark Queen's, DQK.EXE 0x2960A: sums in words; its half-widths a
+    // word table, DS 0x5A40 + (dy + 3) x 6 + (radius - 1) x 2; under water
+    // Ice Storm 0x57 a radius 3, Lightning Bolt 0x33 2)
+    bool    area_queen;
     // The turn's first finder (round 17): Darkness / Treasures / Death
     // Knights ask it before the AI dice when the target is empty (GAME.OVR
     // 0x9AF2 / 0xA904 / 0xA239)
@@ -176,6 +193,11 @@ struct TableAt {
     bool     step_npc = true;           // Tables::step_npc
     uint8_t  mage_rule = 1;             // Tables::mage_rule
     bool     morale_cap = true;         // Tables::morale_cap
+    uint16_t area_shape = 0;            // Tables::area_shape's index 0 (0: no area finder)
+    uint8_t  area_lo[2] = {}, area_quarter[2] = {};
+    uint8_t  area_cap = 18;             // Tables::area_cap
+    uint8_t  area_fire[2] = {0x2F, 0x73};   // Tables::area_fire
+    bool     area_queen = false;        // Tables::area_queen: area_shape a word table, 6 bytes a row
 };
 // ---- The computer's spells (rules round 20; the Project's
 // claude/rules_round20_facts.md, tools/devkit/oracles/aicast.py)
@@ -1115,6 +1137,7 @@ struct Battle {
     bool    gw_water = false;
     bool    crystal_ok = false;         // (Treasures: the game block's +0x3C set at the fight's start)
     int8_t  crystal_who = -1;           // (... the villain whose crystal was smashed this fight)
+    int8_t  ai_cx = -1, ai_cy = -1;     // (the computer's area spell: the centre its area finder chose)
     int8_t  released = -1, released_by = -1;   // (Treasures' yetis: the one let go as its holder fell - "is released")
     bool    fright_ok = false;          // (Treasures: the game block's +0x53 set at the fight's start)
     int     morale_base = 0;            // the script's morale word (0x7EC6)
@@ -1858,6 +1881,11 @@ int ai_targets(Battle& b, const Tables& t, const classes::Tables& st, int i, con
 // and no target kept; Darkness / Treasures 0x22191 scanning from a random
 // place, own side or the enemy): -1 none
 int finder_reach(Battle& b, const Tables& t, int i, int reach, bool own, create::Dice& d);
+// The computer's area spell's centre in Darkness / Treasures / Death
+// Knights / the Dark Queen (their area finder, GAME.OVR 0x22976 / 0x2AC37
+// / 0x23207, DQK.EXE 0x2960A): false - no square with a use
+bool ai_area_centre(const Battle& b, const Tables& t, const classes::Tables& st, int i, int sp, int reach, int r,
+                    bool own, create::Dice& d, int* ox, int* oy);
 const FightSpell* fight_spell(const FightSpell* table, int n, int spell);
 // The targets for a spell the computer thinks of casting (as choose_spell):
 // false when it has no use now

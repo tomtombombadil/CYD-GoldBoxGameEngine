@@ -5072,6 +5072,11 @@ void ai_step(pic::Canvas& c)
                 fg->spell = sp;
                 fg->sp_n = nt;
                 for (int k = 0; k < nt; ++k) fg->sp_t[k] = tg[k];
+                // (Darkness / Treasures: the square their area finder chose)
+                if (b.ai_cx >= 0) {
+                    fg->aim_x = b.ai_cx;
+                    fg->aim_y = b.ai_cy;
+                }
                 cast_now(c, true);
                 return;
             }

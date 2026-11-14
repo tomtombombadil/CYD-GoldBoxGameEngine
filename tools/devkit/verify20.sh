@@ -17,6 +17,7 @@ G=${GAMES:-/tmp/claude-0/games}
 python3 "$O/qhooks.py" "$G/queen/The Dark Queen of Krynn/DQK.EXE" >> "$S" 2>&1
 # (round 20: the by-priority games' use test run in Unicorn - a python with the unicorn module)
 ${UPY:-/tmp/claude-0/uvenv/bin/python} -I "$O/aicast.py" >> "$S" 2>&1
+${UPY:-/tmp/claude-0/uvenv/bin/python} -I "$O/areafind.py" >> "$S" 2>&1      # (round 23: Darkness / Treasures area finder)
 for g in poolrad curse secret darkness champions knights gateway treasures; do
   ovr=$(ls "$G/$g"/*/GAME.OVR "$G/$g"/*/*/GAME.OVR 2>/dev/null | head -1)
   img=$(ls /tmp/claude-0/prog/${g}_start.bin /tmp/claude-0/prog/${g}_game.bin 2>/dev/null | head -1)

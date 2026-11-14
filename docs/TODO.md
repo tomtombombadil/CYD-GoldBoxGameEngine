@@ -1616,9 +1616,19 @@ the Project as claude/TODO.md.
       Round 19 left closed: the step routine's "moves / 2" is combat +6
       (the moves in half squares) / 2 > 0 = the engine's f.moves >= 2 -
       the same; the Dark Queen's morale figure now kept across fights.
-- [ ] Round 20 left (2026-11-10): the by-priority games' area finder
-      (Darkness GAME.OVR 0x22976, 550 lines - where an area spell is
-      centred; the engine centres on the finder's pick); the Dark Queen's
+- [x] Round 20 left (2026-11-10): the by-priority games' area finder -
+      DONE v0.196.50 (round 23): Darkness GAME.OVR 0x22976 = Treasures
+      0x2AC37 (a 37 x 37 byte grid, the use test summed over each
+      fighter's area by its rows' half-widths DS 0xA9E / 0xBD6, two spell
+      sets {34, 101} / {34, 91} - the window's low side / a quarter shape,
+      the reach capped at 18 round the caster's target, the best over 0,
+      a tie 25%, in the field and in sight); Death Knights 0x23207 (a half
+      of 9, no sets, DS 0x648, its fireballs 0x2F / 0x6C); the Dark Queen
+      DQK.EXE 0x2960A (word sums, a word table DS 0x5A40, one set {0x22,
+      0x65}, under water Ice Storm radius 3 / Lightning 2) - each RUN in
+      Unicorn (oracles/areafind.py, 3000 random fields a game) and
+      `combat::ai_area_centre` 0 differ in all four (rules4 aicast). Left:
+      a spell with a casting time goes off round its first target. The Dark Queen's
       spells 138-140 (class 4, 8th level rows past the engine's 138) -
       read (round 22): their name pointers (DS 0x25CB) are null, the last
       named is 137 - no spells there; the computer's weapon choice
@@ -1701,7 +1711,7 @@ the Project as claude/TODO.md.
       that can't be harmed). Not followed: 0xD5's other readers (the
       icon's facing 2; the free-attack list 0x259F0 with 0xD2); 0xA2's
       record 0x18E / 0x18F + 2.
-- [ ] The Dark Queen's monsters' own effects (round 22, carriers.py + the
+- [x] The Dark Queen's monsters' own effects (round 22, carriers.py + the
       qhooks handler map; events 2 / 3 on-hit by attack, 4 the attacker's
       damage, 5 a blow's damage taken, 6 a spell's, 8 the set-up, 9 a spell
       effect given, 0xD death, 0xE the move step, 0xF turn start, 0x12 /
@@ -1750,7 +1760,7 @@ the Project as claude/TODO.md.
       0x1F, the spore's 0xB9 and 0xD7 with the rot 0xAC (spells::Facts 4
       diseases, the temple's list too); the troll's heal ignores 0xD7 (flag
       1). Every Queen monster effect is read now. The Aurak's 0xA5 also blocks spell effects (event 9, 0x4DF31 with 0).
-- [ ] Monsters' effects with no engine fact (v0.196.35, sweep mode
+- [x] Monsters' effects with no engine fact (v0.196.35, sweep mode
       `effects`: every monster's effect list against every byte of the
       fight / magic / cure facts). The Dark Queen: 36 found; mapped as
       Darkness's (same handlers): 0x06 no electricity, 0x5D no fire, 0x3C /

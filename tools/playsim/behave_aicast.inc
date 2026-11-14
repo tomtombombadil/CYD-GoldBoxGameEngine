@@ -283,8 +283,85 @@ void judge_check()
            bad == 0 && n >= 3, "game %d: %d of %d wrong (%s)", game(), bad, n, first);
 }
 
+// 4. Darkness's / Treasures' / Death Knights' / the Dark Queen's area
+// finder (GAME.OVR 0x22976 / 0x2AC37 / 0x23207, DQK.EXE 0x2960A)
+// against the original RUN on random fields (oracle_areafind_<game>.txt -
+// tools/devkit/oracles/areafind.py): the same fighters, sides, caster, its
+// target, spell, radius, side asked and reach - the same centre or none
+void area_check()
+{
+    const int g = game();
+    const char* name = g == 4 ? "darkness" : g == 9 ? "treasures" : g == 6 ? "knights" : g == 7 ? "queen" : nullptr;
+    if (!name) return;
+    char path[200];
+    snprintf(path, sizeof path, "%s/oracle_areafind_%s.txt", getenv("ORACLE_DIR") ? getenv("ORACLE_DIR") : "/tmp/claude-0/bt", name);
+    std::ifstream in(path);
+    if (!in) {
+        expect(P, "aicast: the area finder's oracle (tools/devkit/oracles/areafind.py)", false, "%s missing", path);
+        return;
+    }
+    if (!fight()) return;
+    combat::Battle& b = fg->b;
+    const classes::Tables& st = m->tables;
+    if (!fg->t.area_known) {
+        expect(P, "aicast: the area finder's tables", false, "not read");
+        return;
+    }
+    std::string line;
+    int n = 0, bad = 0, pre = 0, skipped = 0;
+    char first[240] = "";
+    while (std::getline(in, line)) {
+        if (line.compare(0, 5, "area ")) continue;
+        std::istringstream is(line.substr(5));
+        int sp, rad, own, reach, caster, target, cnt;
+        is >> sp >> rad >> own >> reach >> caster >> target >> cnt;
+        if (cnt > b.n) {
+            ++skipped;
+            continue;
+        }
+        int side[16], fx[16], fy[16];
+        for (int k = 0; k < cnt; ++k) is >> side[k] >> fx[k] >> fy[k];
+        std::string arrow, want_x, want_y;
+        is >> arrow >> want_x;
+        if (want_x != "none") is >> want_y;
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        for (int k = 0; k < cnt; ++k) {
+            mx::put(k, side[k], fx[k], fy[k]);
+            b.f[k].magic_res = 0;
+            b.f[k].target = -1;
+        }
+        b.f[caster].target = target;
+        combat::occupancy(b);
+        // (the oracle's use test: 1 on the side asked, -10 on the other - the
+        // engine's ai_use must give the same here)
+        bool same = true;
+        for (int k = 0; k < cnt && same; ++k) {
+            const int want = side[k] == (own ? side[caster] : 1 - side[caster]) ? 1 : g == 7 ? -40 : -10;
+            same = combat::ai_use(b, fg->t, st, caster, sp, k, own != 0) == want;
+        }
+        if (!same) {
+            ++pre;
+            continue;
+        }
+        create::g_die_hook = [](int nn) { return nn == 100 ? 99 : -1; };      // (a tie never taken - as the oracle)
+        int cx = -1, cy = -1;
+        const bool ok = combat::ai_area_centre(b, fg->t, st, caster, sp, reach, rad, own != 0, rng, &cx, &cy);
+        create::g_die_hook = nullptr;
+        char got[24];
+        if (ok) snprintf(got, sizeof got, "%d %d", cx, cy);
+        else snprintf(got, sizeof got, "none");
+        const std::string want = want_x == "none" ? "none" : want_x + " " + want_y;
+        ++n;
+        if (want != got && !bad++) snprintf(first, sizeof first, "%s: engine %s", line.c_str(), got);
+    }
+    if (bad) printf("  (area: %s)\n", first);
+    expect(P, "aicast: the area finder (Darkness GAME.OVR 0x22976 / Treasures 0x2AC37 / Death Knights 0x23207 / DQK.EXE 0x2960A) against the original run",
+           bad == 0 && n > 0 && pre == 0, "%d of %d differ, %d with another use test, %d too many fighters", bad, n, pre, skipped);
+}
+
 void run()
 {
+    area_check();
     use_check();
     chooser_check();
     judge_check();

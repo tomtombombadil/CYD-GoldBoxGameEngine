@@ -254,6 +254,28 @@ bool read_tables(Tables& t, const TableAt& at, ReadDs read, void* ctx)
     t.mage_rule = at.mage_rule;
     t.morale_cap = at.morale_cap;
     for (int k = 0; k < 4; ++k) t.clouds[k] = at.clouds[k];
+    t.area_known = at.area_shape != 0;
+    t.area_cap = at.area_cap;
+    for (int k = 0; k < 2; ++k) {
+        t.area_lo[k] = at.area_lo[k];
+        t.area_quarter[k] = at.area_quarter[k];
+        t.area_fire[k] = at.area_fire[k];
+    }
+    t.area_queen = at.area_queen;
+    if (t.area_known && at.area_queen) {
+        // (words, dy -3..3 by radius 1-3 - into the byte table's places)
+        uint8_t raw[7 * 6];
+        if (!read(ctx, at.area_shape, raw, sizeof raw)) return false;
+        memset(t.area_shape, 0, sizeof t.area_shape);
+        for (int dy = -3; dy <= 3; ++dy)
+            for (int r = 1; r <= 3; ++r) {
+                const int at6 = (dy + 3) * 6 + (r - 1) * 2;
+                t.area_shape[dy * 3 + r + 12] = static_cast<int8_t>(raw[at6] | raw[at6 + 1] << 8);
+            }
+    } else if (t.area_known &&
+               !read(ctx, static_cast<uint16_t>(at.area_shape - 12), reinterpret_cast<uint8_t*>(t.area_shape), sizeof t.area_shape)) {
+        return false;
+    }
     if (t.mood_known && at.mood_stride != 5) {
         // (rows of mood_stride: row m's columns 1-5 at m x stride + c)
         uint8_t raw[7 * 8] = {};
@@ -6740,6 +6762,84 @@ int ai_use(const Battle& b, const Tables& t, const classes::Tables& st, int i, i
     return r;
 }
 
+// The by-priority games' area finder (Darkness GAME.OVR 0x22976, Treasures
+// 0x2AC37 - the same code; Death Knights 0x23207 with a half of 9 and no
+// sets): every square within reach of the caster (or, when reach + radius
+// passes the half, of its target) sums the use test of each
+// active fighter its area would take - the shape's rows' half-widths, the
+// sum a signed byte; the best sum over 0 wins (a tie a 25% chance to take
+// it - 0xEC:0x25), on the field (x 0-49, y 0-23) and in reach and sight of
+// the caster (0x130:0x39). False: no square - the spell has no target
+bool ai_area_centre(const Battle& b, const Tables& t, const classes::Tables& st, int i, int sp, int reach, int r,
+                    bool own, create::Dice& d, int* ox, int* oy)
+{
+    const Fighter& f = b.f[i];
+    const bool lo_only = sp == t.area_lo[0] || sp == t.area_lo[1];
+    const bool quarter = sp == t.area_quarter[0] || sp == t.area_quarter[1];
+    int far = reach + r, near = reach;
+    int cx = f.x, cy = f.y;
+    if (far > t.area_cap) {
+        far = t.area_cap;
+        near = t.area_cap - r;
+        if (f.target >= 0 && f.target < b.n && b.f[f.target].size) {
+            cx = b.f[f.target].x;
+            cy = b.f[f.target].y;
+        }
+    }
+    const int x0 = cx - (lo_only ? near : far), y0 = cy - (lo_only ? near : far);
+    const int x1 = cx + far, y1 = cy + far;
+    // (on the heap only while it runs - 2.7 KB; none: false and *ox -2, the
+    // caller then takes the one-pick way)
+    auto* grid = static_cast<int16_t(*)[37]>(calloc(37 * 37, sizeof(int16_t)));
+    if (!grid) {
+        *ox = -2;
+        return false;
+    }
+    // (the DAX games' sums are bytes, signed - they wrap; the Dark Queen's words)
+    auto add = [&](int16_t& g, int v) {
+        g = t.area_queen ? static_cast<int16_t>(g + v) : static_cast<int16_t>(static_cast<int8_t>(g + v));
+    };
+    auto half = [&](int dy) -> int {
+        const int k = dy * 3 + r + 12;
+        return k >= 0 && k < 37 ? t.area_shape[k] : 0;
+    };
+    for (int c = 0; c < b.n; ++c) {
+        const Fighter& o = b.f[c];
+        if (!o.size || !o.up()) continue;
+        if (o.x < x0 || o.x > x1 || o.y < y0 || o.y > y1) continue;
+        const int score = static_cast<int8_t>(ai_use(b, t, st, i, sp, c, own));
+        int dlo = quarter ? 0 : -r, dhi = r;
+        if (o.y + dlo < cy - near) dlo = cy - near - o.y;
+        if (o.y + dhi > cy + near) dhi = cy + near - o.y;
+        for (int dy = dlo; dy <= dhi; ++dy) {
+            int xl = quarter ? o.x : o.x - half(dy), xh = o.x + half(dy);
+            if (xl < cx - near) xl = cx - near;
+            if (xh > cx + near) xh = cx + near;
+            for (int x = xl; x <= xh; ++x) {
+                const int gx = x - cx + 18, gy = o.y + dy - cy + 18;
+                if (gx >= 0 && gx < 37 && gy >= 0 && gy < 37) add(grid[gx][gy], score);
+            }
+        }
+    }
+    int best = 0;
+    bool found = false;
+    for (int dx = -near; dx <= near; ++dx)
+        for (int dy = -near; dy <= near; ++dy) {
+            const int v = grid[dx + 18][dy + 18];
+            if (!(v > best || (v == best && v > 0 && d.roll(100, 1) <= 25))) continue;
+            const int x = cx + dx, y = cy + dy;
+            if (x < 0 || x > 0x31 || y < 0 || y >= 0x18) continue;
+            int len = 0;
+            if (!path_xy(b, t, f.x, f.y, x, y, false, &len) || len > 2 * reach + 1) continue;
+            best = v;
+            *ox = x;
+            *oy = y;
+            found = true;
+        }
+    free(grid);
+    return found && best > 0;
+}
+
 int ai_targets(Battle& b, const Tables& t, const classes::Tables& st, int i, const FightSpell& fs, int sp, int pw,
                create::Dice& d, int* targets, int judge)
 {
@@ -6768,6 +6868,24 @@ int ai_targets(Battle& b, const Tables& t, const classes::Tables& st, int i, con
         if (c < 0 || (held_effect(b, je.affect) && held_now(b, b.f[c]))) return -1;
         return c;
     };
+    // (Darkness / Treasures / Death Knights: an area's centre by their area finder - aim 9-14,
+    // either side's spells: GAME.OVR 0x20480 with the computer's flag)
+    b.ai_cx = b.ai_cy = -1;
+    if (pri && t.area_known && aim >= 9 && aim <= 14 && fs.does != SpellDoes::Bolt && e.targets != spells::kParty &&
+        fs.does != SpellDoes::Teleport) {
+        int r = aim - 8;
+        if (t.area_queen && b.underwater && sp == 0x57) r = 3;          // (DQK.EXE 0x2964E)
+        else if (t.area_queen && b.underwater && sp == 0x33) r = 2;
+        if ((sp == t.area_fire[0] || sp == t.area_fire[1]) && !b.indoors) --r;
+        int cx = -1, cy = -1;
+        if (ai_area_centre(b, t, st, i, sp, reach, r, own, d, &cx, &cy)) {
+            b.ai_cx = static_cast<int8_t>(cx);
+            b.ai_cy = static_cast<int8_t>(cy);
+            return fs.does == SpellDoes::Cloud ? cloud_fighters(b, cx, cy, targets, kMaxFighters)
+                                               : in_area(b, t, cx, cy, e.aim & 7, targets, kMaxFighters);
+        }
+        if (cx != -2) return 0;
+    }
     if (own && !(pri && aim != 0 && aim < 8 && e.targets != spells::kParty)) {
         // At itself / its side
         if (fs.does == SpellDoes::Teleport) return 0;

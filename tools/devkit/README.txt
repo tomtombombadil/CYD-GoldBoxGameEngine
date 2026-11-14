@@ -349,3 +349,8 @@ Round 20 (2026-11-10) - the computer's spell choice:
                          Queen) run for every spell on ~160 states each -> oracle_aicast_<game>.txt (+ their spell rows);
                          rules4 ONLY=aicast compares the engine (combat::ai_use, the chooser, the d7 games' judge)
   verify20.sh            round 19's batch + aicast.py (UPY=the unicorn python)
+
+Round 23 (2026-11-14) - the by-priority games' area finder:
+  oracles/areafind.py    Darkness's / Treasures' area spell centre (GAME.OVR 0x22976 / 0x2AC37) RUN in Unicorn on 3000
+                         random fields (unicorn python) -> oracle_areafind_<game>.txt; rules4 ONLY=aicast compares
+                         combat::ai_area_centre (0 of 3000 differ in each). verify20.sh runs it.
