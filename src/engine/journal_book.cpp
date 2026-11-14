@@ -157,8 +157,11 @@ int flow(const Prev& p, const pdf::TextLine& l, int page, bool top)
     return 0;
 }
 
-bool near_bottom(const pdf::TextLine& l, const Stats& st) { return l.y - st.bottom(l.size) <= 2.6f * l.size; }
-bool near_top(const pdf::TextLine& l, const Stats& st) { return st.top(l.size) - l.y <= 2.6f * l.size; }
+// (3.3 lines: the Steam Treasures Introduction's columns end 3 lines above
+// the page's lowest and start 3 below its highest - a heading of the
+// text's own size over them. 2.6 until v0.198.1)
+bool near_bottom(const pdf::TextLine& l, const Stats& st) { return l.y - st.bottom(l.size) <= 3.3f * l.size; }
+bool near_top(const pdf::TextLine& l, const Stats& st) { return st.top(l.size) - l.y <= 3.3f * l.size; }
 bool open_end(const pdf::TextLine& l)
 {
     const char c = l.len ? l.text[l.len - 1] : '.';
