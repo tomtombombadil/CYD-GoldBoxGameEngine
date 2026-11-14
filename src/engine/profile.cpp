@@ -1479,6 +1479,7 @@ constexpr combat::Facts kKnightsFacts = [] {
     f.mon.regen = 0x54;                 // the vampire: 3 hit points at each round's end (0x1DB5E)
     f.dk.vamp_gaze = 0x51;              // ... its charming gaze: "gazes!", Charm Person (0x2EBDF)
     f.mon.golem = 0x57;                 // the iron golem: Secret's (0x1DBC7)
+    f.mon.terror = 0x48;                // the death knights' fear (0x1D63B)
     f.mon.stench = 0x4F;                // the ghast's stench (0x1DA09: -2 0x76 to its holder - SPEC 12)
     f.mon.stenched = 0x76;
     f.mon.stench_skip = 0x76;

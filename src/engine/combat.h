@@ -420,6 +420,8 @@ struct MonFx {
     // its great vilstrak (0x92, 0x24E1D): its moves doubled in the first
     // round (the round count [0xA57D] 0)
     uint8_t first_dash = 0;
+    // Death Knights' death knights' fear (0x48, GAME.OVR 0x1D63B)
+    uint8_t terror = 0;
 };
 
 // More spells' effects (spell_facts.md 2): Enlarge, Confusion (and going

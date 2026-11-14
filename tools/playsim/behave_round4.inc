@@ -1339,6 +1339,44 @@ void yeti()
            bad == 0, "%d of %d wrong", bad, n);
 }
 
+// Death Knights' death knights' fear (0x48, GAME.OVR 0x1D63B): foes save
+// against spells or are terrified (Fear's effect, fleeing); the fear-proof
+// (0x5C) and its own side untouched
+void terror()
+{
+    if (!fight() || !fg->b.fx || !fg->b.fx->mon.terror) return;
+    combat::Battle& b = fg->b;
+    const auto& fx = *b.fx;
+    int bad = 0, n = 0;
+    auto chk = [&](bool ok, const char* what) {
+        ++n;
+        if (!ok && !bad++) printf("  (terror: %s)\n", what);
+    };
+    for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+    const int A = b.party_size > 1 ? 1 : 0;
+    mx::put(0, 0, 3, 3, 50);
+    if (A) mx::put(A, 0, 20, 12, 50);
+    if (A && fx.mon.no_fear) mx::add_aff(A, fx.mon.no_fear);
+    mx::put(B, 1, 11, 10, 50);
+    mx::add_aff(B, fx.mon.terror);
+    if (B + 1 < b.n) mx::put(B + 1, 1, 12, 10, 50);
+    const int keep = b.round;
+    b.round = 0;
+    create::g_die_hook = [](int nn) { return nn == 20 ? 2 : -1; };
+    create::Dice dd(3);
+    combat::Event ev[32];
+    const int k = combat::start_round(b, dd, ev, 32);
+    create::g_die_hook = nullptr;
+    b.round = keep;
+    int ter = 0;
+    for (int j = 0; j < k; ++j) ter += ev[j].ev == combat::Ev::Terrified;
+    chk(F(0).has(fx.fear) && F(0).fleeing, "a foe far off: terrified, fleeing");
+    if (A && fx.mon.no_fear) chk(!F(A).has(fx.fear), "the fear-proof: not");
+    if (B + 1 < b.n) chk(!F(B + 1).has(fx.fear), "its own side: not");
+    chk(ter == 1, "\"is terrified\" once");
+    expect(P, "Death Knights' death knights' fear (GAME.OVR 0x1D63B)", bad == 0, "%d of %d wrong", bad, n);
+}
+
 // PoolRad's halving effects (the round 22 effects sweep, GAME.OVR's
 // handlers): 0x5D fire, 0x72 electricity, 0x76 cold halved; 0x6F poison
 // proof. Gateway's 0x5D the same (GAME.OVR 0x13F81).
@@ -5010,6 +5048,7 @@ void run()
     if (want("qmound")) queen_mound();
     if (want("halves")) pool_halves();
     if (want("stench")) stench();
+    if (want("terror")) terror();
     if (want("yeti")) yeti();
     if (want("dmg22")) dmg22();
     if (want("cbreath")) champ_breath();

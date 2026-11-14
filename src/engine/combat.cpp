@@ -2051,6 +2051,32 @@ int start_round(Battle& b, create::Dice& d, Event* out, int cap)
                 }
             }
     }
+    // Death Knights' death knights (0x48, GAME.OVR 0x1D63B - at the fight's
+    // set-up here: when its event comes, not read): every foe on the field
+    // not fear-proof (0x5C) saves against spells or is terrified - Fear's
+    // effect, fleeing under the computer
+    if (b.round == 0 && b.fx && b.fx->mon.terror && b.fx->fear) {
+        for (int i = 0; i < b.n; ++i) {
+            const Fighter& f = b.f[i];
+            if (!f.size || !f.up() || !hasx(f, b.fx->mon.terror)) continue;
+            for (int c = 0; c < b.n; ++c) {
+                Fighter& v = b.f[c];
+                if (c == i || !v.size || !v.up() || v.team() == f.team()) continue;
+                if (hasx(v, b.fx->mon.no_fear) || saving_throw(v, 4, 0, d)) continue;
+                const bool made_quick = v.member >= 0 && v.rec[0xF7] < 0x80 && !v.quick;
+                give_aff(v, b.fx->fear, 0, made_quick ? 1 : 0, false);
+                v.fleeing = true;
+                v.panic = false;
+                if (made_quick) v.quick = true;
+                v.target = -1;
+                if (out && n_ev < cap) {
+                    out[n_ev] = Event{};
+                    out[n_ev].who = static_cast<uint8_t>(c);
+                    out[n_ev++].ev = Ev::Terrified;
+                }
+            }
+        }
+    }
     // (the Dark Queen's troll / anemone at the round's start - event 0x13)
     for (int i = 0; b.fx && b.fx->q.regen1 && i < b.n; ++i)
         if (queen_regen(b, i) && out && n_ev < cap) {
