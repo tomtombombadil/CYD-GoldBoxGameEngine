@@ -1777,9 +1777,11 @@ the Project as claude/TODO.md.
       3 hit points a round, 0x57 the iron golem (Secret's), 0x5D blows of
       type byte <= 1 half, 0x60 charm / sleep proof, 0x63 poison /
       paralysis proof; the Queen's 0x87 (and Knights' 0x4C) took no damage
-      of ANY kind - fire only now (rules4 dmg22). Left: Death Knights 0x46
-      (the fire minion's 1d6 fire round it, 0x1D430), 0x4A (its on-hit
-      2d6, 0x1D7C1); v0.196.45: 0x47 the death knights reflect a spell
+      of ANY kind - fire only now (rules4 dmg22). v0.196.46: the fire
+      minion's 0x46 (at its turn 1d6 fire to all next to it, its own side
+      too - 0x1D430) and 0x4A (2d6 more on a hit, a save against spells
+      for half - 0x1D7C1; when its event runs not read: taken as attack
+      1's hit); Death Knights now has no effect without a fact. v0.196.45: 0x47 the death knights reflect a spell
       that isn't an area's back at its caster ("reflects the spell" - the
       original's d10 decides nothing, both branches test the same; rules4
       reflect), 0x4E their one spell 0x2F at their turn (as the computer

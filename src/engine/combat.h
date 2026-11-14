@@ -430,6 +430,10 @@ struct MonFx {
     // ... and their one spell (0x4E, 0x2EBA3): at its turn it casts
     // `cast_spell` (0x2F) as the computer casts - its effect then gone
     uint8_t cast_once = 0, cast_spell = 0;
+    // Death Knights' fire minion: 0x46 (0x1D430) at its turn 1d6 fire to
+    // every other fighter next to it, friend or foe; 0x4A (0x1D7C1) a hit's
+    // 2d6 more, a save against spells for half
+    uint8_t fire_aura = 0, hit_2d6 = 0;
 };
 
 // More spells' effects (spell_facts.md 2): Enlarge, Confusion (and going

@@ -1374,6 +1374,24 @@ void terror()
     if (A && fx.mon.no_fear) chk(!F(A).has(fx.fear), "the fear-proof: not");
     if (B + 1 < b.n) chk(!F(B + 1).has(fx.fear), "its own side: not");
     chk(ter == 1, "\"is terrified\" once");
+    if (fx.mon.fire_aura) {
+        int ok = 0;
+        for (int seed = 1; seed <= 10; ++seed) {
+            for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+            mx::put(0, 0, 10, 10, 50);
+            mx::put(B, 1, 11, 10, 50);
+            mx::add_aff(B, fx.mon.fire_aura);
+            if (B + 1 < b.n) mx::put(B + 1, 1, 11, 11, 50);
+            if (A) mx::put(A, 0, 15, 10, 50);
+            create::Dice d2(static_cast<uint32_t>(seed));
+            combat::Event e2[16];
+            bool ends = false;
+            combat::special(b, fg->t, B, d2, e2, 16, &ends);
+            const int l0 = 50 - F(0).hp(), l1 = B + 1 < b.n ? 50 - F(B + 1).hp() : 1;
+            ok += l0 >= 1 && l0 <= 6 && l1 >= 1 && l1 <= 6 && (!A || F(A).hp() == 50) && F(B).hp() == 50;
+        }
+        chk(ok == 10, "the fire minion: 1d6 fire to all next to it, friend or foe");
+    }
     expect(P, "Death Knights' death knights' fear (GAME.OVR 0x1D63B)", bad == 0, "%d of %d wrong", bad, n);
 }
 

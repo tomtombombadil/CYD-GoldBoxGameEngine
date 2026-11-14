@@ -2282,6 +2282,19 @@ void after_hit_own(Battle& b, int a, int c, int slot, int roll, int hits1, creat
             if (k2 >= 0) at.aff[k2][3] = static_cast<uint8_t>(c);
             add_event(out, c, Ev::Grabbed);
         }
+        // Death Knights' fire minion's hit (0x4A, GAME.OVR 0x1D7C1): 2d6, a
+        // save against spells for half
+        if (m.hit_2d6 && hasx(at, m.hit_2d6) && tg.up()) {
+            Harm h;
+            h.save = 4;
+            h.on_save = 2;
+            bool dn = false;
+            const int done = harm(b, c, d.roll(6, 2), h, d, &dn);
+            g_kind = 0;
+            Event* e = done > 0 ? add_event(out, c, Ev::Damage) : nullptr;
+            if (e) e->amount = static_cast<int16_t>(done);
+            if (dn) out.down = true;
+        }
         // Treasures' giant rat (0x91, GAME.OVR 0x24D4B)
         if (m.rat_ill && hasx(at, m.rat_ill) && tg.up() && b.fx->sp.ill && !tg.has(b.fx->sp.ill) &&
             d.roll(100, 1) <= 5 && !saving_throw(tg, 0, 0, d)) {
@@ -7886,6 +7899,19 @@ int special(Battle& b, const Tables& t, int i, create::Dice& d, Event* out, int 
             hurt(tg, 7, h);
             if (!f.up()) return n;
         }
+    }
+    // Death Knights' fire minion (0x46, GAME.OVR 0x1D430)
+    if (m.fire_aura && hasx(f, m.fire_aura)) {
+        for (int c = 0; c < b.n; ++c) {
+            const Fighter& v = b.f[c];
+            if (c == i || !v.size || !v.up()) continue;
+            const int ddx = v.x - f.x, ddy = v.y - f.y;
+            if (ddx < -1 || ddx > 1 || ddy < -1 || ddy > 1) continue;
+            Harm h;
+            h.kind = 1;
+            hurt(c, d.roll(6, 1), h);
+        }
+        if (!f.up()) return n;
     }
     // Death Knights' death knights' one spell (0x4E, GAME.OVR 0x2EBA3)
     if (m.cast_once && m.cast_spell && hasx(f, m.cast_once) && special_target(b, t, i, 12, false, d) >= 0) {
