@@ -219,6 +219,9 @@ bool palette(const pic::Rgb** rgb, bool all = false);
 // one of the game's sound effects (the games' numbers, engine/sound.h)
 void set_sound(uint8_t mode, uint8_t volume, const char* rec_dir = nullptr,
                games::Game rec = games::Game::Unknown);
+// Settings' Music (Tom, 2026-11-14): the songs the scan rendered, played
+// where the game plays them (off: none)
+void set_music(bool on);
 uint8_t sound_mode();
 // (game: the game's own number - Darkness's SOUND v)
 void sound_test(int id, bool game = false);

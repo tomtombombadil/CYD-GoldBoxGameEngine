@@ -15,6 +15,7 @@
 // VGA=1: a VGA game (Darkness) in 256 colours, as on the boards with PSRAM (snapshots in its palette);
 // SEARCH=1: Search on before the moves (Darkness's debug arena: a step asks "FIGHT HERE?").
 #include "game/play.cpp"
+#include "game/music_make.cpp"
 #include "host.h"
 #include "engine/rules.h"
 #include <vector>
@@ -783,6 +784,13 @@ int main(int argc, char** argv)
     if (getenv("SOUNDMODE"))
         play::set_sound(static_cast<uint8_t>(atoi(getenv("SOUNDMODE"))), 230, getenv("SOUNDREC"),
                         getenv("SOUNDRECGAME") ? (games::Game)atoi(getenv("SOUNDRECGAME")) : games::Game::Unknown);
+    // MAKEMUSIC=1: the card scan's music step first (game/music_make: the
+    // songs of the game's MUSIC.DAX rendered into CACHE's MUSIC<n>.WAV)
+    if (getenv("MAKEMUSIC") && getenv("CACHE")) {
+        const int bad = musicfiles::make(dir, getenv("CACHE"), games::short_title(game), true,
+                                         [](const char* l, bool, void*) { printf("  [scan] %s\n", l); }, nullptr);
+        printf("  [scan] music: %d failed\n", bad);
+    }
     const char* e = play::open(dir, game, C, getenv("CACHE"));
     if (e) { printf("open: %s\n", e); return 1; }
     if (getenv("CAMPWORDS")) { char cw[48]; play::camp_words(cw, sizeof cw); printf("  camp words [%s] -> [%s]\n", play::d->w_camp_menu, cw); return 0; }    // CAMPWORDS=1: the camp menu's words, read from the program

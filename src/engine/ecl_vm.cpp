@@ -1434,9 +1434,7 @@ bool Vm::dk_step(Stop& r)
         if (!need(1)) return true;
         const int v = value(o[0]) & 0xFF;
         if (v > 0x7F) {
-            char t[40];
-            snprintf(t, sizeof t, "MUSIC %d (not in the engine yet)", v & 0x7F);
-            h_.log(t);
+            h_.music(v & 0x7F);
         } else if (v >= 2 && v <= 14) {
             h_.game_sound(v);
         }
@@ -2122,6 +2120,7 @@ Stop Vm::step()
         } else if (w == set_.sound_call && set_.sound_word) {
             // Gateway: the effect 0x03DE names (its own number); 0x80 up music
             if (sound_kind_ < 0x80) h_.game_sound(sound_kind_);
+            else h_.music(sound_kind_ & 0x7F);
         } else if (w == set_.sound_call) {
             h_.sound(sound_kind_ == 10 ? 0x0B : 0x0A);         // a step; 10: the fireball's roar
         } else if (set_.press_call && w == set_.press_call) {

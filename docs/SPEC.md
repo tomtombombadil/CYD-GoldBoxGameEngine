@@ -272,6 +272,29 @@ stay in the session's scratch space, never in the repo.
   the "Processing" line shows the free memory; a restart by a crash,
   watchdog or brownout is noted in `_CYD/RESTART.TXT`.
 
+- **The games' music** (Tom, 2026-11-14; facts: the Project's
+  claude/music_facts.md): the scan's last step renders each song of a
+  game's MUSIC.DAX (MicroMagic's: Pools of Darkness 8 songs, Death Knights
+  7, Gateway 1, Treasures 1) into `_CYD/<folder>/MUSIC<n>.WAV` (8-bit mono
+  11,025 Hz, trailing silence cut; "Rendering the Pools of Darkness music,
+  song 3 of 8..."; game/music_make). How: the game's own music driver
+  (MUSIC.DAX block 0) runs in the engine's x86 interpreter (`engine/x86.*`,
+  own code; nothing of the games in the firmware - the driver is the
+  player's file, run on the player's board), its AdLib writes go to an
+  emulated YM3812 (ymfm, BSD-3 - `engine/opl.*`). Checked: the interpreter's
+  writes equal Unicorn's on all 17 songs, and those equal the original's in
+  DOSBox (986 notes, every register, timing within 1 ms -
+  tools/devkit/music). A start whose card lacks a game's files renders them
+  first ("Preparing Music", as the pictures). Play streams a file through a
+  16 KB ring (`music::Stream`; the game's loop reads the card, the audio
+  task plays) where the original plays the song: the title (song 1), a
+  script's SOUND 0x80 + n (Gateway: CALL B200 with 0x03DE 0x80 + n); the
+  same song isn't restarted, any sound effect stops it, leaving the title
+  stops it (Darkness's GAME.EXE 5A0:0000 / 5A0:0031 / 0x1BC). Settings'
+  **Music** key (On / Off, `Settings::music_off`). Not yet: Champions' title
+  tune (Electronic Arts' player, SOUND.DAX + MIDI.DAX) and the Dark Queen's
+  XMI songs.
+
 ## 5c. Settings and logs (Tom, 2026-10-09)
 
 - **One Settings screen** (Tom, 2026-10-12, v0.91.0: "the chooser's
@@ -1477,7 +1500,7 @@ the scripts' changed ops, the rule tables, fights, the rest.
   played by DigPak drivers (SND.COM, the one STARTUP.EXE chose; POOL4.CFG
   line 1: 1 Sound Blaster - GOG -, 2 AdLib, 3 / 4 Tandy EX-TX / SL-TL, 5
   PC speaker). SOUND v (op 0x2C; 2-12 - 13 / 14 play nothing; 0x80 + n
-  music, not yet) and the program's own calls play ZOUNDS.DAX block v - 1
+  music - played since 2026-11-14, 5b) and the program's own calls play ZOUNDS.DAX block v - 1
   - whole, its 8SVX header included - at 9,000 Hz
   (`sound::Clips`, the profile's `clips`; `sound::ClipPlayer`; each block
   read from the card as it sounds, `sound::load_clip` - up to 5 KB while
@@ -1837,16 +1860,16 @@ segment at image 0x4C70; run as `GAME UseStart`) + GAME.OVR (51 overlays),
   program's table (DS 0x1794: 4,000-9,000 Hz; `rate_table`), 3 and 6 played
   as 9 (`as_nine`); the program's numbers are Curse's (steps and turns 10,
   hit 7, miss 9 ...). A script's CALL 0xB200 plays the effect 0x03DE holds
-  (`OpSet::sound_word`; 0x80 up is music, not played). No music (MUSIC.DAX).
+  (`OpSet::sound_word`; 0x80 up is music - its scripts never ask for it;
+  the title's song 1 plays, 5b).
 - **The journal.** The Steam / SNEG release's companion (GBC/Games/08.
   Gateway to the Savage Frontier/Game.dat in the game's folder) makes it
   with the existing code (62 entries; checked on the GOG companion's copy of
   Game.dat); its "...AS JOURNAL" "ENTRY #32." mentions are found. The GOG
   release: its PDF's entry table (v0.142.0: 62 entries; the Introduction as
   entry 'I' 1 since v0.146.0 - Treasures' too).
-- **Not yet:** no music (MUSIC.DAX: the original's "0x80 up" sounds -
-  block 0 is its own x86 driver (MicroMagic's), block 1 the one song, a
-  "GLBR" OPL2 / AdLib FM score: not the families the engine plays).
+- **Music** (2026-11-14): MUSIC.DAX's one song at the title (its setup's
+  Music On = Settings' Music), rendered by the scan (5b).
 - **The behaviour pass** (2026-10-24; checks: sweep's behave parts with
   GAME=8 - classes, saves, spells, items, events, monsters, gateway):
   training by its level caps (DS 0x1498) and race limits (the party list's
@@ -2042,7 +2065,8 @@ bytes, data segment at image 0xBCE0) + GAME.OVR (35 overlays), DAX files,
 - **Fights**: Champions' effect numbers, Darkness's 13-word menu with
   Yell; shops by SHOP n's tables, the temple through Darkness's.
 - **Sound**: Champions' / Secret's driver (START segment 0x70D0), its
-  numbers 2-12; MUSIC not played.
+  numbers 2-12; MUSIC (MUSIC.DAX, songs 1-7: the title, the story
+  scenes) rendered by the scan and played since 2026-11-14 (5b).
 - **Journal**: the SNEG Companion's 65 text entries parse; the GOG PDF's
   table still to make (needs the PDF's bytes from the Project).
 - **Checks**: sweep `behave deathknights` (creation, training, knights;
@@ -3494,8 +3518,11 @@ the game's Settings (As Original: all of them).
   is Champions' and read the same way (a kender's row runs into the
   Dexterity table); with Game Fixes on each race its own row (as
   Champions'); off as the original.
-- **Death Knights' music** (MUSIC in its scripts) isn't played; its
-  effects are.
+- **The music** (2026-11-14, 5b): the AdLib versions are played whatever
+  Game Sound is (the originals played their music only on an AdLib /
+  Sound Blaster, with that card's effects), at the Volume's level; Music
+  Off in Settings turns them off. 8-bit 11,025 Hz recordings of the
+  emulated chip, not a live chip.
 - **Gateway's stirge and squid** (Game Fixes): their holds never hurt in
   the original (the stirge's goes at its next step, the squid's per-turn
   handler is in no list); with Game Fixes on the stirge drinks 1d4 a turn up

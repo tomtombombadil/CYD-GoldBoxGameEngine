@@ -34,6 +34,7 @@
 #include "engine/hlib.h"
 #include <malloc.h>
 #include "game/play.cpp"
+#include "game/music_make.cpp"
 #include "host.h"
 #include "engine/rules.h"
 #include <cstdarg>
