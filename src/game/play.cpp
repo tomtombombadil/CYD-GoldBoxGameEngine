@@ -18117,6 +18117,25 @@ bool nav_point(int* x, int* y)
     return true;
 }
 
+// The menu line's Exit word (Tom, 2026-11-14: a handheld's Back button picks
+// it - the PortMaster port; the boards have no key for it). Only a word
+// that is exactly "Exit" on the line shown: never the party menu's "Exit to
+// DOS" (a list line), never while a field is being typed.
+bool exit_point(int* x, int* y)
+{
+    if (!d || input_mode != Input::None || note_until || !menu_on) return false;
+    for (int i = 0; i < menu.count; ++i) {
+        const int a = menu.start[i], n = menu.end[i] - a + 1;
+        if (n != 4 || strncasecmp(menu.s + a, "exit", 4) != 0) continue;
+        int col = 0, row = text::kMenuRow;
+        text::item_cell(menu, i, &col, &row);
+        *x = col * 8 + 2;
+        *y = row * 8 + 2;
+        return true;
+    }
+    return false;
+}
+
 // ---- tap highlight (Tom, 2026-10-09) ---------------------------------------------
 // What a tap will act on - a menu line word, a list line, a party menu
 // line - lights up (its letters in the highlight colour) before the tap is

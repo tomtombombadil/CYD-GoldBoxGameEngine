@@ -1237,6 +1237,9 @@ the Project as claude/TODO.md.
 
 ## Sequels (later, not now - Tom, 2026-11-01)
 
+- [ ] (PortMaster: started 2026-11-14 in its own repo,
+      tomtombombadil/PM-GoldBoxGameEngine - its TODO is there. v0.196.52
+      added `play::exit_point` for its Back button.)
 - [ ] A PortMaster version and an Android version of the engine. Route: an
       SDL2 front end (desktop first - Linux / Windows / PortMaster - then
       Android via SDL's Android project: storage access, touch layout,
