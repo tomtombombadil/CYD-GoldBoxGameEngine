@@ -398,6 +398,39 @@ bool parse_heading(const char* s, int n, char* kind, int* number, int* end)
         *end = i;
         return true;
     }
+    // A scanned heading with its ornaments read as letters ("~i INTRODUCTION
+    // ~", ",* INTRODUCTION tw" - the Steam Treasures and Dark Queen journals;
+    // Tom, 2026-11-14: Treasures' Introduction wasn't found): a short line
+    // whose one real word is "introduction", the rest scraps of two
+    // characters at most, none a digit (so not the contents' "INTRODUCTION
+    // ..... 1", nor "RAEGAR'S INTRODUCTION")
+    if (n <= 28) {
+        bool found = false;
+        for (i = 0; i < n;) {
+            while (i < n && s[i] == ' ') ++i;
+            if (i >= n) break;
+            int k = i;
+            // (in capitals, as those headings are - not "An introduction to it")
+            if (!found && s[i] == 'I' && s[i + 1 < n ? i + 1 : i] == 'N' && word_ci(s, n, &k, "introduction") &&
+                (k >= n || s[k] == ' ')) {
+                found = true;
+                i = k;
+                continue;
+            }
+            const int w0 = i;
+            while (i < n && s[i] != ' ') {
+                if (is_digit(s[i])) return false;
+                ++i;
+            }
+            if (i - w0 > 2) return false;
+        }
+        if (found) {
+            *kind = 'I';
+            *number = 1;
+            *end = n;           // (the whole line is the heading)
+            return true;
+        }
+    }
     return false;
 }
 

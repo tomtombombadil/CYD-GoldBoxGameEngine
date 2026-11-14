@@ -493,7 +493,12 @@ struct XrefOut : inflate::Output {
     bool png = false;
     uint8_t row[33] = {}, up[32] = {};
     int k = 0;
-    int32_t sect[16] = {};            // (first, count) pairs
+    // (first, count) pairs. An updated file's last table lists each changed
+    // object on its own - the Steam Krynn journals have 27 - 38 pairs, and
+    // with room for 8 the table, and so the whole PDF, was refused (Tom,
+    // 2026-11-14)
+    static constexpr int kSect = 256;
+    int32_t sect[kSect] = {};
     int nsect = 0, si = 0;
     int32_t num = 0, left = 0;
     explicit XrefOut(Doc& d) : doc(d) {}
@@ -554,7 +559,14 @@ bool read_xref_stream(dax::ByteSource& src, uint32_t at, Doc& doc, Obj& o, uint3
     num.skip();
     if (!num.number_at(num.p, &n, &e)) return false;
     if (!parse_at(src, at, n, o) || !o.stream_at || !name_is(o, get(o, o.root, "Type"), "XRef")) return false;
-    XrefOut out(doc);
+    // (on the heap: 1 KB of pairs, and the scan's stack is the boards')
+    XrefOut* outp = new (std::nothrow) XrefOut(doc);
+    if (!outp) return false;
+    struct Free {
+        XrefOut* p;
+        ~Free() { delete p; }
+    } freer{outp};
+    XrefOut& out = *outp;
     const int wa = get(o, o.root, "W"), ix = get(o, o.root, "Index"), sz = get(o, o.root, "Size");
     const int ln = get(o, o.root, "Length"), dp = get(o, o.root, "DecodeParms");
     if (wa < 0 || o.node[wa].t != T::Array || sz < 0 || o.node[sz].t != T::Num || ln < 0 || o.node[ln].t != T::Num ||
@@ -567,7 +579,7 @@ bool read_xref_stream(dax::ByteSource& src, uint32_t at, Doc& doc, Obj& o, uint3
         out.cols <= 0)
         return false;
     if (ix >= 0 && o.node[ix].t == T::Array) {
-        for (int k = o.node[ix].first; k >= 0 && out.nsect < 16; k = o.node[k].next) {
+        for (int k = o.node[ix].first; k >= 0 && out.nsect < XrefOut::kSect; k = o.node[k].next) {
             const int32_t v = o.node[k].v;
             if (o.node[k].t != T::Num || v < 0 || v >= kMaxObjects * 64) return false;     // (damaged /Index)
             out.sect[out.nsect++] = v;

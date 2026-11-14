@@ -3629,7 +3629,9 @@ static std::string zstored(const std::string& d)
     return z + d + std::string("\0\0\0\0", 4);             // (the Adler-32 isn't checked)
 }
 
-static Bytes make_pdf3()
+// (many_index: the table as an updated file's - each object a /Index pair
+// of its own, ten free ones after them: 17 pairs)
+static Bytes make_pdf3(bool many_index = false)
 {
     std::string s = "%PDF-1.5\n";
     std::vector<size_t> off(8, 0);
@@ -3653,7 +3655,9 @@ static Bytes make_pdf3()
                                  {1, static_cast<uint32_t>(off[5]), 0}, {1, static_cast<uint32_t>(off[6]), 0}};
     std::string x;
     uint8_t up[5] = {};
-    for (const auto& r : rows) {
+    for (int k = 0; k < (many_index ? 17 : 7); ++k) {
+        static const uint32_t kFree[3] = {0, 0, 0};
+        const uint32_t* r = k < 7 ? rows[k] : kFree;
         const uint8_t raw[5] = {static_cast<uint8_t>(r[0]), static_cast<uint8_t>(r[1] >> 16), static_cast<uint8_t>(r[1] >> 8),
                                 static_cast<uint8_t>(r[1]), static_cast<uint8_t>(r[2])};
         x += '\x02';                                        // PNG Up
@@ -3661,7 +3665,14 @@ static Bytes make_pdf3()
         memcpy(up, raw, 5);
     }
     const std::string zx = zstored(x);
-    s += "6 0 obj\n<</Type/XRef/Size 7/W[1 3 1]/Root 1 0 R/ID[<00000000000000000000000000000003><00>]"
+    std::string index;
+    if (many_index) {
+        index = "/Index[";
+        for (int k = 0; k < 17; ++k) index += std::to_string(k < 7 ? k : k + 3) + " 1 ";
+        index += "]";
+    }
+    s += std::string("6 0 obj\n<</Type/XRef/Size ") + (many_index ? "20" : "7") + index +
+         "/W[1 3 1]/Root 1 0 R/ID[<00000000000000000000000000000003><00>]"
          "/DecodeParms<</Columns 5/Predictor 12>>/Filter/FlateDecode/Length " + std::to_string(zx.size()) + ">>stream\n" +
          zx + "\nendstream\nendobj\n";
     s += "startxref\n" + std::to_string(off[6]) + "\n%%EOF\n";
@@ -3929,6 +3940,12 @@ static void test_journal_typeset()
     CHECK(journal::section_heading("JOURNAL ENTRY 2", 15, &k, &n) && k == 'J' && n == 2);
     CHECK(journal::section_heading("Proclamation CXIV", 17, &k, &n) && k == 'P' && n == 114);
     CHECK(journal::section_heading("Introduction", 12, &k, &n) && k == 'I' && n == 1);
+    // (a scanned heading's ornaments read as letters: still the heading)
+    CHECK(journal::section_heading("~i INTRODUCTION ~", 17, &k, &n) && k == 'I' && n == 1);
+    CHECK(journal::section_heading(",* INTRODUCTION tw", 18, &k, &n) && k == 'I');
+    CHECK(!journal::section_heading("INTRODUCTION ......... 1", 24, &k, &n));
+    CHECK(!journal::section_heading("LENORE INTRODUCTION", 19, &k, &n));
+    CHECK(!journal::section_heading("An introduction to it", 21, &k, &n));
     CHECK(!journal::section_heading("tale 3 of the city", 18, &k, &n));
     CHECK(!journal::section_heading("Journal Entry 52) You are", 25, &k, &n));
     CHECK(!journal::section_heading("Proclamation I have heard", 25, &k, &n));
@@ -4338,6 +4355,15 @@ static void test_journal()
         CHECK(pdf::pages(s3, d3, p3, 2) == 1 && p3[0] == 3);
         CHECK(pdf::page_image(s3, d3, p3[0], im) && im.jpeg && im.width == kJpeg1W && im.data_len == sizeof kJpeg1 &&
               memcmp(three.data() + im.data_at, kJpeg1, sizeof kJpeg1) == 0);
+        // (an updated file's table - 17 /Index pairs: the Steam Krynn journals have up to 38)
+        {
+            Bytes many = make_pdf3(true);
+            dax::MemorySource sm(many.data(), many.size());
+            static pdf::Doc dm;
+            int pm[2];
+            CHECK(pdf::open(sm, dm) && dm.root == 1 && dm.size == 20);
+            CHECK(pdf::pages(sm, dm, pm, 2) == 1 && pm[0] == 3);
+        }
         // (a damaged row filter: not read)
         Bytes bad = three;
         const std::string bs(bad.begin(), bad.end());

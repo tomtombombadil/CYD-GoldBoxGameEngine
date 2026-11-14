@@ -160,6 +160,13 @@ the Project as claude/TODO.md.
       characters one by one).
 
 ## Claude
+- [x] Journal scan misses (Tom, 2026-11-14, from the PortMaster port: the
+      Steam Treasures' Introduction "doesn't exist"): v0.198.1 - a PDF whose
+      last cross-reference stream lists more than 8 /Index pairs was
+      refused whole (the Steam Champions / Death Knights / Dark Queen
+      journals, 27 - 38 pairs: no book text, no sections from them); a
+      scanned "INTRODUCTION" heading with its ornaments read as letters
+      ("~i INTRODUCTION ~") wasn't a heading (Treasures, Dark Queen).
 - [ ] Music, next (2026-11-14): Champions' title tune (Electronic Arts'
       player in START.EXE seg 0x661 + MIDI.DAX's AdLib driver, run in
       engine/x86 like MicroMagic's - its own Unicorn oracle first); the
