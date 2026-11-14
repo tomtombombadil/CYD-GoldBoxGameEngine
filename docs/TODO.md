@@ -687,8 +687,12 @@ the Project as claude/TODO.md.
       memory error left after v0.196.49): Treasures ECL1 blocks 21-31
       (the Red Dragon Trading Lodge's tales, block 31 square 0,3): the
       sweep's taps go round tale -> "press a key" (op 0x1D at 0xB101) ->
-      the next tale without end; check in DOSBox whether the original
-      also asks again and again (then the sweep's artifact). The other
+      the next tale without end. The script: PICTURE, PRINT the tale,
+      GOTO 0xB101 (PRESS KEY, SAVE x / y to the last place, SOUND 0x0A,
+      CALL 1, GOTO 0x8906 - the square's event dispatched again by [0x2D]
+      & 0x7F: the same square, the same tale). Check in DOSBox what the
+      original does after the key there (stands the party on the square
+      from each side - the sweep tries all four). The other
       sweep problems are its own: fights out of its time at Speed 4,
       god mode against monsters the party can't hurt.
 - [ ] **Engine screens for ports**: the platform layer is done
@@ -1925,11 +1929,11 @@ the Project as claude/TODO.md.
       another burst picture set under water (3 for 2) and adds one (9,
       0x14, 2) - pictures only, not followed. The scripts do
       set it: sweep events VMWATCH=3c (Queen, 44 of its blocks swept) -
-      ECL.GLB blocks 1, 2, 3, 14, 15. the Dark Queen's ground 0x46 - laid by effect 0x9A's
-      handler (DQK.EXE 0x50A77) as a cloud record of 1d6 at the holder's
-      square; MONCHA.GLB's carrier: the Bozak Draconian (78) - when it
-      runs (its death?) and what the square does besides stopping steps
-      (under 7 Hit Dice) not read, so not laid; Gateway's magic-user's
+      ECL.GLB blocks 1, 2, 3, 14, 15. The Dark Queen's ground 0x46: done
+      (v0.196.24) - 0x50A77 is inside the kapak's acid layer 0x50A0E
+      (0x9C's, its death), not 0x9A's (the Bozak's is 0x509AE); the
+      engine's lay_acid_spread (2026-11-14: the reading above was wrong);
+      Gateway's magic-user's
       distance for multi-square fighters (its area list's distance /
       2 - the list builder's for big fighters not read); a computer spell
       with a casting time aborts at its start, not as it goes off; Darkness
