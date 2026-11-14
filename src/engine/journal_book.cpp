@@ -236,6 +236,8 @@ struct Book : pdf::TextSink {
     float   body = 0;
     bool    in_body = false;          // its first body-size line taken (before: the heading's sub-heads)
     bool    headed = false;           // nothing under the heading taken yet
+    bool    intro = false;            // the section is the Introduction
+    float   lead = 0;                 // its first paragraph's letter size when not the body's (0: none)
 
     void close()
     {
@@ -286,10 +288,25 @@ struct Book : pdf::TextSink {
             else sj.p = prev_of(l, page, bottom);
             sj.p.solo = bj.p.solo;
             headed = true;
+            intro = kind == 'I';
+            lead = 0;
             return true;
         }
         if (!open) return true;
-        const bool is_body = same_size(l.size, body);
+        // The Introduction's heading alone on its line, set in the page's
+        // middle (the Steam Treasures, Curse and Dark Queen journals): its
+        // text starts at the left margin, far from the heading's own left
+        // end, and its first paragraph may be in larger letters than the
+        // page's body (Treasures) - the first line under the heading is
+        // its text wherever it starts, and lines of that size are too
+        // (Tom, 2026-11-14: the section came out empty)
+        bool first_under = false;
+        if (headed && intro && sj.p.solo && page == sj.p.page) {
+            const float dy = sj.p.y - l.y, big = l.size > sj.p.size ? l.size : sj.p.size;
+            first_under = dy > 0 && dy <= 4.5f * big;
+            if (first_under && !same_size(l.size, body)) lead = l.size;
+        }
+        const bool is_body = same_size(l.size, body) || (lead > 0 && same_size(l.size, lead));
         int g = flow(sj.p, l, page, top);
         if (!in_body) {
             // Under the heading: its sub-heads (any size) straight below
@@ -300,15 +317,7 @@ struct Book : pdf::TextSink {
         } else if (!is_body) {
             return true;                  // (a caption, a page's heading: not the section's)
         }
-        // A heading alone on its line, set in the page's middle (the Steam
-        // Treasures, Curse and Dark Queen journals' "INTRODUCTION": its text
-        // starts at the left margin, far from the heading's own left end -
-        // Tom, 2026-11-14: the section came out empty): the first line
-        // under it is its text wherever it starts
-        if (g == 0 && headed && sj.p.solo && page == sj.p.page) {
-            const float dy = sj.p.y - l.y, big = l.size > sj.p.size ? l.size : sj.p.size;
-            if (dy > 0 && dy <= 4.5f * big) g = 1;
-        }
+        if (g == 0 && first_under) g = 1;
         if (g == 0) {
             close();
             return true;
