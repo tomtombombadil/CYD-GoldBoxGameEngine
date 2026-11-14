@@ -3946,6 +3946,9 @@ static void test_journal_typeset()
     CHECK(!journal::section_heading("INTRODUCTION ......... 1", 24, &k, &n));
     CHECK(!journal::section_heading("LENORE INTRODUCTION", 19, &k, &n));
     CHECK(!journal::section_heading("An introduction to it", 21, &k, &n));
+    CHECK(journal::section_heading("U Tavern Tale 12", 16, &k, &n) && k == 'T' && n == 12);
+    CHECK(journal::section_heading("0 Tavern Tale 9", 15, &k, &n) && k == 'T' && n == 9);
+    CHECK(!journal::section_heading("A tavern tale 3", 15, &k, &n));
     CHECK(!journal::section_heading("tale 3 of the city", 18, &k, &n));
     CHECK(!journal::section_heading("Journal Entry 52) You are", 25, &k, &n));
     CHECK(!journal::section_heading("Proclamation I have heard", 25, &k, &n));

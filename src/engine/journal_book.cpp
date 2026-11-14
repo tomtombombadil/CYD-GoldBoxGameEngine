@@ -345,6 +345,13 @@ bool parse_heading(const char* s, int n, char* kind, int* number, int* end)
 {
     int i = 0;
     while (i < n && (s[i] == ' ' || s[i] == '*')) ++i;
+    // (a scanned heading's bullet read as a letter - "U Tavern Tale 12",
+    // "0 Tavern Tale 9", the Steam Champions journal: one character, then
+    // the heading in its capitals)
+    if (i + 2 < n && s[i] != ' ' && s[i + 1] == ' ' && (s[i + 2] == 'T' || s[i + 2] == 'J')) {
+        int k = i + 2;
+        if (word_ci(s, n, &k, "tavern") || word_ci(s, n, &k, "journal")) i += 2;
+    }
     const int start = i;
     if (word_ci(s, n, &i, "journal")) {
         spaces(s, n, &i);
