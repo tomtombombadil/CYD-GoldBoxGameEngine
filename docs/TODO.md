@@ -683,18 +683,19 @@ the Project as claude/TODO.md.
       per-copy items): Curse 134.2, PoolRad 135.8, Darkness 150.2,
       Champions 136.4, Knights 136.4, Queen 143.7, Treasures 152.4 KB of
       the 153.6 - the Thenols run's own env wasn't kept.
-- [ ] Claude (2026-11-14, events sweeps under ASan, all nine games: no
+- [x] Claude (2026-11-14, events sweeps under ASan, all nine games: no
       memory error left after v0.196.49): Treasures ECL1 blocks 21-31
       (the Red Dragon Trading Lodge's tales, block 31 square 0,3): the
-      sweep's taps go round tale -> "press a key" (op 0x1D at 0xB101) ->
-      the next tale without end. The script: PICTURE, PRINT the tale,
-      GOTO 0xB101 (PRESS KEY, SAVE x / y to the last place, SOUND 0x0A,
-      CALL 1, GOTO 0x8906 - the square's event dispatched again by [0x2D]
-      & 0x7F: the same square, the same tale). Check in DOSBox what the
-      original does after the key there (stands the party on the square
-      from each side - the sweep tries all four). The other
-      sweep problems are its own: fights out of its time at Speed 4,
-      god mode against monsters the party can't hurt.
+      sweep went round tale -> "press a key" -> the tale again. The
+      script after the key (0xB101) sets the party back on the square it
+      came from (SAVE [0x17] / [0x18] to x / y), CALL 1, and runs the
+      step's event dispatch (0x8906) there - a real step in (the playsim:
+      a save beside it, F, a key: back at 1,3, no more tales) ends it;
+      the sweep's own placing left "the square before" on the event
+      square itself. Not the engine's. The other sweep problems are its
+      own too: fights out of its time at Speed 4, god mode against
+      monsters the party can't hurt, the Dark Queen's debug variable
+      setter.
 - [ ] **Engine screens for ports**: the platform layer is done
       (v0.91.1: src/game + src/engine use only src/platform/*.h); still
       CYD-only are the engine's own screens (Settings, journal viewer,
