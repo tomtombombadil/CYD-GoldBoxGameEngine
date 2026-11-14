@@ -22,6 +22,14 @@ using AudioFill = bool (*)(uint8_t* buf, int n, void* ctx);
 // Starts the output with this filler if it isn't running (else nothing: the
 // running filler goes on - it picks up new sounds itself)
 void audio_play(AudioFill fill, void* ctx);
+
+// 16-bit samples (signed, silence 0) for an output that takes them - the
+// I2S boards' (the S3s', the C5's); the DAC boards' is 8-bit. The music
+// (2026-11-14) plays this way where audio_wide(). A platform without it
+// needn't define these: play.cpp has weak stand-ins (false / nothing).
+using AudioFill16 = bool (*)(int16_t* buf, int n, void* ctx);
+bool audio_wide();
+void audio_play16(AudioFill16 fill, void* ctx);
 // Stops it and waits until the task has ended (call before the filler's
 // data goes away)
 void audio_stop();

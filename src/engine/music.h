@@ -59,34 +59,45 @@ Result render_micromagic(dax::ByteSource& music_dax, int song, Sink& sink, doubl
 // The song blocks a MUSIC.DAX holds (1 up; 0 is the driver), as a bit mask.
 uint32_t micromagic_songs(dax::ByteSource& music_dax);
 
-// The rendered songs: the files the scan writes (8-bit mono WAV at kRate)
-constexpr uint32_t kRate = 11025;
+// The rendered songs: the files the scan writes - 16-bit mono WAV at kRate
+// (Tom, 2026-11-14: 16-bit 22 kHz; v0.197.0's were 8-bit 11 kHz), the
+// output's own rate, so they play without resampling
+constexpr uint32_t kRate = 22050;
 constexpr uint32_t kWavHeader = 44;
+
+// Whether a WAV header is one of these files' (16-bit mono PCM at kRate)
+bool wav_ours(const uint8_t* h);
+// The data length a header gives (bytes)
+uint32_t wav_data(const uint8_t* h);
 
 // A song played from its file: the game reads the file a piece at a time
 // into the ring (push, from its own loop - a card read never happens in the
-// audio task), the audio task plays from it (render). An empty ring plays
-// silence until more comes (a long card read); end() then the ring empty =
-// the song is over. Threads: one pusher, one renderer.
+// audio task), the audio task plays from it (render8 / render16). An empty
+// ring plays silence until more comes (a long card read); end() then the
+// ring empty = the song is over. Threads: one pusher, one renderer. The
+// ring keeps 16-bit samples for a 16-bit output (`wide`), else 8-bit ones
+// (the DAC boards': twice the time in the same memory).
 class Stream {
 public:
     // The ring (`bytes`, from malloc - freed by the destructor)
-    explicit Stream(uint8_t* ring, uint32_t bytes) : ring_(ring), cap_(bytes) {}
+    Stream(uint8_t* ring, uint32_t bytes, bool wide)
+        : ring_(ring), cap_(wide ? bytes / 2 : bytes), wide_(wide) {}
     ~Stream();
-    uint32_t room() const;                          // bytes push() takes now
-    void push(const uint8_t* p, uint32_t n);
+    uint32_t room() const;                          // samples push() takes now
+    void push(const int16_t* p, uint32_t n);
     void end() { end_.store(true); }                // no more data
-    // n unsigned 8-bit samples at `hz`, volume 0-255; false once the song
-    // has played out
-    bool render(uint8_t* out, int n, int hz, int volume);
+    // n samples, volume 0-255; false once the song has played out
+    bool render8(uint8_t* out, int n, int volume);
+    bool render16(int16_t* out, int n, int volume);
     bool done() const { return done_.load(); }
 
 private:
+    int next(bool& have);                           // the next sample (16-bit scale)
     uint8_t* ring_;
-    uint32_t cap_;
+    uint32_t cap_;                                  // samples
+    bool wide_;
     std::atomic<uint32_t> head_{0}, tail_{0};       // written / read, counting up
     std::atomic<bool> end_{false}, done_{false};
-    uint32_t frac_ = 0;                             // 16.16 between ring samples
 };
 
 }  // namespace music

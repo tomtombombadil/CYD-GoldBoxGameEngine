@@ -9,15 +9,45 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
+
+#include "engine/games.h"
+#include "engine/music.h"
+#include "platform/file.h"
 
 namespace musicfiles {
 
+// (songs() and path() are here, inline, as play.cpp uses them: the
+// PortMaster port builds src/engine + play.cpp only; make() / ready() are
+// the scan's, in music_make.cpp)
+
 // The songs the game in data_dir has (bit n = song n); 0: no music the
 // engine plays
-uint32_t songs(const char* data_dir);
+inline uint32_t songs(const char* data_dir) {
+    char p[200];
+    games::path_of(data_dir, "MUSIC.DAX", p, sizeof p);
+    plat::File f = plat::open(p, "r");
+    if (!f) return 0;
+    plat::FileSource src(f);
+    const uint32_t m = music::micromagic_songs(src);
+    f.close();
+    return m;
+}
 
 // <cache_dir>/MUSIC<n>.WAV
-void path(const char* cache_dir, int song, char* out, size_t cap);
+inline void path(const char* cache_dir, int song, char* out, size_t cap) {
+    snprintf(out, cap, "%s/MUSIC%d.WAV", cache_dir, song);
+}
+
+// That file is there and of the current kind (16-bit 22 kHz: a card
+// rendered by v0.197.0 has 8-bit 11 kHz ones, made again)
+inline bool have(const char* path_) {
+    plat::File f = plat::open(path_, "r");
+    uint8_t h[music::kWavHeader];
+    const bool ok = f && f.read(h, sizeof h) == static_cast<int>(sizeof h) && music::wav_ours(h);
+    f.close();
+    return ok;
+}
 
 // Every song's file there (a start whose card was scanned by an older
 // version makes the missing ones - as the pictures)

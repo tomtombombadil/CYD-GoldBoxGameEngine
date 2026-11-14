@@ -948,8 +948,10 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   interpreter (`engine/x86.*`) on the player's board at scan time - the
   player's code, never copied (Unicorn's run of the same driver is the
   oracle: tools/devkit/music) - their AdLib writes into ymfm's YM3812
-  (BSD-3, `engine/third_party/ymfm`), 8-bit 11,025 Hz WAVs in
-  `_CYD/<folder>/`; only the AdLib versions (Tom); a sound effect stops
+  (BSD-3, `engine/third_party/ymfm`), 16-bit 22,050 Hz WAVs in
+  `_CYD/<folder>/` (Tom, v0.198.0; I2S boards play them 16-bit through
+  `audio_play16` - platform/audio.h, weak stand-ins in play.cpp for the
+  PortMaster port; DAC boards 8-bit); only the AdLib versions (Tom); a sound effect stops
   the music (the originals'). SPEC 5b; the Project's claude/music_facts.md.
 - Toolchain: pioarduino platform 55.03.312-1 (Arduino-ESP32 3.3.x), LovyanGFX
   1.2.x, huge_app.csv (no OTA - the web flasher is the update path).

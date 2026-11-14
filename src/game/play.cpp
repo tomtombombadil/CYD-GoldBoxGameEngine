@@ -452,13 +452,25 @@ music::Stream* mus = nullptr;
 std::atomic<bool> mus_rendering{false};
 int mus_song = 0;
 uint32_t mus_pos = 0, mus_end = 0;              // the file's next byte to read, its data's end
-constexpr uint32_t kMusicRing = 16384;          // ~1.5 s at 11,025 Hz: a long card read doesn't gap it
+// The ring: 16 KB of 8-bit samples on the DAC boards (0.74 s at 22,050 Hz -
+// a long card read doesn't gap it), 64 KB of 16-bit ones on the I2S boards
+// (1.5 s; they have PSRAM, where malloc puts a block that size)
+constexpr uint32_t kMusicRing8 = 16384, kMusicRing16 = 65536;
 
 bool music_fill(uint8_t* buf, int n, void*)
 {
     mus_rendering.store(true);
     music::Stream* m = mus;
-    const bool more = m && m->render(buf, n, kAudioHz, snd_volume);
+    const bool more = m && m->render8(buf, n, snd_volume);
+    mus_rendering.store(false);
+    return more;
+}
+
+bool music_fill16(int16_t* buf, int n, void*)
+{
+    mus_rendering.store(true);
+    music::Stream* m = mus;
+    const bool more = m && m->render16(buf, n, snd_volume);
     mus_rendering.store(false);
     return more;
 }
@@ -498,7 +510,7 @@ void music_pump()
         music_stop();
         return;
     }
-    const uint32_t room = mus->room();
+    const uint32_t room = mus->room() * 2;      // (bytes of the file: 2 a sample)
     if (room < 2048 || mus_pos >= mus_end) {
         if (mus_pos >= mus_end) mus->end();
         return;
@@ -510,12 +522,15 @@ void music_pump()
         mus->end();
         return;
     }
-    uint8_t buf[512];
-    uint32_t want = room < mus_end - mus_pos ? room : mus_end - mus_pos;
+    int16_t buf[256];
+    uint32_t want = (room < mus_end - mus_pos ? room : mus_end - mus_pos) & ~1u;
     while (want) {
-        const int got = f.read(buf, want < sizeof buf ? want : sizeof buf);
+        const int got = f.read(reinterpret_cast<uint8_t*>(buf), want < sizeof buf ? want : sizeof buf) & ~1;
         if (got <= 0) { mus_pos = mus_end; break; }
-        mus->push(buf, static_cast<uint32_t>(got));
+        const uint8_t* b = reinterpret_cast<const uint8_t*>(buf);
+        for (int i = 0; i < got / 2; ++i)          // (little-endian in the file)
+            buf[i] = static_cast<int16_t>(b[2 * i] | b[2 * i + 1] << 8);
+        mus->push(buf, static_cast<uint32_t>(got / 2));
         mus_pos += static_cast<uint32_t>(got);
         want -= static_cast<uint32_t>(got);
     }
@@ -532,8 +547,7 @@ __attribute__((noinline)) void music_start(int n)
     musicfiles::path(d->cache_dir, n, path, sizeof path);
     plat::File f = plat::open(path, "r");
     uint8_t h[music::kWavHeader];
-    const bool ok = f && f.read(h, sizeof h) == static_cast<int>(sizeof h) && memcmp(h, "RIFF", 4) == 0 &&
-                    memcmp(h + 36, "data", 4) == 0;
+    const bool ok = f && f.read(h, sizeof h) == static_cast<int>(sizeof h) && music::wav_ours(h);
     const uint32_t size = f ? static_cast<uint32_t>(f.size()) : 0;
     f.close();
     if (!ok) {
@@ -542,14 +556,17 @@ __attribute__((noinline)) void music_start(int n)
         memlog::note(line);
         return;
     }
-    const uint32_t len = static_cast<uint32_t>(h[40] | h[41] << 8 | h[42] << 16 | static_cast<uint32_t>(h[43]) << 24);
-    if (memlog::largest_kb() < kMusicRing / 1024 + 12 && (fighting() || !make_room(kMusicRing / 1024 + 12, "the music"))) {
+    const uint32_t len = music::wav_data(h);
+    const bool wide = audio_wide();
+    const uint32_t ring_bytes = wide ? kMusicRing16 : kMusicRing8;
+    if (!wide && memlog::largest_kb() < ring_bytes / 1024 + 12 &&
+        (fighting() || !make_room(ring_bytes / 1024 + 12, "the music"))) {
         memlog::note("music left out: memory low");
         return;
     }
     if (audio_running()) audio_stop();          // (an effect playing: the song replaces it)
-    uint8_t* ring = static_cast<uint8_t*>(malloc(kMusicRing));
-    mus = ring ? new (std::nothrow) music::Stream(ring, kMusicRing) : nullptr;
+    uint8_t* ring = static_cast<uint8_t*>(malloc(ring_bytes));
+    mus = ring ? new (std::nothrow) music::Stream(ring, ring_bytes, wide) : nullptr;
     if (!mus) {
         free(ring);
         memlog::note("NOT ENOUGH MEMORY for the music");
@@ -559,7 +576,8 @@ __attribute__((noinline)) void music_start(int n)
     mus_pos = music::kWavHeader;
     mus_end = music::kWavHeader + (len < size - music::kWavHeader ? len : size - music::kWavHeader);
     music_pump();
-    audio_play(music_fill, nullptr);
+    if (wide) audio_play16(music_fill16, nullptr);
+    else audio_play(music_fill, nullptr);
     plat::log("[music] song %d\n", n);
 }
 
@@ -19363,3 +19381,9 @@ void describe(char* line1, char* line2, int cap)
 }
 
 } // namespace play
+
+// The 16-bit output's stand-ins for a platform without one (platform/audio.h:
+// the PC tools, the PortMaster port); the I2S boards' hal/audio.cpp has
+// the real ones
+__attribute__((weak)) bool audio_wide() { return false; }
+__attribute__((weak)) void audio_play16(AudioFill16, void*) {}

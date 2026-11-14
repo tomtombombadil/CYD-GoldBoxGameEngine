@@ -63,11 +63,10 @@ void Opl2Sink::advance(double seconds) {
             accn_ = 0;
             if (v > 32767) v = 32767;
             if (v < -32768) v = -32768;
-            const int s8 = 128 + (v >> 8);
-            buf_[nbuf_++] = static_cast<uint8_t>(s8);
+            buf_[nbuf_++] = static_cast<int16_t>(v);
             ++made_;
-            if (s8 < 126 || s8 > 130) last_loud_ = made_;
-            if (nbuf_ == static_cast<int>(sizeof buf_)) flush();
+            if (v < -512 || v > 512) last_loud_ = made_;   // (quiet: within 2 of an 8-bit sample's middle)
+            if (nbuf_ == static_cast<int>(sizeof buf_ / sizeof buf_[0])) flush();
         }
     }
 }

@@ -28,6 +28,7 @@ volatile bool held = false;             // a fight: the task and DAC stay betwee
 // (v0.86.1: Tom's 4.0" memory log showed sounds needing ~7 KB each time,
 // mid-fight with 8 KB free: they failed without a word)
 AudioFill fill_fn = nullptr;
+AudioFill16 fill16_fn = nullptr;        // (set: the filler gives 16-bit samples - audio_play16)
 void* fill_ctx = nullptr;
 
 void amp(bool on)
@@ -52,6 +53,8 @@ constexpr bool kKeep = false;
 constexpr int kTail = 1;                // silent buffers before the output stops
 dac_continuous_handle_t h = nullptr;
 
+constexpr bool kWide = false;
+bool out_fill16() { return false; }
 bool out_open()
 {
     dac_continuous_config_t cfg = {};
@@ -206,6 +209,18 @@ void out_write(const uint8_t* buf, int n)
     size_t done = 0;
     i2s_channel_write(h, wide, n * sizeof(int16_t), &done, portMAX_DELAY);
 }
+// A 16-bit filler's samples straight out (the music, 2026-11-14)
+bool out_fill16()
+{
+    const bool more = fill16_fn(wide, kBuf, fill_ctx);
+#if defined(BOARD_AUDIO_PDM)
+    for (int i = 0; i < kBuf; ++i) wide[i] = static_cast<int16_t>(wide[i] / 4);   // (out_write's quarter)
+#endif
+    size_t done = 0;
+    i2s_channel_write(h, wide, kBuf * sizeof(int16_t), &done, portMAX_DELAY);
+    return more;
+}
+constexpr bool kWide = true;
 void out_disable()
 {
     i2s_channel_disable(h);
@@ -289,6 +304,8 @@ constexpr int kTail = 1;
 bool out_open() { return false; }
 bool out_enable() { return false; }
 void out_write(const uint8_t*, int) {}
+constexpr bool kWide = false;
+bool out_fill16() { return false; }
 void out_disable() {}
 void out_close() {}
 
@@ -316,17 +333,27 @@ void audio_task(void*)
         int quiet = 0;
         for (;;) {
             while (!stop_wanted && quiet < 4) {
-                const bool more = fill_fn(buf, kBuf, fill_ctx);
+                bool more;
+                if (kWide && fill16_fn) {
+                    more = out_fill16();
+                } else {
+                    more = fill_fn(buf, kBuf, fill_ctx);
+                    out_write(buf, kBuf);
+                }
                 quiet = more ? 0 : quiet + 1;
-                out_write(buf, kBuf);
             }
             // A sound started while the last quiet buffer played (audio_play
             // saw this task still going): keep going with it
             if (!held) ending = true;
-            if (stop_wanted || !fill_fn(buf, kBuf, fill_ctx)) break;
+            if (stop_wanted) break;
+            if (kWide && fill16_fn) {
+                if (!out_fill16()) break;
+            } else {
+                if (!fill_fn(buf, kBuf, fill_ctx)) break;
+                out_write(buf, kBuf);
+            }
             ending = false;
             quiet = 0;
-            out_write(buf, kBuf);
         }
         if (kKeep) {
             // (the output stays on: the queued samples play out, then the
@@ -397,6 +424,7 @@ void audio_play(AudioFill fill, void* ctx)
     }
     if (!fill) return;
     if (task && held) {                 // (held: wake it - it picks the sound up)
+        fill16_fn = nullptr;
         fill_fn = fill;
         fill_ctx = ctx;
         xTaskNotifyGive(task);
@@ -405,7 +433,31 @@ void audio_play(AudioFill fill, void* ctx)
     if (task && ending)
         for (int i = 0; i < 100 && task; ++i) delay(2);     // (ending: start again after it)
     if (task) return;
+    fill16_fn = nullptr;
     fill_fn = fill;
+    fill_ctx = ctx;
+    start_task();
+}
+
+bool audio_wide()
+{
+#if defined(CYD_QEMU)
+    return false;
+#else
+    return kWide;
+#endif
+}
+
+static bool no_fill(uint8_t*, int, void*) { return false; }
+
+void audio_play16(AudioFill16 fill, void* ctx)
+{
+    if (!fill || !audio_wide()) return;
+    if (task && ending)
+        for (int i = 0; i < 100 && task; ++i) delay(2);
+    if (task) return;                   // (the caller stops what plays first)
+    fill_fn = no_fill;
+    fill16_fn = fill;
     fill_ctx = ctx;
     start_task();
 }
@@ -426,6 +478,7 @@ void audio_hold(bool on, AudioFill fill, void* ctx)
     if (!fill) return;
     if (task && ending)
         for (int i = 0; i < 100 && task; ++i) delay(2);
+    fill16_fn = nullptr;
     fill_fn = fill;
     fill_ctx = ctx;
     held = true;

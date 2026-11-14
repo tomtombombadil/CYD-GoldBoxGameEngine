@@ -9,6 +9,7 @@
 #include "engine/x86.h"
 
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <vector>
 
@@ -258,9 +259,9 @@ static void test_micromagic() {
 }
 
 static void test_opl() {
-    std::vector<uint8_t> out;
-    music::Opl2Sink chip(11025, [](const uint8_t* s, uint32_t n, void* u) {
-        auto* v = static_cast<std::vector<uint8_t>*>(u);
+    std::vector<int16_t> out;
+    music::Opl2Sink chip(music::kRate, [](const int16_t* s, uint32_t n, void* u) {
+        auto* v = static_cast<std::vector<int16_t>*>(u);
         v->insert(v->end(), s, s + n);
     }, &out);
     CHECK(chip.ok());
@@ -271,13 +272,45 @@ static void test_opl() {
     for (auto& r : regs) chip.opl(r[0], r[1]);
     chip.advance(0.2);
     chip.flush();
-    CHECK(out.size() >= 3300 && out.size() <= 3310);   // 0.3 s at 11,025
-    int quiet_lo = 255, quiet_hi = 0, lo = 255, hi = 0;
-    for (size_t i = 0; i < 1000 && i < out.size(); ++i) { quiet_lo = std::min<int>(quiet_lo, out[i]); quiet_hi = std::max<int>(quiet_hi, out[i]); }
-    for (size_t i = 1500; i < out.size(); ++i) { lo = std::min<int>(lo, out[i]); hi = std::max<int>(hi, out[i]); }
+    CHECK(out.size() >= 6610 && out.size() <= 6620);   // 0.3 s at 22,050
+    int quiet_lo = 32767, quiet_hi = -32768, lo = 32767, hi = -32768;
+    for (size_t i = 0; i < 2000 && i < out.size(); ++i) { quiet_lo = std::min<int>(quiet_lo, out[i]); quiet_hi = std::max<int>(quiet_hi, out[i]); }
+    for (size_t i = 3000; i < out.size(); ++i) { lo = std::min<int>(lo, out[i]); hi = std::max<int>(hi, out[i]); }
     CHECK(quiet_hi - quiet_lo <= 2);
-    CHECK(hi - lo > 40);
-    CHECK(chip.last_sound() > 3000);
+    CHECK(hi - lo > 10000);
+    CHECK(chip.last_sound() > 6000);
+}
+
+// The ring: 16-bit kept as it is, 8-bit rounded down to a byte; volume;
+// silence while empty, then over once ended
+static void test_stream() {
+    for (int wide = 0; wide < 2; ++wide) {
+        music::Stream s(static_cast<uint8_t*>(malloc(64)), 64, wide != 0);
+        CHECK(s.room() == (wide ? 32u : 64u));
+        const int16_t in[4] = {0, 1000, -1000, 32767};
+        s.push(in, 4);
+        CHECK(s.room() == (wide ? 28u : 60u));
+        int16_t o16[6];
+        uint8_t o8[6];
+        bool more = wide ? s.render16(o16, 6, 255) : s.render8(o8, 6, 255);
+        CHECK(more);
+        if (wide) {
+            CHECK(o16[0] == 0 && o16[1] == 1000 && o16[2] == -1000 && o16[3] == 32767 && o16[4] == 0);
+        } else {
+            CHECK(o8[0] == 128 && o8[1] == 131 && o8[2] == 124 && o8[3] == 255 && o8[4] == 128);
+        }
+        s.push(in, 2);
+        s.end();
+        more = wide ? s.render16(o16, 6, 128) : s.render8(o8, 6, 128);
+        CHECK(!more && s.done());
+        if (wide) CHECK(o16[1] == 1000 * 128 / 255 && o16[2] == 0);
+    }
+    uint8_t h[44] = {};
+    memcpy(h, "RIFF", 4); memcpy(h + 8, "WAVEfmt ", 8); h[20] = 1; h[22] = 1;
+    h[24] = music::kRate & 0xFF; h[25] = music::kRate >> 8; h[34] = 16; memcpy(h + 36, "data", 4); h[40] = 0x10;
+    CHECK(music::wav_ours(h) && music::wav_data(h) == 16);
+    h[34] = 8;
+    CHECK(!music::wav_ours(h));
 }
 
 int main() {
@@ -286,6 +319,7 @@ int main() {
     test_memory_strings_calls();
     test_micromagic();
     test_opl();
+    test_stream();
     if (failures) { printf("%d failures\n", failures); return 1; }
     printf("test_music: all passed\n");
     return 0;

@@ -14,8 +14,10 @@ the Project as claude/TODO.md.
       Darkness's / Death Knights' / Gateway's / Treasures' titles and in
       Darkness's opening story (new game: "WELCOME, MY FRIENDS..."). A
       sound effect (a step) stops the music, as in the originals. Settings'
-      Music turns it off. Questions: (a) on by default on the classic
-      boards too? (b) 8-bit 11 kHz enough, or better on the S3 / 5.0"?
+      Music turns it off. Question: on by default on the classic boards
+      too? v0.198.0 (Tom: "16-bit 22kHz maybe?"): the files are 16-bit
+      22 kHz now (the next start renders them again), played 16-bit on
+      the S3 / C5 / 5.0" boards, 8-bit on the DAC boards.
 - [ ] Try v0.196.6 (Tom, 2026-11-11: "my characters ... fail to ready
       their missile weapons and charge into melee"): Quick with Missile
       ticked now readies a loaded bow / crossbow / sling whenever no foe

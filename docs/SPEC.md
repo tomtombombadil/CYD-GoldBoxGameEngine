@@ -275,8 +275,10 @@ stay in the session's scratch space, never in the repo.
 - **The games' music** (Tom, 2026-11-14; facts: the Project's
   claude/music_facts.md): the scan's last step renders each song of a
   game's MUSIC.DAX (MicroMagic's: Pools of Darkness 8 songs, Death Knights
-  7, Gateway 1, Treasures 1) into `_CYD/<folder>/MUSIC<n>.WAV` (8-bit mono
-  11,025 Hz, trailing silence cut; "Rendering the Pools of Darkness music,
+  7, Gateway 1, Treasures 1) into `_CYD/<folder>/MUSIC<n>.WAV` (16-bit mono
+  22,050 Hz since v0.198.0 - Tom: v0.197.0's 8-bit 11 kHz sounded poor; a
+  card with the old files renders them again at the next start; trailing
+  silence cut; "Rendering the Pools of Darkness music,
   song 3 of 8..."; game/music_make). How: the game's own music driver
   (MUSIC.DAX block 0) runs in the engine's x86 interpreter (`engine/x86.*`,
   own code; nothing of the games in the firmware - the driver is the
@@ -286,8 +288,9 @@ stay in the session's scratch space, never in the repo.
   DOSBox (986 notes, every register, timing within 1 ms -
   tools/devkit/music). A start whose card lacks a game's files renders them
   first ("Preparing Music", as the pictures). Play streams a file through a
-  16 KB ring (`music::Stream`; the game's loop reads the card, the audio
-  task plays) where the original plays the song: the title (song 1), a
+  ring (`music::Stream`; the game's loop reads the card, the audio task
+  plays: 16-bit to the I2S boards - `audio_play16`, a 64 KB ring in PSRAM -
+  8-bit to the DAC boards' 8-bit output, a 16 KB ring) where the original plays the song: the title (song 1), a
   script's SOUND 0x80 + n (Gateway: CALL B200 with 0x03DE 0x80 + n); the
   same song isn't restarted, any sound effect stops it, leaving the title
   stops it (Darkness's GAME.EXE 5A0:0000 / 5A0:0031 / 0x1BC). Settings'
@@ -3521,8 +3524,8 @@ the game's Settings (As Original: all of them).
 - **The music** (2026-11-14, 5b): the AdLib versions are played whatever
   Game Sound is (the originals played their music only on an AdLib /
   Sound Blaster, with that card's effects), at the Volume's level; Music
-  Off in Settings turns them off. 8-bit 11,025 Hz recordings of the
-  emulated chip, not a live chip.
+  Off in Settings turns them off. 16-bit 22,050 Hz recordings of the
+  emulated chip, not a live chip (the DAC boards play them in 8 bits).
 - **Gateway's stirge and squid** (Game Fixes): their holds never hurt in
   the original (the stirge's goes at its next step, the squid's per-turn
   handler is in no list); with Game Fixes on the stirge drinks 1d4 a turn up

@@ -1,5 +1,5 @@
 // An AdLib (YM3812 / OPL2) chip for the music renderer (music.h): the chip
-// writes a driver makes go in, 8-bit mono samples come out at `rate` Hz.
+// writes a driver makes go in, 16-bit mono samples come out at `rate` Hz.
 // The chip itself is Aaron Giles' ymfm (BSD 3-Clause; third_party/ymfm,
 // THIRD_PARTY_NOTICES.md), run at its own rate (3,579,545 / 72 = 49,716 Hz)
 // and averaged down to `rate`.
@@ -12,7 +12,7 @@
 namespace music {
 
 // Takes the samples as they are made (a file writer on the board).
-using SampleOut = void (*)(const uint8_t* samples, uint32_t n, void* user);
+using SampleOut = void (*)(const int16_t* samples, uint32_t n, void* user);
 
 class Opl2Sink : public Sink {
 public:
@@ -38,7 +38,7 @@ private:
     double due_ = 0;                    // chip samples the time so far asks for
     int32_t acc_ = 0;
     int accn_ = 0;
-    uint8_t buf_[256];
+    int16_t buf_[256];
     int nbuf_ = 0;
     uint32_t made_ = 0, last_loud_ = 0;
 };

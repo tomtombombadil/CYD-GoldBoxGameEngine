@@ -191,48 +191,66 @@ Result render_micromagic(dax::ByteSource& src, int song, Sink& sink, double max_
 
 // ---- Stream -------------------------------------------------------------------
 
+namespace {
+uint32_t le32(const uint8_t* p) {
+    return static_cast<uint32_t>(p[0] | p[1] << 8 | p[2] << 16) | static_cast<uint32_t>(p[3]) << 24;
+}
+}  // namespace
+
+bool wav_ours(const uint8_t* h) {
+    return memcmp(h, "RIFF", 4) == 0 && memcmp(h + 8, "WAVEfmt ", 8) == 0 && h[20] == 1 && h[22] == 1 &&
+           le32(h + 24) == kRate && h[34] == 16 && memcmp(h + 36, "data", 4) == 0;
+}
+
+uint32_t wav_data(const uint8_t* h) { return le32(h + 40); }
+
 Stream::~Stream() { free(ring_); }
 
 uint32_t Stream::room() const {
     return cap_ - (head_.load() - tail_.load());
 }
 
-void Stream::push(const uint8_t* p, uint32_t n) {
+void Stream::push(const int16_t* p, uint32_t n) {
     uint32_t h = head_.load();
-    for (uint32_t i = 0; i < n; ++i, ++h) ring_[h % cap_] = p[i];
+    if (wide_) {
+        int16_t* r = reinterpret_cast<int16_t*>(ring_);
+        for (uint32_t i = 0; i < n; ++i, ++h) r[h % cap_] = p[i];
+    } else {
+        for (uint32_t i = 0; i < n; ++i, ++h) ring_[h % cap_] = static_cast<uint8_t>((p[i] + 32768) >> 8);
+    }
     head_.store(h);
 }
 
-bool Stream::render(uint8_t* out, int n, int hz, int volume) {
-    if (done_.load()) {
-        for (int i = 0; i < n; ++i) out[i] = 128;
-        return false;
+int Stream::next(bool& have) {
+    const uint32_t t = tail_.load();
+    if (t == head_.load()) {
+        have = false;
+        return 0;
     }
-    const uint32_t step = static_cast<uint32_t>((static_cast<uint64_t>(kRate) << 16) / static_cast<uint32_t>(hz));
-    uint32_t t = tail_.load();
+    have = true;
+    const int v = wide_ ? reinterpret_cast<int16_t*>(ring_)[t % cap_] : (ring_[t % cap_] - 128) * 256;
+    tail_.store(t + 1);
+    return v;
+}
+
+bool Stream::render8(uint8_t* out, int n, int volume) {
     for (int i = 0; i < n; ++i) {
-        const uint32_t h = head_.load();
-        if (t == h) {                               // nothing read in yet / any more
-            if (end_.load()) {
-                done_.store(true);
-                for (; i < n; ++i) out[i] = 128;
-                break;
-            }
-            out[i] = 128;
-            continue;
-        }
-        // between this sample and the next in a straight line
-        const int a = ring_[t % cap_];
-        const int b = t + 1 != h ? ring_[(t + 1) % cap_] : a;
-        int s = a + (b - a) * static_cast<int>(frac_ & 0xFFFF) / 65536 - 128;
-        s = s * volume / 255;
+        bool have = false;
+        const int v = done_.load() ? 0 : next(have);
+        if (!have && end_.load()) done_.store(true);
+        const int s = v * volume / 255 / 256;
         out[i] = static_cast<uint8_t>(128 + (s > 127 ? 127 : s < -128 ? -128 : s));
-        frac_ += step;
-        t += frac_ >> 16;
-        frac_ &= 0xFFFF;
-        if (static_cast<int32_t>(t - h) > 0) t = h;
     }
-    tail_.store(t);
+    return !done_.load();
+}
+
+bool Stream::render16(int16_t* out, int n, int volume) {
+    for (int i = 0; i < n; ++i) {
+        bool have = false;
+        const int v = done_.load() ? 0 : next(have);
+        if (!have && end_.load()) done_.store(true);
+        out[i] = static_cast<int16_t>(v * volume / 255);
+    }
     return !done_.load();
 }
 
