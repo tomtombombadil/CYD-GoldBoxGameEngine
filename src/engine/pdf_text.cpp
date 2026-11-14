@@ -633,7 +633,12 @@ struct TextReader::Impl : inflate::Output {
             void number(double v) { code = static_cast<int>(v); }
             void name(const char* s, size_t n)
             {
-                if (code >= 0 && code < 256) {
+                // (".null": an OCR text layer's "no glyph of its own" - the
+                // Steam Krynn journals name every code so and list only
+                // some in /ToUnicode; the rest keep the base encoding's
+                // letter, as other readers take them. Tom, 2026-11-14:
+                // their tavern tales' numbers were lost)
+                if (code >= 0 && code < 256 && !(n == 5 && memcmp(s, ".null", 5) == 0)) {
                     const uint16_t u = glyph_unicode(s, n);
                     f->u[code] = u;
                 }
