@@ -1793,8 +1793,12 @@ the Project as claude/TODO.md.
       sorceress's, the kraken master's: game block +0x3C set - +0x3D = 0 /
       1 / 2, +0x3B bits 1 / 2 / 4, [0xF2A0] = 1, the effect off, 0x23CDE;
       when, not read), 0x8C (the green hag, 0x245F6 - field / sight
-      changes), 0x8E (immune helper 0 in an event not found), 0x90,
-      0x91, 0x92 (x2 of [0x9E1C]), 0x93, 0x94, 0x98. v0.196.41: 0x9A the
+      changes), 0x8E (immune helper 0 in an event not found), 0x90 (the
+      giant kampfult, 0x24AEA), 0x93 (the stone golem, 0x24E74), 0x94 (the
+      white gorgimera, 0x25025), 0x98 (the yetis' fear - 0x6F for 2 rounds
+      round them, 0x254D1). v0.196.43: 0x91 the giant rat (a hit's 5 in 100:
+      a save against poison or diseased), 0x92 the great vilstrak (its
+      moves doubled in the first round). v0.196.41: 0x9A the
       ice hound and 0x8A the hell hound (one next to it: 7 cold / fire, a
       breath save for half - "Breathes Ice" / "Breathes Fire"), 0x89 the
       giant slug (Curse's spit, 1d13 + 3); v0.196.42: 0x8F the manticore's

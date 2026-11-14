@@ -1435,6 +1435,8 @@ constexpr combat::Facts kTreasuresFacts = [] {
     f.mon.slug_spit = 0x89;             // the giant slug (0x24333)
     f.mon.slug_d13 = true;
     f.mon.spines = 0x8F;                // the manticore (0x248D7)
+    f.mon.rat_ill = 0x91;               // the giant rat's disease (0x24D4B)
+    f.mon.first_dash = 0x92;            // the great vilstrak (0x24E1D)
     f.gw.glacier = 0x87;                // a blow at one whose armour has word 0x80: half (0x2423F)
     f.gw.glacier_word = 0x80;
     return f;
@@ -4539,6 +4541,7 @@ uint32_t duel_word(const Profile& p, int word)
         {games::Game::TreasuresOfTheSavageFrontier, kBreathesFireH, 0x2447A},
         {games::Game::TreasuresOfTheSavageFrontier, kSpitsAcid, 0x24312},
         {games::Game::TreasuresOfTheSavageFrontier, kSpitsMisses, 0x2431D},
+        {games::Game::TreasuresOfTheSavageFrontier, kIsDiseased, 0x24D42},
         {games::Game::TreasuresOfTheSavageFrontier, kSpine, 0x248AE},
         {games::Game::TreasuresOfTheSavageFrontier, kSpineMisses, 0x248BD},
         {games::Game::ChampionsOfKrynn, kBreathesB, 0x32698},

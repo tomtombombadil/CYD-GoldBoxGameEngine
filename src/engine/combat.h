@@ -413,6 +413,13 @@ struct MonFx {
     // against the AC; the original's hooks left out) for 1d6, "Throws a
     // Spine" / "Throws a Spine and Misses"; its turn is over
     uint8_t spines = 0;
+    // its giant rat (0x91, 0x24D4B): a hit's 5 in 100 - one without Cause
+    // Disease's effect saves against poison or "diseased" (the effect, its
+    // handler at once: weakness and sickness)
+    uint8_t rat_ill = 0;
+    // its great vilstrak (0x92, 0x24E1D): its moves doubled in the first
+    // round (the round count [0xA57D] 0)
+    uint8_t first_dash = 0;
 };
 
 // More spells' effects (spell_facts.md 2): Enlarge, Confusion (and going

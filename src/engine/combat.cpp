@@ -1951,6 +1951,7 @@ int start_round(Battle& b, create::Dice& d, Event* out, int cap)
         f.moves = mv * 2;
         if (b.fx && f.has(b.fx->haste)) f.moves *= 2;
         if (b.fx && f.has(b.fx->slow)) f.moves /= 2;
+        if (b.fx && b.round == 0 && hasx(f, b.fx->mon.first_dash)) f.moves *= 2;   // (Treasures' 0x92: 0x24E1D)
         // (the Dark Queen under water: a third, unless effect 0x96 - DQK.EXE 0xA767)
         if (b.underwater && !f.has(0x96)) f.moves /= 3;
         bool ranged = false;
@@ -2254,6 +2255,14 @@ void after_hit_own(Battle& b, int a, int c, int slot, int roll, int hits1, creat
             const int k2 = find_aff(at, m.yeti[y]);
             if (k2 >= 0) at.aff[k2][3] = static_cast<uint8_t>(c);
             add_event(out, c, Ev::Grabbed);
+        }
+        // Treasures' giant rat (0x91, GAME.OVR 0x24D4B)
+        if (m.rat_ill && hasx(at, m.rat_ill) && tg.up() && b.fx->sp.ill && !tg.has(b.fx->sp.ill) &&
+            d.roll(100, 1) <= 5 && !saving_throw(tg, 0, 0, d)) {
+            give_aff(tg, b.fx->sp.ill, 0, 0xFF, false);
+            if (b.fx->sp.weak) give_aff(tg, b.fx->sp.weak, 60, 0, true);
+            if (b.fx->sp.sick) give_aff(tg, b.fx->sp.sick, 10, 0, true);
+            add_event(out, c, Ev::Diseased);
         }
         // Treasures' harpy (0x84, GAME.OVR 0x240ED): Gateway's charm
         if (!gw.ways && hasx(at, gw.harpy) && tg.up() && b.fx->charm && !tg.has(b.fx->charm) && !saving_throw(tg, 4, 0, d)) {
