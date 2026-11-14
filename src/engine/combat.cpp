@@ -2056,13 +2056,10 @@ int start_round(Battle& b, create::Dice& d, Event* out, int cap)
                 }
             }
     }
-    // Death Knights' death knights (0x48, GAME.OVR 0x1D63B - at the fight's
-    // set-up here: when its event comes, not read): every foe on the field
-    // not fear-proof (0x5C) saves against spells or is terrified - Fear's
-    // effect, fleeing under the computer
+    // (Death Knights' death knights' 0x48: at each of their turns - special())
     // (Treasures' yetis the same with the game's flag: a petrification save,
     // 2 rounds, "is frightened." - GAME.OVR 0x254D1; once whoever holds it)
-    for (int kind = 0; kind < 2 && b.round == 0 && b.fx && b.fx->fear; ++kind) {
+    for (int kind = 1; kind < 2 && b.round == 0 && b.fx && b.fx->fear; ++kind) {   // (kind 0: special(), the death knight's turns)
         const uint8_t ty = kind ? b.fx->mon.fright : b.fx->mon.terror;
         if (!ty || (kind && !b.fright_ok)) continue;
         for (int i = 0; i < b.n; ++i) {
@@ -2345,19 +2342,6 @@ void after_hit_own(Battle& b, int a, int c, int slot, int roll, int hits1, creat
             add_event(out, c, Ev::ParalyzedLow);
         }
         if (hasx(at, m.chill)) touch(d.roll(8, 2), 0x0A);
-        // Death Knights' fire minion's hit (0x4A, GAME.OVR 0x1D7C1): 2d6, a
-        // save against spells for half
-        if (m.hit_2d6 && hasx(at, m.hit_2d6) && tg.up()) {
-            Harm h;
-            h.save = 4;
-            h.on_save = 2;
-            bool dn = false;
-            const int done = harm(b, c, d.roll(6, 2), h, d, &dn);
-            g_kind = 0;
-            Event* e = done > 0 ? add_event(out, c, Ev::Damage) : nullptr;
-            if (e) e->amount = static_cast<int16_t>(done);
-            if (dn) out.down = true;
-        }
         // Treasures' giant rat (0x91, GAME.OVR 0x24D4B)
         if (m.rat_ill && hasx(at, m.rat_ill) && tg.up() && b.fx->sp.ill && !tg.has(b.fx->sp.ill) &&
             d.roll(100, 1) <= 5 && !saving_throw(tg, 0, 0, d)) {
@@ -2510,6 +2494,20 @@ void after_hit_own(Battle& b, int a, int c, int slot, int roll, int hits1, creat
     if (hasx(at, m.fire2d6_hit)) fire_hit(2);
     if (slot == 1 && hasx(at, m.fire4d6_2)) fire_hit(4);
     if (slot == 1 && hasx(at, m.fire2d6_2)) fire_hit(2);
+    // Death Knights' fire minion's hit (0x4A, GAME.OVR 0x1D7C1 - in the hook
+    // switch's lists of events 2 and 3: either attack's hit): 2d6, a save
+    // against spells for half
+    if (m.hit_2d6 && hasx(at, m.hit_2d6) && tg.up()) {
+        Harm h;
+        h.save = 4;
+        h.on_save = 2;
+        bool dn = false;
+        const int done = harm(b, c, d.roll(6, 2), h, d, &dn);
+        g_kind = 0;
+        Event* e = done > 0 ? add_event(out, c, Ev::Damage) : nullptr;
+        if (e) e->amount = static_cast<int16_t>(done);
+        if (dn) out.down = true;
+    }
     // Treasures' yetis (GAME.OVR 0x251A0 - events 2 / 3, either attack's
     // hit, a roll of 20) and its giant kampfult (0x24AEA - event 2, attack
     // 1's every hit): the hold (0x9C) and the one held kept in its data
@@ -8026,6 +8024,26 @@ int special(Battle& b, const Tables& t, int i, create::Dice& d, Event* out, int 
             h.kind = hk ? 1 : 2;
             hurt(tg, 7, h);
             if (!f.up()) return n;
+        }
+    }
+    // Death Knights' death knights (0x48, GAME.OVR 0x1D63B - event 0xF, the
+    // holder's turn's start 0x933C): every foe on the field (the scan's
+    // range 0xFF) not fear-proof (0x5C) saves against spells or is
+    // terrified - Fear's effect, fleeing - at each of its turns, the afraid
+    // too (the original asks them again and, its give 0x31C4A keeping one
+    // for ever, adds another copy to the list: one here)
+    if (m.terror && b.fx->fear && hasx(f, m.terror)) {
+        for (int c = 0; c < b.n; ++c) {
+            Fighter& v = b.f[c];
+            if (c == i || !v.size || !v.up() || v.team() == f.team()) continue;
+            if (hasx(v, m.no_fear) || saving_throw(v, 4, 0, d)) continue;
+            const bool made_quick = v.member >= 0 && v.rec[0xF7] < 0x80 && !v.quick;
+            if (!v.has(b.fx->fear)) give_aff(v, b.fx->fear, 0, made_quick ? 1 : 0, false);
+            v.fleeing = true;
+            v.panic = false;
+            if (made_quick) v.quick = true;
+            v.target = -1;
+            ev(c, Ev::Terrified);
         }
     }
     // Death Knights' fire minion (0x46, GAME.OVR 0x1D430)

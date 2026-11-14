@@ -14480,7 +14480,8 @@ void view_box(pic::Canvas& c, const party::Character& ch)
         for (int fr = 0; fr < 2; ++fr) {
             int w = 0, h = 0;
             ic.px[fr] = load_pic4(file, ch.rec[0x126] + fr * 0x80, 0, &w, &h);
-            if (ic.px[fr]) ic.w = static_cast<uint8_t>(w), ic.h = static_cast<uint8_t>(h);
+            if (fr && ic.px[0] && ic.px[1]) ic.px[1] = fit_masked(ic.px[1], w, h, ic.w, ic.h);     // (one size: the ready frame's)
+            else if (ic.px[fr]) ic.w = static_cast<uint8_t>(w), ic.h = static_cast<uint8_t>(h);
         }
     }
     if (!ic.px[0]) build_icon(ch.rec, ic);

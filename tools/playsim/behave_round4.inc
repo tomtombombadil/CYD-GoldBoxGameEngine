@@ -1538,20 +1538,49 @@ void terror()
     mx::put(B, 1, 11, 10, 50);
     mx::add_aff(B, fx.mon.terror);
     if (B + 1 < b.n) mx::put(B + 1, 1, 12, 10, 50);
-    const int keep = b.round;
-    b.round = 0;
-    create::g_die_hook = [](int nn) { return nn == 20 ? 2 : -1; };
-    create::Dice dd(3);
-    combat::Event ev[32];
-    const int k = combat::start_round(b, dd, ev, 32);
-    create::g_die_hook = nullptr;
-    b.round = keep;
-    int ter = 0;
-    for (int j = 0; j < k; ++j) ter += ev[j].ev == combat::Ev::Terrified;
-    chk(F(0).has(fx.fear) && F(0).fleeing, "a foe far off: terrified, fleeing");
-    if (A && fx.mon.no_fear) chk(!F(A).has(fx.fear), "the fear-proof: not");
-    if (B + 1 < b.n) chk(!F(B + 1).has(fx.fear), "its own side: not");
-    chk(ter == 1, "\"is terrified\" once");
+    // (event 0xF - its turn's start, GAME.OVR 0x933C: at each of its turns,
+    // not at the fight's set-up)
+    {
+        create::Dice d0(3);
+        combat::Event e0[32];
+        const int k0 = combat::start_round(b, d0, e0, 32);
+        bool any = false;
+        for (int j = 0; j < k0; ++j) any |= e0[j].ev == combat::Ev::Terrified;
+        chk(!any && !F(0).has(fx.fear), "not at the round's start");
+    }
+    for (int turn = 0; turn < 2; ++turn) {
+        create::g_die_hook = [](int nn) { return nn == 20 ? 2 : -1; };
+        create::Dice dd(3);
+        combat::Event ev[32];
+        bool ends = false;
+        const int k = combat::special(b, fg->t, B, dd, ev, 32, &ends);
+        create::g_die_hook = nullptr;
+        int ter = 0;
+        for (int j = 0; j < k; ++j) ter += ev[j].ev == combat::Ev::Terrified;
+        chk(F(0).has(fx.fear) && F(0).fleeing, "a foe far off: terrified, fleeing");
+        if (A && fx.mon.no_fear) chk(!F(A).has(fx.fear), "the fear-proof: not");
+        if (B + 1 < b.n) chk(!F(B + 1).has(fx.fear), "its own side: not");
+        chk(ter == 1, "\"is terrified\" once a turn (the afraid asked again)");
+    }
+    if (fx.mon.hit_2d6) {
+        // the fire minion's hit (0x4A): attack 2's hit too (events 2 and 3)
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(0, 0, 10, 10, 100);
+        mx::put(B, 1, 11, 10, 50);
+        mx::add_aff(B, fx.mon.hit_2d6);
+        combat::Fighter& at = F(B);
+        at.attacks[0] = 0;
+        at.attacks[1] = 1;
+        at.rec[0x19F] = 1;
+        at.rec[0x1A1] = 1;
+        at.rec[0x1A3] = 0;
+        at.rec[0x199] = 60;
+        create::g_die_hook = [](int nn) { return nn == 20 ? 19 : -1; };
+        const combat::Attack r = combat::attack(b, B, 0, names, rng);
+        create::g_die_hook = nullptr;
+        const int lost = 100 - F(0).hp();
+        chk(r.n > 0 && r.hits[0].hit && lost >= 2, "the fire minion: attack 2's hit burns too");
+    }
     if (fx.mon.fire_aura) {
         int ok = 0;
         for (int seed = 1; seed <= 10; ++seed) {

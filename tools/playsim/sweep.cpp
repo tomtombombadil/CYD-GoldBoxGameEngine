@@ -1826,6 +1826,9 @@ int main(int argc, char** argv)
     pc::card_root() = game_dir.substr(0, game_dir.rfind('/'));
     const std::string mode = argv[2];
     const int arg = argc > 3 ? atoi(argv[3]) : 0;
+#ifdef CYD_TEST_HOOKS
+    if (getenv("FCHECK")) fc::install();        // (FCHECK=1: the fight checker / FCACTLOG trace in any mode)
+#endif
     if (mode == "spells") sweep_spells();
     else if (mode == "campspells") sweep_campspells();
     else if (mode == "monsters") sweep_monsters(arg);

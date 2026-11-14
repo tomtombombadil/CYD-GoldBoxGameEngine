@@ -149,7 +149,7 @@ the Project as claude/TODO.md.
 
 ## Claude
 
-- [ ] Sweeps' order (Tom, 2026-11-10, 5.0", PoolRad, Podol Plaza goblins:
+- [x] Sweeps' order (Tom, 2026-11-10, 5.0", PoolRad, Podol Plaza goblins:
       one swing, the first skull, then all the swept goblins gone at once,
       no more sounds or rolls). Not reproduced: Tom's own party (his save
       G, speed 1) in the playsim's fights (12 sweeps) and in the REAL 5.0"
@@ -671,13 +671,16 @@ the Project as claude/TODO.md.
       (a) Dark Queen reroll - the engine's queen_roll keeps spells a
       previous roll's training learned (its god's spells are learned at
       Done, before the roll); check DQK.EXE's roll (+0x1A90) / DOSBox
-      whether the original drops them. (b) Death Knights: LOAD CHARACTER
-      | 0x80 never removes a member (its second flag, DS 0xDB60, is never
-      set in GAME.OVR / START.EXE) - as the original; check whether a
-      script relies on it (then a Game Fixes case). (c) the Dark Queen's
-      QSV header u16 at bytes 11-12: kept from the loaded game - find
-      what DQK.EXE writes there. (d) the overland Thenols fight budget
-      (144.6 KB) wasn't re-measured with the per-copy items.
+      whether the original drops them. (b) done 2026-11-14: Death Knights'
+      LOAD CHARACTER | 0x80 never removes a member (its second flag, DS
+      0xDB60, is never set) - as the original; no script relies on it (the
+      events sweep, every block of ECL1-3 with a trace on a removal asked
+      after the name's clearing: none). (c) the Dark Queen's QSV header
+      u16 at bytes 11-12: kept from the loaded game - find what DQK.EXE
+      writes there. (d) done 2026-11-14 (v0.196.49, budgetx with the
+      per-copy items): Curse 134.2, PoolRad 135.8, Darkness 150.2,
+      Champions 136.4, Knights 136.4, Queen 143.7, Treasures 152.4 KB of
+      the 153.6 - the Thenols run's own env wasn't kept.
 - [ ] **Engine screens for ports**: the platform layer is done
       (v0.91.1: src/game + src/engine use only src/platform/*.h); still
       CYD-only are the engine's own screens (Settings, journal viewer,
@@ -1823,6 +1826,22 @@ the Project as claude/TODO.md.
       as the original's (a d20 of 20 counts 100, then the effects' changes -
       a Blessed 19 grabs; `Attack::roll_mods`), and its fall says "NAME is
       released" for the one let go (0x2524E).
+      v0.196.49 Death Knights' event timings read (GAME.OVR's hook switch
+      0x3021F, its lists): 0x4A the fire minion's 2d6 in events 2 AND 3
+      (either attack's hit - was attack 1's), 0x48 the death knights' fear
+      in event 0xF - the holder's turn's start (0x933C), not the fight's
+      set-up: at each of its turns every foe not 0x5C saves or is
+      terrified again ("is terrified" again; the original's give 0x31C4A
+      adds another for-ever copy - one here). rules4 terror.
+      Also v0.196.49 - an events sweep under ASan (Death Knights, ECL2):
+      a monster whose attack frame is bigger than its ready one (CPIC1 0:
+      40 x 24 / 48 x 24) read past the ready frame's bytes - both frames
+      are made the larger size now, every game (`load_monster_icon`; the
+      View portrait the ready one's). The other DAX games' CPIC frames
+      all match (checked). The sweeps' endless fights (Death Knights'
+      iron golems against a terrified party, Gateway's regenerating
+      scrags against bare hands) are the sweep's god mode, not the
+      engine's.
       v0.196.47 the Dark Queen (DQK.EXE; its hook switch's lists read out
       to know each one's event): 0x75 the beholder (Curse's rays, then
       Fear / Slow / Sleep - w0 0x21E4:0x4FD1), 0xC3 / 0xCB the gorgon (4

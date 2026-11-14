@@ -606,6 +606,16 @@ inline bool masked(const uint8_t* m, int w, int x, int y)
 uint8_t* fit_masked(uint8_t* p, int w, int h, int w2, int h2)
 {
     if (!p || (w == w2 && h == h2)) return p;
+    if (!fight_masks()) {
+        // (no see-through plane: colour 0 is the see-through; what's past the
+        // picture 0)
+        uint8_t* out = static_cast<uint8_t*>(calloc(1, static_cast<size_t>(rowb(w2)) * h2));
+        if (out)
+            for (int y = 0; y < h2 && y < h; ++y)
+                for (int x = 0; x < w2 && x < w; ++x) set_nib(out, w2, x, y, nib(p, w, x, y));
+        free(p);
+        return out;
+    }
     const uint32_t nb = static_cast<uint32_t>(rowb(w2)) * h2;
     uint8_t* out = static_cast<uint8_t*>(calloc(1, nb + mask_bytes(w2, h2)));
     if (out) {
@@ -1493,22 +1503,31 @@ void load_monster_icon(int slot, int block)
     free_pic(ic);
     char file[16];
     area_fmt(file, sizeof file, "CPIC%d.DAX");
-    for (int fr = 0; fr < 2; ++fr) {
-        int w, h;
-        uint8_t* p = load_pic4(file, block + fr * 0x80, 0, &w, &h);
-        if (!p) continue;
-        if (fr && ic.px[0] && fight_masks() && (w != ic.w || h != ic.h)) {
-            // (the attack frame made the ready one's size: a Pic4 has one -
-            // the Dark Queen's Sivak 24 x 23 / 24 x 24 drew a black row)
-            p = fit_masked(p, w, h, ic.w, ic.h);
-            if (!p) continue;
-            w = ic.w;
-            h = ic.h;
-        }
-        ic.px[fr] = arena_adopt(p, pic_bytes(w, h));
-        ic.w = static_cast<uint8_t>(w);
-        ic.h = static_cast<uint8_t>(h);
+    int w[2] = {}, h[2] = {};
+    uint8_t* p[2] = {};
+    for (int fr = 0; fr < 2; ++fr) p[fr] = load_pic4(file, block + fr * 0x80, 0, &w[fr], &h[fr]);
+    if (!p[0] && p[1]) {
+        free(p[1]);
+        return;
     }
+    if (!p[0]) return;
+    int cw = w[0], ch = h[0];
+    if (p[1] && (w[1] != w[0] || h[1] != h[0])) {
+        // (a Pic4 has one size: both frames made the larger one's, the rest
+        // see-through - the Dark Queen's Sivak 24 x 23 / 24 x 24 drew a black
+        // row; Death Knights' CPIC1 0: its attack frame 48 wide, the ready one
+        // 40 - drawn with the attack's width it read past the ready one)
+        cw = w[1] > w[0] ? w[1] : w[0];
+        ch = h[1] > h[0] ? h[1] : h[0];
+        for (int fr = 0; fr < 2; ++fr) p[fr] = fit_masked(p[fr], w[fr], h[fr], cw, ch);
+        if (!p[0]) {
+            free(p[1]);
+            return;
+        }
+    }
+    for (int fr = 0; fr < 2; ++fr) ic.px[fr] = p[fr] ? arena_adopt(p[fr], pic_bytes(cw, ch)) : nullptr;
+    ic.w = static_cast<uint8_t>(cw);
+    ic.h = static_cast<uint8_t>(ch);
 }
 
 void end_fight_art()
