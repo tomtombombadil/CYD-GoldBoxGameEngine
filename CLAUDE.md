@@ -983,6 +983,12 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   screen's menu words, list lines and party menu lines turn to the
   highlight colour (`play::tap_highlight`); one already lit blinks off and
   on. New tappable things must take part.
+- Modify Character shows ONE highlight (Tom, 2026-11-14, v0.196.53, from
+  the PortMaster port's buttons): the item being changed in its colour
+  while the cursor keys are on the items, the menu line's word unboxed
+  then; on the menu line (Up from the first item / Down from the name) the
+  word boxed and no item marked (`mod_menu`, `menu_unlit`). A cue for
+  where the next press acts - new screens with two places follow it.
 - **Menu highlight - one rule for every game** (Tom, 2026-10-24: "My
   preferences about the highlight should be on ALL games"; features.h
   `CYD_MENU_HIGHLIGHT`, play.cpp `hl_apply` / `hl_remember` / `hl_plain`):

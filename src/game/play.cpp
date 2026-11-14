@@ -1786,6 +1786,15 @@ bool hl_plain() { return !CYD_MENU_HIGHLIGHT && d->prof->variant.tr; }
 // (Darkness's fight menu takes rows 23 and 24: text::two_rows)
 bool menu_was_two = false;
 
+// The menu line drawn with no word highlighted (Modify, while its
+// highlight is on an item)
+bool menu_unlit = false;
+struct Unlit {
+    int keep;
+    Unlit() : keep(menu.selected) { if (menu_unlit) menu.selected = -1; }
+    ~Unlit() { menu.selected = keep; }
+};
+
 void show_menu_line(pic::Canvas& c);
 void clear_menu_line(pic::Canvas& c);
 void put(pic::Canvas& c, const char* s, int col, int row, uint8_t fg);
@@ -1838,12 +1847,14 @@ void show_menu_line(pic::Canvas& c)
             q_strip_drop();
         }
         q_bar(c);
+        const Unlit unlit;
         text::draw(c, d->font, menu, q_buttons());
         dirty_rows(text::kMenuRow - 2, text::kMenuRow);
         return;
     }
     text::MenuColors mc;
     mc.plain_sel = hl_plain();              // (Treasures' own: the chosen word white - DOSBox)
+    const Unlit unlit;
     text::draw(c, d->font, menu, mc);
     dirty_rows(menu_was_two ? text::kMenuRow - 1 : text::kMenuRow, text::kMenuRow);
 }
@@ -11602,13 +11613,21 @@ void modify_menu_line(pic::Canvas& c)
     text::build(menu, rw(Data::kModify), rw(Data::kKeepExit));
     menu.selected = mod_word < menu.count ? mod_word : 0;
     hl_moved();
+    // (the word boxed only while the cursor keys are on the menu line; a
+    // tap on a word still picks it)
+    menu_unlit = modder && !mod_menu;
     show_menu_line(c);
+    menu_unlit = false;
 }
 
 void draw_modify(pic::Canvas& c)
 {
     party::Character* ch = mod_ch();
     if (!ch) return;
+    // The item marked - none while the cursor keys are on the menu line
+    // (Tom, 2026-11-14: the name stayed magenta there, and the menu's word
+    // was boxed all along - one highlight, where the next press acts)
+    const int mark = mod_menu ? -1 : mod_item;
     if (hl() && names) {
         // (the Dark Queen's Modify shows the character without the items
         // readied - their figures and the weapon / armour lines left out
@@ -11633,7 +11652,7 @@ void draw_modify(pic::Canvas& c)
         for (int i = 0; i < 6; ++i) {
             const bool changed = ch->stat(i) != modder->ch.stat(i) || (i == 0 && ch->str00() != modder->ch.str00());
             c.fill(12 * 8, (9 + i) * 8, 8, 8, 0);
-            if (changed) put(c, "*", 12, 9 + i, mod_item == i ? 13 : 10);
+            if (changed) put(c, "*", 12, 9 + i, mark == i ? 13 : 10);
         }
     }
     if (hl()) {
@@ -11649,15 +11668,15 @@ void draw_modify(pic::Canvas& c)
         };
         for (int i = 0; modder && i < 6; ++i) {
             const bool changed = ch->stat(i) != modder->ch.stat(i) || (i == 0 && ch->str00() != modder->ch.str00());
-            if (changed) put(c, "*", 12, 9 + i, mod_item == i ? 15 : 7);
+            if (changed) put(c, "*", 12, 9 + i, mark == i ? 15 : 7);
         }
-        if (mod_item < 6) {
-            stat_text(mod_item, t, sizeof t);
-            put(c, t, 1 + static_cast<int>(strlen(d->v_stat[mod_item])), 9 + mod_item, 15);
-        } else if (mod_item == 6) {
+        if (mark >= 0 && mark < 6) {
+            stat_text(mark, t, sizeof t);
+            put(c, t, 1 + static_cast<int>(strlen(d->v_stat[mark])), 9 + mark, 15);
+        } else if (mark == 6) {
             snprintf(t, sizeof t, "%d/%d", ch->hp(), ch->hp_max());
             put(c, t, 37 - static_cast<int>(strlen(t)), 3, 15);
-        } else {
+        } else if (mark == 7) {
             ch->name(t, sizeof t);
             put(c, t, 1, 1, 15);
         }
@@ -11668,26 +11687,26 @@ void draw_modify(pic::Canvas& c)
         // Secret's View: the stats from row 9 (the number at column 5), the
         // hit points "95/95" at row 3, column 31; its menu "Add Subtract
         // Keep Exit" (Add / Subtract: the arrows' up / down)
-        if (mod_item < 6) {
-            const int v = ch->stat(mod_item);
-            c.fill(5 * 8, (9 + mod_item) * 8, 7 * 8, 8, 0);
-            if (mod_item == 0 && v == 18 && ch->str00() > 0) {
+        if (mark >= 0 && mark < 6) {
+            const int v = ch->stat(mark);
+            c.fill(5 * 8, (9 + mark) * 8, 7 * 8, 8, 0);
+            if (mark == 0 && v == 18 && ch->str00() > 0) {
                 if (ch->str00() == 100) snprintf(t, sizeof t, "18(00)");
                 else snprintf(t, sizeof t, "18(%02d)", ch->str00());
             } else {
                 snprintf(t, sizeof t, "%d", v);
             }
-            put(c, t, 5, 9 + mod_item, 13);
-        } else if (mod_item == 6) {
+            put(c, t, 5, 9 + mark, 13);
+        } else if (mark == 6) {
             c.fill(31 * 8, 3 * 8, 8 * 8, 8, 0);
             snprintf(t, sizeof t, "%d/%d", ch->hp(), ch->hp_max());
             put(c, t, 31, 3, 13);
-        } else {
+        } else if (mark == 7) {
             ch->name(t, sizeof t);
             put(c, t, 1, 1, 13);
             mod_name_seen = true;
         }
-        if (darkness_files() && mod_item != 7 && mod_name_seen) {
+        if (darkness_files() && mark != 7 && mod_name_seen) {
             ch->name(t, sizeof t);
             put(c, t, 1, 1, 10);
         }
@@ -11699,43 +11718,43 @@ void draw_modify(pic::Canvas& c)
         // column 5, the hit points "13/13" right-aligned to column 37 of row 3
         // (Tom, 2026-10-24: Curse's rows put the changing number on the
         // wrong lines)
-        if (mod_item < 6) {
-            const int v = ch->stat(mod_item);
-            c.fill(5 * 8, (9 + mod_item) * 8, 7 * 8, 8, 0);
-            if (mod_item == 0 && v == 18 && ch->str00() > 0) {
+        if (mark >= 0 && mark < 6) {
+            const int v = ch->stat(mark);
+            c.fill(5 * 8, (9 + mark) * 8, 7 * 8, 8, 0);
+            if (mark == 0 && v == 18 && ch->str00() > 0) {
                 if (ch->str00() == 100) snprintf(t, sizeof t, "18(00)");
                 else snprintf(t, sizeof t, "18(%02d)", ch->str00());
             } else {
                 snprintf(t, sizeof t, "%d", v);
             }
-            put(c, t, 5, 9 + mod_item, 13);
-        } else if (mod_item == 6) {
+            put(c, t, 5, 9 + mark, 13);
+        } else if (mark == 6) {
             c.fill(31 * 8, 3 * 8, 7 * 8, 8, 0);
             snprintf(t, sizeof t, "%d/%d", ch->hp(), ch->hp_max());
             put(c, t, 38 - static_cast<int>(strlen(t)), 3, 13);
-        } else {
+        } else if (mark == 7) {
             ch->name(t, sizeof t);
             put(c, t, 1, 1, 13);
         }
         modify_menu_line(c);
         return;
     }
-    if (mod_item < 6) {
-        const int v = ch->stat(mod_item);
-        c.fill(5 * 8, (7 + mod_item) * 8, 6 * 8, 8, 0);
+    if (mark >= 0 && mark < 6) {
+        const int v = ch->stat(mark);
+        c.fill(5 * 8, (7 + mark) * 8, 6 * 8, 8, 0);
         snprintf(t, sizeof t, "%d", v);
-        put(c, t, v < 10 ? 6 : 5, 7 + mod_item, 13);
-        if (mod_item == 0 && v == 18 && ch->str00() > 0) {
+        put(c, t, v < 10 ? 6 : 5, 7 + mark, 13);
+        if (mark == 0 && v == 18 && ch->str00() > 0) {
             const int e = ch->str00();
             if (e == 100) snprintf(t, sizeof t, "(00)");
             else snprintf(t, sizeof t, "(%02d)", e);
             put(c, t, 7, 7, 13);
         }
-    } else if (mod_item == 6) {
+    } else if (mark == 6) {
         c.fill(4 * 8, 18 * 8, 3 * 8, 8, 0);
         snprintf(t, sizeof t, "%d", ch->hp());
         put(c, t, 4, 18, 13);
-    } else {
+    } else if (mark == 7) {
         ch->name(t, sizeof t);
         put(c, t, 1, 1, 13);
     }
