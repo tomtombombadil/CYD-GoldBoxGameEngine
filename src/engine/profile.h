@@ -239,6 +239,7 @@ enum FightWord {
     kGrabbed,               // Treasures' yetis: "has been grabbed" (GAME.OVR 0x25181)
     kSqueezing,             // ... "is squeezing " + the name (0x25192)
     kReleased,              // ... "is released" (0x25175)
+    kBreathesIce,           // Treasures' ice hound: "Breathes Ice" (0x2563C)
     kFightWords
 };
 

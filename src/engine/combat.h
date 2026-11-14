@@ -400,6 +400,14 @@ struct MonFx {
     // dice (count, sides) - and its turn is over; it lets go as it falls
     // ("is released")
     uint8_t yeti[3] = {}, yeti_dice[3][2] = {}, yeti_held = 0;
+    // Treasures' ice hound (0x9A, GAME.OVR 0x25649): at its turn one next to
+    // it (its pick) - "Breathes Ice", 7 cold, a save against breath for half
+    uint8_t ice_breath = 0;
+    // ... its hell hound (0x8A, 0x24488): the same with fire, "Breathes Fire"
+    uint8_t fire_hound = 0;
+    // its giant slug's spit (0x89, 0x24333): Curse's, but 1d13 + 3 (its
+    // routine 0xFB:0x52 with 1 and 13), a save against breath for half
+    bool slug_d13 = false;
 };
 
 // More spells' effects (spell_facts.md 2): Enlarge, Confusion (and going
@@ -1139,6 +1147,7 @@ enum class Ev : uint8_t {
     // Treasures' yetis: "has been grabbed" (`who` the one held), "is
     // squeezing NAME" (`to` the one held), "is released"
     Grabbed, Squeezes, Released,
+    BreathesIce,                        // Treasures' ice hound
 };
 struct Event {
     uint8_t who = 0;

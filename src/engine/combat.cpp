@@ -7823,6 +7823,21 @@ int special(Battle& b, const Tables& t, int i, create::Dice& d, Event* out, int 
         return false;
     };
 
+    // Treasures' ice hound (0x9A, GAME.OVR 0x25649): its pick, if next to
+    // it - 7 cold, a save against breath for half
+    for (int hk = 0; hk < 2; ++hk) {
+        const uint8_t ht = hk ? m.fire_hound : m.ice_breath;
+        if (!ht || !hasx(f, ht)) continue;
+        const int tg = special_target(b, t, i, 1, false, d);
+        if (tg >= 0) {
+            ev(i, hk ? Ev::HoundFire : Ev::BreathesIce);
+            fly(i, b.f[tg].x, b.f[tg].y, 5, 1, 30);
+            Harm h = breath;
+            h.kind = hk ? 1 : 2;
+            hurt(tg, 7, h);
+            if (!f.up()) return n;
+        }
+    }
     // The stench (Champions' ghast, the Dark Queen's 0x89): every foe within
     // a square saves against spells or is affected - the -2 to hit given to
     // the stench's holder as the originals do, to the one affected with the
@@ -8001,7 +8016,7 @@ int special(Battle& b, const Tables& t, int i, create::Dice& d, Event* out, int 
             if (roll <= 30) {
                 ev(i, Ev::SpitsAcid);
                 fly(i, b.f[tg].x, b.f[tg].y, 10, 1, 30);
-                hurt(tg, f.hp_max(), breath);
+                hurt(tg, m.slug_d13 ? d.roll(13, 1) + 3 : f.hp_max(), breath);
             } else {
                 ev(i, Ev::SpitsMisses);
             }

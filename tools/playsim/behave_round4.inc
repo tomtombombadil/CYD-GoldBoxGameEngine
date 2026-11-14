@@ -1290,6 +1290,30 @@ void yeti()
         combat::damage(b, B, 250);
         chk(!F(0).has(m.yeti_held), "its fall lets go");
     }
+    if (m.ice_breath) {
+        int seen7 = 0, seen3 = 0, far_hit = 0;
+        for (int seed = 1; seed <= 20; ++seed) {
+            for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+            mx::put(0, 0, 10, 10, 100);
+            mx::put(B, 1, 11, 10, 100);
+            mx::add_aff(B, m.ice_breath);
+            create::Dice dd(static_cast<uint32_t>(seed));
+            combat::Event ev[16];
+            bool ends = false;
+            combat::special(b, fg->t, B, dd, ev, 16, &ends);
+            const int lost = 100 - F(0).hp();
+            seen7 += lost == 7;
+            seen3 += lost == 3;
+            for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+            mx::put(0, 0, 10, 10, 100);
+            mx::put(B, 1, 13, 10, 100);
+            mx::add_aff(B, m.ice_breath);
+            combat::special(b, fg->t, B, dd, ev, 16, &ends);
+            far_hit += F(0).hp() != 100;
+        }
+        chk(seen7 > 0 && seen3 > 0 && seen7 + seen3 == 20, "the ice hound: 7 cold, half on a save");
+        chk(far_hit == 0, "the ice hound: only one next to it");
+    }
     expect(P, "Treasures' yetis: the hug (GAME.OVR 0x251A0) - grabbed on a 20, squeezed 2d8 / 4d5 / 6d4, let go",
            bad == 0, "%d of %d wrong", bad, n);
 }

@@ -1430,6 +1430,10 @@ constexpr combat::Facts kTreasuresFacts = [] {
     f.mon.yeti_dice[2][0] = 6;
     f.mon.yeti_dice[2][1] = 4;
     f.mon.yeti_held = 0x9C;
+    f.mon.ice_breath = 0x9A;            // the ice hound (0x25649)
+    f.mon.fire_hound = 0x8A;            // the hell hound (0x24488)
+    f.mon.slug_spit = 0x89;             // the giant slug (0x24333)
+    f.mon.slug_d13 = true;
     f.gw.glacier = 0x87;                // a blow at one whose armour has word 0x80: half (0x2423F)
     f.gw.glacier_word = 0x80;
     return f;
@@ -4530,6 +4534,10 @@ uint32_t duel_word(const Profile& p, int word)
         {games::Game::TreasuresOfTheSavageFrontier, kGrabbed, 0x25181},      // (its yetis' hug: 0x251A0)
         {games::Game::TreasuresOfTheSavageFrontier, kSqueezing, 0x25192},
         {games::Game::TreasuresOfTheSavageFrontier, kReleased, 0x25175},
+        {games::Game::TreasuresOfTheSavageFrontier, kBreathesIce, 0x2563C},
+        {games::Game::TreasuresOfTheSavageFrontier, kBreathesFireH, 0x2447A},
+        {games::Game::TreasuresOfTheSavageFrontier, kSpitsAcid, 0x24312},
+        {games::Game::TreasuresOfTheSavageFrontier, kSpitsMisses, 0x2431D},
         {games::Game::ChampionsOfKrynn, kBreathesB, 0x32698},
         {games::Game::ChampionsOfKrynn, kBreathesAcid, 0x32E24},
         {games::Game::ChampionsOfKrynn, kEmitsStench, 0x13726},     // (the ghast's stench 0x4F: 0x13747)
