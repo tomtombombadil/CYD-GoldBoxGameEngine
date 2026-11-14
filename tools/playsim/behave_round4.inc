@@ -1241,6 +1241,59 @@ void dmg22()
            bad == 0, "%d of %d wrong", bad, n);
 }
 
+// Treasures' yetis' hug (GAME.OVR 0x251A0): a d20 of 20 grabs (0x9C, the
+// yeti's data the one held), its turn squeezes (2d8 / 4d5 / 6d4) and ends,
+// its fall lets go
+void yeti()
+{
+    if (!fight() || !fg->b.fx || !fg->b.fx->mon.yeti_held) return;
+    combat::Battle& b = fg->b;
+    const auto& m = b.fx->mon;
+    int bad = 0, n = 0;
+    auto chk = [&](bool ok, const char* what) {
+        ++n;
+        if (!ok && !bad++) printf("  (yeti: %s)\n", what);
+    };
+    for (int y = 0; y < 3; ++y) {
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(0, 0, 10, 10, 200);
+        mx::put(B, 1, 11, 10, 100);
+        mx::add_aff(B, m.yeti[y]);
+        for (int j = 0; F(B).n_aff && j < *F(B).n_aff; ++j)
+            if (F(B).aff[j][0] == m.yeti[y]) F(B).aff[j][3] = 0xFF;
+        combat::Fighter& at = F(B);
+        at.rec[0x199] = 60;
+        at.attacks[0] = 1;
+        at.attacks[1] = 0;
+        at.rec[0x19E] = 1;
+        at.rec[0x1A0] = 4;
+        at.rec[0x1A2] = 0;
+        create::g_die_hook = [](int nn) { return nn == 20 ? 19 : -1; };
+        const combat::Attack r = combat::attack(b, B, 0, names, rng);
+        create::g_die_hook = nullptr;
+        bool grab = false;
+        for (int j = 0; j < r.n_ev; ++j) grab |= r.ev[j].ev == combat::Ev::Grabbed;
+        int data = -1;
+        for (int j = 0; F(B).n_aff && j < *F(B).n_aff; ++j)
+            if (F(B).aff[j][0] == m.yeti[y]) data = F(B).aff[j][3];
+        chk(grab && F(0).has(m.yeti_held) && data == 0, "a 20: grabbed, its data the one held");
+        const int hp0 = F(0).hp();
+        int bite = -1;
+        bool go_on = true;
+        combat::Event ev[8];
+        create::Dice dd(7);
+        const int k = combat::turn_holds(b, B, dd, ev, 8, &bite, &go_on);
+        bool sq = false;
+        for (int j = 0; j < k; ++j) sq |= ev[j].ev == combat::Ev::Squeezes;
+        const int lost = hp0 - F(0).hp(), lo = m.yeti_dice[y][0], hi = m.yeti_dice[y][0] * m.yeti_dice[y][1];
+        chk(sq && lost >= lo && lost <= hi && !go_on, "its turn: squeezes for its dice, the turn over");
+        combat::damage(b, B, 250);
+        chk(!F(0).has(m.yeti_held), "its fall lets go");
+    }
+    expect(P, "Treasures' yetis: the hug (GAME.OVR 0x251A0) - grabbed on a 20, squeezed 2d8 / 4d5 / 6d4, let go",
+           bad == 0, "%d of %d wrong", bad, n);
+}
+
 // PoolRad's halving effects (the round 22 effects sweep, GAME.OVR's
 // handlers): 0x5D fire, 0x72 electricity, 0x76 cold halved; 0x6F poison
 // proof. Gateway's 0x5D the same (GAME.OVR 0x13F81).
@@ -4912,6 +4965,7 @@ void run()
     if (want("qmound")) queen_mound();
     if (want("halves")) pool_halves();
     if (want("stench")) stench();
+    if (want("yeti")) yeti();
     if (want("dmg22")) dmg22();
     if (want("cbreath")) champ_breath();
     if (want("qbreath")) queen_breath();

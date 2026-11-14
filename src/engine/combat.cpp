@@ -1245,6 +1245,14 @@ void fall(Battle& b, int c)
     let_go(b, f, m.holding);
     let_go(b, f, b.fx->gw.sucking);
     let_go(b, f, b.fx->gw.constrict);
+    // (Treasures' yetis, event 0xD: the one held let go - "is released" not said here)
+    for (int y = 0; y < 3; ++y) {
+        const int k = m.yeti[y] && m.yeti_held ? find_aff(f, m.yeti[y]) : -1;
+        if (k < 0 || f.aff[k][3] == 0xFF) continue;
+        const int v = f.aff[k][3];
+        f.aff[k][3] = 0xFF;
+        if (v < b.n) lose_aff(b.f[v], m.yeti_held);
+    }
     const uint8_t regen[2] = {m.regen_wait, m.regen};
     for (uint8_t t : regen) {
         const int k = t ? find_aff(f, t) : -1;
@@ -1959,6 +1967,7 @@ int start_round(Battle& b, create::Dice& d, Event* out, int cap)
             f.moves = static_cast<int16_t>((f.moves & 0xFF) * (b.weather == 0 ? 3 : 2) / 5);
         if (b.fx && b.fx->entangle && f.has(b.fx->entangle)) f.moves = 0;      // entangled: no moving
         if (b.fx && hasx(f, b.fx->mon.held_fast)) f.moves = 0;                 // engulfed, hugged
+        if (b.fx && hasx(f, b.fx->mon.yeti_held)) f.moves = 0;                // (Treasures' 0x9C: GAME.OVR 0x257B2)
     }
     b.surprise = 0;
     // Pool's fear auras (its effect group 8, the round's start;
@@ -2236,6 +2245,16 @@ void after_hit_own(Battle& b, int a, int c, int slot, int roll, int hits1, creat
             add_event(out, c, Ev::ParalyzedLow);
         }
         if (hasx(at, m.chill)) touch(d.roll(8, 2), 0x0A);
+        // Treasures' yetis (GAME.OVR 0x251A0 - events 2 / 3, either blow)
+        for (int y = 0; y < 3; ++y) {
+            const int k = m.yeti[y] && m.yeti_held ? find_aff(at, m.yeti[y]) : -1;
+            if (k < 0 || at.aff[k][3] != 0xFF || roll < 20 || !tg.up() || tg.has(m.yeti_held)) continue;
+            give_aff(tg, m.yeti_held, 0, 0xFF, false);
+            tg.moves = 0;
+            const int k2 = find_aff(at, m.yeti[y]);
+            if (k2 >= 0) at.aff[k2][3] = static_cast<uint8_t>(c);
+            add_event(out, c, Ev::Grabbed);
+        }
         // Treasures' harpy (0x84, GAME.OVR 0x240ED): Gateway's charm
         if (!gw.ways && hasx(at, gw.harpy) && tg.up() && b.fx->charm && !tg.has(b.fx->charm) && !saving_throw(tg, 4, 0, d)) {
             give_aff(tg, b.fx->charm, 0, (at.team() ? 0x80 : 0) | 3, true);
@@ -3308,6 +3327,25 @@ int turn_holds(Battle& b, int i, create::Dice& d, Event* out, int cap, int* bite
                 let_go(b, f, suck);
             }
         }
+    }
+    // Treasures' yetis (GAME.OVR 0x2538A, event 0xE): the one it holds
+    // squeezed - its dice - and its turn is over
+    for (int y = 0; y < 3; ++y) {
+        const int k = m.yeti[y] && m.yeti_held ? find_aff(f, m.yeti[y]) : -1;
+        if (k < 0 || f.aff[k][3] == 0xFF || !f.up()) continue;
+        const int v = f.aff[k][3];
+        if (v >= b.n || !b.f[v].has(m.yeti_held) || !b.f[v].up()) continue;
+        ev(i, Ev::Squeezes, v);
+        set_actor(b, i);
+        const int amount = d.roll(m.yeti_dice[y][1], m.yeti_dice[y][0]);
+        Harm h;
+        bool dn = false;
+        const int done = harm(b, v, amount, h, d, &dn);
+        g_kind = 0;
+        Event* e = ev(v, Ev::Damage);
+        if (e) e->amount = static_cast<int16_t>(done);
+        if (dn) ev(v, Ev::Down);
+        return n;
     }
     // Gateway's squid with rules::fixes(): it squeezes the one it holds - two
     // of its handler's 1d2 (GAME.OVR 0x1ABA3, never reached in the original);

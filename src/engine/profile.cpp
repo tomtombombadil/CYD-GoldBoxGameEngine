@@ -1420,6 +1420,16 @@ constexpr combat::Facts kTreasuresFacts = [] {
     f.gw.stone_word = 0x81;
     f.mon.swallow = 0x9B;               // the remorhaz: a roll of 20 swallows (0x25749)
     f.mon.quarter_pierce = 0x8D;        // the stone guardian: piercing a quarter, 0x10 types nothing (0x24814)
+    f.mon.yeti[0] = 0x95;               // the yetis' hug: 2d8, 4d5, 6d4 (0x2544D / 0x25474 / 0x2549B -> 0x251A0)
+    f.mon.yeti[1] = 0x96;
+    f.mon.yeti[2] = 0x97;
+    f.mon.yeti_dice[0][0] = 2;
+    f.mon.yeti_dice[0][1] = 8;
+    f.mon.yeti_dice[1][0] = 4;
+    f.mon.yeti_dice[1][1] = 5;
+    f.mon.yeti_dice[2][0] = 6;
+    f.mon.yeti_dice[2][1] = 4;
+    f.mon.yeti_held = 0x9C;
     f.gw.glacier = 0x87;                // a blow at one whose armour has word 0x80: half (0x2423F)
     f.gw.glacier_word = 0x80;
     return f;
@@ -4517,6 +4527,9 @@ uint32_t duel_word(const Profile& p, int word)
         {games::Game::ChampionsOfKrynn, kIsCharmedG, 0x31EF3},
         {games::Game::TreasuresOfTheSavageFrontier, kIsCharmedG, 0x240E2},   // (its harpy's 0x84: 0x240ED)
         {games::Game::TreasuresOfTheSavageFrontier, kSwallowed, 0x2573C},    // (its remorhaz's 0x9B: 0x25749)
+        {games::Game::TreasuresOfTheSavageFrontier, kGrabbed, 0x25181},      // (its yetis' hug: 0x251A0)
+        {games::Game::TreasuresOfTheSavageFrontier, kSqueezing, 0x25192},
+        {games::Game::TreasuresOfTheSavageFrontier, kReleased, 0x25175},
         {games::Game::ChampionsOfKrynn, kBreathesB, 0x32698},
         {games::Game::ChampionsOfKrynn, kBreathesAcid, 0x32E24},
         {games::Game::ChampionsOfKrynn, kEmitsStench, 0x13726},     // (the ghast's stench 0x4F: 0x13747)

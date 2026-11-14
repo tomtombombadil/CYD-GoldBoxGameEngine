@@ -236,6 +236,9 @@ enum FightWord {
     kBreathesSteam,         // the Dark Queen's 0xCC: "breathes steam" (DQK.EXE 0x5466F)
     kEmitsStench,           // "emits an evil stench" (Champions GAME.OVR 0x13726, the Queen DS 0x41FF)
     kStenchAffected,        // "is affected" (Champions 0x1373B) / "Affected" (the Queen DS 0x41F6)
+    kGrabbed,               // Treasures' yetis: "has been grabbed" (GAME.OVR 0x25181)
+    kSqueezing,             // ... "is squeezing " + the name (0x25192)
+    kReleased,              // ... "is released" (0x25175)
     kFightWords
 };
 

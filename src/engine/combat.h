@@ -394,6 +394,12 @@ struct MonFx {
     // ... and its 0x8D (0x24814): a blow of a weapon type byte <= 1 a
     // quarter; of a type flagged 0x10 nothing
     uint8_t quarter_pierce = 0;
+    // Treasures' yetis (0x95 / 0x96 / 0x97, GAME.OVR 0x251A0): a blow's
+    // d20 of 20 "has been grabbed" (`yeti_held` 0x9C on it, the yeti's own
+    // effect's data the one held); at its turn "is squeezing NAME" - the
+    // dice (count, sides) - and its turn is over; it lets go as it falls
+    // ("is released")
+    uint8_t yeti[3] = {}, yeti_dice[3][2] = {}, yeti_held = 0;
 };
 
 // More spells' effects (spell_facts.md 2): Enlarge, Confusion (and going
@@ -1130,6 +1136,9 @@ enum class Ev : uint8_t {
     // the stench (Champions' ghast 0x4F, the Dark Queen's 0x89): "emits an
     // evil stench"; `to` failed its save: "is affected" / "Affected"
     EmitsStench, StenchAffected,
+    // Treasures' yetis: "has been grabbed" (`who` the one held), "is
+    // squeezing NAME" (`to` the one held), "is released"
+    Grabbed, Squeezes, Released,
 };
 struct Event {
     uint8_t who = 0;

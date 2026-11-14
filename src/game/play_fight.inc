@@ -2942,6 +2942,15 @@ void event_words(const combat::Event& e)
     case combat::Ev::BreathesDeath: add_page(who, d->w_qbreath[3]); break;
     case combat::Ev::BreathesSteam: said(profile::kBreathesSteam); break;
     case combat::Ev::EmitsStench: said(profile::kEmitsStench); break;
+    case combat::Ev::Grabbed: said(profile::kGrabbed); break;
+    case combat::Ev::Released: said(profile::kReleased); break;
+    case combat::Ev::Squeezes: {
+        char nm[20];
+        fighter_name(fg->b.f[e.to >= 0 ? e.to : who], nm, sizeof nm);
+        snprintf(t, sizeof t, "%s%s", fw(profile::kSqueezing), nm);
+        add_page(who, t);
+        break;
+    }
     case combat::Ev::StenchAffected: said(profile::kStenchAffected); break;
     case combat::Ev::BreathesPara: add_page(who, d->w_qbreath[4]); break;
     case combat::Ev::HoundFire: said(profile::kBreathesFireH); break;

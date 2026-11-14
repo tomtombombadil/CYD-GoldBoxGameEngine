@@ -1793,8 +1793,13 @@ the Project as claude/TODO.md.
       sorceress's, the kraken master's: game block +0x3C set - +0x3D = 0 /
       1 / 2, +0x3B bits 1 / 2 / 4, [0xF2A0] = 1, the effect off, 0x23CDE;
       when, not read), 0x89, 0x8A, 0x8C, 0x8E (none in some event), 0x8F,
-      0x90, 0x91, 0x92 (x2 of [0x9E1C]), 0x93, 0x94, 0x95-0x97 (the yetis:
-      0x251A0 with 8/2, 5/4, 4/6), 0x98, 0x9A (the ice hound); the
+      0x90, 0x91, 0x92 (x2 of [0x9E1C]), 0x93, 0x94, 0x98, 0x9A (the ice
+      hound's "Breathes Ice", 0x25649). v0.196.40: the yetis' hug 0x95 /
+      0x96 / 0x97 (0x251A0: a blow's roll of 20 "has been grabbed" - 0x9C,
+      no moves -, its turn "is squeezing NAME" 2d8 / 4d5 / 6d4 and over,
+      its fall lets go; rules4 yeti). Not exact yet: the original's 20 is
+      the d20 with the roll's modifiers (a Blessed 19 grabs), the engine's
+      the d20 alone; "is released" isn't said (fall() has no pages); the
       Queen's 0x75, 0x85, 0xC3, 0xC5, 0xC6, 0xD1, 0xC7, 0xCE, 0xD0, 0xD3,
       0xD4, 0xC9.
 - [x] Empty fight words (v0.196.32, fx_check's new E1: a page of the names
