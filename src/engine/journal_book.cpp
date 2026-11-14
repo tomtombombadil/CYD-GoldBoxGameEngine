@@ -130,6 +130,9 @@ int flow(const Prev& p, const pdf::TextLine& l, int page, bool top)
     if (!p.have) return 0;
     const float em = l.size > 1 ? l.size : 1;
     const float dy = p.y - l.y, dx = l.x - p.x;
+    // The same line in pieces (a scan's text layer: the Steam Dark Queen
+    // journal has lines cut in two, the second a point up or down)
+    if (page == p.page && std::fabs(dy) <= 0.3f * em && dx > 2 * em && same_size(p.size, l.size)) return 2;
     // Further down the same column (the text goes on under a picture;
     // lines made short by a picture beside them start further right)
     if (page == p.page && dy > 0.3f * em && std::fabs(dx) <= 6 * em) {
@@ -145,6 +148,11 @@ int flow(const Prev& p, const pdf::TextLine& l, int page, bool top)
     // last line stopped mid-sentence
     if (!same_size(p.size, l.size)) return 0;
     if (page == p.page && l.y > p.y + em && l.x > p.x + 6 * em && (p.bottom || top)) return 3;
+    // (a column that ends above the page's foot and a next one that starts
+    // below its top - a wide paragraph over the columns, a picture under
+    // them: the sentence left open goes on in small letters there. The
+    // Steam Treasures Introduction's first column, Tom 2026-11-14)
+    if (page == p.page && l.y > p.y + em && l.x > p.x + 6 * em && p.open && l.len > 0 && is_lower(l.text[0])) return 3;
     if (page != p.page && (p.bottom || (p.open && top))) return 3;
     return 0;
 }
@@ -293,6 +301,12 @@ struct Book : pdf::TextSink {
             return true;
         }
         if (!open) return true;
+        // (a scan's specks read as a mark or two: not text, and no reason to end the section)
+        if (l.len <= 2) {
+            bool word = false;
+            for (int i = 0; i < l.len; ++i) word = word || is_letter(l.text[i]) || is_digit(l.text[i]);
+            if (!word) return true;
+        }
         // The Introduction's heading alone on its line, set in the page's
         // middle (the Steam Treasures, Curse and Dark Queen journals): its
         // text starts at the left margin, far from the heading's own left
