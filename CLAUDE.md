@@ -815,6 +815,17 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   (the engine / game code already builds on the PC; the src/ui screens and
   hal are the board-bound parts) - keep new code off Arduino / LovyanGFX
   outside src/ui and src/hal.
+  **The PortMaster port is its own repo since 2026-11-14**
+  (`tomtombombadil/PM-GoldBoxGameEngine`, Claude manages it; its Claude
+  Project "PM-GoldBoxGameEngine"): it builds `src/engine` + `src/game/play.cpp`
+  from this repo as a pinned submodule, unchanged, through `play.h` and
+  `src/platform/*.h` only - so those headers are an interface another repo
+  depends on: change a signature there and the port must follow. From that
+  session only bug fixes come here, plus what Tom OKs for the port (v0.196.52:
+  `play::exit_point`, the menu line's Exit word for a handheld's Back
+  button - Tom, 2026-11-14; the boards don't call it). The game code may
+  use only standard C / C++ library calls plus strlcpy / strlcat (the port
+  supplies those two for old glibc).
 - Game screens (Walk Test, Play Test now, the games later): canvas 1:1 at the top left
   (`frame::set_left`), controls below it, on 480x320 the Companion strip on
   the right (SPEC section 4). Which map / walls an area uses comes from its

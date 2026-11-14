@@ -61,6 +61,10 @@ void tick(uint32_t now_ms, pic::Canvas& c);
 bool back(pic::Canvas& c);
 // Exit to DOS was chosen on the party menu: true once.
 bool exit_requested();
+// Where a tap picks the menu line's "Exit" word; false if the line shown
+// has none. For a front end with a Back button (the PortMaster port): Back
+// is back() first, then a tap here.
+bool exit_point(int* x, int* y);
 
 // Typing: the game asks for a number or a line of text (INPUT NUMBER /
 // STRING). The front end shows a keyboard while input() != None and sends
