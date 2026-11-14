@@ -2539,6 +2539,22 @@ constexpr auto kQueenFight = [] {
     f.words[kBreathesLightning] = qw(0x873A);
     f.words[kBreathesPoison] = qw(0x872A);
     f.words[kBreathesSteam] = qw(0x871B);
+    f.words[kRayDisint] = qw(0x5C8C);
+    f.words[kIsDisint] = qw(0x5CA5);
+    f.words[kRayStone] = qw(0x5CB6);
+    f.words[kRayDeath] = qw(0x5CDB);
+    f.words[kWoundsYou] = qw(0x5CED);
+    f.words[kParaPoisonQ] = qw(0x830E);
+    f.words[kCrippledQ] = qw(0x85E2);
+    f.words[kGreenFire] = qw(0x8590);
+    f.words[kGreenFireDies] = qw(0x8575);
+    f.words[kSquirtedQ] = qw(0x863D);
+    f.words[kGorgonBreathes] = qw(0x8548);
+    f.words[kFlashesRay] = qw(0x85AA);
+    f.words[kRayGone] = qw(0x85B6);
+    f.words[kEyeGazes] = qw(0x8606);
+    f.words[kEyeStunned] = qw(0x860C);
+    f.words[kGorgonStoned] = qw(0x8551);
     f.words[kEmitsStench] = qw(0x41FF);       // (the stench 0x89: 0x50221)
     f.words[kStenchAffected] = qw(0x41F6);
     // (words its fights can say that the list had empty: the shambling
@@ -2571,6 +2587,21 @@ constexpr auto kQueenFight = [] {
     // heals, electricity slows, nothing else harms; Globe of Invulnerability
     // 0x39 - 0x4E9A1; a gaze saved 0x7E - 0x4FFA7; 2d6 fire on a hit 0x6C -
     // 0x54289; the poison breath 0x5A and its steam 0xCC - 0x5466F)
+    f.facts.mon.rays = 0x75;            // the beholder: Curse's rays, then Fear / Slow / Sleep (w0 0x21E4:0x4FD1 = 0x29D31)
+    f.facts.mon.ray_spells[0] = 0x54;
+    f.facts.mon.ray_spells[1] = 0x37;
+    f.facts.mon.ray_spells[2] = 0x15;
+    f.facts.mon.q_para2 = 0xC7;         // (round 22's effects sweep - DQK.EXE handlers: 0x526C0)
+    f.facts.mon.q_cripple = 0xCE;       // 0x52874
+    f.facts.mon.q_constrict = 0xD0;     // 0x5291D
+    f.facts.mon.q_para_bite = 0xD3;     // 0x52C7F
+    f.facts.mon.q_squirt = 0xD4;        // 0x52CF3 (the attacker squirted - SPEC 12)
+    f.facts.mon.q_green_hit = 0xC9;     // 0x52703
+    f.facts.mon.q_green = 0xC4;         // 0x522EC
+    f.facts.mon.q_blow_ward = 0xC5;     // 0x52426
+    f.facts.mon.q_ray13 = 0xC6;         // the eye of the deep's ray (0x52472)
+    f.facts.mon.q_eye = 0xD1;           // ... and its gaze (0x52A7C)
+    f.facts.mon.q_gorgon = 0xC3;        // 0x527D9 / 0xCB 0x520EB (the gorgon's breath)
     f.facts.mon.stench = 0x89;          // (the stench: 0x50221 - its -2 to hit 0x94 = q.minus2, on the holder)
     f.facts.mon.stenched = 0x94;
     f.facts.mon.stench_skip = 0x76;

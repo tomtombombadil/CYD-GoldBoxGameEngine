@@ -242,6 +242,17 @@ enum FightWord {
     kBreathesIce,           // Treasures' ice hound: "Breathes Ice" (0x2563C)
     kSpine, kSpineMisses,   // Treasures' manticore: "Throws a Spine" (0x248AE), "... and Misses" (0x248BD)
     kReflectsSpell,         // Death Knights' death knights: "reflects the spell" (DS 0x1F06)
+    kParaPoisonQ,           // the Dark Queen's "paralyzed by poison" (DS 0x830E)
+    kCrippledQ,             // ... "is crippled by venom." (DS 0x85E2)
+    kGreenFire,             // ... "is turning to green fire!" (DS 0x8590)
+    kGreenFireDies,         // ... "is engulfed by green fire!" (DS 0x8575)
+    kSquirtedQ,             // ... "is squirted by anemone's acid!" (DS 0x863D)
+    kGorgonBreathes,        // ... "breathes" (DS 0x8548)
+    kGorgonStoned,          // ... "is petrified by the gorgon's breath" (DS 0x8551)
+    kFlashesRay,            // ... "flashes ray" (DS 0x85AA)
+    kRayGone,               // ... "is disintegrated" (DS 0x85B6)
+    kEyeGazes,              // ... "gazes" (DS 0x8606)
+    kEyeStunned,            // ... "is stunned by the Eye of the Deep's ..." (DS 0x860C)
     kFightWords
 };
 

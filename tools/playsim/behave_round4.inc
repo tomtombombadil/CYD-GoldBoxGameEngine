@@ -1439,6 +1439,218 @@ void reflect()
     expect(P, "Death Knights' death knights' spell reflection (GAME.OVR 0x1D502)", bad == 0, "%d of %d wrong", bad, n);
 }
 
+// The Dark Queen's round 22 hit effects (DQK.EXE 0x526C0 / 0x52874 /
+// 0x52C7F / 0x52CF3 / 0x52703 / 0x522EC / 0x52426): attack 2's paralysing
+// venoms, the crippling venom, the anemone's squirt (the attacker in the
+// original, the one hit with Game Fixes), green fire, the blow ward
+void queen_hits22()
+{
+    if (game() != 7 || !fight() || !fg->b.fx || !fg->b.fx->mon.q_para2) return;
+    combat::Battle& b = fg->b;
+    const auto& m = b.fx->mon;
+    const auto& q = b.fx->q;
+    int bad = 0, n = 0;
+    auto chk = [&](bool ok, const char* what) {
+        ++n;
+        if (!ok && !bad++) printf("  (qhits22: %s)\n", what);
+    };
+    auto scene = [&](uint8_t eff) {
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(0, 0, 10, 10, 200);
+        mx::put(B, 1, 11, 10, 200);
+        mx::add_aff(B, eff);
+        combat::Fighter& at = F(B);
+        at.rec[0x199] = 80;
+        at.attacks[0] = 0;
+        at.attacks[1] = 1;
+        at.rec[0x19F] = 1;
+        at.rec[0x1A1] = 4;
+        at.rec[0x1A3] = 0;
+    };
+    auto count = [](const combat::Attack& r, combat::Ev e, int who) {
+        int k = 0;
+        for (int j = 0; j < r.n_ev; ++j) k += r.ev[j].ev == e && (who < 0 || r.ev[j].who == who);
+        return k;
+    };
+    // the paralysing venoms: paralyzed exactly when "paralyzed by poison" is said
+    for (uint8_t eff : {m.q_para2, m.q_para_bite}) {
+        int said = 0, agree = 0;
+        for (int sd = 1; sd <= 40; ++sd) {
+            scene(eff);
+            create::Dice d2(static_cast<uint32_t>(sd));
+            const combat::Attack r = combat::attack(b, B, 0, nullptr, d2);
+            const bool p = count(r, combat::Ev::ParaPoisonQ, 0) > 0;
+            said += p;
+            agree += p == F(0).has(m.paralyzed);
+        }
+        chk(said > 0 && agree == 40, "attack 2's venom: paralyzed by poison, on a failed save only");
+    }
+    // the crippling venom: 0xCF for 1d4 rounds with the words
+    {
+        int said = 0, agree = 0;
+        for (int sd = 1; sd <= 40; ++sd) {
+            scene(m.q_cripple);
+            create::Dice d2(static_cast<uint32_t>(sd));
+            const combat::Attack r = combat::attack(b, B, 0, nullptr, d2);
+            const bool p = count(r, combat::Ev::CrippledQ, 0) > 0;
+            said += p;
+            agree += p == F(0).has(q.tgt_minus1);
+        }
+        chk(said > 0 && agree == 40, "crippled by venom: 0xCF");
+    }
+    // the anemone's squirt: the attacker (original), the one hit (Game Fixes)
+    const bool was = rules::fixes();
+    for (int fix = 0; fix < 2; ++fix) {
+        rules::set_fixes(fix != 0);
+        scene(m.q_squirt);
+        create::Dice d2(5);
+        const combat::Attack r = combat::attack(b, B, 0, nullptr, d2);
+        const int who = fix ? 0 : B;
+        chk(count(r, combat::Ev::SquirtedQ, who) == 1 && F(who).hp() < 200 - (fix ? 4 : 0) + (fix ? 4 : 0),
+            fix ? "Game Fixes: the one hit squirted" : "the original: the anemone squirts itself");
+        if (!fix) chk(F(B).hp() >= 200 - 12 && F(B).hp() <= 200 - 3, "the squirt: 3d4");
+    }
+    rules::set_fixes(was);
+    // green fire: given on a failed save, 1d8 at each round's start, gone when whole
+    {
+        int given = 0;
+        for (int sd = 1; sd <= 30 && !given; ++sd) {
+            scene(m.q_green_hit);
+            create::Dice d2(static_cast<uint32_t>(sd));
+            combat::attack(b, B, 0, nullptr, d2);
+            given += F(0).has(m.q_green);
+        }
+        chk(given > 0, "green fire given");
+        F(0).rec[0x1A4] = 150;
+        combat::Event ev[16];
+        create::Dice d3(9);
+        const int k = combat::start_round(b, d3, ev, 16);
+        int dmg = 0, words = 0;
+        for (int j = 0; j < k; ++j) {
+            if (ev[j].ev == combat::Ev::Damage && ev[j].who == 0) dmg = ev[j].amount;
+            words += ev[j].ev == combat::Ev::GreenFire && ev[j].who == 0;
+        }
+        chk(dmg >= 1 && dmg <= 8 && words == 1 && F(0).has(m.q_green), "green fire: 1d8, burning on");
+        F(0).rec[0x1A4] = F(0).rec[0x78];
+        combat::start_round(b, d3, ev, 16);
+        chk(!F(0).has(m.q_green), "green fire: gone when whole");
+    }
+    // the blow ward: from next to it with no magic weapon - nothing
+    {
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(0, 0, 10, 10, 200);
+        mx::put(B, 1, 11, 10, 200);
+        mx::add_aff(B, m.q_blow_ward);
+        combat::Fighter& at = F(0);
+        at.rec[0x199] = 80;
+        at.attacks[0] = 1;
+        at.attacks[1] = 0;
+        at.rec[0x19E] = 1;
+        at.rec[0x1A0] = 6;
+        at.rec[0x1A2] = 2;
+        create::Dice d2(3);
+        const combat::Attack r = combat::attack(b, 0, B, nullptr, d2);
+        chk(r.n > 0 && r.hits[0].hit && F(B).hp() == 200, "the ward: a bare blow from next to it does nothing");
+    }
+    expect(P, "the Dark Queen's round 22 hit effects (DQK.EXE 0x526C0 / 0x52874 / 0x52CF3 / 0x52703 / 0x522EC / 0x52426)",
+           bad == 0, "%d of %d wrong", bad, n);
+}
+
+// The Dark Queen's gorgon (0xC3 / 0xCB), eye of the deep (0xC6 / 0xD1),
+// beholder (0x75) - their turns (DQK.EXE 0x527D9 / 0x520EB / 0x52472 /
+// 0x52A7C / 0x29D31)
+void queen_turns22()
+{
+    if (game() != 7 || !fight() || !fg->b.fx || !fg->b.fx->mon.q_gorgon) return;
+    combat::Battle& b = fg->b;
+    const auto& m = b.fx->mon;
+    int bad = 0, n = 0;
+    auto chk = [&](bool ok, const char* what) {
+        ++n;
+        if (!ok && !bad++) printf("  (qturns22: %s)\n", what);
+    };
+    auto scene = [&](uint8_t eff, int bx = 13) {
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(0, 0, 10, 10, 200);
+        mx::put(B, 1, bx, 10, 200);
+        combat::occupancy(b);
+        mx::add_aff(B, eff, 0xFF);   // (a monster's effects: data 0xFF)
+    };
+    auto run = [&](int seed, combat::Event* ev, int* k, bool* ends) {
+        create::Dice dd(static_cast<uint32_t>(seed));
+        *ends = false;
+        *k = combat::special(b, fg->t, B, dd, ev, 32, ends);
+    };
+    auto has_ev = [](const combat::Event* ev, int k, combat::Ev e) {
+        for (int j = 0; j < k; ++j)
+            if (ev[j].ev == e) return true;
+        return false;
+    };
+    combat::Event ev[32];
+    int k = 0;
+    bool ends = false;
+    const int keep = b.round;
+    // the gorgon: 4 breaths, stoned only on a failed save
+    {
+        scene(m.q_gorgon);
+        b.round = 0;
+        int breathes = 0, stoned_ok = 1;
+        for (int t = 0; t < 6; ++t) {
+            mx::put(0, 0, 10, 10, 200);
+            combat::occupancy(b);
+            run(10 + t, ev, &k, &ends);
+            const bool br = has_ev(ev, k, combat::Ev::GorgonBreathes);
+            breathes += br;
+            if (br && has_ev(ev, k, combat::Ev::GorgonStoned) != (F(0).rec[0x195] == party::Stoned)) stoned_ok = 0;
+            b.round = 1;
+        }
+        if (getenv("QT_DEBUG")) printf("  gorgon breathes %d\n", breathes);
+        chk(breathes == 4, "the gorgon: four breaths a fight");
+        chk(stoned_ok, "the gorgon: \"is petrified by the gorgon's breath\" with the stoning");
+    }
+    // the eye's ray: in the first round, then not until the round count is a multiple of 6
+    {
+        scene(m.q_ray13);
+        b.round = 0;
+        run(3, ev, &k, &ends);
+        const bool r1 = has_ev(ev, k, combat::Ev::FlashesRay);
+        b.round = 1;
+        run(4, ev, &k, &ends);
+        const bool r2 = has_ev(ev, k, combat::Ev::FlashesRay);
+        b.round = 5;
+        run(5, ev, &k, &ends);
+        const bool r6 = has_ev(ev, k, combat::Ev::FlashesRay);
+        chk(r1 && !r2 && r6, "the eye's ray: the first round, then each sixth");
+    }
+    // the eye's gaze: paralysed when stunned is said, every turn
+    {
+        int said = 0, agree = 0;
+        for (int sd = 1; sd <= 20; ++sd) {
+            scene(m.q_eye, 11);
+            b.round = 1;
+            run(sd, ev, &k, &ends);
+            const bool st = has_ev(ev, k, combat::Ev::EyeStunned);
+            said += st;
+            agree += st == F(0).has(m.paralyzed) && has_ev(ev, k, combat::Ev::EyeGazes) && ends;
+            if (sd == 1 && getenv("QT_DEBUG")) {
+                printf("  eye: k %d ends %d:", k, ends);
+                for (int j = 0; j < k; ++j) printf(" %d/%d", static_cast<int>(ev[j].ev), ev[j].who);
+                printf("\n");
+            }
+        }
+        chk(said > 0 && agree == 20, "the eye's gaze: stunned (paralysed) on a failed save, its turn over");
+    }
+    // the beholder's rays
+    if (m.rays) {
+        scene(m.rays, 11);
+        run(7, ev, &k, &ends);
+        chk(has_ev(ev, k, combat::Ev::RayDisintegrate), "the beholder: its first ray next to it - disintegrate");
+    }
+    b.round = keep;
+    expect(P, "the Dark Queen's gorgon, eye of the deep and beholder (DQK.EXE 0x520EB / 0x52472 / 0x52A7C / 0x29D31)",
+           bad == 0, "%d of %d wrong", bad, n);
+}
+
 // PoolRad's halving effects (the round 22 effects sweep, GAME.OVR's
 // handlers): 0x5D fire, 0x72 electricity, 0x76 cold halved; 0x6F poison
 // proof. Gateway's 0x5D the same (GAME.OVR 0x13F81).
@@ -5110,6 +5322,8 @@ void run()
     if (want("qmound")) queen_mound();
     if (want("halves")) pool_halves();
     if (want("stench")) stench();
+    if (want("qhits22")) queen_hits22();
+    if (want("qturns22")) queen_turns22();
     if (want("terror")) terror();
     if (want("reflect")) reflect();
     if (want("yeti")) yeti();

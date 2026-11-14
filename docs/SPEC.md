@@ -3126,6 +3126,10 @@ the game's Settings (As Original: all of them).
   byte compared unsigned, so a total below 0 wraps round to a save made -
   a 2 rolled with -4 (blinded, a bestowed curse) saves. With Game Fixes
   on a total below 0 is a save failed (`combat::saving_throw`).
+- **The anemone's squirt** (Game Fixes; the Dark Queen's 0xD4, DQK.EXE
+  0x52CF3): the original squirts the record in [0xAD67] - during a blow,
+  the attacker, the anemone itself - for 3d4. With Game Fixes on, the one
+  it hit is squirted.
 - **The stench** (Game Fixes; Champions' / Death Knights' ghast 0x4F, the Dark Queen's 0x89,
   the effects sweep 2026-11-13): both originals give the -2 to hit
   (Champions 0x76, the Queen 0x94) to the stench's holder each time a foe

@@ -2943,6 +2943,17 @@ void event_words(const combat::Event& e)
     case combat::Ev::BreathesSteam: said(profile::kBreathesSteam); break;
     case combat::Ev::EmitsStench: said(profile::kEmitsStench); break;
     case combat::Ev::Grabbed: said(profile::kGrabbed); break;
+    case combat::Ev::ParaPoisonQ: said(profile::kParaPoisonQ); break;
+    case combat::Ev::CrippledQ: said(profile::kCrippledQ); break;
+    case combat::Ev::GreenFire: said(profile::kGreenFire); break;
+    case combat::Ev::GreenFireDies: said(profile::kGreenFireDies); break;
+    case combat::Ev::SquirtedQ: said(profile::kSquirtedQ); break;
+    case combat::Ev::GorgonBreathes: said(profile::kGorgonBreathes); break;
+    case combat::Ev::GorgonStoned: fallen(profile::kGorgonStoned); break;
+    case combat::Ev::FlashesRay: said(profile::kFlashesRay); break;
+    case combat::Ev::RayGone: fallen(profile::kRayGone); break;
+    case combat::Ev::EyeGazes: said(profile::kEyeGazes); break;
+    case combat::Ev::EyeStunned: said(profile::kEyeStunned); break;
     case combat::Ev::BreathesIce: said(profile::kBreathesIce); break;
     case combat::Ev::Spine: said(profile::kSpine); break;
     case combat::Ev::SpineMisses: said(profile::kSpineMisses); break;

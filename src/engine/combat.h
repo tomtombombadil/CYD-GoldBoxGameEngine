@@ -434,6 +434,37 @@ struct MonFx {
     // every other fighter next to it, friend or foe; 0x4A (0x1D7C1) a hit's
     // 2d6 more, a save against spells for half
     uint8_t fire_aura = 0, hit_2d6 = 0;
+    // The Dark Queen's (DQK.EXE; events 3 / 4 / 5 of its hook switch):
+    // 0xC7 (0x526C0) attack 2's hit: a save against spells at -4, then
+    //   against poison, or paralyzed 10 rounds ("paralyzed by poison");
+    // 0xCE (0x52874) attack 2's hit: a save against poison or "is crippled
+    //   by venom." - 0xCF (q.tgt_minus1) for 1d4;
+    // 0xD0 (0x5291D) attack 2's hit: the engulf's hold (0xB1-B3) on a d10
+    //   of 4 or less - "constricts NAME";
+    // 0xD3 (0x52C7F) attack 2's hit: a save against poison or 1d6 more and
+    //   paralyzed 3d6 rounds;
+    // 0xD4 (0x52CF3) attack 2's hit of 15 or less on one next to it: the
+    //   original squirts the ATTACKER (its record in [0xAD67]) - 3d4, "is
+    //   squirted by anemone's acid!"; Game Fixes: the one hit;
+    // 0xC9 (0x52703) its damage: a save against spells or green fire (0xC4);
+    // 0xC4 (0x522EC) green fire: 1d8 a round until dead or whole again;
+    // 0xC5 (0x52426): a blow from next to it by no magic weapon does nothing
+    uint8_t q_para2 = 0, q_cripple = 0, q_constrict = 0, q_para_bite = 0, q_squirt = 0, q_green_hit = 0,
+            q_green = 0, q_blow_ward = 0;
+    // the Dark Queen's gorgon (0xC3, DQK.EXE 0x527D9: 0xCB with 4 uses at
+    // the fight's set-up; 0xCB 0x520EB at its turn): a use taken, then its
+    // pick (spell 0x17's aim) - the cone (reach 6, 2 lines) with none of
+    // its side on it: "breathes", each a save against petrification or "is
+    // petrified by the gorgon's breath" (stoned); its turn over
+    uint8_t q_gorgon = 0;
+    // its eye of the deep: 0xC6 (0x52472) a ray once each 6 rounds (its
+    // data 1 again when the round count is a multiple of 6): its pick (spell
+    // 0x17's aim), a line of 13 with none of its side on it, "flashes ray",
+    // each 4d4 - none on a save against breath - and "is disintegrated" as
+    // it falls; 0xD1 (0x52A7C) every turn: the cone (reach 3, 2 lines),
+    // "gazes", each a save against poison or "is stunned by the Eye of the
+    // Deep's Blinding flash" - paralysed 2d4 rounds; either ends its turn
+    uint8_t q_ray13 = 0, q_eye = 0;
 };
 
 // More spells' effects (spell_facts.md 2): Enlarge, Confusion (and going
@@ -1175,6 +1206,12 @@ enum class Ev : uint8_t {
     Grabbed, Squeezes, Released,
     BreathesIce,                        // Treasures' ice hound
     Spine, SpineMisses,                 // Treasures' manticore
+    // the Dark Queen's: "paralyzed by poison", "is crippled by venom.",
+    // "is turning to green fire!", "is engulfed by green fire!", "is
+    // squirted by anemone's acid!"
+    ParaPoisonQ, CrippledQ, GreenFire, GreenFireDies, SquirtedQ,
+    GorgonBreathes, GorgonStoned,
+    FlashesRay, RayGone, EyeGazes, EyeStunned,
 };
 struct Event {
     uint8_t who = 0;

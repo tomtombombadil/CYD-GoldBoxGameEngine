@@ -1815,9 +1815,22 @@ the Project as claude/TODO.md.
       no moves -, its turn "is squeezing NAME" 2d8 / 4d5 / 6d4 and over,
       its fall lets go; rules4 yeti). Not exact yet: the original's 20 is
       the d20 with the roll's modifiers (a Blessed 19 grabs), the engine's
-      the d20 alone; "is released" isn't said (fall() has no pages); the
-      Queen's 0x75, 0x85, 0xC3, 0xC5, 0xC6, 0xD1, 0xC7, 0xCE, 0xD0, 0xD3,
-      0xD4, 0xC9.
+      the d20 alone; "is released" isn't said (fall() has no pages).
+      v0.196.47 the Dark Queen (DQK.EXE; its hook switch's lists read out
+      to know each one's event): 0x75 the beholder (Curse's rays, then
+      Fear / Slow / Sleep - w0 0x21E4:0x4FD1), 0xC3 / 0xCB the gorgon (4
+      breaths, a cone of 6 by 2 lines, a petrification save or stoned),
+      0xC6 / 0xD1 the eye of the deep (a 13-long ray each 6 rounds - 4d4,
+      none on a breath save, disintegrated as it falls; a 3-long gaze every
+      turn - poison save or paralysed 2d4), 0xC4 / 0xC9 green fire (a
+      spell save or 1d8 a round until dead or whole), 0xC5 (a bare / plus 0
+      blow from next to it does nothing), 0xC7 / 0xD3 attack 2's venoms
+      (paralysed 10 / 3d6 rounds, 0xD3 1d6 more), 0xCE crippled by venom
+      (0xCF 1d4), 0xD0 the constriction (the engulf's hold), 0xD4 the
+      anemone's squirt (3d4 - on the attacker in the original, on the one
+      hit with Game Fixes, SPEC 12); 0x85, 0x9F, 0xD2 in no list of the
+      hook switch - inert. rules4 qhits22 / qturns22. Every game's effects
+      sweep: only Treasures' list above left.
 - [x] Empty fight words (v0.196.32, fx_check's new E1: a page of the names
       alone): Champions' turn effects (runs away, is confused, goes berserk,
       is enraged - GAME.OVR 0x11936 on), "is Paralyzed" (0x10BE8), "Avoids

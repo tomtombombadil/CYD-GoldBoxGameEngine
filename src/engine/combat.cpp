@@ -2077,6 +2077,33 @@ int start_round(Battle& b, create::Dice& d, Event* out, int cap)
             }
         }
     }
+    // (the Dark Queen's green fire 0xC4, its clock at the round's start -
+    // DQK.EXE 0x522EC: whole again - gone; else 1d8, "is turning to green
+    // fire!" / "is engulfed by green fire!" as it falls)
+    for (int i = 0; b.fx && b.fx->mon.q_green && i < b.n; ++i) {
+        Fighter& f = b.f[i];
+        if (!f.size || !f.has(b.fx->mon.q_green)) continue;
+        if (!f.up() || f.hp() >= f.hp_max()) {
+            lose_aff(f, b.fx->mon.q_green);
+            continue;
+        }
+        Harm h;
+        bool dn = false;
+        const int done = harm(b, i, d.roll(8, 1), h, d, &dn);
+        g_kind = 0;
+        if (out && n_ev < cap && done > 0) {
+            out[n_ev] = Event{};
+            out[n_ev].who = static_cast<uint8_t>(i);
+            out[n_ev].amount = static_cast<int16_t>(done);
+            out[n_ev++].ev = Ev::Damage;
+        }
+        if (out && n_ev < cap) {
+            out[n_ev] = Event{};
+            out[n_ev].who = static_cast<uint8_t>(i);
+            out[n_ev++].ev = dn ? Ev::GreenFireDies : Ev::GreenFire;
+        }
+        if (dn) lose_aff(f, b.fx->mon.q_green);
+    }
     // (the Dark Queen's troll / anemone at the round's start - event 0x13)
     for (int i = 0; b.fx && b.fx->q.regen1 && i < b.n; ++i)
         if (queen_regen(b, i) && out && n_ev < cap) {
@@ -2447,6 +2474,43 @@ void after_hit_own(Battle& b, int a, int c, int slot, int roll, int hits1, creat
     if (hasx(at, m.fire2d6_hit)) fire_hit(2);
     if (slot == 1 && hasx(at, m.fire4d6_2)) fire_hit(4);
     if (slot == 1 && hasx(at, m.fire2d6_2)) fire_hit(2);
+    // The Dark Queen's attack 2 specials (event 3) and green fire (event 4)
+    if (m.paralyzed && slot == 1 && hasx(at, m.q_para2) && tg.up() && !saving_throw(tg, 4, -4, d) &&
+        !saving_throw(tg, 0, 0, d)) {
+        give_aff(tg, m.paralyzed, 10, 12, false);
+        add_event(out, c, Ev::ParaPoisonQ);
+    }
+    if (slot == 1 && hasx(at, m.q_cripple) && tg.up() && b.fx->q.tgt_minus1 && !saving_throw(tg, 0, 0, d)) {
+        add_event(out, c, Ev::CrippledQ);
+        lose_aff(tg, b.fx->q.tgt_minus1);
+        give_aff(tg, b.fx->q.tgt_minus1, d.roll(4, 1), 0xFF, false);
+    }
+    if (slot == 1 && hasx(at, m.q_constrict) && d.roll(10, 1) <= 4 && hits1 == 2 && tg.up() && m.held_fast &&
+        m.suffocate && m.engulfing && !tg.has(m.held_fast) && !tg.has(m.suffocate) && !hasx(tg, b.fx->q.engulf_not)) {
+        add_event(out, a, Ev::Constricts, c);
+        hold(m.engulfing);
+        give_aff(tg, m.suffocate, 0, d.roll(4, 2), false);
+    }
+    if (slot == 1 && hasx(at, m.q_para_bite) && tg.up() && !saving_throw(tg, 0, 0, d)) {
+        touch(d.roll(6, 1), 0);
+        if (m.paralyzed && tg.up()) {
+            give_aff(tg, m.paralyzed, d.roll(6, 3), 12, false);
+            add_event(out, c, Ev::ParaPoisonQ);
+        }
+    }
+    if (slot == 1 && hasx(at, m.q_squirt) && out.n > 0 && out.hits[out.n - 1].damage <= 15 && std::abs(tg.x - at.x) <= 1 && std::abs(tg.y - at.y) <= 1) {
+        const int who = rules::fixes() ? c : a;
+        add_event(out, who, Ev::SquirtedQ);
+        bool dn = false;
+        Harm h;
+        harm(b, who, d.roll(4, 3), h, d, &dn);
+        g_kind = 0;
+        if (dn && who == c) out.down = true;
+    }
+    if (hasx(at, m.q_green_hit) && m.q_green && tg.up() && !saving_throw(tg, 4, 0, d)) {
+        if (!tg.has(m.q_green)) give_aff(tg, m.q_green, 1, 0, true);
+        add_event(out, c, Ev::GreenFire);
+    }
     // Secret's (secret_facts_2.md 15): the cockatrice's touch - a save
     // against petrification or stoned; the remorhaz swallows its victim
     // whole on a natural 20
@@ -3067,6 +3131,9 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
                 };
                 if (hasx(tg, m.need_plus3) && !plus_ok(3)) dmg = 0;
                 if (hasx(tg, m.need_plus3m) && (!item || plus < 3) && (at.rec[0x74] > 0 || at.rec[kHd] < 4)) dmg = 0;
+                // (the Dark Queen's 0xC5, DQK.EXE 0x52426: from next to it, no magic weapon - nothing)
+                if (hasx(tg, m.q_blow_ward) && std::abs(at.x - tg.x) <= 1 && std::abs(at.y - tg.y) <= 1 && (!item || plus == 0))
+                    dmg = 0;
                 if (hasx(tg, m.need_plus2) && !plus_ok(2)) dmg = 0;
                 if (hasx(tg, m.need_plus1) && !plus_ok(1)) dmg = 0;
                 if (hasx(tg, m.half_under3) && item && plus < 3) dmg /= 2;
@@ -8319,6 +8386,73 @@ int special(Battle& b, const Tables& t, int i, create::Dice& d, Event* out, int 
                 *ends_turn = true;
                 return n;
             }
+        }
+    }
+    // The Dark Queen's gorgon (0xC3 / 0xCB, DQK.EXE 0x527D9 / 0x520EB)
+    if (m.q_gorgon && hasx(f, m.q_gorgon)) {
+        const int k0 = find_aff(f, m.q_gorgon);
+        if (k0 >= 0 && b.round == 0 && f.aff[k0][3] == 0xFF) f.aff[k0][3] = 4;
+        if (k0 >= 0 && f.aff[k0][3] > 0 && f.aff[k0][3] != 0xFF) {
+            --f.aff[k0][3];
+            const int tg = special_target(b, t, i, 6, false, d);
+            int on[kMaxFighters];
+            const int k = tg >= 0 ? cone(b, t, i, b.f[tg].x, b.f[tg].y, 6, 2, on, kMaxFighters) : 0;
+            if (k && !friend_on(on, k)) {
+                ev(i, Ev::GorgonBreathes);
+                fly(i, b.f[tg].x, b.f[tg].y, 5, 1, 30);
+                for (int j = 0; j < k; ++j)
+                    if (b.f[on[j]].up() && !saving_throw(b.f[on[j]], 1, 0, d)) remove(on[j], party::Stoned, Ev::GorgonStoned);
+                *ends_turn = true;
+                return n;
+            }
+        }
+    }
+    // The Dark Queen's eye of the deep (0xC6 / 0xD1, DQK.EXE 0x52472 / 0x52A7C)
+    if (m.q_ray13 && hasx(f, m.q_ray13)) {
+        const int k0 = find_aff(f, m.q_ray13);
+        if (k0 >= 0 && ((b.round + 1) % 6 == 0 || f.aff[k0][3] > 1)) f.aff[k0][3] = 1;
+        if (k0 >= 0 && f.aff[k0][3] > 0) {
+            const int tg = special_target(b, t, i, 13, false, d);
+            int on[kMaxFighters];
+            const int k = tg >= 0 ? cone(b, t, i, b.f[tg].x, b.f[tg].y, 13, 1, on, kMaxFighters) : 0;
+            if (k && !friend_on(on, k)) {
+                ev(i, Ev::FlashesRay);
+                fly(i, b.f[tg].x, b.f[tg].y, 5, 1, 30);
+                for (int j = 0; j < k; ++j) {
+                    if (!b.f[on[j]].up() || saving_throw(b.f[on[j]], 3, 0, d)) continue;
+                    Harm h;
+                    bool dn = false;
+                    const int done = harm(b, on[j], d.roll(4, 4), h, d, &dn);
+                    g_kind = 0;
+                    if (Event* e = done > 0 ? ev(on[j], Ev::Damage) : nullptr) e->amount = static_cast<int16_t>(done);
+                    if (dn) {
+                        b.f[on[j]].rec[kHealth] = party::Gone;
+                        ev(on[j], Ev::RayGone);
+                    }
+                }
+                --f.aff[k0][3];
+                *ends_turn = true;
+                return n;
+            }
+        }
+    }
+    if (m.q_eye && hasx(f, m.q_eye)) {
+        const int tg = special_target(b, t, i, 3, false, d);
+        int on[kMaxFighters];
+        const int k = tg >= 0 ? cone(b, t, i, b.f[tg].x, b.f[tg].y, 3, 2, on, kMaxFighters) : 0;
+        if (k && !friend_on(on, k)) {
+            ev(i, Ev::EyeGazes);
+            for (int j = 0; j < k; ++j) {
+                Fighter& v = b.f[on[j]];
+                if (!v.up()) continue;
+                if (saving_throw(v, 0, 0, d)) ev(on[j], Ev::Unaffected);
+                else if (m.paralyzed) {
+                    give_aff(v, m.paralyzed, d.roll(4, 2), 0xFF, false);
+                    ev(on[j], Ev::EyeStunned);
+                }
+            }
+            *ends_turn = true;
+            return n;
         }
     }
     // The Dark Queen's death breath (0xB4) and Baldric's paralysis or cold
