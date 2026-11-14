@@ -253,6 +253,11 @@ enum FightWord {
     kRayGone,               // ... "is disintegrated" (DS 0x85B6)
     kEyeGazes,              // ... "gazes" (DS 0x8606)
     kEyeStunned,            // ... "is stunned by the Eye of the Deep's ..." (DS 0x860C)
+    kSmashesCrystal,        // Treasures' villains: "smashes a crystal" (GAME.OVR 0x23CCC)
+    kFrightened,            // Treasures' yetis: "is frightened." (GAME.OVR 0x254C2)
+    kCrushed, kCrushing,    // ... its kampfult: "is being crushed" (0x24AC0), "is crushing " (0x24ADD)
+    kSlows, kToStone,       // ... its stone golem: "slows " (0x24E3C), "returns to stone" (0x24E43)
+    kGorgBreathes, kTurnedStone, kChangesForm, kChangesBack,   // ... its gorgimera: "Breathes" (0x25009), "is turned to stone" (0x25012)
     kFightWords
 };
 

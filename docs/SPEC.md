@@ -3130,6 +3130,12 @@ the game's Settings (As Original: all of them).
   0x52CF3): the original squirts the record in [0xAD67] - during a blow,
   the attacker, the anemone itself - for 3d4. With Game Fixes on, the one
   it hit is squirted.
+- **The green hag's shapes** (Treasures' 0x8C, GAME.OVR 0x245F6; not a
+  fix): the original loads five combat pictures (CPIC 0x26-0x2A) at the
+  fight's set-up and gives her one of them at random each time she
+  "changes form". The engine says "changes form" / "changes back" at the
+  same moments but keeps her own icon - five more icon pictures a fight
+  is memory a classic board doesn't have to spare.
 - **The stench** (Game Fixes; Champions' / Death Knights' ghast 0x4F, the Dark Queen's 0x89,
   the effects sweep 2026-11-13): both originals give the -2 to hit
   (Champions 0x76, the Queen 0x94) to the stench's holder each time a foe

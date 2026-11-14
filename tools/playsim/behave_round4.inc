@@ -1268,6 +1268,28 @@ void yeti()
         at.rec[0x19E] = 1;
         at.rec[0x1A0] = 4;
         at.rec[0x1A2] = 0;
+        if (y == 0 && b.fx->bless) {
+            // a 19 grabs only with the roll's changes (Blessed +1: the roll byte
+            // [0x9E26] the hooks raise, 0x252CB)
+            for (int bl = 0; bl < 2; ++bl) {
+                if (bl) mx::add_aff(B, b.fx->bless);
+                F(B).attacks[0] = 1;
+                F(B).attacks[1] = 0;
+                create::g_die_hook = [](int nn) { return nn == 20 ? 18 : -1; };
+                const combat::Attack r0 = combat::attack(b, B, 0, names, rng);
+                create::g_die_hook = nullptr;
+                bool g0 = false;
+                for (int j = 0; j < r0.n_ev; ++j) g0 |= r0.ev[j].ev == combat::Ev::Grabbed;
+                const bool hit0 = r0.n > 0 && r0.hits[0].hit;
+                chk(hit0 && g0 == (bl == 1), bl ? "a Blessed 19: grabbed" : "a plain 19: not grabbed");
+                combat::lose_aff(F(0), m.yeti_held);
+                for (int j = 0; F(B).n_aff && j < *F(B).n_aff; ++j)
+                    if (F(B).aff[j][0] == m.yeti[y]) F(B).aff[j][3] = 0xFF;
+            }
+            combat::lose_aff(F(B), b.fx->bless);
+            F(B).attacks[0] = 1;
+            F(B).attacks[1] = 0;
+        }
         create::g_die_hook = [](int nn) { return nn == 20 ? 19 : -1; };
         const combat::Attack r = combat::attack(b, B, 0, names, rng);
         create::g_die_hook = nullptr;
@@ -1288,7 +1310,8 @@ void yeti()
         const int lost = hp0 - F(0).hp(), lo = m.yeti_dice[y][0], hi = m.yeti_dice[y][0] * m.yeti_dice[y][1];
         chk(sq && lost >= lo && lost <= hi && !go_on, "its turn: squeezes for its dice, the turn over");
         combat::damage(b, B, 250);
-        chk(!F(0).has(m.yeti_held), "its fall lets go");
+        chk(!F(0).has(m.yeti_held) && b.released == 0 && b.released_by == B, "its fall lets go - \"is released\"");
+        b.released = b.released_by = -1;
     }
     if (m.ice_breath) {
         int seen7 = 0, seen3 = 0, far_hit = 0;
@@ -1334,6 +1357,161 @@ void yeti()
             ok = ok && hits + misses == 6 && lost >= hits && lost <= hits * 6 && ends;
         }
         chk(ok, "the manticore: six spines, 1d6 each that hits, its turn over");
+    }
+    if (m.crush) {
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(0, 0, 10, 10, 200);
+        mx::put(B, 1, 11, 10, 100);
+        mx::add_aff(B, m.crush, 0xFF);
+        combat::Fighter& at = F(B);
+        at.rec[0x199] = 80;
+        at.attacks[0] = 1;
+        at.attacks[1] = 0;
+        at.rec[0x19E] = 1;
+        at.rec[0x1A0] = 4;
+        at.rec[0x1A2] = 0;
+        create::g_die_hook = [](int nn) { return nn == 20 ? 15 : -1; };
+        const combat::Attack r = combat::attack(b, B, 0, names, rng);
+        create::g_die_hook = nullptr;
+        bool cr = false;
+        for (int j = 0; j < r.n_ev; ++j) cr |= r.ev[j].ev == combat::Ev::Crushed;
+        chk(cr && F(0).has(m.yeti_held), "the kampfult: any hit holds - \"is being crushed\"");
+        const int hp0 = F(0).hp();
+        int bite = -1;
+        bool go_on = true;
+        combat::Event ev[8];
+        create::Dice dd(7);
+        const int k = combat::turn_holds(b, B, dd, ev, 8, &bite, &go_on);
+        bool cg = false;
+        for (int j = 0; j < k; ++j) cg |= ev[j].ev == combat::Ev::Crushing;
+        chk(cg && hp0 - F(0).hp() == m.crush_dmg && !go_on, "the kampfult: its turn crushes for 5, the turn over");
+    }
+    if (m.stone_golem) {
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(0, 0, 10, 10, 200);
+        mx::put(B, 1, 11, 10, 100);
+        mx::add_aff(B, m.stone_golem, 0xFF);
+        combat::occupancy(b);
+        combat::Fighter& at = F(0);
+        at.rec[0x199] = 80;
+        at.attacks[0] = 1;
+        at.attacks[1] = 0;
+        at.rec[0x19E] = 1;
+        at.rec[0x1A0] = 6;
+        at.rec[0x1A2] = 2;
+        create::Dice d6(3);
+        combat::attack(b, 0, B, names, d6);
+        chk(F(B).hp() == 100, "the stone golem: a bare blow does nothing in stone");
+        create::Dice d7(4);
+        combat::Harm h;
+        h.spell = 0x2F;
+        h.kind = 1;
+        bool dn = false;
+        chk(combat::harm(b, B, 20, h, d7, &dn) == 0, "the stone golem: a spell no harm");
+        h.spell = m.stone_spell;
+        chk(combat::harm(b, B, 20, h, d7, &dn) > 0, "the stone golem: its own spell harms");
+        combat::Event ev[16];
+        bool ends = false;
+        create::Dice d8(5);
+        const int k = combat::special(b, fg->t, B, d8, ev, 16, &ends);
+        bool sl = false;
+        for (int j = 0; j < k; ++j) sl |= ev[j].ev == combat::Ev::Slows;
+        chk(sl && b.fx->slow && F(0).has(b.fx->slow), "the stone golem: its turn slows its pick");
+    }
+    if (m.gorgimera) {
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(B, 1, 12, 10, 100);
+        mx::add_aff(B, m.gorgimera, 0xFF);
+        int br = 0;
+        for (int t2 = 0; t2 < 4; ++t2) {
+            mx::put(0, 0, 10, 10, 100);
+            combat::occupancy(b);
+            create::g_die_hook = [](int nn) { return nn == 20 ? 2 : -1; };
+            combat::Event ev[16];
+            bool ends = false;
+            create::Dice d9(static_cast<uint32_t>(t2 + 1));
+            const int k = combat::special(b, fg->t, B, d9, ev, 16, &ends);
+            create::g_die_hook = nullptr;
+            bool b1 = false, st = false;
+            for (int j = 0; j < k; ++j) {
+                b1 |= ev[j].ev == combat::Ev::GorgBreathes;
+                st |= ev[j].ev == combat::Ev::TurnedStone;
+            }
+            br += b1;
+            if (b1) chk(st && F(0).rec[0x195] == party::Stoned && ends, "the gorgimera: a failed save - turned to stone, its turn over");
+        }
+        chk(br == 2, "the gorgimera: two breaths");
+    }
+    if (m.shape) {
+        // the green hag (GAME.OVR 0x24687): each round's start, by turns
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(B, 1, 12, 10, 50);
+        mx::add_aff(B, m.shape, 0xFF);
+        int seq = 0;
+        for (int r = 0; r < 4; ++r) {
+            combat::Event ev[16];
+            create::Dice d5(static_cast<uint32_t>(r + 7));
+            const int k = combat::start_round(b, d5, ev, 16);
+            for (int j = 0; j < k; ++j)
+                if (ev[j].who == B && (ev[j].ev == combat::Ev::ChangesForm || ev[j].ev == combat::Ev::ChangesBack))
+                    seq = seq * 10 + (ev[j].ev == combat::Ev::ChangesForm ? 1 : 2);
+        }
+        chk(seq == 1212, "the green hag: changes form / back by turns at each round's start");
+    }
+    if (m.no_effects) {
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(B, 1, 12, 10, 50);
+        mx::add_aff(B, m.no_effects, 0xFF);
+        combat::Harm h;
+        h.spell = 1;
+        create::Dice d4(3);
+        chk(combat::resists(b, B, b.fx->charm ? b.fx->charm : 0x0B, h, d4), "the stone guardian: no spell's effect");
+    }
+    if (m.fright && b.fx->fear) {
+        for (int on = 0; on < 2; ++on) {
+            for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+            mx::put(0, 0, 10, 10, 50);
+            mx::put(B, 1, 14, 10, 50);
+            mx::add_aff(B, m.fright, 0xFF);
+            b.fright_ok = on != 0;
+            const int keep = b.round;
+            b.round = 0;
+            create::g_die_hook = [](int nn) { return nn == 20 ? 2 : -1; };
+            create::Dice d5(3);
+            combat::Event e5[32];
+            const int k5 = combat::start_round(b, d5, e5, 32);
+            create::g_die_hook = nullptr;
+            b.round = keep;
+            int fr = 0;
+            for (int j = 0; j < k5; ++j) fr += e5[j].ev == combat::Ev::Frightened;
+            if (on) chk(fr == 1 && F(0).has(b.fx->fear) && F(0).fleeing, "the yetis' fear with the game's flag: frightened, fleeing");
+            else chk(fr == 0 && !F(0).has(b.fx->fear), "the yetis' fear: none without the game's flag");
+        }
+        b.fright_ok = false;
+    }
+    if (m.crystal[0]) {
+        for (int on = 0; on < 2; ++on) {
+            for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+            mx::put(0, 0, 10, 10, 200);
+            mx::put(B, 1, 12, 10, 10);
+            mx::add_aff(B, m.crystal[1], 0xFF);
+            const bool two = B + 1 < b.n;
+            if (two) {
+                mx::put(B + 1, 1, 14, 10, 50);
+                mx::add_aff(B + 1, m.crystal[2], 0xFF);
+            }
+            b.crystal_ok = on != 0;
+            b.crystal_who = -1;
+            combat::damage(b, B, 50);
+            if (on) {
+                chk(F(B).escaped && F(B).crystal && b.crystal_who == 1 && (!two || (F(B + 1).escaped && !F(B + 1).up())),
+                    "the villains: the crystal smashed, every holder gone, which one kept");
+            } else {
+                chk(!F(B).escaped && b.crystal_who < 0, "the villains: without the game's flag they fall as any");
+            }
+        }
+        b.crystal_ok = false;
+        b.crystal_who = -1;
     }
     expect(P, "Treasures' yetis: the hug (GAME.OVR 0x251A0) - grabbed on a 20, squeezed 2d8 / 4d5 / 6d4, let go",
            bad == 0, "%d of %d wrong", bad, n);

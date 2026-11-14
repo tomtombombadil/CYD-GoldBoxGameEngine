@@ -1430,7 +1430,18 @@ constexpr combat::Facts kTreasuresFacts = [] {
     f.mon.yeti_dice[2][0] = 6;
     f.mon.yeti_dice[2][1] = 4;
     f.mon.yeti_held = 0x9C;
+    f.mon.crush = 0x90;                 // the giant kampfult (0x24AEA)
+    f.mon.crush_dmg = 5;
+    f.mon.shape = 0x8C;                 // the green hag (0x245F6)
     f.mon.ice_breath = 0x9A;            // the ice hound (0x25649)
+    f.mon.gorgimera = 0x94;             // the white gorgimera (0x25025)
+    f.mon.stone_golem = 0x93;           // the stone golem (0x24E74)
+    f.mon.stone_spell = 0x71;
+    f.mon.fright = 0x98;                // the yetis' fear (0x254D1, the game block's +0x53)
+    f.mon.no_effects = 0x8E;            // the stone guardian: no spell's effect (0x24891, event 9)
+    f.mon.crystal[0] = 0x80;            // the villains' crystals (0x23BAC .., event 0xD)
+    f.mon.crystal[1] = 0x81;
+    f.mon.crystal[2] = 0x82;
     f.mon.fire_hound = 0x8A;            // the hell hound (0x24488)
     f.mon.slug_spit = 0x89;             // the giant slug (0x24333)
     f.mon.slug_d13 = true;
@@ -4575,6 +4586,16 @@ uint32_t duel_word(const Profile& p, int word)
         {games::Game::TreasuresOfTheSavageFrontier, kSqueezing, 0x25192},
         {games::Game::TreasuresOfTheSavageFrontier, kReleased, 0x25175},
         {games::Game::TreasuresOfTheSavageFrontier, kBreathesIce, 0x2563C},
+        {games::Game::TreasuresOfTheSavageFrontier, kSmashesCrystal, 0x23CCC},
+        {games::Game::TreasuresOfTheSavageFrontier, kFrightened, 0x254C2},
+        {games::Game::TreasuresOfTheSavageFrontier, kCrushed, 0x24AC0},
+        {games::Game::TreasuresOfTheSavageFrontier, kSlows, 0x24E3C},
+        {games::Game::TreasuresOfTheSavageFrontier, kGorgBreathes, 0x25009},
+        {games::Game::TreasuresOfTheSavageFrontier, kTurnedStone, 0x25012},
+        {games::Game::TreasuresOfTheSavageFrontier, kChangesForm, 0x245DC},
+        {games::Game::TreasuresOfTheSavageFrontier, kChangesBack, 0x245E9},
+        {games::Game::TreasuresOfTheSavageFrontier, kToStone, 0x24E43},
+        {games::Game::TreasuresOfTheSavageFrontier, kCrushing, 0x24ADD},
         {games::Game::TreasuresOfTheSavageFrontier, kBreathesFireH, 0x2447A},
         {games::Game::TreasuresOfTheSavageFrontier, kSpitsAcid, 0x24312},
         {games::Game::TreasuresOfTheSavageFrontier, kSpitsMisses, 0x2431D},

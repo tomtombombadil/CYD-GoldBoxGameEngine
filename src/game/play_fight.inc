@@ -2485,9 +2485,25 @@ bool q_lost_spell(int who, bool after_blow)
     return true;
 }
 
+// Treasures' villains: "smashes a crystal" for each one gone so (the one
+// that fell first)
+bool crystal_pages(int t)
+{
+    if (!fg->b.f[t].crystal) return false;
+    for (int k = -1; k < fg->b.n; ++k) {
+        const int i = k < 0 ? t : k;
+        combat::Fighter& v = fg->b.f[i];
+        if (!v.crystal || v.crystal_said) continue;
+        v.crystal_said = true;
+        add_page(i, fw(profile::kSmashesCrystal));
+    }
+    return true;
+}
+
 void down_page(int t, bool after_hit = false)
 {
     if (fg->b.f[t].escaped) {
+        if (crystal_pages(t)) return;
         // Pool's vampire: "Turns gaseous and escapes"
         add_page(t, fw(profile::kGaseous));
         return;
@@ -2510,6 +2526,9 @@ void down_page(int t, bool after_hit = false)
     kapak_acid(t);
     aurak_rise(t);
     queen_death(t);
+    // (Treasures' yetis: the one it held "is released" - GAME.OVR 0x2524E)
+    if (fg->b.released_by == t && fg->b.released >= 0) add_page(fg->b.released, fw(profile::kReleased));
+    fg->b.released = fg->b.released_by = -1;
 }
 
 // Champions' kapak going down (GAME.OVR 0x12C1F): "dissolves into acid!",
@@ -2958,10 +2977,19 @@ void event_words(const combat::Event& e)
     case combat::Ev::Spine: said(profile::kSpine); break;
     case combat::Ev::SpineMisses: said(profile::kSpineMisses); break;
     case combat::Ev::Released: said(profile::kReleased); break;
-    case combat::Ev::Squeezes: {
+    case combat::Ev::Crushed: said(profile::kCrushed); break;
+    case combat::Ev::ToStone: said(profile::kToStone); break;
+    case combat::Ev::GorgBreathes: said(profile::kGorgBreathes); break;
+    case combat::Ev::ChangesForm: said(profile::kChangesForm); break;
+    case combat::Ev::ChangesBack: said(profile::kChangesBack); break;
+    case combat::Ev::TurnedStone: fallen(profile::kTurnedStone); break;
+    case combat::Ev::Squeezes:
+    case combat::Ev::Slows:
+    case combat::Ev::Crushing: {
         char nm[20];
         fighter_name(fg->b.f[e.to >= 0 ? e.to : who], nm, sizeof nm);
-        snprintf(t, sizeof t, "%s%s", fw(profile::kSqueezing), nm);
+        snprintf(t, sizeof t, "%s%s",
+                 fw(e.ev == combat::Ev::Crushing ? profile::kCrushing : e.ev == combat::Ev::Slows ? profile::kSlows : profile::kSqueezing), nm);
         add_page(who, t);
         break;
     }
@@ -3038,7 +3066,7 @@ void event_words(const combat::Event& e)
     case combat::Ev::Unaffected: said(profile::kIsUnaffectedS); break;
     case combat::Ev::Down: {
         if (fg->b.f[who].escaped) {
-            add_page(who, fw(profile::kGaseous));
+            if (!crystal_pages(who)) add_page(who, fw(profile::kGaseous));
             break;
         }
         const combat::Down dn = combat::down_state(fg->b.f[who]);
@@ -3089,6 +3117,7 @@ void event_words(const combat::Event& e)
     case combat::Ev::Cast: special_cast(who, e.amount, e.to); break;
     // Darkness's monsters (R14)
     case combat::Ev::Terrified: said(profile::kTerrifiedDk); break;
+    case combat::Ev::Frightened: said(profile::kFrightened); break;
     case combat::Ev::Beheaded: fallen(profile::kBeheadedDk); break;
     case combat::Ev::SlainBolt: fallen(profile::kSlainBoltDk); break;
     case combat::Ev::ParaGazes: said(profile::kParaGazeDk); break;
@@ -5396,6 +5425,10 @@ void fight_start(pic::Canvas& c)
             b.underwater = b.rate.no_ranged;
         }
         b.gw_water = g == G::GatewayToTheSavageFrontier && vm && vm->get(0x4CF7) != 0;
+        // (Treasures' villains' crystals: the game block's +0x3C - script address 0x3D)
+        b.crystal_ok = b.fx && b.fx->mon.crystal[0] && vm && vm->get(0x3D) != 0;
+        b.crystal_who = -1;
+        b.fright_ok = b.fx && b.fx->mon.fright && vm && vm->get(0x54) != 0;      // (the yetis' fear: +0x53)
     }
     // Darkness's Turn Undead (R13): the undead its LOAD MONSTERs loaded (each
     // cleric turns as many times), the script's penalty (block +0x0E)
@@ -5692,6 +5725,13 @@ void end_fight(pic::Canvas& c)
     if (d->prof->variant.tr_max_age && age_check && !in_demo) {
         age_check = false;
         if (old_age_begin(c)) return;
+    }
+    // (Treasures' villains: which smashed its crystal - the game block's
+    // +0x3D = it, +0x3B its bit; GAME.OVR 0x23BCC)
+    if (b.crystal_who >= 0 && vm) {
+        vm->set(0x3E, static_cast<uint16_t>(b.crystal_who));
+        vm->set(0x3C, static_cast<uint16_t>(vm->get(0x3C) | (1u << b.crystal_who)));
+        b.crystal_who = -1;
     }
     if (hl()) queen_morale_fig = b.morale_fig;     // (kept for the next fight - round 20)
     fg->out = combat::finish(b, ml ? ml->m : nullptr);

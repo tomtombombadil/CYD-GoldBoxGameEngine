@@ -1796,14 +1796,20 @@ the Project as claude/TODO.md.
       nothing), 0x86 inert, 0x87 / 0x88 / 0x8B Gateway's glacier / name-word
       doubles (words 0x80 / 0x7F / 0x81 - a word, not a byte), 0x99 the
       yetis' fire half again, 0x9B the remorhaz's swallow (rules4 dmg22).
-      Left in Treasures: 0x80-0x82 (the Zhentil captain's, the Hosttower
-      sorceress's, the kraken master's: game block +0x3C set - +0x3D = 0 /
-      1 / 2, +0x3B bits 1 / 2 / 4, [0xF2A0] = 1, the effect off, 0x23CDE;
-      when, not read), 0x8C (the green hag, 0x245F6 - field / sight
-      changes), 0x8E (immune helper 0 in an event not found), 0x90 (the
-      giant kampfult, 0x24AEA), 0x93 (the stone golem, 0x24E74), 0x94 (the
-      white gorgimera, 0x25025), 0x98 (the yetis' fear - 0x6F for 2 rounds
-      round them, 0x254D1). v0.196.43: 0x91 the giant rat (a hit's 5 in 100:
+      v0.196.48 Treasures' last ones: 0x80-0x82 the villains' crystals
+      (0x23BAC / 0x23CDE: at the fall of one holding a crystal while the
+      game's flag 0x3D is set and none smashed yet - "smashes the crystal",
+      every holder gone as fled; the game's vars 0x3E / 0x3C told after),
+      0x8E the stone guardian (no effect of a spell), 0x90 the giant
+      kampfult (attack 1's hold, "is being crushed", its turn "is crushing
+      NAME" 5), 0x93 the stone golem (spells nothing, a +2 weapon in its
+      stone form, its turn slows its pick), 0x94 the white gorgimera (two
+      breaths, a petrification save or stoned), 0x98 the yetis' fear (0x6F
+      for 2 rounds on a failed save, only while the game's 0x54 is set),
+      0x8C the green hag ("changes form" / "changes back" by turns at each
+      round's start - her icon stays, SPEC 12). rules4 yeti. Every game's
+      effects sweep: 0 with no fact.
+      Earlier, v0.196.43: 0x91 the giant rat (a hit's 5 in 100: 0x91 the giant rat (a hit's 5 in 100:
       a save against poison or diseased), 0x92 the great vilstrak (its
       moves doubled in the first round). v0.196.41: 0x9A the
       ice hound and 0x8A the hell hound (one next to it: 7 cold / fire, a
@@ -1813,9 +1819,10 @@ the Project as claude/TODO.md.
       original's roll hooks left out). v0.196.40: the yetis' hug 0x95 /
       0x96 / 0x97 (0x251A0: a blow's roll of 20 "has been grabbed" - 0x9C,
       no moves -, its turn "is squeezing NAME" 2d8 / 4d5 / 6d4 and over,
-      its fall lets go; rules4 yeti). Not exact yet: the original's 20 is
-      the d20 with the roll's modifiers (a Blessed 19 grabs), the engine's
-      the d20 alone; "is released" isn't said (fall() has no pages).
+      its fall lets go; rules4 yeti). v0.196.48: the 20 is the roll byte
+      as the original's (a d20 of 20 counts 100, then the effects' changes -
+      a Blessed 19 grabs; `Attack::roll_mods`), and its fall says "NAME is
+      released" for the one let go (0x2524E).
       v0.196.47 the Dark Queen (DQK.EXE; its hook switch's lists read out
       to know each one's event): 0x75 the beholder (Curse's rays, then
       Fear / Slow / Sleep - w0 0x21E4:0x4FD1), 0xC3 / 0xCB the gorgon (4
@@ -1829,8 +1836,7 @@ the Project as claude/TODO.md.
       (0xCF 1d4), 0xD0 the constriction (the engulf's hold), 0xD4 the
       anemone's squirt (3d4 - on the attacker in the original, on the one
       hit with Game Fixes, SPEC 12); 0x85, 0x9F, 0xD2 in no list of the
-      hook switch - inert. rules4 qhits22 / qturns22. Every game's effects
-      sweep: only Treasures' list above left.
+      hook switch - inert. rules4 qhits22 / qturns22.
 - [x] Empty fight words (v0.196.32, fx_check's new E1: a page of the names
       alone): Champions' turn effects (runs away, is confused, goes berserk,
       is enraged - GAME.OVR 0x11936 on), "is Paralyzed" (0x10BE8), "Avoids

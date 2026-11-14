@@ -400,6 +400,13 @@ struct MonFx {
     // dice (count, sides) - and its turn is over; it lets go as it falls
     // ("is released")
     uint8_t yeti[3] = {}, yeti_dice[3][2] = {}, yeti_held = 0;
+    // its giant kampfult (0x90, 0x24AEA): the same hold on every hit of
+    // attack 1, "is being crushed"; at its turn "is crushing NAME", 5
+    uint8_t crush = 0, crush_dmg = 0;
+    // its green hag (0x8C, GAME.OVR 0x245F6, event 0x13 = each round's
+    // start, while active): "changes form" / "changes back" by turns (the
+    // effect's data 0xFF = her own form); her icon stays (SPEC 12)
+    uint8_t shape = 0;
     // Treasures' ice hound (0x9A, GAME.OVR 0x25649): at its turn one next to
     // it (its pick) - "Breathes Ice", 7 cold, a save against breath for half
     uint8_t ice_breath = 0;
@@ -465,6 +472,33 @@ struct MonFx {
     // "gazes", each a save against poison or "is stunned by the Eye of the
     // Deep's Blinding flash" - paralysed 2d4 rounds; either ends its turn
     uint8_t q_ray13 = 0, q_eye = 0;
+    // Treasures' three villains (0x80 / 0x81 / 0x82, GAME.OVR 0x23BAC .. -
+    // the hook switch's event 0xD, its fall): with the game block's +0x3C
+    // set (script address 0x3D; Battle::crystal_ok) and none gone yet this
+    // fight, every holder of one "smashes a crystal" and leaves the fight;
+    // the game block's +0x3D (address 0x3E) = which (0 / 1 / 2), +0x3B
+    // (address 0x3C) | its bit - the play side writes them (crystal_who)
+    uint8_t crystal[3] = {};
+    // Treasures' stone guardian (0x8E, GAME.OVR 0x24891 in event 9 - an
+    // effect given): its helper 0x204D9 with 0 cancels every effect a spell
+    // gives it
+    uint8_t no_effects = 0;
+    // Treasures' yetis' fear (0x98, GAME.OVR 0x254D1 at the fight's set-up):
+    // only with the game block's +0x53 set (script address 0x54;
+    // Battle::fright_ok), every foe a save against petrification or "is
+    // frightened." - Fear's effect for 2 rounds, fleeing
+    uint8_t fright = 0;
+    // its stone golem (0x93, 0x24E74): its data 0xFF (stone) - a blow needs
+    // +2 (or a monster of 7+ Hit Dice), at its turn its pick within 12
+    // without Slow "slows NAME" (Slow, 6 rounds); else its data counts down
+    // a turn, at 0xFF "returns to stone"; a spell other than 0 / `stone_spell`
+    // (0x71) does it no harm and gives it nothing
+    uint8_t stone_golem = 0, stone_spell = 0;
+    // its white gorgimera (0x94, 0x25025): two uses (its data 0xFF -> 0xFD,
+    // each taken before the pick) - its pick within 12, closer than 3:
+    // "Breathes", its turn over; a petrification save or, without
+    // dk.gaze_proof (0x7E), "is turned to stone"
+    uint8_t gorgimera = 0;
 };
 
 // More spells' effects (spell_facts.md 2): Enlarge, Confusion (and going
@@ -976,6 +1010,7 @@ struct Fighter {
     // turned undead and fear keep `fleeing` without it
     bool    panic = false;
     bool    escaped = false;            // turned gaseous and escaped (Pool's vampire): away, not down
+    bool    crystal = false, crystal_said = false;   // (Treasures' villains: smashed a crystal and gone)
     uint8_t rise_how = 0;               // the Dark Queen's Aurak up again: 1 "goes mad!", 2 "rises in a new form" (to be said)
     uint8_t was_control = 0;            // its control byte before Animate Dead (back after the fight)
     uint8_t undead_turns = 0;           // Darkness: its Turn Undeads this fight (R13)
@@ -1078,6 +1113,10 @@ struct Battle {
     // Fireball and the item fireball (0x2F / 0x40) "Nothing Happens."
     // (their handler 0x385FB, the spell spent)
     bool    gw_water = false;
+    bool    crystal_ok = false;         // (Treasures: the game block's +0x3C set at the fight's start)
+    int8_t  crystal_who = -1;           // (... the villain whose crystal was smashed this fight)
+    int8_t  released = -1, released_by = -1;   // (Treasures' yetis: the one let go as its holder fell - "is released")
+    bool    fright_ok = false;          // (Treasures: the game block's +0x53 set at the fight's start)
     int     morale_base = 0;            // the script's morale word (0x7EC6)
     // The morale routine's last figure (Curse DS 0x6FBC, Darkness 0xA7E1,
     // the Dark Queen 0xC2DE - round 19): 100 as a fighter is set up (Curse
@@ -1212,6 +1251,11 @@ enum class Ev : uint8_t {
     ParaPoisonQ, CrippledQ, GreenFire, GreenFireDies, SquirtedQ,
     GorgonBreathes, GorgonStoned,
     FlashesRay, RayGone, EyeGazes, EyeStunned,
+    SmashesCrystal,                     // Treasures' villains: "smashes a crystal"
+    Frightened,                         // Treasures' yetis' fear: "is frightened."
+    Crushed, Crushing,                  // its kampfult: "is being crushed", "is crushing NAME"
+    Slows, ToStone,                     // its stone golem: "slows NAME", "returns to stone"
+    GorgBreathes, TurnedStone, ChangesForm, ChangesBack,          // its gorgimera: "Breathes", "is turned to stone"
 };
 struct Event {
     uint8_t who = 0;
@@ -1361,6 +1405,7 @@ struct Attack {
     int  n_ev = 0;
     int  shots = 0;                     // the weapon's (slot 1) attacks made: a shot uses one missile each
     bool rake = false;                  // (Pool's tiger: its rakes follow)
+    int  roll_mods = 0;                 // the effects' change to the d20 (the originals' roll hooks)
 };
 // A backstab: a thief (backstabbing weapon or none) straight behind a man-
 // sized target that has had an attack this round already: the rear AC 4

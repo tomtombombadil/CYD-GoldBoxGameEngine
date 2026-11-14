@@ -1245,13 +1245,18 @@ void fall(Battle& b, int c)
     let_go(b, f, m.holding);
     let_go(b, f, b.fx->gw.sucking);
     let_go(b, f, b.fx->gw.constrict);
-    // (Treasures' yetis, event 0xD: the one held let go - "is released" not said here)
-    for (int y = 0; y < 3; ++y) {
-        const int k = m.yeti[y] && m.yeti_held ? find_aff(f, m.yeti[y]) : -1;
+    // (Treasures' yetis, event 0xD - GAME.OVR 0x251C0: the one held let go,
+    // "is released" when it is still active; the play side says it)
+    for (int y = 0; y < 4; ++y) {
+        const uint8_t id = y < 3 ? m.yeti[y] : m.crush;
+        const int k = id && m.yeti_held ? find_aff(f, id) : -1;
         if (k < 0 || f.aff[k][3] == 0xFF) continue;
         const int v = f.aff[k][3];
         f.aff[k][3] = 0xFF;
-        if (v < b.n) lose_aff(b.f[v], m.yeti_held);
+        if (v < b.n && lose_aff(b.f[v], m.yeti_held) && b.f[v].up()) {
+            b.released = static_cast<int8_t>(v);
+            b.released_by = static_cast<int8_t>(c);
+        }
     }
     const uint8_t regen[2] = {m.regen_wait, m.regen};
     for (uint8_t t : regen) {
@@ -2055,16 +2060,21 @@ int start_round(Battle& b, create::Dice& d, Event* out, int cap)
     // set-up here: when its event comes, not read): every foe on the field
     // not fear-proof (0x5C) saves against spells or is terrified - Fear's
     // effect, fleeing under the computer
-    if (b.round == 0 && b.fx && b.fx->mon.terror && b.fx->fear) {
+    // (Treasures' yetis the same with the game's flag: a petrification save,
+    // 2 rounds, "is frightened." - GAME.OVR 0x254D1; once whoever holds it)
+    for (int kind = 0; kind < 2 && b.round == 0 && b.fx && b.fx->fear; ++kind) {
+        const uint8_t ty = kind ? b.fx->mon.fright : b.fx->mon.terror;
+        if (!ty || (kind && !b.fright_ok)) continue;
         for (int i = 0; i < b.n; ++i) {
             const Fighter& f = b.f[i];
-            if (!f.size || !f.up() || !hasx(f, b.fx->mon.terror)) continue;
+            if (!f.size || !f.up() || !hasx(f, ty)) continue;
             for (int c = 0; c < b.n; ++c) {
                 Fighter& v = b.f[c];
                 if (c == i || !v.size || !v.up() || v.team() == f.team()) continue;
-                if (hasx(v, b.fx->mon.no_fear) || saving_throw(v, 4, 0, d)) continue;
+                if (kind ? v.has(b.fx->fear) : hasx(v, b.fx->mon.no_fear)) continue;
+                if (saving_throw(v, kind ? 1 : 4, 0, d)) continue;
                 const bool made_quick = v.member >= 0 && v.rec[0xF7] < 0x80 && !v.quick;
-                give_aff(v, b.fx->fear, 0, made_quick ? 1 : 0, false);
+                give_aff(v, b.fx->fear, kind ? 2 : 0, made_quick ? 1 : 0, false);
                 v.fleeing = true;
                 v.panic = false;
                 if (made_quick) v.quick = true;
@@ -2072,7 +2082,7 @@ int start_round(Battle& b, create::Dice& d, Event* out, int cap)
                 if (out && n_ev < cap) {
                     out[n_ev] = Event{};
                     out[n_ev].who = static_cast<uint8_t>(c);
-                    out[n_ev++].ev = Ev::Terrified;
+                    out[n_ev++].ev = kind ? Ev::Frightened : Ev::Terrified;
                 }
             }
         }
@@ -2103,6 +2113,20 @@ int start_round(Battle& b, create::Dice& d, Event* out, int cap)
             out[n_ev++].ev = dn ? Ev::GreenFireDies : Ev::GreenFire;
         }
         if (dn) lose_aff(f, b.fx->mon.q_green);
+    }
+    // (Treasures' green hag 0x8C at each round's start - event 0x13, GAME.OVR
+    // 0x24687: active ones only; data 0xFF -> "changes form", else back)
+    for (int i = 0; b.fx && b.fx->mon.shape && i < b.n; ++i) {
+        Fighter& f = b.f[i];
+        const int k = f.size && f.up() ? find_aff(f, b.fx->mon.shape) : -1;
+        if (k < 0) continue;
+        const bool to = f.aff[k][3] == 0xFF;
+        f.aff[k][3] = to ? 0 : 0xFF;
+        if (out && n_ev < cap) {
+            out[n_ev] = Event{};
+            out[n_ev].who = static_cast<uint8_t>(i);
+            out[n_ev++].ev = to ? Ev::ChangesForm : Ev::ChangesBack;
+        }
     }
     // (the Dark Queen's troll / anemone at the round's start - event 0x13)
     for (int i = 0; b.fx && b.fx->q.regen1 && i < b.n; ++i)
@@ -2146,6 +2170,28 @@ bool damage(Battle& b, int c, int amount)
     }
     const int over = amount - hp;
     f.rec[kHp] = 0;
+    // Treasures' villains at their fall (GAME.OVR 0x23BAC / 0x23CDE): every
+    // one holding a crystal smashes it and is gone (as fled)
+    if (b.fx && b.crystal_ok && b.crystal_who < 0) {
+        int which = -1;
+        for (int k = 0; k < 3 && which < 0; ++k)
+            if (b.fx->mon.crystal[k] && hasx(f, b.fx->mon.crystal[k])) which = k;
+        if (which >= 0) {
+            b.crystal_who = static_cast<int8_t>(which);
+            lose_aff(f, b.fx->mon.crystal[which]);
+            for (int i = 0; i < b.n; ++i) {
+                Fighter& v = b.f[i];
+                bool holds = false;
+                for (int k = 0; k < 3; ++k) holds |= b.fx->mon.crystal[k] && hasx(v, b.fx->mon.crystal[k]);
+                if (i != c && (!v.size || !v.up() || !holds)) continue;
+                v.rec[kHealth] = party::Running;
+                v.escaped = true;
+                v.crystal = true;
+                fall(b, i);
+            }
+            return true;
+        }
+    }
     // Pool's vampire at 0 hit points: "Turns gaseous and escapes" - away
     // (as fled), not down
     if (b.fx && hasx(f, b.fx->mon.gas_escape)) {
@@ -2299,16 +2345,6 @@ void after_hit_own(Battle& b, int a, int c, int slot, int roll, int hits1, creat
             add_event(out, c, Ev::ParalyzedLow);
         }
         if (hasx(at, m.chill)) touch(d.roll(8, 2), 0x0A);
-        // Treasures' yetis (GAME.OVR 0x251A0 - events 2 / 3, either blow)
-        for (int y = 0; y < 3; ++y) {
-            const int k = m.yeti[y] && m.yeti_held ? find_aff(at, m.yeti[y]) : -1;
-            if (k < 0 || at.aff[k][3] != 0xFF || roll < 20 || !tg.up() || tg.has(m.yeti_held)) continue;
-            give_aff(tg, m.yeti_held, 0, 0xFF, false);
-            tg.moves = 0;
-            const int k2 = find_aff(at, m.yeti[y]);
-            if (k2 >= 0) at.aff[k2][3] = static_cast<uint8_t>(c);
-            add_event(out, c, Ev::Grabbed);
-        }
         // Death Knights' fire minion's hit (0x4A, GAME.OVR 0x1D7C1): 2d6, a
         // save against spells for half
         if (m.hit_2d6 && hasx(at, m.hit_2d6) && tg.up()) {
@@ -2474,6 +2510,22 @@ void after_hit_own(Battle& b, int a, int c, int slot, int roll, int hits1, creat
     if (hasx(at, m.fire2d6_hit)) fire_hit(2);
     if (slot == 1 && hasx(at, m.fire4d6_2)) fire_hit(4);
     if (slot == 1 && hasx(at, m.fire2d6_2)) fire_hit(2);
+    // Treasures' yetis (GAME.OVR 0x251A0 - events 2 / 3, either attack's
+    // hit, a roll of 20) and its giant kampfult (0x24AEA - event 2, attack
+    // 1's every hit): the hold (0x9C) and the one held kept in its data
+    for (int y = 0; y < 4; ++y) {
+        const uint8_t id = y < 3 ? m.yeti[y] : m.crush;
+        const int k = id && m.yeti_held ? find_aff(at, id) : -1;
+        if (k < 0 || at.aff[k][3] != 0xFF || !tg.up() || tg.has(m.yeti_held)) continue;
+        // (the roll byte [0x9E26]: a 20 counts 100, then the hooks' changes -
+        // a Blessed 19 grabs, a cursed 20 still does; 0x252CB)
+        if (y < 3 ? (roll == 20 ? 100 : roll) + out.roll_mods < 20 : slot != 0) continue;
+        give_aff(tg, m.yeti_held, 0, 0xFF, false);
+        tg.moves = 0;
+        const int k2 = find_aff(at, id);
+        if (k2 >= 0) at.aff[k2][3] = static_cast<uint8_t>(c);
+        add_event(out, c, y < 3 ? Ev::Grabbed : Ev::Crushed);
+    }
     // The Dark Queen's attack 2 specials (event 3) and green fire (event 4)
     if (m.paralyzed && slot == 1 && hasx(at, m.q_para2) && tg.up() && !saving_throw(tg, 4, -4, d) &&
         !saving_throw(tg, 0, 0, d)) {
@@ -2903,6 +2955,7 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
             }
         }
         }   // (!qh)
+        out.roll_mods = side - (at.team() ? b.to_hit_monsters : b.to_hit_party);
         if (!qh) {
         if (fx.blinded && tg.has(fx.blinded) && !coughing) ac -= 4;     // a blind target: easier (coughing: lost)
         // Darkness (R6, R14): a dancing target's AC 4 worse (0x76, ovr 0x1DB21);
@@ -3135,6 +3188,10 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
                 if (hasx(tg, m.q_blow_ward) && std::abs(at.x - tg.x) <= 1 && std::abs(at.y - tg.y) <= 1 && (!item || plus == 0))
                     dmg = 0;
                 if (hasx(tg, m.need_plus2) && !plus_ok(2)) dmg = 0;
+                {   // (Treasures' stone golem in stone: GAME.OVR 0x24E93 -> 0x21B83 with 2)
+                    const int sk = m.stone_golem ? find_aff(tg, m.stone_golem) : -1;
+                    if (sk >= 0 && tg.aff[sk][3] == 0xFF && !plus_ok(2)) dmg = 0;
+                }
                 if (hasx(tg, m.need_plus1) && !plus_ok(1)) dmg = 0;
                 if (hasx(tg, m.half_under3) && item && plus < 3) dmg /= 2;
                 if (hasx(tg, m.half_under4) && item && plus < 4) dmg /= 2;
@@ -3445,14 +3502,15 @@ int turn_holds(Battle& b, int i, create::Dice& d, Event* out, int cap, int* bite
     }
     // Treasures' yetis (GAME.OVR 0x2538A, event 0xE): the one it holds
     // squeezed - its dice - and its turn is over
-    for (int y = 0; y < 3; ++y) {
-        const int k = m.yeti[y] && m.yeti_held ? find_aff(f, m.yeti[y]) : -1;
+    for (int y = 0; y < 4; ++y) {
+        const uint8_t id = y < 3 ? m.yeti[y] : m.crush;
+        const int k = id && m.yeti_held ? find_aff(f, id) : -1;
         if (k < 0 || f.aff[k][3] == 0xFF || !f.up()) continue;
         const int v = f.aff[k][3];
         if (v >= b.n || !b.f[v].has(m.yeti_held) || !b.f[v].up()) continue;
-        ev(i, Ev::Squeezes, v);
+        ev(i, y < 3 ? Ev::Squeezes : Ev::Crushing, v);
         set_actor(b, i);
-        const int amount = d.roll(m.yeti_dice[y][1], m.yeti_dice[y][0]);
+        const int amount = y < 3 ? d.roll(m.yeti_dice[y][1], m.yeti_dice[y][0]) : m.crush_dmg;
         Harm h;
         bool dn = false;
         const int done = harm(b, v, amount, h, d, &dn);
@@ -3518,6 +3576,8 @@ bool resists(Battle& b, int c, int effect, const Harm& h, create::Dice& d)
     const Facts& fx = *b.fx;
     const MonFx& m = fx.mon;
     const bool magic = effect != 0 || (h.kind & 8);
+    if (effect && hasx(f, m.no_effects)) return true;      // (Treasures' 0x8E)
+    if (effect && h.spell && h.spell != m.stone_spell && hasx(f, m.stone_golem)) return true;   // (its 0x93: events 6 / 9)
     // Gateway: Mirror Image first in its magic resistance list (0x1C, GAME.OVR
     // 0x123FD) - a hostile spell at picked creatures may take an image
     // ("lost an image"; the spell's effect cancelled)
@@ -3626,6 +3686,7 @@ int harm(Battle& b, int c, int amount, const Harm& h, create::Dice& d, bool* dow
         // magic fire healing - events 6)
         if ((h.kind & 1) && hasx(f, m.half_fire)) dmg /= 2;
         if ((h.kind & 1) && hasx(f, m.fire_more)) dmg += dmg / 2;
+        if (h.spell && h.spell != m.stone_spell && hasx(f, m.stone_golem)) dmg = 0;   // (Treasures' stone golem)
         if ((h.kind & 0x0F) && hasx(f, m.half_magic)) dmg /= 2;
         if ((h.kind & 4) && hasx(f, m.half_elec)) dmg /= 2;
         if ((h.kind & 2) && hasx(f, m.half_cold) && !((h.kind & 4) && m.half_cold == m.half_elec)) dmg /= 2;
@@ -7987,6 +8048,36 @@ int special(Battle& b, const Tables& t, int i, create::Dice& d, Event* out, int 
         Event* e = ev(i, Ev::Cast, -1);
         if (e) e->amount = m.cast_spell;
         return n;
+    }
+    // Treasures' stone golem (0x93, GAME.OVR 0x24E74 - event 0xE)
+    if (m.stone_golem && hasx(f, m.stone_golem)) {
+        const int k0 = find_aff(f, m.stone_golem);
+        if (k0 >= 0 && f.aff[k0][3] == 0xFF) {
+            const int tg = special_target(b, t, i, 12, false, d);
+            if (tg >= 0 && b.fx->slow && !b.f[tg].has(b.fx->slow)) {
+                ev(i, Ev::Slows, tg);
+                fly(i, b.f[tg].x, b.f[tg].y, 5, 1, 30);
+                give_aff(b.f[tg], b.fx->slow, 6, 0xFF, false);
+            }
+        } else if (k0 >= 0) {
+            if (--f.aff[k0][3] == 0xFF) ev(i, Ev::ToStone);
+        }
+    }
+    // Treasures' white gorgimera (0x94, GAME.OVR 0x25025)
+    if (m.gorgimera && hasx(f, m.gorgimera)) {
+        const int k0 = find_aff(f, m.gorgimera);
+        if (k0 >= 0 && f.aff[k0][3] != 0xFD) {
+            --f.aff[k0][3];
+            const int tg = special_target(b, t, i, 12, false, d);
+            if (tg >= 0 && squares_to(b, t, i, tg) < 3) {
+                *ends_turn = true;
+                ev(i, Ev::GorgBreathes);
+                fly(i, b.f[tg].x, b.f[tg].y, 5, 1, 30);
+                if (!saving_throw(b.f[tg], 1, 0, d) && !hasx(b.f[tg], b.fx->dk.gaze_proof))
+                    remove(tg, party::Stoned, Ev::TurnedStone);
+                return n;
+            }
+        }
     }
     // Treasures' manticore (0x8F, GAME.OVR 0x248D7): six spines at its pick
     if (m.spines && hasx(f, m.spines)) {
