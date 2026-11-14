@@ -667,7 +667,7 @@ the Project as claude/TODO.md.
       much", script questions), lists stay lit while a question asks
       (the unlit lists of parts 3-6 and Gateway's / Darkness's undone).
 
-- [ ] Code review follow-ups (branch review-fixes-engine, 2026-10-31):
+- [x] Code review follow-ups (branch review-fixes-engine, 2026-10-31):
       (a) done 2026-11-14: the Dark Queen's reroll (DQK.EXE ovl 5 +0x1A90,
       file 0x3BF50) clears the slots (0x24 bytes at 0x167) and ORs the
       cleric list / magic-user spells into the known bits (0x157) -
@@ -677,9 +677,11 @@ the Project as claude/TODO.md.
       LOAD CHARACTER | 0x80 never removes a member (its second flag, DS
       0xDB60, is never set) - as the original; no script relies on it (the
       events sweep, every block of ECL1-3 with a trace on a removal asked
-      after the name's clearing: none). (c) the Dark Queen's QSV header
-      u16 at bytes 11-12: kept from the loaded game - find what DQK.EXE
-      writes there. (d) done 2026-11-14 (v0.196.49, budgetx with the
+      after the name's clearing: none). (c) done 2026-11-14: the Dark Queen's QSV
+      header's bytes 11-12 are DS 0xCA05 (the writer 0x36307: 5 bytes DS
+      0xC9F0, words 0xAE67, 0xAE57, 0xCA03, 0xCA05, then the count) -
+      read back by the loader and used nowhere else: 0 from a new game;
+      the engine keeps the loaded one (also 0). (d) done 2026-11-14 (v0.196.49, budgetx with the
       per-copy items): Curse 134.2, PoolRad 135.8, Darkness 150.2,
       Champions 136.4, Knights 136.4, Queen 143.7, Treasures 152.4 KB of
       the 153.6 - the Thenols run's own env wasn't kept.
@@ -1935,8 +1937,11 @@ the Project as claude/TODO.md.
       (0x9C's, its death), not 0x9A's (the Bozak's is 0x509AE); the
       engine's lay_acid_spread (2026-11-14: the reading above was wrong);
       Gateway's magic-user's
-      distance for multi-square fighters (its area list's distance /
-      2 - the list builder's for big fighters not read); a computer spell
+      distance for multi-square fighters: as the engine (2026-11-14 -
+      0x41743 builds the scan with the walls passed over and takes the
+      target's entry; the scan measures each pair of squares, Curse's
+      0x3FD5D, and range() takes the least of each pair, 2 a straight
+      step and 3 a diagonal - the same); a computer spell
       with a casting time aborts at its start, not as it goes off; Darkness
       / Treasures memorized places 84-140 (the engine's fighters hold 84) -
       read (round 22): every MON*CHA record with spells keeps them under

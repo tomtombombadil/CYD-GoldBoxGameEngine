@@ -299,8 +299,9 @@ bool write_queen(Sink& out, const ecl::GameState& gs, const Header& h, const par
     char names[party::kMaxParty][16] = {};
     int n_src = 0;
     if (src && !queen_layout(*src, at, names, &n_src, &rest)) src = nullptr;
-    // (bytes 11-12, a u16 not worked out: the loaded game's, as the rest of
-    // what the engine doesn't keep - 0 without one, as the GOG save's)
+    // (bytes 11-12: DS 0xCA05 - DQK.EXE's writer 0x36307 saves it and its
+    // loader 0x35B27 reads it back, nothing else uses it: 0 from a new game
+    // (BSS); the loaded game's kept)
     uint8_t unknown[2] = {0, 0};
     if (src && src->read_at(kDarknessBlock + 11, unknown, 2) != 2) unknown[0] = unknown[1] = 0;
     const uint8_t b[15] = {static_cast<uint8_t>(gs.x), static_cast<uint8_t>(gs.y), static_cast<uint8_t>(gs.dir),
