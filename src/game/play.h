@@ -254,6 +254,7 @@ struct PanelMember {
     uint8_t  stopped;                   // bit k: class k a dual-classed human's former one
     bool     krynn;                     // (magic-user = Mage, monk's place = Knight)
     bool     drained;                   // levels lost to a drain, not restored (create::drained)
+    uint8_t  ready;                     // bit k: class k has the experience for its next level
 };
 int  panel_members();
 bool panel_member(int i, PanelMember& m);

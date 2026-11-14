@@ -57,6 +57,15 @@ struct TitleStep {
     uint8_t  sound;          // a sound effect as it shows (0 = none)
 };
 
+// One step of a picture show (the Dark Queen's ending - DQK.EXE 0x3878B,
+// tools/devkit/oracles/qfinal.py): 'L' the library's entry v, 'F' its
+// part 1 (the background) then part v when v > 0, 'W' a wait of v x 0.36 s
+// (the frame shown; a key ends the wait)
+struct ShowStep {
+    char   op;
+    int8_t v;
+};
+
 // A table of names in the program: Pascal strings, each in a fixed-size
 // slot (class, race, alignment ... names)
 struct NameTable {
@@ -934,6 +943,11 @@ struct Profile {
         uint8_t song_block = 0;
         uint16_t pit = 0;
     } music_ea;
+    // The Dark Queen's ending (its PROGRAM 1; play.cpp qf_*): the show's
+    // steps, its picture library (anchored at 8, 8 as the big pictures)
+    const ShowStep* finale = nullptr;
+    int finale_steps = 0;
+    const char* finale_file = nullptr;
 };
 
 // The game's program file name (to look for it), or nullptr if no

@@ -160,6 +160,9 @@ bool drained(const party::Character& c);
 // class mask bits (the tables' class masks; a training hall's 0x7EA8 uses
 // the same bits)
 int trainable(const party::Character& c, const classes::Tables& t);
+// The same as bits by class index (bit k: class k - cleric 0 ... monk 7);
+// the Companion's Party view marks those classes (Tom, 2026-11-14)
+int ready_classes(const party::Character& c, const classes::Tables& t);
 // Gateway's race limits for training (its GAME.OVR overlay 0x3EB10 +0x382E:
 // fighters only but the half-elf cleric at 5; by the Strength in use) - the
 // party list's "may train" colour and the classes' own training

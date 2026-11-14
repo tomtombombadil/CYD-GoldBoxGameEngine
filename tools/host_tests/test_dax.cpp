@@ -2370,8 +2370,9 @@ static void op_str(Bytes& b, const char* t)
 struct TestHost : ecl::Host {
     Bytes next;                 // the block NEWECL loads
     int map = -1, walls[4] = {-2, -2, -2, -2}, pic = -1, loads = 0, frames = 0;
-    int sprite_id = -1, sprite_dist = -1, sprites = 0, items_block = -1;
+    int sprite_id = -1, sprite_dist = -1, sprites = 0, items_block = -1, song = 0;
     void load_items(int block, items::Ground&) override { items_block = block; }
+    void music(int n) override { song = n; }
     bool load_script(int, uint8_t* code, uint32_t* len) override
     {
         ++loads;
@@ -2928,6 +2929,21 @@ static void test_ecl_party()
     CHECK(r == ecl::Stop::Waiting && pvm.wait() == ecl::Wait::Won);
     r = pvm.resume();
     CHECK(pvm.get(0x4C07) == 9);
+    // The Dark Queen's PROGRAM 1 (ending_program): its song (ending_sound
+    // 0x27 = song 8 of 0x20 on), then its picture show; the script goes on
+    static ecl::OpSet q_set;
+    q_set = *pr->ecl_ops;
+    q_set.music_ids = 0x20;
+    q_set.ending_program = 8;
+    q_set.ending_sound = 0x27;
+    static ecl::Vm qvm(gs, host, q_set);
+    qvm.set(0x4C07, 0);
+    host.song = 0;
+    CHECK(qvm.init_script());
+    r = qvm.run(qvm.entry(4));
+    CHECK(r == ecl::Stop::Waiting && qvm.wait() == ecl::Wait::Finale && host.song == 8);
+    r = qvm.resume();
+    CHECK(qvm.get(0x4C07) == 9);
 }
 
 // The original's ways (coab's facts / the listing): RETURN with nothing to

@@ -339,7 +339,7 @@ void vga_send(int first, int n)
 enum class Screen : uint8_t { Game, PartyMenu, LoadWhich, View, Items, Shop, ShopBuy, Camp, SaveWhich, AddFrom,
                                AddList, YesNo, CreatePick, CreateName, TradeWho, Heal, Take, Appraise, Magic,
                                SpellList, Rest, Cast, Effects, Alter, Fight, Loot, Modify, Title, Icon, Won,
-                               Portrait, ViewWho, QForm, QGod, QRolled, QInv };
+                               Portrait, ViewWho, QForm, QGod, QRolled, QInv, Finale };
 Screen screen = Screen::Game;
 Screen view_from = Screen::Game;  // where View Character goes back to
 Screen save_from = Screen::PartyMenu;   // where Save Which Game goes back to
@@ -5117,6 +5117,102 @@ void leave_party(int i)
 // ^Z left out; the window cleared at the end. The camp's romance (ovl 0x79
 // +0x3CC) prints line by line ("line " - the lines run on), \x02 - \x08 the
 // two characters' names, a third member's, "HIS" / "HER".
+// ---- The Dark Queen's ending (its PROGRAM 1 - Wait::Finale; the profile's
+// finale, from DQK.EXE 0x3878B): its song already started by the script,
+// the text box and the button bar cleared, then FINAL.TLB's pictures
+// played over the screen as it is at the big pictures' place (8, 8) - each
+// frame the background (part 1) and a part over it - a wait 0.36 s (a key
+// or tap ends the wait, as the original's); the last frame stays and the
+// script goes on (DOSBox, 2026-11-14)
+struct Finale {
+    int      step = 0, entry = 0;
+    uint32_t until = 0;
+} qf;
+
+__attribute__((noinline)) void qf_frame(pic::Canvas& c, int part)
+{
+    plat::File f;
+    if (!open_hl(d->prof->finale_file, f)) return;
+    {
+        plat::FileSource src(f);
+        uint32_t pos, len;
+        if (hlib::find_entry(src, static_cast<uint16_t>(qf.entry), pos, len)) {
+            const int16_t paper = c.paper;
+            c.paper = -1;
+            hlpic::draw_picture_part(src, pos, len, 1, q_col(), q_pal(), c, 8, 8);
+            if (part > 0) hlpic::draw_picture_part(src, pos, len, part, q_col(), q_pal(), c, 8, 8);
+            q_take();
+            c.paper = paper;
+        }
+    }
+    f.close();
+    dirty(0, 17 * 8);
+}
+
+// The steps up to the next wait (or the end: the script goes on)
+void qf_run(uint32_t now, pic::Canvas& c)
+{
+    const profile::ShowStep* s = d->prof->finale;
+    while (qf.step < d->prof->finale_steps) {
+        const profile::ShowStep& st = s[qf.step++];
+        if (st.op == 'L') qf.entry = st.v;
+        else if (st.op == 'F') qf_frame(c, st.v);
+        else if (st.op == 'W') {
+            qf.until = now + 360u * static_cast<uint32_t>(st.v);
+            return;
+        }
+    }
+    plat::log("[play] the ending's pictures shown\n");
+    screen = Screen::Game;
+    pic_shown = true;                   // (the last frame stays until the view comes back)
+    bigpic = -1;
+    waiting = false;
+    handle(vm->resume());
+}
+
+// The strip under the picture's place: marble in the original (the view's
+// boxes' edges there go) - FRAME.TLB's 320 x 7 strip, rows 127-133
+__attribute__((noinline)) void qf_strip(pic::Canvas& c)
+{
+    plat::File f;
+    if (!open_hl("FRAME.TLB", f)) return;
+    {
+        plat::FileSource src(f);
+        hlib::Library lib;
+        const int16_t paper = c.paper;
+        c.paper = -1;
+        if (hlib::open(src, 0, src.size(), lib) == hlib::Status::Ok) q_frame_part_at(c, src, lib, 7, 0, 127);
+        q_take();
+        c.paper = paper;
+    }
+    f.close();
+}
+
+void qf_start(pic::Canvas& c)
+{
+    if (!hl() || !d->prof->finale) {
+        waiting = false;
+        handle(vm->resume());
+        return;
+    }
+    anim_stop();
+    text::clear(c, text::kTextArea);
+    clear_menu_line(c);
+    qf_strip(c);
+    dirty_rows(15, text::kMenuRow);
+    qf = Finale{};
+    screen = Screen::Finale;
+    qf_run(plat::now_ms(), c);
+}
+
+void qf_tick(uint32_t now, pic::Canvas& c)
+{
+    if (static_cast<int32_t>(now - qf.until) >= 0) qf_run(now, c);
+}
+
+// A key or tap: the wait ends (the original's 0x383CC)
+void qf_key() { qf.until = plat::now_ms(); }
+
 struct LuckRun {
     bool     on = false, romance = false, prompt = false;
     enum class Then : uint8_t { Vm, Romance, Crown, Paper } then = Then::Vm;
@@ -6316,12 +6412,14 @@ struct MagicRules {
     classes::Tables tables;
 };
 
-bool load_rules(MagicRules*& m)
+// (room: make room first - the Companion's look passes false: it never
+// drops a sound, and tries again later when there isn't the memory)
+bool load_rules(MagicRules*& m, bool room = true)
 {
     if (!d->prof->create.ds_image) return false;
     delete m;                           // (never two copies: a block left over goes first)
     m = nullptr;
-    make_room(8, "the rule tables");  // (its biggest block: up to 7.4 KB, the Dark Queen's tables)
+    if (room) make_room(8, "the rule tables");  // (its biggest block: up to 7.4 KB, the Dark Queen's tables)
     m = new (std::nothrow) MagicRules;
     if (!m) return false;
     plat::File f;
@@ -12230,6 +12328,10 @@ void pm_tap(int x, int y, pic::Canvas& c)
         won_key(c);
         return;
     }
+    if (screen == Screen::Finale) {
+        qf_key();
+        return;
+    }
     if (screen == Screen::Icon) {
         icon_tap(x, y, c);
         return;
@@ -13815,6 +13917,9 @@ void begin_wait(pic::Canvas& c)
         break;
     case ecl::Wait::ShipRest:           // Treasures' PROGRAM 4: healing on the way
         ship_rest(c);
+        break;
+    case ecl::Wait::Finale:             // the Dark Queen's PROGRAM 1: its ending
+        qf_start(c);
         break;
     case ecl::Wait::Key:                // "press <enter>/<return> to continue"
         journal_ready();                // (Darkness: JOURNAL n's sentence waits for a key)
@@ -16879,6 +16984,62 @@ uint32_t sig_mix(uint32_t h, uint32_t v) { return (h ^ v) * 16777619u; }
 
 int panel_members() { return d && pt ? pt->count : 0; }
 
+// The Companion's trainable classes (Tom, 2026-11-14: a class with the
+// experience for its next level yellow): worked out when what they depend
+// on changes (experience, levels, race, stats, the Ext), never inside a
+// fight - the rule tables read for the moment unless the camp's or the
+// training hall's are there; Gateway by its own party list's routine
+struct ReadyLook {
+    uint32_t key = 0;
+    uint8_t  bits = 0;
+};
+ReadyLook ready_look[party::kMaxParty];
+
+uint32_t ready_key(const party::Character& ch)
+{
+    uint32_t h = 2166136261u;
+    auto mix = [&](const uint8_t* p, int n) {
+        for (int k = 0; k < n; ++k) h = (h ^ p[k]) * 16777619u;
+    };
+    mix(ch.rec + 0x10, 16);
+    mix(ch.rec + 0x74, 2);
+    mix(ch.rec + 0x109, 16);
+    mix(ch.rec + 0x127, 4);
+    mix(ch.ext, static_cast<int>(sizeof ch.ext));
+    return h | 1u;                      // (0: not worked out)
+}
+
+uint8_t ready_bits(int i)
+{
+    const party::Character& ch = pt->m[i];
+    ReadyLook& r = ready_look[i];
+    const uint32_t key = ready_key(ch);
+    if (key == r.key || fg) return r.bits;
+    if (d->gw_xp) {
+        // (Gateway's routine - gw_trainable - class by class)
+        uint8_t b = 0;
+        for (int k = 0; k < 7; ++k) {
+            const int lv = ch.level(k);
+            if (lv <= 0 || lv >= 12 || lv >= d->gw_xp[88 + k] || create::gw_race_limited(ch, k, lv)) continue;
+            const int32_t need = d->gw_xp[k * 11 + lv - 1];
+            if (need > 0 && static_cast<int64_t>(ch.exp()) >= need) b |= static_cast<uint8_t>(1u << k);
+        }
+        r.bits = b;
+        r.key = key;
+        return b;
+    }
+    const classes::Tables* t = mrules ? &mrules->tables : trainer ? &trainer->tables : nullptr;
+    MagicRules* own = nullptr;
+    if (!t) {
+        if (!d->prof->create.ds_image || !load_rules(own, false)) return r.bits;   // (tried again later)
+        t = &own->tables;
+    }
+    r.bits = static_cast<uint8_t>(create::ready_classes(ch, *t));
+    r.key = key;
+    delete own;
+    return r.bits;
+}
+
 bool panel_member(int i, PanelMember& m)
 {
     if (i < 0 || i >= panel_members()) return false;
@@ -16903,6 +17064,7 @@ bool panel_member(int i, PanelMember& m)
         if (m.lv[c] && lv <= 0) m.stopped |= static_cast<uint8_t>(1u << c);
     }
     m.krynn = krynn_rules();
+    m.ready = static_cast<uint8_t>(ready_bits(i) & ~m.stopped);
     return true;
 }
 
@@ -16978,6 +17140,8 @@ uint32_t panel_party_sig(bool icons)
         panel_member(i, m);
         h = sig_mix(h, static_cast<uint16_t>(m.hp) | static_cast<uint32_t>(m.hp_max) << 16);
         h = sig_mix(h, m.health | static_cast<uint32_t>(m.fx) << 8 | (m.current ? 1u << 24 : 0u) | (m.drained ? 1u << 25 : 0u));
+        for (int c = 0; c < 8; ++c) h = sig_mix(h, m.lv[c]);
+        h = sig_mix(h, m.stopped | static_cast<uint32_t>(m.ready) << 8);
     }
     return h;
 }
@@ -17705,6 +17869,7 @@ void reset_session()
 
 void close()
 {
+    for (auto& r : ready_look) r = ReadyLook{};
     // (a fight first: its end reads the script's parked code back into the
     // machine - host and vm still there)
     if (fg) {
@@ -17808,6 +17973,10 @@ bool act(Act a, pic::Canvas& c)
     }
     if (screen == Screen::Won) {
         won_key(c);
+        return true;
+    }
+    if (screen == Screen::Finale) {
+        qf_key();
         return true;
     }
     if (screen != Screen::Game) return false;
@@ -18105,6 +18274,10 @@ bool nav(Nav n, pic::Canvas& c)
     const bool first = !pm_lit();
     if (screen == Screen::Won) {
         won_key(c);
+        return true;
+    }
+    if (screen == Screen::Finale) {
+        qf_key();
         return true;
     }
     keys_used = true;
@@ -18894,6 +19067,11 @@ void tick_screens(uint32_t now, pic::Canvas& c)
         won_tick(now, c);
         return;
     }
+    if (screen == Screen::Finale) {
+        cv = &c;
+        qf_tick(now, c);
+        return;
+    }
     if (screen == Screen::Cast) {
         cv = &c;
         cast_tick(now, c);
@@ -19049,6 +19227,10 @@ bool back(pic::Canvas& c)
     if (demo_input(c)) return true;
     if (screen == Screen::Won) {
         won_key(c);
+        return true;
+    }
+    if (screen == Screen::Finale) {
+        qf_key();
         return true;
     }
     if (screen == Screen::Icon) {

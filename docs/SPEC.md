@@ -304,7 +304,15 @@ stay in the session's scratch space, never in the repo.
   done); song n = sound id 0x1F + n, its file and sequence from DQK.EXE's
   own tables (DS 0x1F21 / 0x1F31; profile `music_ail`); the title song 1,
   scripts' SOUND 0x20-0x27, the ending (PROGRAM 1 - DQK.EXE's switch 0x3290B:
-  the FINAL pictures with sound 0x27) song 8. Checked: the interpreter's
+  the FINAL pictures with sound 0x27) song 8. **Its ending's pictures**
+  (v0.200.0; `Wait::Finale`, play.cpp `qf_*`, profile `finale` =
+  kQueenFinal from tools/devkit/oracles/qfinal.py - the original's routine
+  0x3878B run in Unicorn): the text box and button bar cleared, the strip
+  under the picture marble, then FINAL.TLB's entries 1, 3, 2 at (8, 8),
+  each frame its background (part 1) and one part over it, a wait 0.36 s
+  (a tap or key ends the wait); the last frame stays, the script goes on.
+  Checked in DOSBox (the original with its PROGRAM 9 case pointed at the
+  ending, from the inn): the same frame at the same second, ~31 s. Checked: the interpreter's
   writes equal Unicorn's for all 8 (ail_log.py), and the title song's
   equal DOSBox's (1828 notes, every register).
   **Champions** (v0.199.0): its title tune - SOUND.DAX block 1 played by
@@ -2700,7 +2708,12 @@ a PC, PortMaster handhelds):
     they fit beside the state's whole words, else "F7" / "C6/R6" (C D F P
     R M T, K the knight; M = Magic-User or Mage); as View shows them (a
     dual-classed human's former class once the new one passed it, grey;
-    the classes white, "/" grey). State: OK unless something is wrong,
+    the classes white, "/" grey; a class with the experience for its
+    next level - name and level, "M1" too - yellow, Tom, 2026-11-14:
+    `create::ready_classes`, the training hall's own test - the game's
+    level / race limits; Gateway by its party list's routine; worked out
+    only when experience, levels, race, stats or the Ext change, never in
+    a fight, the rule tables read for the moment). State: OK unless something is wrong,
     else the health word, then Drained (Tom, 2026-11-10: levels lost to a
     drain and not restored - `create::drained`: the record's lost levels,
     0xE7 - 1 to 127 only: 0x80 on is a monster record's filler, PoolRad's

@@ -94,7 +94,8 @@ int state_words(int health, uint16_t fx, bool drained, Word* w)
 }
 
 // The classes: "Fighter 7" / "Cleric 6/Ranger 6" long, "F7" / "C6/R6" short;
-// a former class grey, the "/" grey. Returns the length.
+// a former class grey, the "/" grey, a class with the experience for its
+// next level yellow, name and level (Tom, 2026-11-14). Returns the length.
 int class_spans(const play::PanelMember& m, bool full, Span* sp, int* ns)
 {
     static const char* const kName[8] = {"Cleric", "Druid", "Fighter", "Paladin", "Ranger", "Magic-User", "Thief", "Monk"};
@@ -110,7 +111,7 @@ int class_spans(const play::PanelMember& m, bool full, Span* sp, int* ns)
         const char* nm = full ? (m.krynn && c == 5 ? "Mage" : m.krynn && c == 7 ? "Knight" : kName[c])
                               : (m.krynn && c == 7 ? "K" : kLetter[c]);
         len += snprintf(sp[n].t, sizeof sp[n].t, full ? "%s %d" : "%s%d", nm, m.lv[c]);
-        sp[n++].col = (m.stopped >> c & 1) ? style::kTextMuted : kWhite;
+        sp[n++].col = (m.stopped >> c & 1) ? style::kTextMuted : (m.ready >> c & 1) ? kYellow : kWhite;
     }
     *ns = n;
     return len;

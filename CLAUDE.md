@@ -463,6 +463,10 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   _page.ppm beside each snapshot); data via `play::panel_*` - no memory
   kept, nothing drawn inside a fight's work. Monsters' records go before
   a fight's results: panel_dot skips them once `ml` is gone.
+  Party view's classes (Tom, 2026-11-14): a class with the experience for
+  its next level yellow - its name and level only ("Fighter 2/Magic-User
+  1/Thief 2": only "Magic-User 1"; short "M1"), `PanelMember::ready`
+  (`create::ready_classes`; play.cpp `ready_bits`, cached per member).
 - Show Rolls (Tom, 2026-10-31; `CYD_COMBAT_ROLLS`, on by default): fight
   pages show their rolls at the panel's foot (rows 19-21, never over the
   message) - "To Hit: d20+mods=total" / "Needed: N" (counted from THAC0
@@ -945,7 +949,9 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
 - **Music** (Tom, 2026-11-14: rendered at scan time, played from the
   card): the games' own music drivers (MicroMagic's MUSIC.DAX block 0;
   the Dark Queen's Miles AIL 2 ADLIB.ADV + INSTR.AD through the AIL API -
-  `render_ail`, profile `music_ail`; Champions' Electronic Arts MIDI.DAX
+  `render_ail`, profile `music_ail`; its ending's picture show, PROGRAM 1
+  = `Wait::Finale`, profile `finale` from tools/devkit/oracles/qfinal.py,
+  v0.200.0; Champions' Electronic Arts MIDI.DAX
   driver + SOUND.DAX - `render_ea`, `music_ea`; v0.199.0) are RUN in the engine's own x86
   interpreter (`engine/x86.*`) on the player's board at scan time - the
   player's code, never copied (Unicorn's run of the same driver is the

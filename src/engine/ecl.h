@@ -172,7 +172,7 @@ struct OpSet {
     uint8_t  music_ids = 0;
     // The Dark Queen: PROGRAM <ending_program> is its ending (DQK.EXE's
     // PROGRAM switch 0x3290B, case 1 -> 0x3878B: the FINAL pictures with the
-    // sound <ending_sound> - its last song, 0x27); 0 = none
+    // sound <ending_sound> - its last song, 0x27; Wait::Finale); 0 = none
     uint8_t  ending_program = 0, ending_sound = 0;
     uint8_t  shops = 11;
     bool     tr_ops = false;

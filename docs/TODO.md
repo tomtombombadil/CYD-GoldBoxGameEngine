@@ -186,11 +186,14 @@ the Project as claude/TODO.md.
       has no table (its entries are text from the PDF's layer - 13 and 26
       have no heading there; the Companion's Game.dat has both); Curse's
       "INTRODUCTION - or -" is only the title over Journal Entry 1.
-- [ ] The Dark Queen's PROGRAM 1 (blocks 58 / 60) is its FINAL picture
-      show (DQK.EXE's PROGRAM switch 0x3290B case 1 -> overlay 4's
-      0x3878B: "final1" pictures, a 16-step fade, 8 pages a key each,
-      sound 0x27): the engine plays the song there (v0.199.0) but doesn't
-      draw the pictures yet (FINAL.TLB).
+- [x] The Dark Queen's ending pictures (PROGRAM 1, block 60): v0.200.0 -
+      FINAL.TLB's three animations over the screen with song 8, as
+      DQK.EXE's 0x3878B (its steps from qfinal.py; DOSBox: the same frame
+      each second, ~31 s).
+- [x] Companion Party view (Tom, 2026-11-14): a class with the experience
+      for its next level in yellow, name and level (F2/M1/T2: only M1),
+      long and short forms - v0.200.0 (checked: Curse, PoolRad, Darkness,
+      Gateway, Queen saves with experience set - playsim SETEXP).
 
 - [x] Music finished (v0.199.0): the Dark Queen's 8 AdLib songs (Miles'
       AIL 2 driver run through its API - music::render_ail; Unicorn equal
@@ -943,7 +946,7 @@ the Project as claude/TODO.md.
       screens, the Sivaks' black row. Left: the overland map's colour
       cycling (the water); a city's place box shows "x,y" (the original:
       the time only); PROGRAM 1 (blocks 58 / 60) is the FINAL picture
-      show (Claude item above; v0.199.0 plays its song); the events sweep's fights in blocks
+      show (v0.200.0); the events sweep's fights in blocks
       36 and 63 (a few of the party against dragons / 17 monsters) ran
       600+ rounds without an end (god mode - check they end in real play).
       Play is on (darkqueen5); the flasher's list says "in testing".

@@ -1778,6 +1778,30 @@ constexpr ecl::OpSet kQueenEcl = [] {
     return s;
 }();
 
+// Its ending (PROGRAM 1; music_facts.md): DQK.EXE's routine 0x3878B as
+// tools/devkit/oracles/qfinal.py --table lists it - FINAL.TLB's pictures 1,
+// 3, 2, each a background with its animation's parts over it; checked in
+// DOSBox (2026-11-14: the show ends ~32 s after it starts, a wait 0.36 s)
+constexpr ShowStep kQueenFinal[] = {
+    {'L', 1}, {'F', -1}, {'W', 1}, {'F', 2}, {'W', 1}, {'F', 3}, {'W', 1}, {'F', 4}, {'W', 1}, {'F', 5}, {'W', 1},
+    {'F', 6}, {'W', 1}, {'F', 7}, {'W', 1}, {'F', 8}, {'W', 1}, {'F', 9}, {'W', 1}, {'F', 10}, {'W', 1}, {'F', 11},
+    {'W', 1}, {'F', 12}, {'W', 1}, {'F', 13}, {'W', 1}, {'F', 14}, {'W', 1}, {'F', 15}, {'W', 1}, {'F', 16},
+    {'W', 1}, {'W', 1}, {'L', 3}, {'F', -1}, {'W', 2}, {'F', 2}, {'W', 2}, {'F', 3}, {'W', 2}, {'F', 4}, {'W', 2},
+    {'F', 5}, {'W', 2}, {'F', 6}, {'W', 2}, {'F', 5}, {'W', 1}, {'F', 7}, {'W', 2}, {'F', 8}, {'F', 9}, {'F', 10},
+    {'F', 11}, {'F', 12}, {'F', 13}, {'F', 14}, {'F', 15}, {'F', 16}, {'W', 1}, {'F', 17}, {'W', 1}, {'F', 16},
+    {'W', 1}, {'F', 17}, {'W', 1}, {'F', 16}, {'W', 1}, {'F', 17}, {'W', 1}, {'F', 16}, {'W', 3}, {'L', 2},
+    {'F', -1}, {'F', 1}, {'W', 1}, {'F', 2}, {'W', 1}, {'F', 3}, {'W', 1}, {'F', 1}, {'W', 1}, {'F', 2}, {'W', 1},
+    {'F', 3}, {'W', 1}, {'F', 1}, {'W', 1}, {'F', 2}, {'W', 1}, {'F', 3}, {'W', 1}, {'F', 1}, {'W', 1}, {'F', 2},
+    {'W', 1}, {'F', 3}, {'W', 1}, {'F', 1}, {'W', 1}, {'F', 2}, {'W', 1}, {'F', 3}, {'W', 1}, {'F', 1}, {'W', 1},
+    {'F', 2}, {'W', 1}, {'F', 3}, {'W', 1}, {'F', 4}, {'W', 1}, {'F', 1}, {'F', 3}, {'W', 1}, {'F', 4}, {'F', 1},
+    {'W', 1}, {'F', 4}, {'F', 1}, {'W', 1}, {'F', 2}, {'F', 5}, {'W', 1}, {'F', 3}, {'F', 5}, {'W', 1}, {'F', 1},
+    {'F', 6}, {'W', 1}, {'F', 2}, {'F', 6}, {'W', 1}, {'F', 3}, {'F', 7}, {'W', 1}, {'F', 1}, {'F', 7}, {'W', 1},
+    {'F', 2}, {'F', 8}, {'W', 1}, {'F', 3}, {'F', 8}, {'W', 1}, {'F', 1}, {'F', 9}, {'W', 1}, {'F', 2}, {'F', 9},
+    {'W', 1}, {'F', 3}, {'F', 10}, {'W', 1}, {'F', 1}, {'F', 10}, {'W', 1}, {'F', 2}, {'F', 11}, {'W', 1},
+    {'F', 3}, {'F', 12}, {'W', 1}, {'F', 13}, {'W', 2}, {'F', 14}, {'W', 2}, {'F', 13}, {'W', 1}, {'F', 14},
+    {'W', 2}
+};
+
 // Its title (queen_facts_3.md 2; DOSBox): TITLE.TLB's pictures by id, each
 // over the one before when not cleared - the MicroMagic logo and the SSI
 // one on the red (1 + 2, 1 + 3), the AD&D product (1 + 4), the Dragonlance
@@ -4499,7 +4523,8 @@ const Profile kProfiles[] = {
      // 0x2461 (13 bytes each: Roland, AdLib, Tandy, speaker); the driver /
      // library names DS 0x2001 / 0x1E5D
      .music_ail = {.files = kQueenDs + 0x1F21, .seqs = kQueenDs + 0x1F31, .prefix = kQueenDs + 0x2461 + 13, .count = 8,
-                   .driver = "ADLIB.ADV", .timbres = "INSTR.AD", .dir = "DISK1"}},
+                   .driver = "ADLIB.ADV", .timbres = "INSTR.AD", .dir = "DISK1"},
+     .finale = kQueenFinal, .finale_steps = sizeof kQueenFinal / sizeof kQueenFinal[0], .finale_file = "FINAL.TLB"},
 };
 
 } // namespace

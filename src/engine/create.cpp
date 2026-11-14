@@ -1291,16 +1291,25 @@ void set_name(party::Character& c, const char* name)
     memcpy(c.rec + 1, name, n);
 }
 
-int trainable(const party::Character& c, const classes::Tables& t)
+int ready_classes(const party::Character& c, const classes::Tables& t)
 {
-    int mask = 0;
+    int bits = 0;
     const uint32_t xp = c.exp();
     for (int k = 0; k < classes::kClasses; ++k) {
         const int lv = c.level(k);
         if (lv <= 0 || lv >= t.top_level() || train_limited(c, t, k, lv)) continue;
         const int32_t need = t.exp_needed(k, lv, &c);
-        if (need > 0 && static_cast<uint32_t>(need) <= xp) mask |= t.u8(static_cast<uint16_t>(t.lay.class_masks + k));
+        if (need > 0 && static_cast<uint32_t>(need) <= xp) bits |= 1 << k;
     }
+    return bits;
+}
+
+int trainable(const party::Character& c, const classes::Tables& t)
+{
+    int mask = 0;
+    const int bits = ready_classes(c, t);
+    for (int k = 0; k < classes::kClasses; ++k)
+        if (bits >> k & 1) mask |= t.u8(static_cast<uint16_t>(t.lay.class_masks + k));
     return mask;
 }
 

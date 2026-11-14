@@ -223,6 +223,14 @@ struct SimPainter final : companion::Painter {
 };
 static void panel_shot(const char* name)
 {
+    // (the members' classes: levels and the ready ones - "READY i lv... ready=bits")
+    for (int i = 0; i < play::panel_members(); ++i) {
+        play::PanelMember m;
+        if (!play::panel_member(i, m)) continue;
+        printf("  READY %d %s lv", i, m.name);
+        for (int c = 0; c < 8; ++c) printf(" %d", m.lv[c]);
+        printf(" exp %u ready=%02X\n", (unsigned)play::pt->m[i].exp(), m.ready);
+    }
     std::string base(name);
     base.resize(base.size() - 4);
     SimPainter a(480, 200);
@@ -350,6 +358,10 @@ static void settle(int choice = 0, int max_ms = 60000)
         if (play::lk.on) {                // (Treasures' LUCK texts: a tap at each page's end)
             if (play::lk.prompt) { shot("luck"); play::tap(10, 10, C); }
             else if (play::rom.asking) { shot("ask"); play::tap((int)strlen(play::menu.prompt) * 8 + 2 + (getenv("ROMREJECT") ? play::menu.start[1] * 8 : 0), text::kMenuRow * 8 + 2, C); }
+            continue;
+        }
+        if (play::screen == play::Screen::Finale) {     // (the Dark Queen's ending: a shot a second)
+            if (t % 1000 == 0) shot("finale");
             continue;
         }
         if (!waiting) return;
@@ -1531,6 +1543,15 @@ int main(int argc, char** argv)
     }
     if (getenv("TELE")) { int x, y, dd; sscanf(getenv("TELE"), "%d,%d,%d", &x, &y, &dd); play::d->gs.x = x; play::d->gs.y = y; play::d->gs.dir = dd; play::after_move_redraw(); }
     if (getenv("TELE0")) { int x, y, dd; sscanf(getenv("TELE0"), "%d,%d,%d", &x, &y, &dd); play::d->gs.x = x; play::d->gs.y = y; play::d->gs.dir = dd; play::after_move_redraw(); }
+    // SETEXP=m:exp,...: member m's experience (the Companion's ready classes)
+    for (const char* q = getenv("SETEXP"); q && *q;) {
+        int m;
+        unsigned long xp;
+        if (sscanf(q, "%d:%lu", &m, &xp) == 2 && m >= 0 && m < play::pt->count)
+            for (int i = 0; i < 4; ++i) play::pt->m[m].rec[0x127 + i] = (uint8_t)(xp >> (8 * i));
+        q = strchr(q, ',');
+        if (q) ++q;
+    }
     // SETAGE=m:age,...: member m that old; AGEUP=n: the clock's years make
     // everyone n older (Darkness / Treasures - old age at the next fight's end)
     for (const char* q = getenv("SETAGE"); q && *q;) {
@@ -1568,15 +1589,16 @@ int main(int argc, char** argv)
             printf("  monster swapped: MON%u #%u\n", area, id);
         }
         if (getenv("WINPATCH")) {
-            // WINPATCH: PROGRAM 8 written at RUNAT (the ending from where the party stands)
+            // WINPATCH[=n]: PROGRAM 8 (n) written at RUNAT (the ending from where the party stands;
+            // the Dark Queen's PROGRAM 1 - its picture show)
             play::vm->set((uint16_t)a, 0x38);
             play::vm->set((uint16_t)(a + 1), 0);
-            play::vm->set((uint16_t)(a + 2), 8);
+            play::vm->set((uint16_t)(a + 2), atoi(getenv("WINPATCH")) > 0 ? atoi(getenv("WINPATCH")) : 8);
         }
         play::then = play::Then::Idle;
         w0 = world_hash();
         play::handle(play::vm->run((uint16_t)a));
-        settle(0, 5000);
+        settle(0, play::screen == play::Screen::Finale ? 45000 : 5000);
         printf("  screen %d, %d goods, menu [%s]\n", (int)play::screen, play::ground->n, play::menu.s);
         if (play::screen == play::Screen::Won) {
             // The game won (RUNAT at a PROGRAM 8): a tap every 2 s, a snapshot before each
