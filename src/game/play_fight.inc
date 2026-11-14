@@ -2944,6 +2944,8 @@ void event_words(const combat::Event& e)
     case combat::Ev::EmitsStench: said(profile::kEmitsStench); break;
     case combat::Ev::Grabbed: said(profile::kGrabbed); break;
     case combat::Ev::BreathesIce: said(profile::kBreathesIce); break;
+    case combat::Ev::Spine: said(profile::kSpine); break;
+    case combat::Ev::SpineMisses: said(profile::kSpineMisses); break;
     case combat::Ev::Released: said(profile::kReleased); break;
     case combat::Ev::Squeezes: {
         char nm[20];

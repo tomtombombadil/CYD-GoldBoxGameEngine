@@ -1314,6 +1314,27 @@ void yeti()
         chk(seen7 > 0 && seen3 > 0 && seen7 + seen3 == 20, "the ice hound: 7 cold, half on a save");
         chk(far_hit == 0, "the ice hound: only one next to it");
     }
+    if (m.spines) {
+        bool ok = true;
+        for (int seed = 1; seed <= 10; ++seed) {
+            for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+            mx::put(0, 0, 10, 10, 200);
+            mx::put(B, 1, 15, 10, 100);
+            mx::add_aff(B, m.spines);
+            create::Dice dd(static_cast<uint32_t>(seed));
+            combat::Event ev[32];
+            bool ends = false;
+            const int k = combat::special(b, fg->t, B, dd, ev, 32, &ends);
+            int hits = 0, misses = 0;
+            for (int j = 0; j < k; ++j) {
+                hits += ev[j].ev == combat::Ev::Spine;
+                misses += ev[j].ev == combat::Ev::SpineMisses;
+            }
+            const int lost = 200 - F(0).hp();
+            ok = ok && hits + misses == 6 && lost >= hits && lost <= hits * 6 && ends;
+        }
+        chk(ok, "the manticore: six spines, 1d6 each that hits, its turn over");
+    }
     expect(P, "Treasures' yetis: the hug (GAME.OVR 0x251A0) - grabbed on a 20, squeezed 2d8 / 4d5 / 6d4, let go",
            bad == 0, "%d of %d wrong", bad, n);
 }

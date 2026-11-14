@@ -408,6 +408,11 @@ struct MonFx {
     // its giant slug's spit (0x89, 0x24333): Curse's, but 1d13 + 3 (its
     // routine 0xFB:0x52 with 1 and 13), a save against breath for half
     bool slug_d13 = false;
+    // its manticore (0x8F, 0x248D7): at its turn its pick within 10 squares
+    // takes six spines - each its to-hit roll (the d20 and its to-hit
+    // against the AC; the original's hooks left out) for 1d6, "Throws a
+    // Spine" / "Throws a Spine and Misses"; its turn is over
+    uint8_t spines = 0;
 };
 
 // More spells' effects (spell_facts.md 2): Enlarge, Confusion (and going
@@ -1148,6 +1153,7 @@ enum class Ev : uint8_t {
     // squeezing NAME" (`to` the one held), "is released"
     Grabbed, Squeezes, Released,
     BreathesIce,                        // Treasures' ice hound
+    Spine, SpineMisses,                 // Treasures' manticore
 };
 struct Event {
     uint8_t who = 0;

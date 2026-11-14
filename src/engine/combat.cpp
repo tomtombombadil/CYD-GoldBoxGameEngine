@@ -7838,6 +7838,26 @@ int special(Battle& b, const Tables& t, int i, create::Dice& d, Event* out, int 
             if (!f.up()) return n;
         }
     }
+    // Treasures' manticore (0x8F, GAME.OVR 0x248D7): six spines at its pick
+    if (m.spines && hasx(f, m.spines)) {
+        const int tg = special_target(b, t, i, 10, false, d);
+        if (tg >= 0) {
+            *ends_turn = true;
+            fly(i, b.f[tg].x, b.f[tg].y, 5, 1, 30);
+            for (int k = 0; k < 6 && b.f[tg].up() && f.up(); ++k) {
+                const int r = d.roll(20, 1);
+                const bool hit = r != 1 && (r == 20 || r + f.rec[0x199] >= b.f[tg].rec[0x19A]);
+                if (!hit) {
+                    ev(i, Ev::SpineMisses, tg);
+                    continue;
+                }
+                ev(i, Ev::Spine, tg);
+                Harm h;
+                hurt(tg, d.roll(6, 1), h);
+            }
+            return n;
+        }
+    }
     // The stench (Champions' ghast, the Dark Queen's 0x89): every foe within
     // a square saves against spells or is affected - the -2 to hit given to
     // the stench's holder as the originals do, to the one affected with the

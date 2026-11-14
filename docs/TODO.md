@@ -1793,11 +1793,13 @@ the Project as claude/TODO.md.
       sorceress's, the kraken master's: game block +0x3C set - +0x3D = 0 /
       1 / 2, +0x3B bits 1 / 2 / 4, [0xF2A0] = 1, the effect off, 0x23CDE;
       when, not read), 0x8C (the green hag, 0x245F6 - field / sight
-      changes), 0x8E (immune helper 0 in an event not found), 0x8F, 0x90,
+      changes), 0x8E (immune helper 0 in an event not found), 0x90,
       0x91, 0x92 (x2 of [0x9E1C]), 0x93, 0x94, 0x98. v0.196.41: 0x9A the
       ice hound and 0x8A the hell hound (one next to it: 7 cold / fire, a
       breath save for half - "Breathes Ice" / "Breathes Fire"), 0x89 the
-      giant slug (Curse's spit, 1d13 + 3). v0.196.40: the yetis' hug 0x95 /
+      giant slug (Curse's spit, 1d13 + 3); v0.196.42: 0x8F the manticore's
+      six spines (its pick within 10, each a to-hit roll for 1d6 - the
+      original's roll hooks left out). v0.196.40: the yetis' hug 0x95 /
       0x96 / 0x97 (0x251A0: a blow's roll of 20 "has been grabbed" - 0x9C,
       no moves -, its turn "is squeezing NAME" 2d8 / 4d5 / 6d4 and over,
       its fall lets go; rules4 yeti). Not exact yet: the original's 20 is
