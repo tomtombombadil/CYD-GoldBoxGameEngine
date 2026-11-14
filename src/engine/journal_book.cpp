@@ -294,18 +294,20 @@ struct Book : pdf::TextSink {
         if (!in_body) {
             // Under the heading: its sub-heads (any size) straight below
             const float dy = sj.p.y - l.y;
-            const float big = l.size > sj.p.size ? l.size : sj.p.size;
-            if (page == sj.p.page && dy > 0 && dy <= 2.8f * big && std::fabs(l.x - sj.p.x) <= 4 * l.size)
+            if (page == sj.p.page && dy > 0 && dy <= 2.8f * (l.size > sj.p.size ? l.size : sj.p.size) &&
+                std::fabs(l.x - sj.p.x) <= 4 * l.size)
                 g = g >= 2 ? 2 : 1;
-            // A heading alone on its line, set in the page's middle (the
-            // Steam Treasures journal's "INTRODUCTION": its text starts at
-            // the left margin, far from the heading's own left end - Tom,
-            // 2026-11-14: the section came out empty): the first line
-            // under it is its text wherever it starts
-            else if (headed && sj.p.solo && page == sj.p.page && dy > 0 && dy <= 4.5f * big && g == 0)
-                g = 1;
         } else if (!is_body) {
             return true;                  // (a caption, a page's heading: not the section's)
+        }
+        // A heading alone on its line, set in the page's middle (the Steam
+        // Treasures, Curse and Dark Queen journals' "INTRODUCTION": its text
+        // starts at the left margin, far from the heading's own left end -
+        // Tom, 2026-11-14: the section came out empty): the first line
+        // under it is its text wherever it starts
+        if (g == 0 && headed && sj.p.solo && page == sj.p.page) {
+            const float dy = sj.p.y - l.y, big = l.size > sj.p.size ? l.size : sj.p.size;
+            if (dy > 0 && dy <= 4.5f * big) g = 1;
         }
         if (g == 0) {
             close();
