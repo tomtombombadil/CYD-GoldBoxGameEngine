@@ -1435,6 +1435,8 @@ bool Vm::dk_step(Stop& r)
         const int v = value(o[0]) & 0xFF;
         if (v > 0x7F) {
             h_.music(v & 0x7F);
+        } else if (set_.music_ids && v >= set_.music_ids && v < set_.music_ids + 8) {
+            h_.music(v - set_.music_ids + 1);
         } else if (v >= 2 && v <= 14) {
             h_.game_sound(v);
         }
@@ -2391,6 +2393,10 @@ Stop Vm::step()
         const int v = value(o[0]) & 0xFF;
         restore_selected();
         if (v == 0) return wait_for(Wait::PartyMenu);      // the party menu, then on
+        if (set_.ending_program && v == set_.ending_program) {  // (the Dark Queen's ending: its song)
+            if (set_.music_ids && set_.ending_sound >= set_.music_ids) h_.music(set_.ending_sound - set_.music_ids + 1);
+            return Stop::Running;
+        }
         if (v == 9) {                                       // the camp, then EXIT
             if (!set_.camp_resumes) stop_script();          // (the Dark Queen's goes on)
             return wait_for(Wait::Camp);

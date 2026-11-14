@@ -79,7 +79,13 @@ static void scan(const char* file, int id, const uint8_t* code, uint32_t len,
             const auto& o = in.ops[0];
             if (!constant(o))
                 printf("%s block %d @%04X: SOUND [%04X] (a variable)\n", file, id, in.at, o.word());
-            else if ((o.word() & 0xFF) >= 0x80) {
+            else if (g == games::Game::DarkQueenOfKrynn && o.word() >= 0x20 && o.word() <= 0x27) {
+                // (the Dark Queen: sound ids 0x20-0x27 are its songs - DQK.EXE's
+                // sound routine, file 0x12501: DS 0x1F21 file, 0x1F31 sequence)
+                printf("%s block %d @%04X: MUSIC song %d\n", file, id, in.at, o.word() - 0x1F);
+                text_after(code, len, in.next, set);
+                ++total_music;
+            } else if ((o.word() & 0xFF) >= 0x80) {
                 printf("%s block %d @%04X: MUSIC song %d\n", file, id, in.at, o.word() & 0x7F);
                 text_after(code, len, in.next, set);
                 ++total_music;

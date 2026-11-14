@@ -313,11 +313,44 @@ static void test_stream() {
     CHECK(!music::wav_ours(h));
 }
 
+// A tiny driver in Electronic Arts' shape (called far at 0 with AH): 1 play
+// (3 notes left, word 0x80), 0 a tick (B0 = notes left while any), others
+// nothing
+static Bytes synthetic_ea_driver() {
+    Bytes d(0x100, 0x90);
+    const int code[] = {0xE9, 0x0D, 0x00};
+    for (int i = 0; i < 3; ++i) d[i] = static_cast<uint8_t>(code[i]);
+    const int body[] = {0x80, 0xFC, 0x01, 0x74, 0x06, 0x84, 0xE4, 0x74, 0x0A, 0xCB, 0x90,
+                        0x2E, 0xC7, 0x06, 0x80, 0x00, 0x03, 0x00, 0xCB,
+                        0x2E, 0x83, 0x3E, 0x80, 0x00, 0x00, 0x74, 0x11, 0xBA, 0x88, 0x03, 0xB0, 0xB0, 0xEE, 0x42,
+                        0x2E, 0xA0, 0x80, 0x00, 0xEE, 0x2E, 0xFF, 0x0E, 0x80, 0x00, 0xCB};
+    for (size_t i = 0; i < sizeof body / sizeof body[0]; ++i) d[0x10 + i] = static_cast<uint8_t>(body[i]);
+    return d;
+}
+
+static void test_ea() {
+    const Bytes drv = synthetic_ea_driver();
+    Bytes song(16, 0);
+    Log log;
+    double secs = 0;
+    CHECK(music::render_ea(drv.data(), drv.size(), song.data(), song.size(), 0x5555, log, 60, 0.5, &secs) ==
+          music::Result::Ok);
+    CHECK(log.w.size() == 3);
+    if (log.w.size() == 3) CHECK(log.w[0].first == 0xB0 && log.w[0].second == 3 && log.w[2].second == 1);
+    CHECK(secs > 8.5 && secs < 8.7);                     // (8 s quiet after the last write, then the tail)
+    Bytes junk(16, 0);
+    CHECK(music::render_ea(junk.data(), junk.size(), song.data(), song.size(), 0x5555, log) == music::Result::NoDriver);
+    Mem bad;
+    bad.d = junk;
+    CHECK(music::render_ail(bad, bad, bad, 0, log) == music::Result::NoDriver);
+}
+
 int main() {
     test_arithmetic();
     test_mul_div_shift();
     test_memory_strings_calls();
     test_micromagic();
+    test_ea();
     test_opl();
     test_stream();
     if (failures) { printf("%d failures\n", failures); return 1; }

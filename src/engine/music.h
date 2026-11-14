@@ -56,6 +56,20 @@ const char* result_text(Result r);
 Result render_micromagic(dax::ByteSource& music_dax, int song, Sink& sink, double max_seconds = 600,
                          double tail = 1.5, double* seconds = nullptr);
 
+// Renders sequence `seq` of an XMIDI file with Miles' AIL 2 driver (the
+// Dark Queen's ADLIB.ADV) and its Global Timbre Library (INSTR.AD) - the
+// driver run as the game runs it (music.cpp); as render_micromagic.
+// Memory: the three files + the driver's state and cache, ~40 KB.
+Result render_ail(dax::ByteSource& adv, dax::ByteSource& xmi, dax::ByteSource& gtl, int seq, Sink& sink,
+                  double max_seconds = 600, double tail = 1.5, double* seconds = nullptr);
+
+// Renders an Electronic Arts sound driver's song (Champions of Krynn's
+// title: MIDI.DAX's driver block, SOUND.DAX's song block - both loaded by
+// the caller) ticked at the PIT divisor `pit` as the game's program sets it
+// (music.cpp); ends 8 s after the last chip write, else as above.
+Result render_ea(const uint8_t* drv, uint32_t drv_len, const uint8_t* song, uint32_t song_len, uint16_t pit,
+                 Sink& sink, double max_seconds = 600, double tail = 1.5, double* seconds = nullptr);
+
 // The song blocks a MUSIC.DAX holds (1 up; 0 is the driver), as a bit mask.
 uint32_t micromagic_songs(dax::ByteSource& music_dax);
 

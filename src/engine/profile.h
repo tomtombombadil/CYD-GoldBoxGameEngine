@@ -913,6 +913,27 @@ struct Profile {
     // spaces) on row 24 - program image strings (0: Curse's one line,
     // title_version as the menu's prompt)
     uint32_t title_name = 0, title_prompt = 0;
+    // Miles AIL music (the Dark Queen; music_make.cpp): the program's song
+    // tables (image offsets: `count` words each - a song's XMIDI file number
+    // and its sequence in it), the name of its AdLib files' prefix ("ADDQ":
+    // <prefix><file>.XMI) and the AdLib driver / timbre library's files
+    struct MusicAil {
+        uint32_t files = 0, seqs = 0, prefix = 0;
+        uint8_t count = 0;
+        const char* driver = nullptr;
+        const char* timbres = nullptr;
+        const char* dir = nullptr;   // the folder they're in
+    } music_ail;
+    // Electronic Arts' sound drivers (Champions; music_make.cpp): the title
+    // tune - SOUND.DAX's song block played by the AdLib driver (MIDI.DAX
+    // block: the sound type's + 1), ticked at the program's PIT divisor
+    struct MusicEa {
+        const char* driver_file = nullptr;
+        uint8_t driver_block = 0;
+        const char* song_file = nullptr;
+        uint8_t song_block = 0;
+        uint16_t pit = 0;
+    } music_ea;
 };
 
 // The game's program file name (to look for it), or nullptr if no

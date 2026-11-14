@@ -1772,6 +1772,9 @@ constexpr ecl::OpSet kQueenEcl = [] {
     s.camp_resumes = true;          // (PROGRAM 9: its inns' city menu again after the camp - DOSBox)
     s.moons = true;                 // (its clock steps the moons a day at a time: DQK.EXE 0x60C8 -> 0x5E58)
     s.queen_damage = true;          // (its DAMAGE's saves - DQK.EXE 0x4256F, round 15)
+    s.music_ids = 0x20;             // (its songs: SOUND 0x20-0x27 - music_facts.md)
+    s.ending_program = 1;           // (its ending plays 0x27: DQK.EXE 0x387DD)
+    s.ending_sound = 0x27;
     return s;
 }();
 
@@ -3405,7 +3408,13 @@ const Profile kProfiles[] = {
                  .qbreath_words = {0x3306F, 0x3306A, 0x33065, 0, 0, 0},
                  .knight_words = {0x2595F, 0x25964, 0x2597F, 0x25985, 0x2598A, 0x25999, 0x259B0, 0x259C3, 0x259D1,
                                   0x259E5, 0x259F1, 0x25A07}},
-     .overland = nullptr},
+     .overland = nullptr,
+     // Its title tune (music_facts.md): START.EXE's sound unit (image
+     // 0x661A on; GAME.OVR 0x73B: type, driver, song 1 into slot 2, play)
+     // - the AdLib choice is sound type 2, its driver MIDI.DAX block 3; the
+     // unit's INT 8 at PIT 0x5555
+     .music_ea = {.driver_file = "MIDI.DAX", .driver_block = 3, .song_file = "SOUND.DAX", .song_block = 1,
+                  .pit = 0x5555}},
     // Death Knights of Krynn, GOG release (deathknights_facts.md; being
     // built): START.EXE 74,299 bytes, EXEPACK, unpacked 82,336; its data
     // segment at image 0xBCE0; GAME.OVR (35 overlays). Darkness's engine at
@@ -4484,7 +4493,13 @@ const Profile kProfiles[] = {
                  .hlib = true,
                  .queen_orders = kQueenDs + 0x8D8C},     // (BIGPIC ids 240-242),
      .joined = kQueenJoined, .n_joined = sizeof kQueenJoined / sizeof kQueenJoined[0],
-     .title_name = qw(0x4D73)},
+     .title_name = qw(0x4D73),
+     // Its music (music_facts.md): the sound routine's ids 0x20-0x27 (DQK.EXE
+     // 0x122A6), file DS 0x1F21 / sequence 0x1F31; the prefixes' table DS
+     // 0x2461 (13 bytes each: Roland, AdLib, Tandy, speaker); the driver /
+     // library names DS 0x2001 / 0x1E5D
+     .music_ail = {.files = kQueenDs + 0x1F21, .seqs = kQueenDs + 0x1F31, .prefix = kQueenDs + 0x2461 + 13, .count = 8,
+                   .driver = "ADLIB.ADV", .timbres = "INSTR.AD", .dir = "DISK1"}},
 };
 
 } // namespace

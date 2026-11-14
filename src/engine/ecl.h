@@ -167,6 +167,13 @@ struct OpSet {
     // record offsets (0x401 + offset - queen_facts_3.md 6), but the race
     // (0xAD) in Krynn's numbers (the record's own)
     bool     krynn_race = false;
+    // ... and its songs are SOUND 0x20-0x27 (DQK.EXE's sound routine, file
+    // 0x12501: song = id - 0x1F; music_facts.md): the first id, 0 none
+    uint8_t  music_ids = 0;
+    // The Dark Queen: PROGRAM <ending_program> is its ending (DQK.EXE's
+    // PROGRAM switch 0x3290B, case 1 -> 0x3878B: the FINAL pictures with the
+    // sound <ending_sound> - its last song, 0x27); 0 = none
+    uint8_t  ending_program = 0, ending_sound = 0;
     uint8_t  shops = 11;
     bool     tr_ops = false;
     // Gateway (its interpreter, GAME.OVR overlay 0xAB8 +0x29BD / +0x361F):

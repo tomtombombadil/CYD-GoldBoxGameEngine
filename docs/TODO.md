@@ -18,6 +18,11 @@ the Project as claude/TODO.md.
       too? v0.198.0 (Tom: "16-bit 22kHz maybe?"): the files are 16-bit
       22 kHz now (the next start renders them again), played 16-bit on
       the S3 / C5 / 5.0" boards, 8-bit on the DAC boards.
+      v0.199.0: the Dark Queen's 8 songs (its title; the scripts' jingles,
+      e.g. "UNSEEN MAGICKS POUR INTO CAPTAIN DAENOR...") and Champions'
+      title tune (stops when the demo starts, as the original) - the
+      next start renders them ("Preparing Music"). Sound / music is
+      complete for the PortMaster port (see the Claude item below).
 - [ ] Try v0.196.6 (Tom, 2026-11-11: "my characters ... fail to ready
       their missile weapons and charge into melee"): Quick with Missile
       ticked now readies a loaded bow / crossbow / sling whenever no foe
@@ -181,14 +186,23 @@ the Project as claude/TODO.md.
       has no table (its entries are text from the PDF's layer - 13 and 26
       have no heading there; the Companion's Game.dat has both); Curse's
       "INTRODUCTION - or -" is only the title over Journal Entry 1.
-- [ ] Music, next (2026-11-14): Champions' title tune (Electronic Arts'
-      player in START.EXE seg 0x661 + MIDI.DAX's AdLib driver, run in
-      engine/x86 like MicroMagic's - its own Unicorn oracle first); the
-      Dark Queen's ADDQ1-3.XMI (Miles' ADLIB.ADV driver, or our own XMI
-      reader into the OPL2) and where DQK.EXE plays them; whether the
-      MicroMagic songs loop (none did within 8 s of their end - Unicorn);
-      Knights' effects stopping its music (Darkness's rule assumed).
+- [ ] The Dark Queen's PROGRAM 1 (blocks 58 / 60) is its FINAL picture
+      show (DQK.EXE's PROGRAM switch 0x3290B case 1 -> overlay 4's
+      0x3878B: "final1" pictures, a 16-step fade, 8 pages a key each,
+      sound 0x27): the engine plays the song there (v0.199.0) but doesn't
+      draw the pictures yet (FINAL.TLB).
 
+- [x] Music finished (v0.199.0): the Dark Queen's 8 AdLib songs (Miles'
+      AIL 2 driver run through its API - music::render_ail; Unicorn equal
+      on all 8, DOSBox equal on the title, 1828 notes) and Champions'
+      title tune (Electronic Arts' driver, MIDI.DAX 3 - music::render_ea;
+      Unicorn and DOSBox equal); Knights' effects stop its music
+      (START 0x5DC0, confirmed). The MicroMagic songs don't loop (none
+      wrote within 8 s of their end). For the PortMaster port: play.cpp
+      needs music_make.h's inline songs() / path() / have() (now with the
+      game's profile), platform/audio.h's audio_wide() / audio_play16()
+      (weak stand-ins in play.cpp: 8-bit when absent) and play::set_music;
+      the scan's music_make.cpp (make / ready) renders the files.
 - [x] Sweeps' order (Tom, 2026-11-10, 5.0", PoolRad, Podol Plaza goblins:
       one swing, the first skull, then all the swept goblins gone at once,
       no more sounds or rolls). Not reproduced: Tom's own party (his save
@@ -895,9 +909,7 @@ the Project as claude/TODO.md.
       PDF reader now takes cross-reference / object streams; Rescan
       needed), the kapak's acid pool, "WHERE DO YOU WISH TO GO?" kept in
       shops / temple, its sound effects (the SSI driver in START.EXE, as
-      Secret's). Open: the title music (SOUND.DAX / MIDI.DAX - Electronic
-      Arts' player: next after the MicroMagic games' music, v0.197.0);
-      an in-game effect not yet compared with DOSBox.
+      Secret's). The title music since v0.199.0; open: an in-game effect not yet compared with DOSBox.
 - [x] v0.151.0: the journal viewer (Column / Whole, Turn for maps,
       pieces at their own widths - Treasures' introduction; the book a
       column at a time; grey print to black, paper threshold 232, cubic
@@ -930,8 +942,8 @@ the Project as claude/TODO.md.
       Strength, Knight New Order's refusals straight back, the camp's cast
       screens, the Sivaks' black row. Left: the overland map's colour
       cycling (the water); a city's place box shows "x,y" (the original:
-      the time only); PROGRAM 1 (the gnomes' celebration, 58 / 60) passed
-      over - not known what it does; the events sweep's fights in blocks
+      the time only); PROGRAM 1 (blocks 58 / 60) is the FINAL picture
+      show (Claude item above; v0.199.0 plays its song); the events sweep's fights in blocks
       36 and 63 (a few of the party against dragons / 17 monsters) ran
       600+ rounds without an end (god mode - check they end in real play).
       Play is on (darkqueen5); the flasher's list says "in testing".

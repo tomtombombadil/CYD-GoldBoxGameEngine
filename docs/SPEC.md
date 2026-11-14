@@ -294,9 +294,26 @@ stay in the session's scratch space, never in the repo.
   script's SOUND 0x80 + n (Gateway: CALL B200 with 0x03DE 0x80 + n); the
   same song isn't restarted, any sound effect stops it, leaving the title
   stops it (Darkness's GAME.EXE 5A0:0000 / 5A0:0031 / 0x1BC). Settings'
-  **Music** key (On / Off, `Settings::music_off`). Not yet: Champions' title
-  tune (Electronic Arts' player, SOUND.DAX + MIDI.DAX) and the Dark Queen's
-  XMI songs.
+  **Music** key (On / Off, `Settings::music_off`).
+  **The Dark Queen** (v0.199.0): its eight AdLib songs (DISK1's
+  ADDQ1-3.XMI) played by Miles' AIL 2 driver (DISK1/ADLIB.ADV) with its
+  timbres (DISK1/INSTR.AD), the driver run in the interpreter through the
+  AIL API as DQK.EXE does (`music::render_ail`: describe, init, state
+  table, timbre cache, register, the timbre requests filled from the
+  library, start, then serve at the driver's 120 Hz until the sequence is
+  done); song n = sound id 0x1F + n, its file and sequence from DQK.EXE's
+  own tables (DS 0x1F21 / 0x1F31; profile `music_ail`); the title song 1,
+  scripts' SOUND 0x20-0x27, the ending (PROGRAM 1 - DQK.EXE's switch 0x3290B:
+  the FINAL pictures with sound 0x27) song 8. Checked: the interpreter's
+  writes equal Unicorn's for all 8 (ail_log.py), and the title song's
+  equal DOSBox's (1828 notes, every register).
+  **Champions** (v0.199.0): its title tune - SOUND.DAX block 1 played by
+  MIDI.DAX block 3 (the AdLib driver; the setup's type 2 + 1), called as
+  START.EXE's sound unit does (image 0x661A-0x69BC: the driver at a
+  paragraph, AH 1 = play CX:0, AH 0 a tick at PIT 0x5555, 54.6 Hz;
+  `music::render_ea`, profile `music_ea`); 144 s, but the title's demo
+  stops it (as the original: DOSBox, 626 notes identical then the demo).
+  Checked: Unicorn equal (ealog.py) and DOSBox equal (timing within 2 ms).
 
 ## 5c. Settings and logs (Tom, 2026-10-09)
 
@@ -2027,7 +2044,7 @@ GAME=5); `variant.krynn`. Play on since 2026-10-24 (branch champions).
   SOUND.DAX (one block) is the title's music - an event stream for
   Electronic Arts' player in START.EXE (seg 0x661) - and MIDI.DAX's five
   blocks that player's device drivers (C/MS, Roland LAPC, AdLib, Tandy, PC
-  speaker); music only at the title: not played (facts only).
+  speaker); music only at the title: played since v0.199.0 (5b).
 - **Journal**: the SNEG release's Gold Box Companion text (88 entries)
   works through `journal::make_gbc`; the GOG PDF (88 entries, 57 tavern
   tales) has its table since branch champions-finish (section 7).
@@ -3515,8 +3532,6 @@ the game's Settings (As Original: all of them).
   ground under both); a cloud and a pool going in the same round show only
   "The air clears a little..." (the original says each). The computer's
   fighters walk into acid as the original's do (no check).
-- **Champions' title music** (SOUND.DAX through MIDI.DAX's drivers) isn't
-  played; its effects are.
 - **Death Knights' thief skills by race** (`rules::fixes()`): its table
   is Champions' and read the same way (a kender's row runs into the
   Dexterity table); with Game Fixes on each race its own row (as

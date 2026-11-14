@@ -447,7 +447,7 @@ bool clip_fill(uint8_t* buf, int n, void* ctx)
 // again, another song stops it first, and every sound effect stops the
 // music; leaving the title stops it too. Only while it plays: the ring.
 bool music_on = true;                           // (Settings' Music)
-bool title_music = false;                       // the game has songs (its MUSIC.DAX): song 1 at the title
+bool title_music = false;                       // the game has songs (music_make.h songs()): song 1 at the title
 music::Stream* mus = nullptr;
 std::atomic<bool> mus_rendering{false};
 int mus_song = 0;
@@ -16208,9 +16208,9 @@ bool start_title(pic::Canvas& c, uint32_t timeout_ms)
     title_run = new (std::nothrow) TitleRun;
     if (!title_run) return false;
     title_run->timeout_ms = timeout_ms;
-    // (the MicroMagic games' title music: song 1 - Darkness GAME.OVR 0x125,
-    // Death Knights 0x61C, Treasures 0x150, Gateway 0x95B with its setup's
-    // Music On)
+    // (the title music: song 1 - Darkness GAME.OVR 0x125, Death Knights
+    // 0x61C, Treasures 0x150, Gateway 0x95B with its setup's Music On, the
+    // Dark Queen's DQK.EXE 0x3872D (sound 0x20), Champions' GAME.OVR 0x73B)
     if (title_music) music_start(1);
     plat::File f;
     if ((p.title_version || p.title_menu) && open_file(p.program, f)) {
@@ -17554,7 +17554,7 @@ const char* open(const char* data_dir, games::Game g, pic::Canvas& c, const char
     strncpy(d->data_dir, data_dir, sizeof d->data_dir - 1);
     if (cache_dir) strncpy(d->cache_dir, cache_dir, sizeof d->cache_dir - 1);
     load_icon_picks();
-    title_music = (musicfiles::songs(d->data_dir) >> 1) & 1;
+    title_music = (musicfiles::songs(d->data_dir, profile::first(g)) >> 1) & 1;
 
     if (!open_program(g, prog)) {
         close();

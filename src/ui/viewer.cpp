@@ -1593,15 +1593,16 @@ void prepare_programs()
     }
 }
 
-// The games' music (Tom, 2026-11-14): each song of a game's MUSIC.DAX
+// The games' music (Tom, 2026-11-14): each song of a game's MUSIC.DAX (the
+// Dark Queen's: its XMIDI songs)
 // rendered once into _CYD/<folder>/MUSIC<n>.WAV (game/music_make), which
 // Play streams where the game plays it
 bool music_ready(const library::GameDir& g)
 {
-    if (g.format != library::Format::Dax || !play::available(g.game)) return true;
+    if (!play::available(g.game)) return true;
     char cdir[160];
     snprintf(cdir, sizeof cdir, "%s/%s/%s", games::kRootDir, library::kCacheDir, g.folder);
-    return musicfiles::ready(g.data_dir, cdir);
+    return musicfiles::ready(g.data_dir, cdir, profile::first(g.game));
 }
 
 int prepare_music(bool only_missing)
@@ -1609,12 +1610,12 @@ int prepare_music(bool only_missing)
     int failed = 0;
     for (int i = 0; i < n_games; ++i) {
         const library::GameDir& g = game_dirs[i];
-        if (g.format != library::Format::Dax || !play::available(g.game)) continue;
+        if (!play::available(g.game)) continue;
         if (only_missing && music_ready(g)) continue;
         char cdir[160];
         snprintf(cdir, sizeof cdir, "%s/%s/%s", games::kRootDir, library::kCacheDir, g.folder);
         if (!library::make_cache_dirs(g)) continue;
-        failed += musicfiles::make(g.data_dir, cdir, games::short_title(g.game), !only_missing,
+        failed += musicfiles::make(g.data_dir, cdir, profile::first(g.game), games::short_title(g.game), !only_missing,
                                    [](const char* l, bool replace, void* u) { scan_say(l, replace, u); }, nullptr);
     }
     return failed;

@@ -7,6 +7,14 @@ mm_log.cpp the engine's music::render_micromagic (x86.cpp) -> the same log form
                src/engine/x86.cpp src/engine/dax.cpp -o /tmp/claude-0/mus/mm_log
 mm_wav.cpp the whole renderer (driver -> ymfm OPL2 -> 8-bit 11,025 Hz WAV, trailing silence cut); add
            src/engine/opl.cpp src/engine/opl_pcm.cpp to the line above. WAVs stay in scratch.
+ail_log.py the Dark Queen's Miles AIL 2 driver (ADLIB.ADV + INSTR.AD + ADDQn.XMI) run in Unicorn through
+           the AIL API -> "tick reg val" lines (the oracle for music::render_ail)
+ail_wav.cpp music::render_ail end to end (-> WAV; "log" = ail_log.py's lines)
+ealog.py   Champions' Electronic Arts driver (MIDI.DAX block 3) + SOUND.DAX block 1 in Unicorn, ticked as
+           START.EXE's sound unit does (PIT 0x5555) -> "T n" / "reg val" (the oracle for music::render_ea)
+ea_wav.cpp music::render_ea end to end (-> WAV; "log" = ealog.py's lines)
+           (both: g++ -std=gnu++2b -O2 -Isrc -Itools/host <tool> src/engine/music.cpp src/engine/x86.cpp
+            src/engine/opl.cpp src/engine/opl_pcm.cpp src/engine/dax.cpp)
 dro.py / cmpdro.py   DOSBox's raw OPL capture (.dro) against a log: notes, channels, pitch, timing and
            every register the capture saw written, at each note-on.
 
@@ -21,3 +29,8 @@ Results (2026-11-14):
 - mmlog.py vs DOSBox: Darkness song 1 in the intro - 986 notes identical (channel, pitch), timing within
   1 ms over 93.6 s, every register the capture saw written identical at every note-on; in the game's
   title 271 notes identical (then the credits restart it), timing within 4 ms.
+- ail_wav vs ail_log.py: every write and tick identical for the Dark Queen's 8 songs. ail_log.py vs
+  DOSBox ("dqk SB220 SI7" = AdLib music, the title): 1828 notes identical, every register; timing within
+  142 ms over 62 s (an ail_wav log turned into "T n" lines at HZ 120 for cmpdro.py).
+- ea_wav vs ealog.py: identical (Champions' title, 144 s). ealog.py vs DOSBox (KRYNN.CFG's AdLib, START):
+  626 notes identical, timing within 2 ms, then the title's demo stops the music.

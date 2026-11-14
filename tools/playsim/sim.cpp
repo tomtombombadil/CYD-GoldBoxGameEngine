@@ -787,7 +787,7 @@ int main(int argc, char** argv)
     // MAKEMUSIC=1: the card scan's music step first (game/music_make: the
     // songs of the game's MUSIC.DAX rendered into CACHE's MUSIC<n>.WAV)
     if (getenv("MAKEMUSIC") && getenv("CACHE")) {
-        const int bad = musicfiles::make(dir, getenv("CACHE"), games::short_title(game), true,
+        const int bad = musicfiles::make(dir, getenv("CACHE"), profile::first(game), games::short_title(game), true,
                                          [](const char* l, bool, void*) { printf("  [scan] %s\n", l); }, nullptr);
         printf("  [scan] music: %d failed\n", bad);
     }
