@@ -1779,8 +1779,11 @@ the Project as claude/TODO.md.
       paralysis proof; the Queen's 0x87 (and Knights' 0x4C) took no damage
       of ANY kind - fire only now (rules4 dmg22). Left: Death Knights 0x46
       (the fire minion's 1d6 fire round it, 0x1D430), 0x4A (its on-hit
-      2d6, 0x1D7C1), 0x47 / 0x4E (the death knights: 0x1D502 a d10
-      power, 0x2EBA3 a spell 0x2F once); v0.196.44: 0x48 their fear (every
+      2d6, 0x1D7C1); v0.196.45: 0x47 the death knights reflect a spell
+      that isn't an area's back at its caster ("reflects the spell" - the
+      original's d10 decides nothing, both branches test the same; rules4
+      reflect), 0x4E their one spell 0x2F at their turn (as the computer
+      casts; the effect then gone); v0.196.44: 0x48 their fear (every
       foe not 0x5C-proof saves against spells or is terrified - Fear's
       effect, fleeing; rules4 terror) - run at the fight's set-up: its
       event not read, so maybe each round in the original. v0.196.39 Treasures (table DS

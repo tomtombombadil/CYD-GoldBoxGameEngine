@@ -1480,6 +1480,9 @@ constexpr combat::Facts kKnightsFacts = [] {
     f.dk.vamp_gaze = 0x51;              // ... its charming gaze: "gazes!", Charm Person (0x2EBDF)
     f.mon.golem = 0x57;                 // the iron golem: Secret's (0x1DBC7)
     f.mon.terror = 0x48;                // the death knights' fear (0x1D63B)
+    f.mon.spell_reflect = 0x47;         // ... their spell reflection (0x1D502)
+    f.mon.cast_once = 0x4E;             // ... their one spell 0x2F (0x2EBA3)
+    f.mon.cast_spell = 0x2F;
     f.mon.stench = 0x4F;                // the ghast's stench (0x1DA09: -2 0x76 to its holder - SPEC 12)
     f.mon.stenched = 0x76;
     f.mon.stench_skip = 0x76;
@@ -4555,6 +4558,7 @@ uint32_t duel_word(const Profile& p, int word)
         {games::Game::ChampionsOfKrynn, kLostImage, 0x11609},
         {games::Game::ChampionsOfKrynn, kGainsItem, 0x1138F},
         {games::Game::DeathKnightsOfKrynn, kGazesCharm, kP | 0xDFAD},     // (the vampire's 0x51: DS 0x22CD)
+        {games::Game::DeathKnightsOfKrynn, kReflectsSpell, kP | 0xDBE6},  // (the death knights' 0x47: DS 0x1F06)
         {games::Game::DeathKnightsOfKrynn, kEmitsStench, kP | 0xDC1B},   // (the stench 0x4F: DS 0x1F3B / 0x4580)
         {games::Game::DeathKnightsOfKrynn, kStenchAffected, kP | 0x10260},
         // PoolRad: its boar's "Falls dead" (0x5F's handler, GAME.OVR 0x1126B)

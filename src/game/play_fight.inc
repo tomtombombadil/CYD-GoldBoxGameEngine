@@ -6475,6 +6475,7 @@ void spell_pages(int caster, const combat::SpellLine* l, int n, const combat::Fi
         case combat::Did::Misses: add_page(caster, fw(profile::kMisses), nullptr, l[k].who); break;
         case combat::Did::LostImage: add_page(l[k].who, fw(profile::kLostImage)); break;
         case combat::Did::Water: add_page(l[k].who, fw(profile::kNoEffectWaterQ)); break;
+        case combat::Did::Reflected: add_page(l[k].who, fw(profile::kReflectsSpell)); break;
         case combat::Did::Fallen:
             if (fg->pages > 0 && !fg->page_dropped) fg->page[fg->pages - 1].fx[1] = skull_fx(l[k].who);
             break;

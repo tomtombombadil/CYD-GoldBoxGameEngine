@@ -1377,6 +1377,50 @@ void terror()
     expect(P, "Death Knights' death knights' fear (GAME.OVR 0x1D63B)", bad == 0, "%d of %d wrong", bad, n);
 }
 
+// Death Knights' death knights reflect a spell not an area's (0x47,
+// GAME.OVR 0x1D502): "reflects the spell", the caster takes it; an area
+// spell isn't
+void reflect()
+{
+    if (!fight() || !fg->b.fx || !fg->b.fx->mon.spell_reflect) return;
+    combat::Battle& b = fg->b;
+    if (!mrules) load_magic();
+    if (!mrules) return;
+    int bad = 0, n = 0;
+    auto chk = [&](bool ok, const char* what) {
+        ++n;
+        if (!ok && !bad++) printf("  (reflect: %s)\n", what);
+    };
+    int single = 0, area = 0;
+    for (int sp = 1; sp < 120 && (!single || !area); ++sp) {
+        const combat::FightSpell* fs = fight_spell(sp);
+        if (!fs || fs->does != combat::SpellDoes::Damage) continue;
+        const spells::Entry e = spells::entry(mrules->tables, sp);
+        const bool is_area = e.aim >= 8 && e.aim <= 14;
+        if (is_area ? area : single) continue;
+        for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
+        mx::put(0, 0, 10, 10, 200);
+        mx::put(B, 1, 12, 10, 200);
+        mx::add_aff(B, b.fx->mon.spell_reflect);
+        combat::SpellLine lines[16];
+        const int tg[1] = {B};
+        b.aim_x = b.f[B].x;
+        b.aim_y = b.f[B].y;
+        const int k = combat::cast(b, mrules->tables, 0, sp, *fs, tg, 1, rng, lines, 16, 9);
+        bool refl = false;
+        for (int j = 0; j < k; ++j) refl |= lines[j].did == combat::Did::Reflected;
+        if (is_area) {
+            ++area;
+            chk(!refl, "an area's spell: not reflected");
+        } else {
+            ++single;
+            chk(refl && F(B).hp() == 200, "a single spell: reflected, the knight untouched");
+        }
+    }
+    chk(single > 0, "a single damage spell found");
+    expect(P, "Death Knights' death knights' spell reflection (GAME.OVR 0x1D502)", bad == 0, "%d of %d wrong", bad, n);
+}
+
 // PoolRad's halving effects (the round 22 effects sweep, GAME.OVR's
 // handlers): 0x5D fire, 0x72 electricity, 0x76 cold halved; 0x6F poison
 // proof. Gateway's 0x5D the same (GAME.OVR 0x13F81).
@@ -5049,6 +5093,7 @@ void run()
     if (want("halves")) pool_halves();
     if (want("stench")) stench();
     if (want("terror")) terror();
+    if (want("reflect")) reflect();
     if (want("yeti")) yeti();
     if (want("dmg22")) dmg22();
     if (want("cbreath")) champ_breath();

@@ -241,6 +241,7 @@ enum FightWord {
     kReleased,              // ... "is released" (0x25175)
     kBreathesIce,           // Treasures' ice hound: "Breathes Ice" (0x2563C)
     kSpine, kSpineMisses,   // Treasures' manticore: "Throws a Spine" (0x248AE), "... and Misses" (0x248BD)
+    kReflectsSpell,         // Death Knights' death knights: "reflects the spell" (DS 0x1F06)
     kFightWords
 };
 

@@ -422,6 +422,14 @@ struct MonFx {
     uint8_t first_dash = 0;
     // Death Knights' death knights' fear (0x48, GAME.OVR 0x1D63B)
     uint8_t terror = 0;
+    // ... and their spell reflection (0x47, 0x1D502): a spell cast at one
+    // whose aim byte isn't an area's (8-14) "reflects the spell" - the
+    // caster takes it (the original's d10 decides nothing: both ways the
+    // same test)
+    uint8_t spell_reflect = 0;
+    // ... and their one spell (0x4E, 0x2EBA3): at its turn it casts
+    // `cast_spell` (0x2F) as the computer casts - its effect then gone
+    uint8_t cast_once = 0, cast_spell = 0;
 };
 
 // More spells' effects (spell_facts.md 2): Enlarge, Confusion (and going
@@ -1577,7 +1585,8 @@ struct FightSpell {
 // What happened to each target, in order
 // Fallen: the skull, no words; Risen: "gets back up" / "stands up and grins"
 // (Water: the Dark Queen's "That has no effect underwater!" - the spell spent)
-enum class Did : uint8_t { Word, Damage, Unaffected, Misses, Healed, Down, Word2, Fallen, Word3, Risen, LostImage, Word4, Water };
+enum class Did : uint8_t { Word, Damage, Unaffected, Misses, Healed, Down, Word2, Fallen, Word3, Risen, LostImage, Word4, Water,
+                           Reflected };
 struct SpellLine {
     uint8_t who;
     Did     did;

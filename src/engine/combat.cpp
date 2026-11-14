@@ -4941,6 +4941,20 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
                         fs.n && fs.sides;
     if (rolled) minutes = (d.roll(fs.sides, fs.n) + fs.plus) * (fs.per == 4 ? 10 : 1);
     const int my = me.team() ? 1 : 0;
+    // (Death Knights' death knights: not an area's spell comes back - 0x1D502)
+    int bounced[kMaxFighters];
+    if (b.fx && b.fx->mon.spell_reflect && !(e.aim >= 8 && e.aim <= 14) && n > 0 && n <= kMaxFighters) {
+        bool any = false;
+        for (int k = 0; k < n; ++k) {
+            bounced[k] = targets[k];
+            const int i = targets[k];
+            if (i < 0 || i >= b.n || i == caster || !hasx(b.f[i], b.fx->mon.spell_reflect)) continue;
+            say(i, Did::Reflected, 0);
+            bounced[k] = caster;
+            any = true;
+        }
+        if (any) targets = bounced;
+    }
     // The targets this kind of spell takes
     int who[kMaxFighters], m = 0;
     for (int k = 0; k < n && m < kMaxFighters; ++k) {
@@ -7872,6 +7886,14 @@ int special(Battle& b, const Tables& t, int i, create::Dice& d, Event* out, int 
             hurt(tg, 7, h);
             if (!f.up()) return n;
         }
+    }
+    // Death Knights' death knights' one spell (0x4E, GAME.OVR 0x2EBA3)
+    if (m.cast_once && m.cast_spell && hasx(f, m.cast_once) && special_target(b, t, i, 12, false, d) >= 0) {
+        lose_aff(f, m.cast_once);
+        *ends_turn = true;
+        Event* e = ev(i, Ev::Cast, -1);
+        if (e) e->amount = m.cast_spell;
+        return n;
     }
     // Treasures' manticore (0x8F, GAME.OVR 0x248D7): six spines at its pick
     if (m.spines && hasx(f, m.spines)) {
