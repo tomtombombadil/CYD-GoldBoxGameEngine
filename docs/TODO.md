@@ -668,10 +668,12 @@ the Project as claude/TODO.md.
       (the unlit lists of parts 3-6 and Gateway's / Darkness's undone).
 
 - [ ] Code review follow-ups (branch review-fixes-engine, 2026-10-31):
-      (a) Dark Queen reroll - the engine's queen_roll keeps spells a
-      previous roll's training learned (its god's spells are learned at
-      Done, before the roll); check DQK.EXE's roll (+0x1A90) / DOSBox
-      whether the original drops them. (b) done 2026-11-14: Death Knights'
+      (a) done 2026-11-14: the Dark Queen's reroll (DQK.EXE ovl 5 +0x1A90,
+      file 0x3BF50) clears the slots (0x24 bytes at 0x167) and ORs the
+      cleric list / magic-user spells into the known bits (0x157) -
+      nothing clears them, so a previous roll's spells stay, as the
+      engine's queen_roll (its race adjustments are real there, unlike
+      Champions' / Death Knights': the engine's too). (b) done 2026-11-14: Death Knights'
       LOAD CHARACTER | 0x80 never removes a member (its second flag, DS
       0xDB60, is never set) - as the original; no script relies on it (the
       events sweep, every block of ECL1-3 with a trace on a removal asked
@@ -681,6 +683,14 @@ the Project as claude/TODO.md.
       per-copy items): Curse 134.2, PoolRad 135.8, Darkness 150.2,
       Champions 136.4, Knights 136.4, Queen 143.7, Treasures 152.4 KB of
       the 153.6 - the Thenols run's own env wasn't kept.
+- [ ] Claude (2026-11-14, events sweeps under ASan, all nine games: no
+      memory error left after v0.196.49): Treasures ECL1 blocks 21-31
+      (the Red Dragon Trading Lodge's tales, block 31 square 0,3): the
+      sweep's taps go round tale -> "press a key" (op 0x1D at 0xB101) ->
+      the next tale without end; check in DOSBox whether the original
+      also asks again and again (then the sweep's artifact). The other
+      sweep problems are its own: fights out of its time at Speed 4,
+      god mode against monsters the party can't hurt.
 - [ ] **Engine screens for ports**: the platform layer is done
       (v0.91.1: src/game + src/engine use only src/platform/*.h); still
       CYD-only are the engine's own screens (Settings, journal viewer,
@@ -1329,8 +1339,9 @@ the Project as claude/TODO.md.
       The engine offered cleric / druid spells (Secret, Darkness, Krynn)
       and every robe's spells (Krynn): fixed (magic::learnable,
       Layout::mu_lists); 600 random set-ups a game, 0 differ (the old
-      code: 121-573 differ). Left: PoolRad's spell 56 (cleric 7th level:
-      its record's 0xB8 read as the slot count) not modelled; when the
+      code: 121-573 differ). PoolRad's spell 56 (cleric 7th level:
+      its record's 0xB8 read as the slot count) modelled since (magic.cpp
+      learnable; Game Fixes: none - seen 2026-11-14). Left: when the
       list is shown (the originals' training condition) not compared.
       2026-11-08 (rules4 ONLY=use, every game but the Dark Queen): items
       used outside fights - each original's UseMagicItem read (PoolRad
@@ -1342,10 +1353,11 @@ the Project as claude/TODO.md.
       Darkness / Treasures by skill levels (a paladin / ranger past 8th
       reads); the engine used Curse's rule everywhere and rolled the d100
       for everyone (a die the originals roll only for a thief past 9th):
-      fixed (magic::scroll_reader). Left: Treasures' own items with 0x3E
+      fixed (magic::scroll_reader). Treasures' own items with 0x3E
       0x0F ("jumps" - fights), 0x10 and 0x11 ("is already affected" - an
       effect on the user) have routines of their own (GAME.OVR 0x2DBF3 /
-      0x2DD75 / 0x2DB44) - the engine casts their 0x3D as a spell.
+      0x2DD75 / 0x2DB44) - done since (play.cpp tr_own_item /
+      tr_effect_item / tr_map_item / tr_fight_item; seen 2026-11-14).
       2026-11-08 (rules4 ONLY=canuse): the Krynn games' can-learn read
       (Champions GAME.OVR 0x2DC8E, Death Knights 0x29C84): cleric spells
       for a cleric or a knight past 5th (Death Knights also a paladin past
@@ -1360,9 +1372,12 @@ the Project as claude/TODO.md.
       turn stub 0x97:0x4D the menu's Turn calls) and Champions' (0xC772,
       from 0xC6D3, before its spells: the menu's test - turns < the undead
       loaded, a cleric or a former one) now turn as Curse's computer does;
-      fightfuzz seed 1 x 40 fights each: no rule broken. Left: Darkness's
-      AI turning (its menu dispatch not found by the 'T' key - not
-      traced); Champions' AI compares the old cleric level with record
+      fightfuzz seed 1 x 40 fights each: no rule broken. Darkness's AI
+      turning: done since (its AI 0x9C61 calls 0x9D14 - after the item
+      and the pending spell, before a new spell: combat part 0x13 = 0, turns
+      under the undead loaded, cleric skill > 0 or paladin skill > 2, the
+      target finder 0xA1:0x48 - play_fight ai_turns' dk_ai; seen
+      2026-11-14); Champions' AI compares the old cleric level with record
       0xD7 (the engine: the menu's test); the undead check (0x97:0x52 /
       0x88:0x52) taken as Curse's (an enemy undead in range).
       Round 6, v0.178.0 (facts: scratch /tmp/claude-0/ag/round6_facts.md):
