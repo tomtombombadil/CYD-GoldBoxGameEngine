@@ -161,12 +161,26 @@ the Project as claude/TODO.md.
 
 ## Claude
 - [x] Journal scan misses (Tom, 2026-11-14, from the PortMaster port: the
-      Steam Treasures' Introduction "doesn't exist"): v0.198.1 - a PDF whose
-      last cross-reference stream lists more than 8 /Index pairs was
-      refused whole (the Steam Champions / Death Knights / Dark Queen
-      journals, 27 - 38 pairs: no book text, no sections from them); a
-      scanned "INTRODUCTION" heading with its ornaments read as letters
-      ("~i INTRODUCTION ~") wasn't a heading (Treasures, Dark Queen).
+      Steam Treasures' Introduction "doesn't exist"; every game's journal
+      checked in both releases with the port's `tools/jlist`): v0.198.1 -
+      (1) a PDF whose last cross-reference stream lists more than 8 /Index
+      pairs was refused whole - the Steam Champions / Death Knights / Dark
+      Queen journals and GOG's Dark Queen (27 - 38 pairs): no book, no
+      sections; (2) their OCR text layer names every glyph ".null" and
+      lists only some in /ToUnicode - the rest now keep the base
+      encoding's letter (digits 2 - 8 were lost: "Tavern Tale" without its
+      number); (3) headings with a scan's ornaments: "~i INTRODUCTION ~",
+      "U Tavern Tale 12"; (4) the Introduction under a centred heading,
+      its first paragraph in larger letters, columns that end short of
+      the page's foot, a line in pieces, specks. Now: Steam Champions 88
+      entries + 57 tales (as GOG's table), Treasures' and Gateway's
+      Introductions whole, Dark Queen's entries from GOG's PDF text.
+- [ ] Journals, still weak (2026-11-14): the Dark Queen's Introduction
+      ("A letter from the general") comes out as its heading lines only
+      (the scan's text layer is in fragments); GOG's Dark Queen journal
+      has no table (its entries are text from the PDF's layer - 13 and 26
+      have no heading there; the Companion's Game.dat has both); Curse's
+      "INTRODUCTION - or -" is only the title over Journal Entry 1.
 - [ ] Music, next (2026-11-14): Champions' title tune (Electronic Arts'
       player in START.EXE seg 0x661 + MIDI.DAX's AdLib driver, run in
       engine/x86 like MicroMagic's - its own Unicorn oracle first); the
