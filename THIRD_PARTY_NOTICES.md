@@ -31,6 +31,15 @@
   `src/engine/third_party/qrcodegen.*`, unchanged (from
   github.com/nayuki/QR-Code-generator, commit 3c6d0b3). Send Logs' QR code.
 
+- **ymfm** (Yamaha FM sound cores), Copyright (c) 2021 Aaron Giles, BSD
+  3-Clause License (`src/engine/third_party/ymfm/LICENSE`),
+  https://github.com/aaronsgiles/ymfm, commit 81aec25 -
+  `src/engine/third_party/ymfm/`: ymfm.h, ymfm_fm.h / .ipp, ymfm_opl.h,
+  ymfm_adpcm.h, ymfm_pcm.h unchanged; ymfm_opl.cpp, ymfm_adpcm.cpp and
+  ymfm_pcm.cpp unchanged but renamed .inc (compiled through
+  `src/engine/opl.cpp` / `opl_pcm.cpp`). The YM3812 (AdLib) chip the scan
+  renders the games' music with.
+
 ## Loaded by the web pages (not copied into the repo)
 - **ESP Web Tools** (Apache License 2.0) - the installer page loads it from unpkg.
 

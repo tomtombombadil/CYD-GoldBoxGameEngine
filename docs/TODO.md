@@ -6,6 +6,16 @@ to the bottom with their version, then drop off after a while. Synced to
 the Project as claude/TODO.md.
 
 ## Tom
+- [ ] Music (v0.197.0, Tom 2026-11-14: "convert the adlib music into wave
+      files ... during the sd card scanning"): flash, tap Rescan (or just
+      start: a card scanned before renders the songs first, "Preparing
+      Music") - Darkness 8 songs, Death Knights 7, Gateway and Treasures 1
+      each; each line in the scan log says how long it took. Listen at
+      Darkness's / Death Knights' / Gateway's / Treasures' titles and in
+      Darkness's opening story (new game: "WELCOME, MY FRIENDS..."). A
+      sound effect (a step) stops the music, as in the originals. Settings'
+      Music turns it off. Questions: (a) on by default on the classic
+      boards too? (b) 8-bit 11 kHz enough, or better on the S3 / 5.0"?
 - [ ] Try v0.196.6 (Tom, 2026-11-11: "my characters ... fail to ready
       their missile weapons and charge into melee"): Quick with Missile
       ticked now readies a loaded bow / crossbow / sling whenever no foe
@@ -148,6 +158,13 @@ the Project as claude/TODO.md.
       characters one by one).
 
 ## Claude
+- [ ] Music, next (2026-11-14): Champions' title tune (Electronic Arts'
+      player in START.EXE seg 0x661 + MIDI.DAX's AdLib driver, run in
+      engine/x86 like MicroMagic's - its own Unicorn oracle first); the
+      Dark Queen's ADDQ1-3.XMI (Miles' ADLIB.ADV driver, or our own XMI
+      reader into the OPL2) and where DQK.EXE plays them; whether the
+      MicroMagic songs loop (none did within 8 s of their end - Unicorn);
+      Knights' effects stopping its music (Darkness's rule assumed).
 
 - [x] Sweeps' order (Tom, 2026-11-10, 5.0", PoolRad, Podol Plaza goblins:
       one swing, the first skull, then all the swept goblins gone at once,
@@ -855,7 +872,8 @@ the Project as claude/TODO.md.
       PDF reader now takes cross-reference / object streams; Rescan
       needed), the kapak's acid pool, "WHERE DO YOU WISH TO GO?" kept in
       shops / temple, its sound effects (the SSI driver in START.EXE, as
-      Secret's). Open: the title music (SOUND.DAX / MIDI.DAX, not played);
+      Secret's). Open: the title music (SOUND.DAX / MIDI.DAX - Electronic
+      Arts' player: next after the MicroMagic games' music, v0.197.0);
       an in-game effect not yet compared with DOSBox.
 - [x] v0.151.0: the journal viewer (Column / Whole, Turn for maps,
       pieces at their own widths - Treasures' introduction; the book a
@@ -964,8 +982,8 @@ the Project as claude/TODO.md.
       on) - matches DOSBox through Yartar, the wilderness, the vault, shops,
       fights; its GOG journal table (v0.142.0). behave gateway is light
       (creation 1084 cases, 48 menu states) - Claude: a deeper behaviour
-      pass (spells, monsters, items, as Curse's sweeps). Open: music
-      (MUSIC.DAX, sounds 0x80 up - no game plays music yet); the
+      pass (spells, monsters, items, as Curse's sweeps). Music: its title
+      song since v0.197.0; the
       wilderness start selects ARNOLD where the original has MERL.
 - [ ] Treasures of the Savage Frontier: PLAYABLE since v0.145.0 (Play
       on) - the 256-colour parchment, the clock's years and old age, the

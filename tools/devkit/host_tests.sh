@@ -3,7 +3,7 @@
 set -e -o pipefail          # (pipefail: a test that fails stops it - its | tail hid the exit before)
 R=${REPO:-$(cd "$(dirname "$0")/../.." && pwd)}
 O=${HTOUT:-/tmp/claude-0/ag7/ht}; mkdir -p $O; cd "$R"     # (HTOUT=dir: another output folder - parallel agents)
-for t in test_dax test_hlib test_decoders; do
+for t in test_dax test_hlib test_decoders test_music; do
   g++ -std=c++17 -O1 -Wall -Werror -fsanitize=address,undefined -Isrc -o $O/$t tools/host_tests/$t.cpp src/engine/*.cpp
   $O/$t | tail -1
 done

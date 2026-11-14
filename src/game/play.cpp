@@ -2,6 +2,7 @@
 
 #include "platform/platform.h"
 
+#include <atomic>
 #include <cstdlib>
 #include <initializer_list>
 #include <cctype>
@@ -30,6 +31,7 @@
 #include "engine/profile.h"
 #include "engine/rules.h"
 #include "engine/savegame.h"
+#include "engine/music.h"
 #include "engine/sound.h"
 #include "engine/text.h"
 #include "engine/view3d.h"
@@ -38,6 +40,7 @@
 #include "engine/qview.h"
 #include "platform/audio.h"
 #include "platform/memlog.h"
+#include "game/music_make.h"
 
 namespace play {
 
@@ -436,17 +439,128 @@ bool clip_fill(uint8_t* buf, int n, void* ctx)
     return static_cast<sound::ClipPlayer*>(ctx)->render(buf, n, kAudioHz, snd_volume);
 }
 
+// ---- Music (Tom, 2026-11-14; the Project's claude/music_facts.md): the
+// songs the card scan rendered (game/music_make: _CYD/<folder>/MUSIC<n>.WAV),
+// streamed from the card - the game's loop reads the file into a ring
+// (music_pump), the audio task plays it. As the originals (Darkness's
+// GAME.EXE 5A0:0031 / 5A0:0000): a song already playing isn't started
+// again, another song stops it first, and every sound effect stops the
+// music; leaving the title stops it too. Only while it plays: the ring.
+bool music_on = true;                           // (Settings' Music)
+bool title_music = false;                       // the game has songs (its MUSIC.DAX): song 1 at the title
+music::Stream* mus = nullptr;
+std::atomic<bool> mus_rendering{false};
+int mus_song = 0;
+uint32_t mus_pos = 0, mus_end = 0;              // the file's next byte to read, its data's end
+constexpr uint32_t kMusicRing = 16384;          // ~1.5 s at 11,025 Hz: a long card read doesn't gap it
+
+bool music_fill(uint8_t* buf, int n, void*)
+{
+    mus_rendering.store(true);
+    music::Stream* m = mus;
+    const bool more = m && m->render(buf, n, kAudioHz, snd_volume);
+    mus_rendering.store(false);
+    return more;
+}
+
 bool sound_on()
 {
     return ((snd && snd->ready()) || clips) && (snd_mode == 1 || snd_mode == 2 || snd_mode == 4);
 }
 sound::Device sound_device() { return snd_mode == 2 ? sound::Device::PcSpeaker : sound::Device::Tandy; }
 
+void music_stop();
+
 void start_output()
 {
+    music_stop();                               // (an effect stops the music - the originals' 5A0:0000)
     if (clips) audio_play(clip_fill, clips);
     else if (lclips) audio_play(lent_fill, nullptr);
     else audio_play(snd_fill, snd);
+}
+
+void music_stop()
+{
+    if (!mus) return;
+    plat::log("[music] song %d stopped\n", mus_song);
+    audio_stop();                               // (the output was the music's: it ends with it)
+    while (mus_rendering.load()) {}
+    delete mus;
+    mus = nullptr;
+    mus_song = 0;
+}
+
+// Reads the song's file on into the ring (the game's loop, often)
+void music_pump()
+{
+    if (!mus) return;
+    if (mus->done()) {
+        music_stop();
+        return;
+    }
+    const uint32_t room = mus->room();
+    if (room < 2048 || mus_pos >= mus_end) {
+        if (mus_pos >= mus_end) mus->end();
+        return;
+    }
+    char path[200];
+    musicfiles::path(d->cache_dir, mus_song, path, sizeof path);
+    plat::File f = plat::open(path, "r");
+    if (!f || !f.seek(mus_pos)) {
+        mus->end();
+        return;
+    }
+    uint8_t buf[512];
+    uint32_t want = room < mus_end - mus_pos ? room : mus_end - mus_pos;
+    while (want) {
+        const int got = f.read(buf, want < sizeof buf ? want : sizeof buf);
+        if (got <= 0) { mus_pos = mus_end; break; }
+        mus->push(buf, static_cast<uint32_t>(got));
+        mus_pos += static_cast<uint32_t>(got);
+        want -= static_cast<uint32_t>(got);
+    }
+    f.close();
+}
+
+// Song n as the game asks for it (a script's SOUND 0x80 + n, the title's 1)
+__attribute__((noinline)) void music_start(int n)
+{
+    if (!music_on || !d || !d->cache_dir[0] || snd_volume == 0) return;
+    if (mus && mus_song == n && !mus->done()) return;   // (the same song goes on - 5A0:0031)
+    music_stop();
+    char path[200];
+    musicfiles::path(d->cache_dir, n, path, sizeof path);
+    plat::File f = plat::open(path, "r");
+    uint8_t h[music::kWavHeader];
+    const bool ok = f && f.read(h, sizeof h) == static_cast<int>(sizeof h) && memcmp(h, "RIFF", 4) == 0 &&
+                    memcmp(h + 36, "data", 4) == 0;
+    const uint32_t size = f ? static_cast<uint32_t>(f.size()) : 0;
+    f.close();
+    if (!ok) {
+        char line[96];
+        snprintf(line, sizeof line, "music: song %d has no rendered file (Rescan makes it)", n);
+        memlog::note(line);
+        return;
+    }
+    const uint32_t len = static_cast<uint32_t>(h[40] | h[41] << 8 | h[42] << 16 | static_cast<uint32_t>(h[43]) << 24);
+    if (memlog::largest_kb() < kMusicRing / 1024 + 12 && (fighting() || !make_room(kMusicRing / 1024 + 12, "the music"))) {
+        memlog::note("music left out: memory low");
+        return;
+    }
+    if (audio_running()) audio_stop();          // (an effect playing: the song replaces it)
+    uint8_t* ring = static_cast<uint8_t*>(malloc(kMusicRing));
+    mus = ring ? new (std::nothrow) music::Stream(ring, kMusicRing) : nullptr;
+    if (!mus) {
+        free(ring);
+        memlog::note("NOT ENOUGH MEMORY for the music");
+        return;
+    }
+    mus_song = n;
+    mus_pos = music::kWavHeader;
+    mus_end = music::kWavHeader + (len < size - music::kWavHeader ? len : size - music::kWavHeader);
+    music_pump();
+    audio_play(music_fill, nullptr);
+    plat::log("[music] song %d\n", n);
 }
 
 // A fight holds the sound output from its start to its end (Hit / Miss)
@@ -13453,6 +13567,7 @@ struct Host : ecl::Host {
     }
     void sound(int id) override { sfx(id); }
     void game_sound(int v) override { sfx(v, true); }
+    void music(int n) override { music_start(n); }
     void log(const char* what) override { plat::log("[ecl %d:%04X] %s\n", d->gs.script, vm->pc() + 0x8000, what); }
 };
 
@@ -15425,6 +15540,7 @@ void title_show(int from, pic::Canvas& c)
 
 void end_title(pic::Canvas& c)
 {
+    music_stop();                       // (leaving the title: Darkness's GAME.EXE 0x1BC)
     delete title_run;
     title_run = nullptr;
     c.clear(0);
@@ -15964,6 +16080,7 @@ void won_tick(uint32_t now, pic::Canvas& c)
 // first-run entry
 void start_demo(pic::Canvas& c)
 {
+    music_stop();
     delete title_run;
     title_run = nullptr;
     menu_on = false;
@@ -16054,6 +16171,10 @@ bool start_title(pic::Canvas& c, uint32_t timeout_ms)
     title_run = new (std::nothrow) TitleRun;
     if (!title_run) return false;
     title_run->timeout_ms = timeout_ms;
+    // (the MicroMagic games' title music: song 1 - Darkness GAME.OVR 0x125,
+    // Death Knights 0x61C, Treasures 0x150, Gateway 0x95B with its setup's
+    // Music On)
+    if (title_music) music_start(1);
     plat::File f;
     if ((p.title_version || p.title_menu) && open_file(p.program, f)) {
         plat::FileSource src(f);
@@ -17067,6 +17188,12 @@ void set_sound(uint8_t mode, uint8_t volume, const char* rec_dir, games::Game re
 
 uint8_t sound_mode() { return snd_mode; }
 
+void set_music(bool on)
+{
+    music_on = on;
+    if (!on) music_stop();
+}
+
 void sound_test(int id, bool game) { sfx(id, game); }
 
 // play::open's steps, each with its own file buffers on the stack only
@@ -17390,6 +17517,7 @@ const char* open(const char* data_dir, games::Game g, pic::Canvas& c, const char
     strncpy(d->data_dir, data_dir, sizeof d->data_dir - 1);
     if (cache_dir) strncpy(d->cache_dir, cache_dir, sizeof d->cache_dir - 1);
     load_icon_picks();
+    title_music = (musicfiles::songs(d->data_dir) >> 1) & 1;
 
     if (!open_program(g, prog)) {
         close();
@@ -17552,6 +17680,7 @@ void close()
     font::set_ink_remap(-1, 0);
     text::set_menu_origin(0);
     copy_of = nullptr;
+    music_stop();
     audio_stop();
     delete snd;
     snd = nullptr;
@@ -18573,6 +18702,7 @@ void tap(int x, int y, pic::Canvas& c)
 void tick(uint32_t now, pic::Canvas& c)
 {
     if (!d) return;
+    music_pump();
     tidy_memory();
     // Effects run out as game time passes (walking, searching, scripts)
     if (vm && pt) {

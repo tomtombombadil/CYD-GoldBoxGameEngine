@@ -35,6 +35,8 @@ struct Settings {
                                   // Hand, the default and older files'): a board setting, not in As Original
     uint8_t no_strip = 0;         // the 5.0" boards' Companion Strip switched off (Tom, 2026-11-10; 0 = on,
                                   // older files too): a board setting, not in As Original
+    uint8_t music_off = 0;        // Music (Tom, 2026-11-14): the games' songs, rendered by the scan, off
+                                  // (0 = on, the default and older files')
 };
 
 // The Volume key (Tom, 2026-10-24): 0-100% in 5% steps, kept in the 0-255

@@ -37,6 +37,7 @@
 #include "sendlog.h"
 #include "pdfview.h"
 #include "game/companion.h"
+#include "game/music_make.h"
 #include "game/play.h"
 #include "game/walk.h"
 #include "ui.h"
@@ -64,7 +65,7 @@ bool      dirty = true;            // redraw the current screen
 // game; pages with arrows bottom right. (The code: after Dev Tools.)
 enum class SetFrom : uint8_t { Home, Game, InGame };
 SetFrom set_from = SetFrom::Home;
-enum SetItem : uint8_t { kBright, kVolume, kSound, kInvert, kSwap, kRotate, kCalibrate, kScale, kLogs, kHand, kStrip, kInfo };
+enum SetItem : uint8_t { kBright, kVolume, kSound, kMusic, kInvert, kSwap, kRotate, kCalibrate, kScale, kLogs, kHand, kStrip, kInfo };
 struct SetEntry {
     bool    comfort = false;    // a Comfort (below), else a SetItem
     uint8_t id = 0;
@@ -1592,12 +1593,40 @@ void prepare_programs()
     }
 }
 
+// The games' music (Tom, 2026-11-14): each song of a game's MUSIC.DAX
+// rendered once into _CYD/<folder>/MUSIC<n>.WAV (game/music_make), which
+// Play streams where the game plays it
+bool music_ready(const library::GameDir& g)
+{
+    if (g.format != library::Format::Dax || !play::available(g.game)) return true;
+    char cdir[160];
+    snprintf(cdir, sizeof cdir, "%s/%s/%s", games::kRootDir, library::kCacheDir, g.folder);
+    return musicfiles::ready(g.data_dir, cdir);
+}
+
+int prepare_music(bool only_missing)
+{
+    int failed = 0;
+    for (int i = 0; i < n_games; ++i) {
+        const library::GameDir& g = game_dirs[i];
+        if (g.format != library::Format::Dax || !play::available(g.game)) continue;
+        if (only_missing && music_ready(g)) continue;
+        char cdir[160];
+        snprintf(cdir, sizeof cdir, "%s/%s/%s", games::kRootDir, library::kCacheDir, g.folder);
+        if (!library::make_cache_dirs(g)) continue;
+        failed += musicfiles::make(g.data_dir, cdir, games::short_title(g.game), !only_missing,
+                                   [](const char* l, bool replace, void* u) { scan_say(l, replace, u); }, nullptr);
+    }
+    return failed;
+}
+
 void prepare_made(void*)
 {
     prepare_programs();
     prepare_pictures(false);
     for (int i = 0; i < n_games; ++i)
         if (game_dirs[i].journal[0] || game_dirs[i].gbc[0]) prepare_journal(game_dirs[i]);
+    prepare_music(false);
 }
 
 void rescan()
@@ -1668,11 +1697,11 @@ void rescan()
 // by an older version, or in a board of another size): the scan's picture
 // step for the missing ones, its lines shown and added to the scan log -
 // the library page itself only ever shows the files (Tom, v0.103.1)
-void make_missing_pictures(bool pictures, bool journals)
+void make_missing_pictures(bool pictures, bool journals, bool music)
 {
     scr = new (std::nothrow) ScanScreen;
     ui::clear();
-    ui::header(pictures ? "Preparing Pictures" : "Preparing Journals", false);
+    ui::header(pictures ? "Preparing Pictures" : journals ? "Preparing Journals" : "Preparing Music", false);
     if (scr) {
         char path[160];
         library::cache_path("SCAN.TXT", path, sizeof path);
@@ -1683,18 +1712,22 @@ void make_missing_pictures(bool pictures, bool journals)
     }
     struct Job {
         int failed;
-        bool pictures, journals;
-    } job{-1, pictures, journals};
+        bool pictures, journals, music;
+    } job{-1, pictures, journals, music};
     if (pictures) scan_say("Making the library's pictures for this screen (once)...", false, nullptr);
     // A journal an older version made (a Steam / SNEG one without the PDF's
     // tavern tales and book - v0.162): made again now, so no Rescan is needed
     if (journals) scan_say("Bringing the journals up to date (once)...", false, nullptr);
+    // The games' music (made by the scan since 2026-11-14): a card scanned
+    // before gets it now, once
+    if (music) scan_say("Rendering the games' music (once; it takes a while)...", false, nullptr);
     if (!run_on_big_stack(
             [](void* p) {
                 Job& j = *static_cast<Job*>(p);
                 j.failed = j.pictures ? prepare_pictures(true) : 0;
                 for (int i = 0; j.journals && i < n_games; ++i)
                     if (journal_stale(game_dirs[i])) prepare_journal(game_dirs[i]);
+                if (j.music) j.failed = (j.failed > 0 ? j.failed : 0) + prepare_music(true);
             },
             &job))
         scan_say("Not enough memory to make the pictures and journals now: the next start tries again.", false, nullptr);
@@ -5818,6 +5851,7 @@ int set_entries(SetEntry* out)
     add(false, kBright);
     add(false, kVolume);
     add(false, kSound);
+    add(false, kMusic);
     add(false, kInvert);
     add(false, kSwap);
     add(false, kRotate);
@@ -5871,6 +5905,7 @@ const char* set_name(const SetEntry& e)
     case kBright: return "Brightness";
     case kVolume: return "Volume";
     case kSound: return "Game Sound";
+    case kMusic: return "Music";
     case kInvert: return "Invert Colors";
     case kSwap: return "Swap Red/Blue";
     case kRotate: return "Rotate 180";
@@ -5884,7 +5919,7 @@ const char* set_name(const SetEntry& e)
 }
 bool set_has_help(const SetEntry& e)
 {
-    return e.comfort || e.id == kVolume || e.id == kSound || e.id == kInvert || e.id == kSwap || e.id == kRotate ||
+    return e.comfort || e.id == kVolume || e.id == kSound || e.id == kMusic || e.id == kInvert || e.id == kSwap || e.id == kRotate ||
            e.id == kScale || e.id == kHand || e.id == kStrip;
 }
 const char* set_help_text(const SetEntry& e)
@@ -5901,6 +5936,11 @@ const char* set_help_text(const SetEntry& e)
                "Treasures: the older games' effects played with that game's recordings, read from its folder "
                "(listed when that game is on the card); one it has no match for plays as Tandy. Pools of Darkness, Gateway and Treasures play their own. The Game menu's Sounds tab "
                "plays each effect.";
+    case kMusic:
+        return "The games' own music, where the originals play it: Pools of Darkness, Death Knights of Krynn, "
+               "Gateway and Treasures of the Savage Frontier have songs at the title and in story scenes (a "
+               "sound effect stops them, as in the originals). The card scan turns each song into a sound file "
+               "once, from your own game files - it takes a while. The AdLib versions, at the Volume's level.";
     case kInvert:
         return "Some screens show every colour inverted, like a photo negative. If yours does, turn this on.";
     case kSwap:
@@ -6011,6 +6051,7 @@ void apply_sound()
                 break;
             }
     play::set_sound(mode, settings_sound_volume(*cfg), rec_dir, rec);
+    play::set_music(!cfg->music_off);
 }
 
 void draw_game_sound(const ui::Rect& r) { ui::key2(r, "Game Sound", sound_mode_name(shown_sound_mode())); }
@@ -6191,6 +6232,7 @@ void draw_set_entry(const ui::Rect& cell, const SetEntry& e)
         case kBright: draw_slider(r); break;
         case kVolume: draw_volume(r); break;
         case kSound: draw_game_sound(r); break;
+        case kMusic: ui::key2(r, "Music", cfg->music_off ? "Off" : "On", lit(!cfg->music_off)); break;
         case kInvert: ui::key2(r, "Invert Colors", pp.invert ? "On" : "Off", lit(pp.invert)); break;
         case kSwap: draw_swap(r, pp.swap_rb); break;
         case kRotate: ui::key2(r, "Rotate 180", cfg->flipped ? "On" : "Off", lit(cfg->flipped)); break;
@@ -6291,6 +6333,10 @@ bool tap_settings_body(const ui::Tap& t)
             }
             return true;
         case kSound: tap_game_sound(r); return true;
+        case kMusic:
+            cfg->music_off = !cfg->music_off;
+            play::set_music(!cfg->music_off);
+            break;
         case kInvert: pp.invert = !pp.invert; panel_prefs_set(g, pp); break;
         case kSwap: pp.swap_rb = !pp.swap_rb; panel_prefs_set(g, pp); break;
         case kRotate:
@@ -6418,12 +6464,13 @@ void begin(const Env& env, Settings& settings)
         memlog::note(line);
         // The pictures the scan makes, for this screen: made now if they're
         // missing (never while the library page shows - Tom, v0.103.1)
-        int missing = 0, stale = 0;
+        int missing = 0, stale = 0, songs = 0;
         for (int i = 0; i < n_games; ++i) {
             if (!picture_ready(game_dirs[i])) ++missing;
             if (journal_stale(game_dirs[i])) ++stale;
+            if (!music_ready(game_dirs[i])) ++songs;
         }
-        if (missing || stale) make_missing_pictures(missing > 0, stale > 0);
+        if (missing || stale || songs) make_missing_pictures(missing > 0, stale > 0, songs > 0);
         else go(Screen::Home);
     } else {
         rescan();            // ends at its log (Continue -> the library)
