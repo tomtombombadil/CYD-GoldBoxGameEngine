@@ -180,9 +180,16 @@ the Project as claude/TODO.md.
         by itself; Add goes straight to "Add a character: Add Exit"; back
         at the menu the highlight is on Drop Character; "Pick Character
         Select Exit"; Reroll on No, the icon and Save questions on Yes.
-      - **Curse and PoolRad not run**: their code wheel question stands
-        before the party menu. Neither program has a "Pick Character"
-        string (searched), so no pick prompt there.
+      - **Curse and PoolRad run too** (Tom, 2026-11-14: GOG's copies take
+        any answer at the code wheel; PoolRad needs GOG's layout - its
+        folder's parent as C:, `cd POOLRAD`): the same as the engine.
+        View and Modify act on the selected member at once (Curse "Trade
+        Drop Heal Cure Exit", "Modify: Keep Exit"; PoolRad "View: Trade
+        Drop Exit", "Modify Character: Keep Exit"), Drop asks "Drop NAME
+        forever? Yes No" on No, no "Pick Character"; PoolRad's new
+        character is saved without a Save question and not added; Add
+        goes straight to "Add a character: Add Exit". Esc does nothing at
+        their Yes / No.
 - [x] v0.200.4 (Tom, 2026-11-14: "check the DOSbox versions ... make sure
       we're following what the actual games do"; the originals run side by
       side with the engine on the party menu, GOG copies):
