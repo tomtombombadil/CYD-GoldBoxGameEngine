@@ -17591,7 +17591,7 @@ __attribute__((noinline)) bool open_tr_frame()
     if (!open_dax("BORD.DAX", f)) return false;
     plat::FileSource src(f);
     bool ok = false;
-    d->tr_frame = static_cast<uint8_t*>(malloc(64 * 64));
+    d->tr_frame = static_cast<uint8_t*>(malloc(vga ? 64 * 64 : 64 * 32));     // (EGA: 4 bits a pixel)
     const dax::Entry* e = d->idx.find(7);
     if (d->tr_frame && e && e->raw_size > 0) d->tr_pieces = static_cast<uint8_t*>(malloc(e->raw_size));
     if (d->tr_pieces && dax::load_block(src, d->idx, *e, d->tr_pieces) == e->raw_size &&
@@ -17609,14 +17609,15 @@ __attribute__((noinline)) bool open_tr_frame()
         // of 8X8D0's (whose other glyphs stay)
         // - in 256 colours drawn over the background, the glyphs' black
         // pixels their shadow (DOSBox VGA)
-        uint8_t* g = static_cast<uint8_t*>(malloc(64 * 64));
+        uint8_t* g = static_cast<uint8_t*>(malloc(64 * 32));
         if (vga && cv && cv->bpp == 8) d->tr_shade = static_cast<uint8_t(*)[8]>(malloc(64 * 8));
         if (g && layout::load_tr_tiles(src, d->idx, 8, g, true)) {
             for (int k = 0; k < 64; ++k)
                 for (int y = 0; y < 8; ++y) {
                     uint8_t bits = 0, shade = 0;
                     for (int x = 0; x < 8; ++x) {
-                        const uint8_t v = g[k * 64 + y * 8 + x];
+                        const int i = y * 8 + x;      // (EGA colours: two a byte)
+                        const uint8_t v = static_cast<uint8_t>(i & 1 ? g[k * 32 + i / 2] & 15 : g[k * 32 + i / 2] >> 4);
                         if (v != 13 && v != 0) bits = static_cast<uint8_t>(bits | 0x80 >> x);
                         if (v == 0) shade = static_cast<uint8_t>(shade | 0x80 >> x);
                     }

@@ -184,11 +184,16 @@ bool load_tr_tiles(dax::ByteSource& src, const dax::Index& idx, uint8_t block, u
     if (!ega && r.skip((h.count + 1) / 2u) != (h.count + 1) / 2u) return false;
     const uint32_t gap = h.pixels_at - (pic::kVgaHeaderSize + h.count * 3u + (h.count + 1) / 2u);
     if (r.skip(gap) != gap) return false;
-    memset(out, 0, 64 * 64);
+    // (EGA: two pixels a byte, the first in the high nibble - 32 bytes a tile)
+    memset(out, 0, ega ? 64 * 32 : 64 * 64);
     for (int k = 0; k < h.frames && k < 64; ++k) {
         uint8_t px[64];
         if (r.read(px, sizeof px) != sizeof px) return false;
-        for (int i = 0; i < 64; ++i) out[k * 64 + i] = map[px[i]];
+        if (ega)
+            for (int i = 0; i < 32; ++i)
+                out[k * 32 + i] = static_cast<uint8_t>(map[px[2 * i]] << 4 | (map[px[2 * i + 1]] & 15));
+        else
+            for (int i = 0; i < 64; ++i) out[k * 64 + i] = map[px[i]];
     }
     return true;
 }
@@ -370,10 +375,11 @@ namespace {
 void tr_tile(pic::Canvas& c, const Tables& tb, int n, int col, int row)
 {
     if (!tb.tr_tiles || n < 0 || n > 63) return;
-    const uint8_t* s = tb.tr_tiles + n * 64;
+    const uint8_t* s = tb.tr_tiles + n * (tb.tr_vga ? 64 : 32);
     for (int y = 0; y < 8; ++y)
         for (int x = 0; x < 8; ++x) {
-            const uint8_t v = s[y * 8 + x];
+            const int i = y * 8 + x;
+            const uint8_t v = tb.tr_vga ? s[i] : static_cast<uint8_t>(i & 1 ? s[i / 2] & 15 : s[i / 2] >> 4);
             const int px = col * 8 + x, py = row * 8 + y;
             if (v != kMask && px >= 0 && px < c.w && py >= 0 && py < c.h) c.set(px, py, v);
         }

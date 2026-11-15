@@ -123,7 +123,7 @@ struct Tables {
     // across or down from a cell, 0xFF a gap, 0xFE a piece's end), each
     // screen its own pieces (its img 0x1B38 exploring, 0x1BE6 the border,
     // 0x1C5B the border with the row-16 bar, 0x1CE7 a fight); the 64 tiles
-    // in tr_tiles (64 bytes each: EGA colours, colour 13 not drawn - or a
+    // in tr_tiles (32 bytes each: EGA colours two a byte, colour 13 not drawn - or 64, a
     // VGA screen's values, tr_vga); the screen cleared first with tr_clear
     // (Treasures' VGA background, BORD 1; nullptr: black)
     bool tr = false;
@@ -139,8 +139,9 @@ struct Tables {
 
 // Treasures: the frame pieces' starts in tb.tr_pieces (the block as read)
 void tr_set_pieces(Tables& tb, const uint8_t* bytes, uint16_t n);
-// Treasures: BORD.DAX block `block`'s 64 VGA tiles into out (64 x 64 bytes):
-// ega - their EGA colours (the original's EGA mode), else their values;
+// Treasures: BORD.DAX block `block`'s 64 VGA tiles into out: ega - their
+// EGA colours (the original's EGA mode), two a byte (64 x 32 bytes), else
+// their values (64 x 64 bytes);
 // pal: the block's palette entries (nullptr: not wanted)
 bool load_tr_tiles(dax::ByteSource& src, const dax::Index& idx, uint8_t block, uint8_t* out, bool ega,
                    pic::VgaPalette* pal = nullptr);
