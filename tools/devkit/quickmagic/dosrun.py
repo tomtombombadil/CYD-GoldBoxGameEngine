@@ -16,12 +16,12 @@ if not os.environ.get('KEEP'):
             shutil.copy(a, W + ('/c/' if os.environ.get('ROOT') else '/c/GAME/') + b)
 shutil.rmtree(W + '/shots', ignore_errors=True); os.makedirs(W + '/shots/frames')
 base = os.path.basename(src.rstrip('/'))
-conf = open('/tmp/claude-0/differ/dos.conf.in').read().replace('@DIR@', W + '/c').replace('@RUN@', ('cd \\' if os.environ.get('ROOT') else 'cd \\GAME') + ('\\' + sub if sub != '.' else '') + '\n' + cmd)
+conf = open(os.environ.get('CONFIN','/tmp/claude-0/differ/dos.conf.in')).read().replace('@DIR@', W + '/c').replace('@RUN@', ('cd \\' if os.environ.get('ROOT') else 'cd \\GAME') + ('\\' + sub if sub != '.' else '') + '\n' + cmd)
 open(W + '/dos.conf', 'w').write(conf)
 shutil.copy(scr, W + '/dos.script')
 env = dict(os.environ, SDL_VIDEODRIVER='dummy', SDL_AUDIODRIVER='dummy', AUTODOS_SCRIPT=W + '/dos.script', AUTODOS_OUT=W + '/shots')
 r = subprocess.run(['/tmp/claude-0/differ/bin/dosbox-auto', '-conf', W + '/dos.conf'], env=env, capture_output=True, text=True, timeout=3000)
 open(W + '/dosbox.log', 'w').write(r.stdout + r.stderr)
-for p in sorted(glob.glob(W + '/shots/*.ppm')):
+for p in ([] if os.environ.get('NOPNG') else sorted(glob.glob(W + '/shots/*.ppm'))):
     subprocess.run(['convert', p, '-scale', '200%', p[:-4] + '.png'])
 print(W, len(glob.glob(W + '/shots/*.ppm')), 'shots')

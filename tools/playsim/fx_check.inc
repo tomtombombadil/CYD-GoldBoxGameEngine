@@ -57,6 +57,17 @@ bool skull_open = false;                    // a skull drawn, the field not put 
 uint32_t pause_at = 0, wait_at = 0, wait_ms = 0;
 bool pause_on = false, wait_on = false;
 
+int ex_ring = 0, ex_rings = 0;          // F4: the burst's last ring shown, its rings
+void ex_done()
+{
+    ++seen["F4 burst whole"];
+    if (ex_ring != ex_rings) {
+        char t[96];
+        snprintf(t, sizeof t, "a burst stopped at ring %d of %d", ex_ring, ex_rings);
+        bad("F4", t);
+    }
+    ex_ring = 0;
+}
 void hook(play::FxEv ev, uint32_t wait, int n)
 {
     using namespace play;
@@ -133,13 +144,27 @@ void hook(play::FxEv ev, uint32_t wait, int n)
         if (!evs.empty() && evs.back().ev == FxEv::Frame && evs.back().kind == e.kind && e.step > 0) {
             const uint32_t got = g_now - evs.back().at;
             const uint32_t want = evs.back().wait;
-            const char* what = e.kind == Fx::Skull ? "W1 skull" : e.kind == Fx::Burst ? "W1 burst" : "W1 flight";
+            const char* what = e.kind == Fx::Skull ? "W1 skull" : e.kind == Fx::Burst ? "W1 burst" : e.kind == Fx::Explode ? "W1 explode" : "W1 flight";
             ++seen[what];
             const uint32_t rule = e.kind == Fx::Skull ? 10 : e.kind == Fx::Burst ? 70 : want;
             if (got != rule) {
                 snprintf(t, sizeof t, "%s frame %d after %u ms, the rule %u", what + 3, e.step, got, rule);
                 bad("W1", t);
             }
+        }
+        // F4 (2026-11-15): the Dark Queen's area burst - its rings 1, 2 ... in
+        // order, all of them (3 x area + 1, DQK.EXE 0x249BF) before anything else
+        if (e.kind == Fx::Explode) {
+            ++seen["F4 burst ring"];
+            const int want = ex_ring + 1;
+            if (n != want) {
+                snprintf(t, sizeof t, "burst ring %d after ring %d", n, ex_ring);
+                bad("F4", t);
+            }
+            ex_ring = n;
+            ex_rings = fg->fx.boom_rings;
+        } else if (ex_ring) {
+            ex_done();
         }
         if (e.kind == Fx::Skull) {
             if (e.step == 0) {
@@ -159,6 +184,7 @@ void hook(play::FxEv ev, uint32_t wait, int n)
             }
         }
     }
+    if (ev != FxEv::Frame && ex_ring) ex_done();
     if (ev == FxEv::PageWait) {
         if (skull_who >= 0 && skull_frames && skull_frames != 9) {
             snprintf(t, sizeof t, "fighter %d's skull blinked %d frames, the rule 9", skull_who, skull_frames);

@@ -2522,6 +2522,15 @@ on the square - a wall too; with Game Fixes only a square the jumper can
 stand on (Dimension Door's). A map in a fight is shown as outside one,
 the items screen back after its key, nothing used, the turn not over.
 
+**Area bursts** (v0.202.0, Tom 2026-11-15: watched in DOSBox, then built
+as its routine - the Project's claude/queen_explode_facts.md): Stinking
+Cloud, Cloudkill, Fireball, Delayed Blast Fireball, the Necklace, Ice Storm
+(and Lightning Bolt under water) burst where they land - the view on the
+square aimed at, rings 1 .. 3 x area + 1 of the spell's COMSPR picture (2k -
+1 a ring, at random angles, a third of a square further out each ring),
+the field back after. 40 ms a ring (the original waits nothing; its own
+dice there, ours separate so play never depends on them).
+
 ## 10. Engine UI rules (carried over from CYD-Classic-Games)
 
 - Big targets, stylus taps (Tom uses a DS Lite stylus, firm presses). A tap acts

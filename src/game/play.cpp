@@ -3,6 +3,7 @@
 #include "platform/platform.h"
 
 #include <atomic>
+#include <cmath>
 #include <cstdlib>
 #include <initializer_list>
 #include <cctype>

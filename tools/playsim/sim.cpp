@@ -590,6 +590,7 @@ static void run_fight()
                     q = strchr(q, ':');
                     for (int k = 0; q && *q; ++k) { ++q; play::fg->b.f[m].rec[magic::kListAt + k] = (uint8_t)strtol(q, nullptr, 16); q = strchr(q, ','); }
                     play::fg->b.f[m].can_cast = true;
+                    if (getenv("FORCEAI")) play::fg->b.f[m].rec[0xF7] |= 0x80;     // FORCEAI=1: the computer's (its spells too)
                     if (play::fg->st == play::FSt::Menu) play::fight_menu(C);
                     printf("  forced spells: fighter %d (of %d), list %02X %02X\n", m, play::fg->b.n, (unsigned)play::fg->b.f[m].rec[magic::kListAt], (unsigned)play::fg->b.f[m].rec[magic::kListAt + 1]);
                 }
@@ -1981,6 +1982,21 @@ int main(int argc, char** argv)
             printf("  screenmem %-8s left: %6.1f KB, screen %d\n", nm, now2 / 1024.0, (int)play::screen);
         }
     }
+    if (getenv("PARTYDUMP"))            // PARTYDUMP=1: each member's memorized spells (record 0x1E on)
+        for (int i = 0; i < play::pt->count; ++i) {
+            char nm[32];
+            play::pt->m[i].name(nm, sizeof nm);
+            printf("  member %d %s mem:", i, nm);
+            for (int k = 0; k < 84 && play::pt->m[i].rec[magic::kListAt + k]; ++k) printf(" %02X", play::pt->m[i].rec[magic::kListAt + k]);
+            printf("\n");
+        }
+    if (getenv("RECSET"))               // RECSET=m:off=v,...: party member m's record bytes (hex) before SAVESLOT
+        for (const char* q = getenv("RECSET"); q && *q;) {
+            unsigned m, off, v;
+            if (sscanf(q, "%u:%x=%x", &m, &off, &v) == 3 && m < (unsigned)play::pt->count) play::pt->m[m].rec[off] = (uint8_t)v;
+            q = strchr(q, ',');
+            if (q) ++q;
+        }
     if (getenv("SAVESLOT")) {
         // Encamp, Save to that slot
         auto tap_word = [](char k) { for (int i = 0; i < play::menu.count; ++i) if (text::key(play::menu, i) == k) { int cx, cy; text::item_cell(play::menu, i, &cx, &cy); play::tap(cx * 8 + 2, cy * 8 + 2, C); return true; } return false; };

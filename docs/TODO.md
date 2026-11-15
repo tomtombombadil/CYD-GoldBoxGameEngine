@@ -2185,8 +2185,15 @@ the Project as claude/TODO.md.
       spell's flight): Stinking Cloud (1, 0x1B), Cloudkill (1, 0x1C),
       Fireball / Delayed Blast / the Necklace (3, 0x19; 2 where game byte
       0x22 is set or for the Necklace), Ice Storm (2, 0x1A; 3 under
-      water), Lightning Bolt under water (2, 0x14, sound 9). Tom to say
-      whether it's wanted (a pictures-only feature). The scripts do
+      water), Lightning Bolt under water (2, 0x14, sound 9). DONE v0.202.0
+      (Tom, 2026-11-15: "Test it and replicate it"): watched in DOSBox
+      (Caergoth's dragons, tools/devkit/queenburst), built as the original's
+      routine (Fx::Explode; the Project's queen_explode_facts.md), fx_check F4.
+- [ ] The Dark Queen's Caergoth dragon fight (save A, the walk in
+      tools/devkit/queenburst/walk.txt): DOSBox's field is brown ground with
+      sandstone walls, the engine's grass and trees - the fight's set-up
+      0x2CC04 picks its look by game byte 0x22 (0x19 / 0x27); not checked
+      yet (found 2026-11-15). The scripts do
       set it: sweep events VMWATCH=3c (Queen, 44 of its blocks swept) -
       ECL.GLB blocks 1, 2, 3, 14, 15. The Dark Queen's ground 0x46: done
       (v0.196.24) - 0x50A77 is inside the kapak's acid layer 0x50A0E

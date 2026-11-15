@@ -755,12 +755,15 @@ enum class FSt : uint8_t {
 struct Fx {
     // Redraw: the field again (a cloud laid); Bolt: a flight to (x1, y1), then lightning along the
     // fight's bolt segments
-    enum Kind : uint8_t { None, Fly, Burst, Skull, Redraw, Bolt } kind = None;
+    // Explode: the Dark Queen's area burst round (x1, y1) - its pictures in rings (q_explode)
+    enum Kind : uint8_t { None, Fly, Burst, Skull, Redraw, Bolt, Explode } kind = None;
     uint8_t sound = 0;
     combat::Flight fl;                  // Fly / Burst: the pictures, their cycle, ms a step
     uint8_t loops = 1;                  // Burst: times round the cycle
     int8_t  who = -1;                   // Burst / Skull: the fighter
     uint8_t x0 = 0, y0 = 0, x1 = 0, y1 = 0;     // Fly: from, to (field squares)
+    // Fly: the Dark Queen's burst where it lands (rings, its picture, its sound; 0: none)
+    uint8_t boom_rings = 0, boom_pic = 0, boom_sound = 0;
 };
 
 // (tests: the fight's pages, pictures and waits told as they happen - the
@@ -935,6 +938,9 @@ struct Fight {
     Fx       fx;
     combat::FlightPath path;
     uint8_t* fx_pic[2] = {};            // its ready / attack pictures (COMSPR)
+    uint8_t* ex_pic[2] = {};            // Explode: its two pictures (any size)
+    int      ex_w[2] = {}, ex_h[2] = {}, ex_ox = 0, ex_oy = 0;
+    uint32_t ex_rng = 1;                // (its own dice: the pictures never change play)
     int      fx_step = 0;
     int      bolt_at = -1;              // a Bolt picture: the segment flying (-1: the flight to the square first)
     uint8_t  under[kSq * kSq];          // what the flying picture covers
@@ -2030,6 +2036,86 @@ void fx_free()
     free(fg->fx_pic[0]);
     free(fg->fx_pic[1]);
     fg->fx_pic[0] = fg->fx_pic[1] = nullptr;
+    free(fg->ex_pic[0]);
+    free(fg->ex_pic[1]);
+    fg->ex_pic[0] = fg->ex_pic[1] = nullptr;
+}
+
+// ---- The Dark Queen's area burst (DQK.EXE 0x249BF, its spells' picture
+// routine 0x5B73B - the Project's queen_explode_facts.md): the view on the
+// square aimed at, then rings 1 .. 3 x area + 1 of its pictures - ring k
+// 2k - 1 of them, each at a random angle (2-degree steps) k thirds of a
+// square out, rounded, drawn where it falls inside the view's 19 x 19 thirds
+// (picture slot `pic` or `pic` + 38, either way round, at random), never taken
+// off; each ring shown; then the field again
+int q_sin(int a)                       // 100 x sin(2a degrees), rounded (a 0-179)
+{
+    static int8_t t[180];
+    static bool made = false;
+    if (!made) {
+        for (int i = 0; i < 180; ++i) t[i] = static_cast<int8_t>(lround(100.0 * sin(i * 3.14159265358979 / 90.0)));
+        made = true;
+    }
+    return t[a];
+}
+int ex_rand(int n)
+{
+    uint32_t& s = fg->ex_rng;
+    s ^= s << 13;
+    s ^= s >> 17;
+    s ^= s << 5;
+    return static_cast<int>(s % static_cast<uint32_t>(n));
+}
+constexpr uint32_t kExplodeRingMs = 40;   // (the original waits nothing: its drawing's time, ~40 ms a ring at 3,000 cycles)
+
+bool explode_begin(pic::Canvas& c, const Fx& e)
+{
+    combat::Battle& b = fg->b;
+    free(fg->ex_pic[0]);
+    free(fg->ex_pic[1]);
+    // (its picture slots: slot s of 15-37 holds COMSPR s - 15, slot s + 38
+    // that one's attack picture, 128 + s - 15 - the fight's set-up 0x2CBA1)
+    const int id = e.boom_pic - 15;
+    fg->ex_pic[0] = load_pic4("COMSPR.DAX", id, 0, &fg->ex_w[0], &fg->ex_h[0]);
+    fg->ex_pic[1] = load_pic4("COMSPR.DAX", id + 128, 0, &fg->ex_w[1], &fg->ex_h[1]);
+    plat::log("[fight] burst: %d rings of COMSPR %d at %d,%d%s\n", e.boom_rings, id, e.x1, e.y1,
+              fg->ex_pic[0] && fg->ex_pic[1] ? "" : " (pictures missing)");
+    if (!fg->ex_pic[0] && !fg->ex_pic[1]) return false;
+    focus_at(e.x1, e.y1, 0xFF);
+    fg->ex_ox = (e.x1 - b.vx - 3) * 3;
+    fg->ex_oy = (e.y1 - b.vy - 3) * 3;
+    fg->ex_rng = 0x9E3779B9u ^ static_cast<uint32_t>(e.x1 << 16 | e.y1 << 8) ^ static_cast<uint32_t>(b.round * 2654435761u);
+    if (!fg->ex_rng) fg->ex_rng = 1;
+    draw_field(c);
+    return true;
+}
+
+// Ring `k` (from 1); false: the rings are done (the field back)
+bool explode_step(pic::Canvas& c, int k)
+{
+    const Fx& e = fg->fx;
+    if (k > e.boom_rings) {
+        draw_field(c);
+        if (fg->cur >= 0 && fg->b.f[fg->cur].up()) mark(c, fg->cur);
+        fg->fx.kind = Fx::None;         // (done: fx_end has nothing to clear)
+        return false;
+    }
+    for (int j = 2 * k - 2; j >= 0; --j) {
+        const int a = ex_rand(180);
+        const int dx = (q_sin((a + 45) % 180) * k + 50) / 100 + fg->ex_ox;
+        const int dy = (q_sin(a) * k + 50) / 100 + fg->ex_oy;
+        if (dx < -9 || dx > 9 || dy < -9 || dy > 9) continue;
+        const int s = ex_rand(4);
+        const int p = s >> 1;
+        if (!fg->ex_pic[p]) continue;
+        const int x = kViewX + (dx + 9) * 8, y = kViewY + (dy + 9) * 8;
+        blit4(c, fg->ex_pic[p], fg->ex_w[p], fg->ex_h[p], x, y, (s & 1) != 0, true, kViewX, kViewY, kViewX + kViewW,
+              kViewY + kViewW);
+        dirty(y, y + fg->ex_h[p]);
+    }
+    fg->until = plat::now_ms() + kExplodeRingMs;
+    CYD_TEST_FX(Frame, kExplodeRingMs, k);
+    return true;
 }
 
 // A COMSPR picture by Curse's number (the engine's): the game's own (the
@@ -2105,6 +2191,14 @@ bool fx_step(pic::Canvas& c)
     case Fx::Fly: {
         under_put(c);
         while (!combat::flight_step(fg->path)) {
+            // (the Dark Queen: its area burst where the flight lands)
+            if (e.kind == Fx::Fly && e.boom_rings) {
+                e.kind = Fx::Explode;
+                if (e.boom_sound) sfx(e.boom_sound);
+                if (!explode_begin(c, e)) return false;
+                fg->fx_step = 2;
+                return explode_step(c, 1);
+            }
             // A bolt: on along its segments (the lightning picture, COMSPR 6, 50 ms a step)
             if (e.kind != Fx::Bolt || fg->bolt_at + 1 >= fg->b.n_bolt) return false;
             if (fg->bolt_at < 0) {
@@ -2132,6 +2226,7 @@ bool fx_step(pic::Canvas& c)
         CYD_TEST_FX(Frame, 70, 1);
         return true;
     }
+    case Fx::Explode: return explode_step(c, k);
     case Fx::Skull: {
         if (k >= 9) return false;
         const combat::Fighter& f = fg->b.f[e.who];
@@ -2217,6 +2312,12 @@ void page_fx(pic::Canvas& c)
 void fx_end(pic::Canvas& c)
 {
     under_put(c);
+    // (a burst cut short: its pictures off the field)
+    if (fg->fx_on && fg->fx.kind == Fx::Explode) {
+        fg->fx.kind = Fx::None;
+        draw_field(c);
+        if (fg->cur >= 0 && fg->b.f[fg->cur].up()) mark(c, fg->cur);
+    }
     fx_free();
     fg->fx_on = false;
     ++fg->fx_at;
@@ -6975,6 +7076,33 @@ void cast_now(pic::Canvas& c, bool forgotten)
         e.sound = static_cast<uint8_t>(sp == d->prof->sound.fireball_spell ? sound::kFireball
                                        : bolt                              ? sound::kLightning
                                                                            : sound::kSpell);
+        // The Dark Queen: its area spells burst where they land (DQK.EXE
+        // 0x5B9D9's case table): Stinking Cloud / Cloudkill 1 (pictures 0x1B /
+        // 0x1C), Fireball / Delayed Blast / the Necklace 3 where game byte
+        // 0x22 is set (not the Necklace) else 2 (0x19), Ice Storm 2, 3 under
+        // water (0x1A), Lightning Bolt under water 2 (0x14, its own sound)
+        if (hl() && ax >= 0) {
+            const bool water = fg->b.underwater;
+            int area = 0, pic = 0, snd = sound::kFireball;
+            switch (sp) {
+            case 0x22: area = 1, pic = 0x1B; break;
+            case 0x5B: area = 1, pic = 0x1C; break;
+            case 0x2F:
+            case 0x73:
+            case 0x85: area = vm && (vm->get(0x22) & 0xFF) && sp != 0x85 ? 3 : 2, pic = 0x19; break;
+            case 0x57: area = water ? 3 : 2, pic = 0x1A; break;
+            case 0x33:
+                if (water) area = 2, pic = 0x14, snd = sound::kLightning;
+                break;
+            default: break;
+            }
+            if (area) {
+                e.boom_rings = static_cast<uint8_t>(area * 3 + 1);
+                e.boom_pic = static_cast<uint8_t>(pic);
+                e.boom_sound = static_cast<uint8_t>(snd);
+                if (e.kind == Fx::Bolt) e.kind = Fx::Fly;
+            }
+        }
         fg->page[first_page].fx[0] = e;
         // Darkness: an area spell's burst plays the fireball's effect again
         // where it lands (R16)
