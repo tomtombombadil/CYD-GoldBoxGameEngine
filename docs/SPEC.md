@@ -2968,6 +2968,19 @@ the originals is a bug. Engine comforts with a `features.h` switch are
 marked (switch); since v0.72.0 the player can also turn each one off in
 the game's Settings (As Original: all of them).
 
+- **Paladins' casting level in Darkness and Treasures** (Game Fixes,
+  v0.201.0): their caster-level routine (GAME.OVR 0x36C2E / 0x40CC7)
+  takes max(level, former level) a class and returns 6 for one with no
+  cleric or magic-user level and ranger under 8 - with no test of the
+  paladin, so a pure paladin casts at 6; Death Knights' the same shape
+  (its knight). Kept so; with Game Fixes a paladin's cleric spells take
+  the paladin's level as the earlier games do.
+- **Death Knights' Remove Curse and Heal** (Game Fixes, v0.201.0): its
+  Remove Curse (0x2CD27) and Darkness's in a fight look for effect 0x2B
+  while Bestow Curse gives 0x24 - the curse stays; Death Knights' Heal
+  cures effect 0x3D, not Feeblemind's 0x44, and none of the other ills
+  (Cure Disease, spell 0x27, is an empty routine there - kept). With Game
+  Fixes Remove Curse lifts the bestowed curse and Heal ends Feeblemind.
 - **Poison's slow damage** (Game Fixes, v0.200.3): in Secret, Darkness and
   Treasures the poison damage effect (0x0F, under Slow Poison), run out,
   renews effect 0x1A - the dwarves' to-hit effect - instead of itself

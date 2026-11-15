@@ -452,14 +452,18 @@ the Project as claude/TODO.md.
 - [ ] Maybe later: the Dark Queen's creation Modify holds two Makings
       (134 KB, +24.5 KB) - Modify could borrow creation's tables.
 
-- [ ] Side-steps (2026-11-06, Tom: Pool's city hall / Kuto's Well asked
+- [x] Side-steps (2026-11-06, Tom: Pool's city hall / Kuto's Well asked
       and held the party on a move away): a side-step's step script now
       sees the step's direction (SPEC 12). Pool checked by autodiff
       around both places; every other game's play test must check
       side-steps beside facing-dependent step scripts (doors "locked",
       wells, "you can't go that way", NO-MOVE 0x7EC9 squares) - a
       side-step away must not ask, a side-step into one must ask as a
-      step forward that way does.
+      step forward that way does. 2026-11-15 (gaps): generic - the
+      side-step sets the facing and the wall ahead to the step's before
+      the step's script runs, and every game's script machine reads the
+      facing live (ecl_vm's direction words 0x11 / 0x033D / 0xC04D), so a
+      facing-dependent script sees the side-step as that step forward.
 - [x] Rest messages (v0.196.2, from PoolRad's / Curse's code): every
       message of a step shown, each with its game delay (the engine showed
       a step's first only); the name (party-list colour) and words on row
@@ -1021,7 +1025,9 @@ the Project as claude/TODO.md.
       the beholder's ray target (the original's picker, ovr 0x23130); an
       Energy Drain check.
 - [ ] Darkness 256 colours on the S3 / C5 (merged, branch darkness-vga):
-      matches DOSBox's VGA mode. Open: the overland arena fight (jumper ->
+      matches DOSBox's VGA mode. DONE 2026-11-15 (playsim, both depths):
+      the overland arena fight - 6 against 1 on grass, the monster there,
+      the map back after; was: the overland arena fight (jumper ->
       Arena -> Overland -> Prime, river No, monster 10 x 1) gives an
       all-river field with no monster and an empty frame after (EGA
       too; DOSBox: grass, the monster, the map back); the VGA fight's 40
@@ -1504,9 +1510,12 @@ the Project as claude/TODO.md.
       PoolRad's Animate Dead in camp skips the original's sight check
       (ovr23 +0x20E9 call) and its effect-allowed check (+0x21B6) as the
       fights' version does. Death Knights' camp Blink taken as Gateway's
-      (its camp code not read). Not compared in DOSBox: the Dark Queen's
-      party menu Exit asks "Exit to DOS?" (the engine leaves at once - all
-      games: check the others' originals).
+      (its camp code not read). 2026-11-15 (gaps): no item of any game
+      carries one of those spells (testchars' item lists); PoolRad's camp
+      Animate Dead stands the dead up as its own stand-up routine (ovr23
+      0xb0:0x8e - full hit points, "gets back up"); the Dark Queen's party
+      menu Exit asks "Exit to DOS? " (the only game with that question -
+      the others' "Quit to DOS" is the camp's save).
 - [x] Death Knights: "fighter 1's turn without Move (moves 0, rec move 6)"
       (2026-11-07): the check's blind spot, not the engine - the turn began
       while navcheck's probe settled and the next monkey action (its own
@@ -2158,7 +2167,18 @@ the Project as claude/TODO.md.
       underwater" before "Not with that weapon" (0x239CC). Left: 0x5BA58 / 0x5BA89 - read (round 22): the area spells'
       picture routine (spells 0x22 0x2F 0x33 0x57 0x5B 0x73 0x85) picks
       another burst picture set under water (3 for 2) and adds one (9,
-      0x14, 2) - pictures only, not followed. The scripts do
+      0x14, 2) - pictures only, not followed. Read further 2026-11-15:
+      those are the arguments of the Dark Queen's area-burst ANIMATION
+      (0x1D99:0xF3B -> file 0x249BF: area, picture, sound) - its sound,
+      then rings of small sprites (4 frames of the picture, blocks
+      picture x 38 + 0..3) at random angles out to area x 3 + 1 thirds of
+      a square round the aim, the field redrawn after. The engine draws
+      none of it for the Dark Queen on land or under water (only the
+      spell's flight): Stinking Cloud (1, 0x1B), Cloudkill (1, 0x1C),
+      Fireball / Delayed Blast / the Necklace (3, 0x19; 2 where game byte
+      0x22 is set or for the Necklace), Ice Storm (2, 0x1A; 3 under
+      water), Lightning Bolt under water (2, 0x14, sound 9). Tom to say
+      whether it's wanted (a pictures-only feature). The scripts do
       set it: sweep events VMWATCH=3c (Queen, 44 of its blocks swept) -
       ECL.GLB blocks 1, 2, 3, 14, 15. The Dark Queen's ground 0x46: done
       (v0.196.24) - 0x50A77 is inside the kapak's acid layer 0x50A0E
