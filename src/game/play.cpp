@@ -4748,6 +4748,7 @@ void back_from_save(pic::Canvas& c)
 
 void aw(int i, char* out, size_t cap);
 bool quit_from_camp = false;         // (Pool: the camp's save asked "Quit TO DOS")
+bool quit_from_pm = false;           // (the Dark Queen's party menu Exit asked "Exit to DOS? ")
 bool camp_saved = false;             // (saved since this camp began: the Dark Queen's camp Load)
 void save_tap(int x, int y, pic::Canvas& c)
 {
@@ -10649,6 +10650,14 @@ void next_line(pic::Canvas& c)
     case spells::Said::Word2: ow(cr.cs->word2, t, sizeof t); break;
     case spells::Said::Word3: ow(cr.cs->word3, t, sizeof t); break;
     case spells::Said::Word4: ow(cr.cs->word4, t, sizeof t); break;
+    case spells::Said::GetsUp: {
+        // (PoolRad's camp Animate Dead: the stand-up's "gets back up" - a fight word)
+        const uint32_t w = d->prof->fight.words[profile::kGetsBackUp] ? d->prof->fight.words[profile::kGetsBackUp]
+                                                                        : profile::duel_word(*d->prof, profile::kGetsBackUp);
+        t[0] = 0;
+        if (w) ow(w, t, sizeof t);
+        break;
+    }
     }
     say_line(c, l.who, t);
     if (cr.on_camp) draw_party(c, 17);
@@ -11495,7 +11504,11 @@ bool alter_yes_no(Ask what, char k, pic::Canvas& c)
     if (d->prof->alter.pick && what != Ask::QuitDos) return alter_drop_dk(what, k, c);
     if (what == Ask::QuitDos) {
         if (k == 'Y') exit_wanted = true;
-        if (quit_from_camp) {
+        if (quit_from_pm) {
+            quit_from_pm = false;
+            screen = Screen::PartyMenu;
+            if (k != 'Y') draw_party_menu(c);
+        } else if (quit_from_camp) {
             quit_from_camp = false;
             screen = Screen::Camp;
             draw_camp(c);
@@ -12308,6 +12321,15 @@ void pm_choose_key(char key, pic::Canvas& c)
         begin_adventuring();
         return;
     case 'E':
+        // (the Dark Queen asks first: "Exit to DOS? " Yes No - DQK.EXE's
+        // party menu, DOSBox; the others leave at once)
+        if (hl() && d->prof->alter.words[profile::kCampQuitToDos]) {
+            char t[32];
+            aw(profile::kCampQuitToDos, t, sizeof t);
+            quit_from_pm = true;
+            ask_yes_no(c, Ask::QuitDos, t);
+            return;
+        }
         exit_wanted = true;
         return;
     case 'V':

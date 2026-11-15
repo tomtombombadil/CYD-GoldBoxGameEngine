@@ -6897,6 +6897,15 @@ static void test_spells()
     // Raised: 1 HP, a point of Constitution; an elf can't be
     CHECK(cast(6, spells::Does::Raise, 1) == 1 && out[0].what == spells::Said::Raised);
     CHECK(b.health() == party::Okay && b.hp() == 1 && b.rec[0x18] == 9 && b.rec[0x19] == 9 && b.in_combat());
+    // PoolRad's camp Animate Dead (GAME.OVR 0x29087, its stand-up 0x2C753):
+    // the dead get up at their most hit points, "gets back up", then animated
+    {
+        b.rec[0x195] = party::Dead; b.rec[0x1A4] = 0; b.rec[0x11A] = 0;
+        const int n = cast(1, spells::Does::Animate, -1);   // (spell 1: the whole party, level 3)
+        CHECK(n == 2 && out[0].who == 1 && out[0].what == spells::Said::GetsUp && out[1].what == spells::Said::Word);
+        CHECK(b.health() == party::Animated && b.hp() == 20 && b.rec[0x11A] == 4);
+        b.rec[0x195] = party::Okay; b.rec[0x11A] = 0; b.n_affects = 0;
+    }
     p.m[2].rec[0x195] = party::Dead; p.m[2].rec[0x74] = 2;
     CHECK(cast(6, spells::Does::Raise, 2) == 0 && p.m[2].health() == party::Dead);
     p.m[2].rec[0x195] = party::Okay; p.m[2].rec[0x74] = 7;

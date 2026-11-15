@@ -286,6 +286,10 @@ int cast(party::Party& p, int caster, int target, const CampSpell& cs, const cla
             --left;
             const int side = c.rec[kSide] ? 1 : 0;
             c.rec[kSide] = me.rec[kSide];
+            // (its stand-up, GAME.OVR ovr 13 0x2C753 - always on its feet
+            // outside a fight: hit points to the most, "gets back up")
+            c.rec[kHp] = c.rec[0x78];
+            o.say(who[k], Said::GetsUp);
             c.rec[0xE9] = 2;
             c.rec[0xDD] = 0;
             c.rec[0x1A5] = 6;

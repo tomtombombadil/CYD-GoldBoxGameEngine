@@ -98,7 +98,7 @@ struct CampSpell {
 
 // What is said about a target, in order ("NAME is Blessed")
 enum class Said : uint8_t { Word, Unaffected, Fully, Partly, Cured, CanSee, Unpoisoned, Raised, Uncursed, ItemUncursed,
-                            Word2, Word3, Word4 };
+                            Word2, Word3, Word4, GetsUp };
 struct Line {
     uint8_t who;                        // party member
     Said    what;
