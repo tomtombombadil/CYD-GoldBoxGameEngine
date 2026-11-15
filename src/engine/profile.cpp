@@ -3711,7 +3711,10 @@ const Profile kProfiles[] = {
                .drop = 0x16445, .forever = 0x1644B, .sure = 0x16456, .dump = 0x16465, .out_back = 0x1646F,
                .farewell = 0x1647A, .relief = 0x1648E, .yes_no = kP | 0xC9D4,
                .cant_modify = kP | 0xBA9F, .modify = kP | 0xC6F2, .keep_exit = kP | 0xCC62,
-               .load_from = kP | 0xC76D, .load_sources = kP | 0xCC8B},
+               .load_from = kP | 0xC76D, .load_sources = kP | 0xCC8B,
+               // (Drop / Modify / View / Remove ask "Pick Character " "Select" first - DOSBox,
+               // 2026-11-14; only Drop did)
+               .pick = kP | 0xC6C9, .pick_menu = kP | 0xC9FD},
      // View Character's name tables (DS 0x0E57 classes, 0x103D races in its
      // own order, 0x107C alignments, 0x1115 sex, 0x1123 its three coins,
      // 0x1144 health) and its words (GAME.OVR 0x23891 on)
@@ -4157,7 +4160,10 @@ const Profile kProfiles[] = {
                .drop = 0x1BB9C, .forever = 0x1BBA2, .sure = 0x1BBAD, .dump = 0x1BBBC, .out_back = 0x1BBC6,
                .farewell = 0x1BBD1, .relief = 0x1BBE5, .yes_no = kP | 0xF010,
                .cant_modify = kP | 0xE07E, .modify = kP | 0xED1C, .keep_exit = kP | 0xF2AC,
-               .load_from = kP | 0xED9A, .load_sources = kP | 0xF2D6},
+               .load_from = kP | 0xED9A, .load_sources = kP | 0xF2D6,
+               // (Drop / Modify / View / Remove ask "Pick Character " "Select Exit" first - DOSBox,
+               // 2026-11-14; they went straight on)
+               .pick = kP | 0xECF2, .pick_menu = kP | 0xF064},
      // View Character's name tables (DS 0x0E8E classes, 0x1074 races, 0x10B4
      // alignments, 0x114E sex, 0x115C coins, 0x117E health), its words
      .view = {{0xD26E, 27, 18}, {0xD454, 9, 7}, {0xD494, 17, 9}, {0xD52E, 7, 2}, {0xD53C, 11, 3}, {0xD55E, 13, 9},
@@ -4359,7 +4365,10 @@ const Profile kProfiles[] = {
                .load_from = qw(0x4E13), .load_sources = qw(0x500C),
                .words = kQueenPartyMenu, .n_words = sizeof kQueenPartyMenu / sizeof kQueenPartyMenu[0],
                // (the camp's Load: "Game not saved. Load anyway? " - DOSBox)
-               .camp_load_anyway = qw(0x7D7A)},
+               .camp_load_anyway = qw(0x7D7A),
+               // (Delete Character: "delete a character: " "Delete Exit" "Delete %s forever? "
+               // "No characters to delete." - DOSBox)
+               .del_prompt = qw(0x48A8), .del_menu = qw(0x5023), .del_ask = qw(0x7ED0), .del_none = qw(0x5F5D)},
      // View Character (queen_facts_3.md 5): its name tables are far pointers
      // to C strings (stride 4: a pointer each) - classes DS 0x3B3E (the long
      // names, Magic-User; its numbers, the knight 1), races 0x3B86 in its own
