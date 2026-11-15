@@ -2212,14 +2212,24 @@ the Project as claude/TODO.md.
       and in its EGA mode) and the Queen's Caergoth look as the engine's;
       PoolRad's fields were compared ground byte for ground byte in the
       play test (kobolds, slums, Podol Plaza).
-- [ ] Death Knights' demo: DOSBox plays scenes and a fight (Sir Dryden,
-      Tanar, Flavius - the ghouls, Delayed Blast Fireball); the engine's
-      demo loads ECL3 block 82 and ends at once with no party (found
-      2026-11-15, playsim DEMO=1).
-- [ ] Treasures' demo: DOSBox goes on after its fight ("You will meet
-      the beautiful residents...", the maps); the playsim's ends after
-      the fight (screen 24) - check whether the engine's demo stops there
-      (found 2026-11-15). The scripts do
+- [x] Every game's demo (v0.203.0; found 2026-11-15 - only Curse's ran):
+      the engine ran Curse's block 0x52 in every game; each original's
+      own block, found by its DOSBox texts (Secret 1:3, Gateway 2:82,
+      Champions 3:57, Death Knights 1:2, Darkness / Treasures 1:4, the
+      Queen ECL.GLB 7; `demo_place`). Then: Secret's stopped at Capet's
+      player menu (an NPC whose target fell got the menu - after_attack
+      now asks ai_controls); Treasures' NPC fighters fought bare-handed
+      (their files' class flags 0 - the original's loader works them out
+      from the levels, GAME.OVR 0x17899; DOSBox memory: Lorac 8, his
+      sword kept readied) and its pages typed a letter at a time (its
+      letter routine has no wait - the page appears whole); the Queen's
+      three NPCs read from MONCHA.GLB. Checked: tools/devkit/demos.sh -
+      all eight (PoolRad has none) run to their end and the title.
+      Note: DOSBox runs Turbo Pascal's Delay ~3.4x fast here (Treasures'
+      DelayCnt 1191 at 12,000 cycles: a DELAY of 600 ms shows ~175 ms) -
+      the engine keeps the program's milliseconds, so its demo pages and
+      fight pages stay longer than in DOSBox.
+- [x] (the Dark Queen's ground, an older entry's tail) The scripts do
       set it: sweep events VMWATCH=3c (Queen, 44 of its blocks swept) -
       ECL.GLB blocks 1, 2, 3, 14, 15. The Dark Queen's ground 0x46: done
       (v0.196.24) - 0x50A77 is inside the kapak's acid layer 0x50A0E

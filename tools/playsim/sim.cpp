@@ -844,8 +844,37 @@ int main(int argc, char** argv)
                 for (int t = 0; t < 600000 && play::screen != play::Screen::Title; t += 20) {
                     g_now += 20;
                     play::tick(g_now, C);
-                    if ((int)play::screen != last_screen) { last_screen = (int)play::screen; printf("  demo t=%d screen %d party %d\n", t, last_screen, play::pt->count); }
+                    if ((int)play::screen != last_screen) {
+                        last_screen = (int)play::screen;
+                        printf("  demo t=%d screen %d party %d\n", t, last_screen, play::pt->count);
+                        for (int i = 0; getenv("PARTYDUMP") && i < play::pt->count; ++i) {      // (each member's items: bytes 0x2E-0x3E)
+                            char nm[32];
+                            play::pt->m[i].name(nm, sizeof nm);
+                            printf("    %s: rec 19E-1A3", nm);
+                            for (int b = 0x19E; b < 0x1A4; ++b) printf(" %02X", play::pt->m[i].rec[b]);
+                            printf(" cls %02X ctl %02X quick %02X", play::pt->m[i].rec[0x12B], play::pt->m[i].rec[0xF7], play::pt->m[i].rec[0x198]);
+                            if (play::names) for (int k = 0; k < play::pt->m[i].n_items; ++k) if (play::pt->m[i].items[k][0x34]) {
+                                const auto& ti = play::names->type(play::pt->m[i].items[k][0x2E]);
+                                printf(" [type %02X slot %d %dd%d+%d large %dd%d+%d]", play::pt->m[i].items[k][0x2E], ti.slot, ti.dice, ti.sides, ti.bonus, ti.dice_large, ti.sides_large, ti.bonus_large);
+                            }
+                            printf(" items");
+                            for (int k = 0; k < play::pt->m[i].n_items; ++k) {
+                                printf(" [");
+                                for (int b = 0x2E; b < 0x3F; ++b) printf("%02X", play::pt->m[i].items[k][b]);
+                                printf("]");
+                            }
+                            printf("\n");
+                        }
+                    }
                     if (play::vm && (int)play::vm->pc() != last_pc && play::screen == play::Screen::Game) { last_pc = (int)play::vm->pc(); }
+                    if (getenv("DEMOFST") && play::fg) {        // DEMOFST=1: the fight's state as it changes
+                        static int lst = -1, lcur = -2;
+                        if ((int)play::fg->st != lst || play::fg->cur != lcur) {
+                            lst = (int)play::fg->st;
+                            lcur = play::fg->cur;
+                            printf("  fst t=%d st %d cur %d menu [%s%s]\n", t, lst, lcur, play::menu.prompt, play::menu.s);
+                        }
+                    }
                     if (getenv("DEMOSHOTS") && t % 3000 == 0) shot("demo");
                     // DEMOSTOP=ms: the player taps then (the demo stops: features.h CYD_DEMO_TAP_STOPS)
                     if (getenv("DEMOSTOP") && t == atoi(getenv("DEMOSTOP"))) { printf("  tap at t=%d (screen %d)\n", t, (int)play::screen); play::tap(100, 100, C); }

@@ -3029,8 +3029,9 @@ the game's Settings (As Original: all of them).
   frame 100 ms, a burst 70 ms a frame, the skull 10, a flight's steps);
   a monster's steps wait nothing (150 ms each before). A script's text
   prints speed x 3 ms a letter (Pool x 10; 12 ms at every speed before;
-  Gateway's / Treasures' / Dark Queen's letter waits not found - theirs
-  taken as x 3). A rest's messages ("has memorized", "Healed",
+  Treasures prints a page at once - its letter routine, GAME.EXE 0x6870,
+  has no wait, DOSBox; Gateway's / Dark Queen's letter waits not found -
+  theirs taken as x 3). A rest's messages ("has memorized", "Healed",
   "interrupted") stay the game delay, as the originals' rest routine
   (PoolRad GAME.OVR 0x2A332: speed x 225 ms; Curse 0x2B693 / 0x2B74B:
   x 100; v0.196.2 - was ours, speed x 0.3 s), Readable Messages' 1 s

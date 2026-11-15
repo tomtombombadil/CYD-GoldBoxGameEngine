@@ -10409,6 +10409,10 @@ uint8_t start_speed()
 
 uint32_t char_ms()
 {
+    // Treasures prints a page at once: its letter routine (GAME.EXE 0x6870,
+    // Darkness's 0x4BD6) has no wait - Darkness's Delay(speed x 3) is gone
+    // (DOSBox: the demo's pages appear whole)
+    if (d->prof->game == games::Game::TreasuresOfTheSavageFrontier) return 0;
     return static_cast<uint32_t>(vm->get(0x4BFC) & 0xFF) * (pool_files() ? 10 : 3);
 }
 
@@ -16331,7 +16335,29 @@ void won_tick(uint32_t now, pic::Canvas& c)
     }
 }
 
-// The demo: the party menu skipped, area 1, speed 9, ECL1 block 0x52's
+// The demo's script block and area: Curse's ECL1 0x52 (coab), the others'
+// own - each found by its texts in the original's demo in DOSBox
+// (2026-11-15: the engine ran 0x52 in all of them - Secret, Gateway,
+// Champions, Death Knights, Darkness and the Queen showed nothing):
+// Secret ECL1 3, Gateway ECL2 82, Champions ECL2 57 (area 3), Death Knights
+// ECL1 2, Darkness / Treasures ECL1 4, the Queen ECL.GLB 7 (no party: its
+// story)
+void demo_place(int* block, int* area)
+{
+    *area = 1;
+    *block = d->prof->variant.demo_block ? d->prof->variant.demo_block : 0x52;    // (Treasures: block 4)
+    switch (d->prof->game) {
+    case games::Game::SecretOfTheSilverBlades: *block = 3; break;
+    case games::Game::GatewayToTheSavageFrontier: *block = 82, *area = 2; break;
+    case games::Game::ChampionsOfKrynn: *block = 57, *area = 3; break;
+    case games::Game::DeathKnightsOfKrynn: *block = 2; break;
+    case games::Game::PoolsOfDarkness: *block = 4; break;
+    case games::Game::DarkQueenOfKrynn: *block = 7; break;
+    default: break;
+    }
+}
+
+// The demo: the party menu skipped, its area, speed 9, its block's
 // first-run entry
 void start_demo(pic::Canvas& c)
 {
@@ -16342,14 +16368,16 @@ void start_demo(pic::Canvas& c)
     in_demo = true;
     while (pt->count) leave_party(pt->count - 1);
     ecl::GameState& gs = d->gs;
-    gs.game_area = 1;
-    vm->set(0x7F12, 1);
+    int block = 0, area = 1;
+    demo_place(&block, &area);
+    gs.game_area = static_cast<uint8_t>(area);
+    vm->set(0x7F12, static_cast<uint16_t>(area));
     vm->set(0x4BFC, 9);
     vm->set(0x4BE6, 1);
     gs.x = 7;
     gs.y = 13;
     gs.dir = 2;
-    gs.script = d->prof->variant.demo_block ? d->prof->variant.demo_block : 0x52;    // (Treasures: block 4)
+    gs.script = static_cast<uint8_t>(block);
     d->loaded = false;
     c.clear(0);
     screen = Screen::Game;

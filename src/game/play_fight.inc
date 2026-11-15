@@ -273,18 +273,49 @@ bool npc_join(int id)
     party::Character& ch = pt->m[pt->count];
     ch = party::Character{};
     char file[24];
+    if (hl()) {
+        // (the Dark Queen: MONCHA.GLB's entry - its record, effects and
+        // items in one, as LOAD MONSTER's; its demo's three NPCs)
+        uint8_t sx[2] = {};
+        int ni = 0, na = 0;
+        if (!q_load_monster(id, ch.rec, sx, &ch.items[0][0], &ni, party::kMaxItems, &ch.affects[0][0], &na,
+                            static_cast<int>(sizeof ch.affects / party::kAffectSize))) {
+            plat::log("[play] ADD NPC: MONCHA.GLB #%d not there\n", id);
+            return false;
+        }
+        ch.ext[party::kExtFlags2] = sx[0];
+        ch.ext[party::kExtMagicRes] = sx[1];
+        ch.n_items = ni;
+        ch.n_affects = na;
+    }
     area_fmt(file, sizeof file, "MON%dCHA.DAX");
-    if (!read_record_block(file, id, ch.rec, ch.ext)) {
+    if (!hl() && !read_record_block(file, id, ch.rec, ch.ext)) {
         plat::log("[play] ADD NPC: %s #%d not there\n", file, id);
         return false;
     }
-    area_fmt(file, sizeof file, "MON%dITM.DAX");
-    ch.n_items = read_monster_items(file, id, &ch.items[0][0], party::kMaxItems);
-    area_fmt(file, sizeof file, "MON%dSPC.DAX");
-    const int na = read_block(file, id, &ch.affects[0][0], sizeof ch.affects);
-    ch.n_affects = na > 0 ? na / static_cast<int>(party::kAffectSize) : 0;
+    if (!hl()) {
+        area_fmt(file, sizeof file, "MON%dITM.DAX");
+        ch.n_items = read_monster_items(file, id, &ch.items[0][0], party::kMaxItems);
+        area_fmt(file, sizeof file, "MON%dSPC.DAX");
+        const int na = read_block(file, id, &ch.affects[0][0], sizeof ch.affects);
+        ch.n_affects = na > 0 ? na / static_cast<int>(party::kAffectSize) : 0;
+    }
     ch.rec[0x126] = static_cast<uint8_t>(id);
     if (pool_files()) pool_npc_look(ch);
+    // Darkness / Treasures: the loader works out the class flags (its 0x17B,
+    // the classes a character's items may be of) from the levels - Treasures
+    // GAME.OVR 0x17899's end, DOSBox: the demo's Lorac 8 (the files' 0); with
+    // 0 the computer's weapon chooser left its fighters bare-handed
+    if (darkness_files() && !dkk() && !hl()) {
+        MagicRules* m = nullptr;
+        if (load_rules(m)) {
+            int flags = 0;
+            for (int cls = 0; cls < 7; ++cls)
+                if (ch.level(cls) > 0) flags += m->tables.u8(static_cast<uint16_t>(m->tables.lay.class_flags + cls));
+            ch.rec[0x12B] = static_cast<uint8_t>(flags);
+        }
+        delete m;
+    }
     // The lowest icon slot no one else has
     for (int slot = 0; slot < 8; ++slot) {
         bool used = false;
@@ -3452,6 +3483,7 @@ void attack_pages(int a, int t, const combat::Attack& at, bool behind, bool shot
 
 // After an attack's pages: the turn ends unless attacks are left and the
 // target went down (then pick another)
+bool ai_controls(const combat::Fighter& f);
 void after_attack(pic::Canvas& c)
 {
     draw_fight(c);
@@ -3467,7 +3499,9 @@ void after_attack(pic::Canvas& c)
         return;
     }
     if (left && target_down) {
-        if (f.quick || f.team()) {
+        // (the computer's: monsters, Quick, and the NPCs - an NPC whose
+        // target fell got the player's menu: Secret's demo stopped there)
+        if (ai_controls(f)) {
             fg->st = FSt::Ai;
             fg->until = 1;                  // (no wait of the originals' here)
         } else {
