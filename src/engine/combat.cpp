@@ -5745,8 +5745,10 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
     case SpellDoes::RemoveCurse:
         for (int k = 0; k < m; ++k) {
             Fighter& f = b.f[who[k]];
-            const uint8_t cz = b.fx && b.fx->curse_slip && !rules::fixes() ? b.fx->curse_slip : b.fx ? b.fx->bestow : 0;
-            const int at = cz ? find_aff(f, cz) : -1;
+            // (Game Fixes: the bestowed curse as well - what the original lifts stays)
+            const uint8_t cz = b.fx && b.fx->curse_slip ? b.fx->curse_slip : b.fx ? b.fx->bestow : 0;
+            int at = cz ? find_aff(f, cz) : -1;
+            if (at < 0 && b.fx && cz != b.fx->bestow && b.fx->bestow && rules::fixes()) at = find_aff(f, b.fx->bestow);
             if (at >= 0) {
                 drop_aff(f, at);
                 say(who[k], Did::Word2, 0);         // "is Cured"

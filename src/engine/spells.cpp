@@ -414,8 +414,9 @@ int cast(party::Party& p, int caster, int target, const CampSpell& cs, const cla
             party::Character& c = p.m[who[k]];
             // (Darkness's looks for 0x2B - a disease's - not the curse: facts L6;
             // with Game Fixes the curse)
-            const uint8_t curse = f.curse_dk && !rules::fixes() ? f.curse_dk : cures.curse;
-            if (cure(c, curse)) {
+            // (Game Fixes: the curse as well - what the original lifts stays)
+            const uint8_t curse = f.curse_dk ? f.curse_dk : cures.curse;
+            if (cure(c, curse) || (curse != cures.curse && rules::fixes() && cure(c, cures.curse))) {
                 o.say(who[k], Said::Cured);
                 o.say(who[k], Said::Uncursed);
                 continue;
