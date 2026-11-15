@@ -912,7 +912,14 @@ the Project as claude/TODO.md.
       Vault; where each place is from the scripts (shops / temples /
       training: their calls; inns / taverns: their text). Mockup 2026-11-14:
       PoolRad's New Phlan (playtest_poolrad.md's event squares), white letters.
-- [ ] Tom: pick the 320x240 Map page (mockups 2026-11-14: map 12 / 11 px, party with / without icons - CYD_MOCKUP in viewer.cpp draw_map_page; Claude suggested map 12, no icons).
+      Tom's later ideas: the letters in a colour of their own (not white); the
+      legend under the 11 px map has room for about 3 lines - each place as a
+      word with its letter in the map letters' colour and the rest white
+      ("Tavern": T coloured); more letters D Docks, C Clerk.
+- [x] The 320x240 Map page (Tom, 2026-11-14, from the mockups; v0.200.8): the
+      map at 11 px a square in the corner, its legend under it ("Locked" red,
+      "Secret" cyan - no "Red:" / "S:", Tom), the Party view beside it (icons,
+      the panel's own rows; Companion Views on).
 - [x] Checks 2026-11-15 (v0.200.6): fight budgets after the day's merges
       (BUDGET=150, 153,600 bytes): Curse 134,203, PoolRad 136,043, Darkness
       150,601, Champions 136,599, Knights 136,420, Queen 143,726, Treasures

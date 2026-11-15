@@ -2750,15 +2750,16 @@ ui::Rect walk_key(int k)
 // Where the Companion strip draws the map (480x320)
 constexpr int kCompCell = 9, kCompMapY = 30, kCompPlayMapY = 2;   // (the Walk Test's map under its two lines)
 
-// The map's one legend line (Tom, 2026-11-10): the colours' words in their colours
+// The map's one legend line (Tom, 2026-11-10 / 14): the colours' words in their colours
 void draw_map_legend(lgfx::LovyanGFX& g, int x, int y)
 {
     g.setFont(&fonts::Font0);
     g.setTextDatum(lgfx::textdatum_t::top_left);
+    // (Tom, 2026-11-14: the words alone, in their colours)
     g.setTextColor(style::kWarn);
-    g.drawString("Red: Locked", x, y);
+    g.drawString("Locked", x, y);
     g.setTextColor(style::kCyan);
-    g.drawString("S: Secret", x + 13 * 6, y);
+    g.drawString("Secret", x + 8 * 6, y);
 }
 int comp_map_x() { return pic::kScreenW + (ui::width() - pic::kScreenW - kCompCell * geo::kSize) / 2; }
 
@@ -2924,35 +2925,18 @@ void draw_map_page()
     if (draw_battle_page()) return;
     LGFX& g = ui::gfx();
     g.fillRect(0, 0, pic::kScreenW, pic::kScreenH, style::kBackground);     // (black: the map's)
-#if CYD_MOCKUP
-    // (mockups for Tom, 2026-11-14 - not chosen yet: the map in the corner,
-    // its legend under it where the menu line was, the party beside it; each
-    // Map key press the next of map 12 / 11 px x party icons / none)
-    static int variant = 0;
-    const int v = variant++ % 4;
-    const int cell = v & 2 ? 11 : 12, mx = 0, my = 0, side = mx + cell * geo::kSize + 3;
-    companion::set_party_icon(v & 1 ? 0 : 24);
+    // (Tom, 2026-11-14, from the mockups: the map in the corner at 11 px a
+    // square, its legend under it, the party beside it - the panel's own
+    // rows, icons and all - with Companion Views on; no "tap to go back")
+    const int cell = 11, mx = 0, my = 0, side = mx + cell * geo::kSize + 3;
     const geo::Map* m = kPlayMap.map();
     if (m) {
         draw_map_grid(g, *m, kPlayMap, mx, my, cell);
-        draw_map_legend(g, 2, my + cell * geo::kSize + 1);
+        draw_map_legend(g, 2, my + cell * geo::kSize + 2);
     } else {
         wrap_text(4, 4, side - 8, "No map here.", ui::Font::Normal, style::kText, true);
     }
     if (comp_on()) map_page_party(side, pic::kScreenW - side);
-    companion::set_party_icon(24);
-#else
-    // (no "Tap to go back" - Tom, 2026-11-14: any tap goes back)
-    const int cell = 12, mx = 4, my = (pic::kScreenH - cell * geo::kSize - 1) / 2;
-    const int tx = mx + cell * geo::kSize + 8, tw = pic::kScreenW - tx - 4;
-    const geo::Map* m = kPlayMap.map();
-    if (m) draw_map_grid(g, *m, kPlayMap, mx, my, cell);
-    else wrap_text(mx, my, tx - mx - 8, "No map here.", ui::Font::Normal, style::kText, true);
-    if (m) {
-        const int y = wrap_text(tx, my, tw, "Red: Locked", ui::Font::Small, style::kWarn, true);
-        wrap_text(tx, y, tw, "S: Secret", ui::Font::Small, style::kCyan, true);
-    }
-#endif
 }
 
 void draw_walk_keys(const char* side_label, const char* area_label, bool cursor)

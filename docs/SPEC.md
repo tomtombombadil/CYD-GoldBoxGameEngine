@@ -92,7 +92,12 @@ The games draw a 320x200 screen. The canvas is presented:
   -> Battle (fights only: the whole battlefield as dots, walls grey,
   party green, enemies red); a fight starts on Battle. On 320x240 (and
   the 5.0" board) the Map key in a fight shows the Battle view over the
-  game screen; the fight's key row has a Map key for it.
+  game screen; the fight's key row has a Map key for it. Outside fights the
+  Map key's page (Tom, 2026-11-14) is the map at 11 px a square in the
+  corner, its legend under it, the Party view beside it (its icons and
+  rows, 141 px wide). No view names over the panel (Tom, 2026-11-14); the
+  party's names white for the chosen one, cyan for the rest (the
+  originals'); secret doors cyan.
 
 ### Controls (Tom, 2026-10-06; mockup `docs/controls-proposal.png`)
 
