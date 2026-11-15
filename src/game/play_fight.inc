@@ -1252,10 +1252,13 @@ bool load_fight_tables()
 }
 
 // Frames first .. first + n - 1 of a 24 x 24 picture block into the tiles
-void load_frames(const char* file, int at, int n)
+// (tiles_have: the tiles a picture was read into - a square whose picture
+// isn't there is the field's empty colour, not a black tile)
+uint64_t tiles_have = ~0ull;
+bool load_frames(const char* file, int at, int n)
 {
     plat::File f;
-    if (!open_dax(file, f)) return;
+    if (!open_dax(file, f)) return false;
     plat::FileSource src(f);
     const dax::Entry* e = d->idx.find(1);
     if (e) {
@@ -1267,11 +1270,14 @@ void load_frames(const char* file, int at, int n)
         {
             uint8_t map[16];
             if (pic::begin_frames(r, ph, map))
-                for (int k = 0; k < n && k < ph.frames && at + k < 40; ++k)
+                for (int k = 0; k < n && k < ph.frames && at + k < 40; ++k) {
                     if (!pic::next_frame(r, ph, map, fg->tile[at + k])) break;
+                    tiles_have |= 1ull << (at + k);
+                }
         }
     }
     f.close();
+    return true;
 }
 
 // Darkness: the field's pictures are a VGA block's frames - DUNGCOM block
@@ -1302,6 +1308,7 @@ void load_tiles(bool indoors)
 {
     for (uint8_t* t : fg->tile)
         if (t) memset(t, 0, tile_bytes());
+    tiles_have = ~0ull;
     if (hl()) {
         q_load_tiles();
         return;
@@ -1321,8 +1328,12 @@ void load_tiles(bool indoors)
         else load_vga_frames("WILDCOM.DAX", region <= 2 ? region : 0);
         return;
     }
+    tiles_have = 0;
     load_frames(indoors ? "DUNGCOM.DAX" : "WILDCOM.DAX", 0, indoors ? 25 : 34);
-    load_frames("RANDCOM.DAX", 34, 6);
+    // (Death Knights has no RANDCOM.DAX: its WILDCOM block holds 38 frames, the last
+    // four the pictures RANDCOM has elsewhere - the open ground among them; they were
+    // left out and the field's open squares came out black, Tom 2026-11-14 / DOSBox)
+    if (!load_frames("RANDCOM.DAX", 34, 6) && !indoors) load_frames("WILDCOM.DAX", 0, 40);
 }
 
 // A party member's icon from its record (head 0x141, body 0x142, size
@@ -1637,7 +1648,7 @@ void draw_square(pic::Canvas& c, int x, int y)
     const int sx = kViewX + (x - fg->b.vx) * kSq, sy = kViewY + (y - fg->b.vy) * kSq;
     const uint8_t* g = combat::tile(fg->b, fg->t, x, y);
     const int pic_no = x >= 0 && x < combat::kW && y >= 0 && y < combat::kH && fg->b.ground[y][x] ? g[3] : -1;
-    if (pic_no < 0 || pic_no >= kTiles || !fg->tile[pic_no])
+    if (pic_no < 0 || pic_no >= kTiles || !fg->tile[pic_no] || !(tiles_have >> pic_no & 1))
         c.fill(sx, sy, kSq, kSq, d->prof->variant.fight_unswapped || blit_swap ? 8 : 0);     // (shown dark grey either way)
     else blit4(c, fg->tile[pic_no], kSq, kSq, sx, sy, false, false, 0, 0, pic::kScreenW, pic::kScreenH);
 }

@@ -18134,7 +18134,7 @@ bool nav_list(int step, pic::Canvas& c)
         }
         return false;
     }
-    if (screen == Screen::PartyMenu && (pm_pick_for || pm_picking) && !hl() && pt->count) {
+    if (screen == Screen::PartyMenu && (pm_pick_for || pm_picking) && pt->count) {
         // (a member being picked - Gateway's who pays, Darkness's Drop: the
         // party's highlight, as a tap on the next line)
         pt->selected = (pt->selected + step + pt->count) % pt->count;
@@ -18305,7 +18305,7 @@ bool nav(Nav n, pic::Canvas& c)
     if ((n == Nav::Left || n == Nav::Right) && mk && screen == Screen::QForm) mk->q_cur = -1;
     if ((n == Nav::Up || n == Nav::Down) && (nav_list(step, c) || party_nav(step, c))) return true;
     // The party menu has no menu line: left / right pick the character
-    if (screen == Screen::PartyMenu && (n == Nav::Left || n == Nav::Right) && !((pm_pick_for || pm_picking) && !hl())) {
+    if (screen == Screen::PartyMenu && (n == Nav::Left || n == Nav::Right) && !(pm_pick_for || pm_picking)) {
         if (pt->count < 2) return false;
         pt->selected = (pt->selected + step + pt->count) % pt->count;
         draw_party_menu(c);
@@ -18422,7 +18422,7 @@ bool nav_point(int* x, int* y)
     }
     if (screen == Screen::QForm && mk && mk->q_cur >= 0) return q_form_point(x, y);
     // (a member being picked on the party menu: Select is the menu line's word)
-    if (screen == Screen::PartyMenu && (pm_pick_for || pm_picking) && !hl() && menu_on && menu.count) return at_word();
+    if (screen == Screen::PartyMenu && (pm_pick_for || pm_picking) && menu_on && menu.count) return at_word();
     if (screen == Screen::PartyMenu) {
         if (!pm_lines) return false;
         if (hl()) {
