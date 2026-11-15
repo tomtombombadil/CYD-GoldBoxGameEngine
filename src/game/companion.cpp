@@ -218,7 +218,8 @@ void party_row(Painter& p, const Rows& r, int i, const play::PanelMember& m)
     char hp[16];
     snprintf(hp, sizeof hp, "%d/%d", m.hp, m.hp_max);
     const int hl = static_cast<int>(strlen(hp));
-    put(p, r.tx, y, m.name, m.current ? style::kGold : style::kText, cols - hl - 1);
+    // (the chosen one white, the rest cyan - the originals' party list; Tom, 2026-11-14)
+    put(p, r.tx, y, m.name, m.current ? kWhite : style::kCyan, cols - hl - 1);
     put(p, r.tx + (cols - hl) * kCharW, y, hp, style::kText);
     // The bar: green, yellow under half, red under a quarter
     const int by = y + 9, bh = r.pitch >= 24 ? 4 : 3;

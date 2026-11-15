@@ -2757,7 +2757,7 @@ void draw_map_legend(lgfx::LovyanGFX& g, int x, int y)
     g.setTextDatum(lgfx::textdatum_t::top_left);
     g.setTextColor(style::kWarn);
     g.drawString("Red: Locked", x, y);
-    g.setTextColor(style::kGold);
+    g.setTextColor(style::kCyan);
     g.drawString("S: Secret", x + 13 * 6, y);
 }
 int comp_map_x() { return pic::kScreenW + (ui::width() - pic::kScreenW - kCompCell * geo::kSize) / 2; }
@@ -2894,7 +2894,7 @@ void draw_map_grid(lgfx::LovyanGFX& g, const geo::Map& map, const MapSource& ms,
                         const int oy = across ? ly - 3 : ly + cell / 2 - 3;
                         for (int r = 0; r < 7; ++r)
                             for (int c = 0; c < 5; ++c)
-                                if (kSecretS[r] >> (4 - c) & 1) clip_fill(ox + c, oy + r, 1, 1, style::kGold);
+                                if (kSecretS[r] >> (4 - c) & 1) clip_fill(ox + c, oy + r, 1, 1, style::kCyan);
                         continue;
                     }
                     // A door: 3 pixels across the wall line, a pixel short at each end
@@ -2950,7 +2950,7 @@ void draw_map_page()
     else wrap_text(mx, my, tx - mx - 8, "No map here.", ui::Font::Normal, style::kText, true);
     if (m) {
         const int y = wrap_text(tx, my, tw, "Red: Locked", ui::Font::Small, style::kWarn, true);
-        wrap_text(tx, y, tw, "S: Secret", ui::Font::Small, style::kGold, true);
+        wrap_text(tx, y, tw, "S: Secret", ui::Font::Small, style::kCyan, true);
     }
 #endif
 }
