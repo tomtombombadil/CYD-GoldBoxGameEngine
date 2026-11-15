@@ -41,6 +41,10 @@ struct Piece {
     uint8_t  page;                 // PDF page, from 1
     uint16_t x, y, w, h;           // in pixels of the page's picture
     uint8_t  image = 0;            // which of the page's pictures (pdf::page_image's index; Treasures)
+    // A corner left out (piece's own pixels): rows from cut_y, columns from
+    // cut_x, in the paper's colour (the commonest of row cut_y - 1 there) -
+    // another entry's heading inside a map's box (Secret J45)
+    uint16_t cut_x = 0, cut_y = 0;
 };
 
 struct EntryDef {

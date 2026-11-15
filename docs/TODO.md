@@ -1111,8 +1111,11 @@ the Project as claude/TODO.md.
       `qemus3_50` (2x copies checked: 0 bad pixels through Home, Settings,
       Rotate 180, Swap Red/Blue, Invert, Pool's Play). Facts:
       board_5inch_facts_2.md (scratch -> Project).
-- [ ] Secret J45's piece takes in the "Journal Entry 47" heading (the
-      map overlaps it; a rectangle can't separate them).
+- [x] Secret J45's piece takes in the "Journal Entry 47" heading (the
+      map overlaps it; a rectangle can't separate them). v0.201.0: a piece
+      may leave out its bottom-right corner (Piece::cut_x / cut_y, in the
+      paper's colour) - J45 cuts from 370, 215; checked by eye with
+      tools/devkit/src/journal_dump.cpp on the GOG PDF.
 - [x] Check: pdfview's State (FileSource cache, >4 KB) lands in PSRAM on
       the S3 - its card reads must go through the internal bounce.
       v0.196.21: it did (fs::File reads straight into the FileSource's

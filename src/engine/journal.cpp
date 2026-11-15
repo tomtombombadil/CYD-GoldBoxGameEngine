@@ -335,6 +335,7 @@ struct PageWork {
     int band_y = -1, band_h = 16;
     uint8_t* band = nullptr;       // band_h rows of x1 - x0 indexes
     uint8_t* tmp = nullptr;        // one piece's rows of a band
+    uint8_t paper = 0;             // a cut corner's colour (Piece::cut_y)
     bool ok = true;
 };
 
@@ -347,8 +348,22 @@ void flush(PageWork& w)
         const int r0 = p.y > w.band_y ? p.y : w.band_y;
         const int r1 = p.y + p.h < w.band_y + w.band_h ? p.y + p.h : w.band_y + w.band_h;
         if (r1 <= r0) continue;
-        for (int r = r0; r < r1; ++r)
-            memcpy(w.tmp + static_cast<size_t>(r - r0) * p.w, w.band + static_cast<size_t>(r - w.band_y) * bw + (p.x - w.x0), p.w);
+        for (int r = r0; r < r1; ++r) {
+            uint8_t* row = w.tmp + static_cast<size_t>(r - r0) * p.w;
+            memcpy(row, w.band + static_cast<size_t>(r - w.band_y) * bw + (p.x - w.x0), p.w);
+            if (!p.cut_y || p.cut_x >= p.w) continue;
+            if (r - p.y == p.cut_y - 1) {
+                // (the paper: the commonest colour of the row above the corner)
+                uint16_t n[256] = {};
+                for (int x = p.cut_x; x < p.w; ++x) ++n[row[x]];
+                int best = 0;
+                for (int v = 1; v < 256; ++v)
+                    if (n[v] > n[best]) best = v;
+                w.paper = static_cast<uint8_t>(best);
+            } else if (r - p.y >= p.cut_y) {
+                memset(row + p.cut_x, w.paper, static_cast<size_t>(p.w - p.cut_x));
+            }
+        }
         w.ok = w.out->write_at(w.base[w.list[k]] + static_cast<uint32_t>(r0 - p.y) * p.w, w.tmp,
                                static_cast<size_t>(r1 - r0) * p.w);
     }
