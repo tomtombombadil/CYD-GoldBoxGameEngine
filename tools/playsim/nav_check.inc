@@ -120,8 +120,10 @@ bool settled()
 {
     using namespace play;
     if (!d || !pt || input_mode != Input::None || note_until || screen == Screen::Title || screen == Screen::Won ||
-        screen == Screen::Icon || walk_pending() || journal_waiting())
+        screen == Screen::Icon || screen == Screen::Finale || walk_pending() || journal_waiting())
         return false;
+    // (a cast's timed pause - the next cast or line comes by itself; a key only hurries it)
+    if (screen == Screen::Cast && cr.until) return false;
     if (fg && fg->st != FSt::Menu && fg->st != FSt::Aim && fg->st != FSt::Move && fg->st != FSt::DoneMenu &&
         fg->st != FSt::Speed && fg->st != FSt::AllyAsk && fg->st != FSt::FleeAsk && fg->st != FSt::ContinueAsk &&
         fg->st != FSt::AbortAsk)
@@ -686,10 +688,12 @@ void probe()
         const long st0 = list_state();
         const int before = pixels && !by_member ? (lit_row >= 0 ? lit_row : lit_any) : by_member ? pt->selected : 0;
         const Screen s0 = screen;
+        const int idx0 = plist.index, top0 = plist.top;
         const bool moved_key = nav(Nav::Down, C);
         if (!d) return;
         if (screen != s0) {
-            fail("N4", "Down changed the screen");
+            snprintf(t, sizeof t, "Down changed the screen (%d -> %d, list %d of %d, spells %d)", (int)s0, (int)screen, plist.index, plist.n, sl.sel);
+            fail("N4", t);
             return;
         }
         int after = -1;
@@ -697,8 +701,9 @@ void probe()
         else if (pixels) after = lit_line(listy ? tap_rows() : std::vector<Run>());
         else after = list_state() == st0 ? 0 : 1;
         if (listy && !moved_key) fail("N4", "Down did nothing on a list");
-        else if (listy && moved_key && after == before && (by_member || lit_row >= 0)) {
-            // (a list scrolled under a fixed box is a move too: compare the line's text)
+        else if (listy && moved_key && after == before && (by_member || lit_row >= 0) &&
+                 !(plist_screen() && plist.index != idx0 && plist.top != top0)) {
+            // (a list scrolled under a fixed box - its top one on, the cursor too - is a move)
             snprintf(t, sizeof t, "Down left the lit line where it was (row %d, list %d of %d top %d, spells %d)", before, plist.index, plist.n, plist.top, sl.sel);
             fail("N4", t);
         } else if (!listy && moved_key && !by_member && after != before && after >= 0) {
