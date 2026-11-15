@@ -28,7 +28,13 @@ inline int place_y(const hlib::Part& p, int anchor_y) { return anchor_y - p.x; }
 // e (entries no colours set: e & 15); on a VGA canvas the entry itself
 struct Colours {
     uint8_t ega[256];
-    void reset();                     // every entry e -> e & 15
+    // The EGA screen's 16 palette registers (DQK.EXE 0x178E2: a colour
+    // entry under 16 sets its register from its RGB - each channel's
+    // (v + 8) / 17, its top two bits the EGA 2/3 and 1/3 levels - so TITLE's
+    // own 16 colours show; 0x5266 the VGA DAC), as RGB; changed since read
+    pic::Rgb regs[16];
+    bool regs_changed = true;
+    void reset();                     // every entry e -> e & 15, the registers the standard 16
 };
 // A colour entry (a 0x18 part / a picture's entry 0) into c (its EGA
 // nibbles for its entries) and pal (its RGB, 6-bit DAC values made 8-bit,

@@ -120,6 +120,21 @@ void q_pm_box(pic::Canvas& c, int last = 109)
     }
 }
 
+// A library's reader on the heap - 0.5 KB of buffer each, kept off the
+// classic boards' 8 KB stack (QEMU, the Dark Queen's demo on the 2.8": 896
+// bytes left at a fight's start with three readers in q_draw_view); s is
+// nullptr when the file isn't open or there's no memory (that part isn't drawn)
+struct HeapSrc {
+    plat::FileSource* s = nullptr;
+    HeapSrc(plat::File& f, bool open)
+    {
+        if (open) s = new (std::nothrow) plat::FileSource(f);
+    }
+    ~HeapSrc() { delete s; }
+    HeapSrc(const HeapSrc&) = delete;
+    HeapSrc& operator=(const HeapSrc&) = delete;
+};
+
 // The screen: the exploring frame (the view's frame, the compass, the
 // moons) or, for the party menu, the marble with one box
 __attribute__((noinline)) void q_draw_frame(pic::Canvas& c, bool explore)
@@ -131,11 +146,10 @@ __attribute__((noinline)) void q_draw_frame(pic::Canvas& c, bool explore)
     plat::File fa, fb;
     const bool a = open_hl("FRAME.TLB", fa), b = open_hl("GEN.TLB", fb);
     {
-        plat::FileSource sa(fa), sb(fb);
+        HeapSrc sa(fa, a), sb(fb, b);
         int moons[3];
         q_moons(moons);
-        qview::draw_frame(c, a ? &sa : nullptr, b ? &sb : nullptr, explore ? d->gs.dir : -1, explore ? moons : nullptr,
-                          q_col(), q_pal());
+        qview::draw_frame(c, sa.s, sb.s, explore ? d->gs.dir : -1, explore ? moons : nullptr, q_col(), q_pal());
         q_take();
     }
     if (a) fa.close();
@@ -167,9 +181,9 @@ __attribute__((noinline)) void q_draw_view(pic::Canvas& c, bool area)
     plat::File fa, fb, fc;
     if (area) {
         if (open_hl("TOPVIEW.TLB", fa)) {
-            plat::FileSource sa(fa);
+            HeapSrc sa(fa, true);
             qview::Libs libs;
-            libs.topview = &sa;
+            libs.topview = sa.s;
             const int16_t paper = c.paper;
             c.paper = -1;                       // (the area map's black)
             qview::draw_area_map(c, libs, d->map, d->gs.x, d->gs.y, d->gs.dir, q_col(), 24, 24, q_pal());
@@ -182,11 +196,11 @@ __attribute__((noinline)) void q_draw_view(pic::Canvas& c, bool area)
     // (three files at once: the card's slots)
     const bool a = open_hl("8X8DB.TLB", fa), b = open_hl("8X8DC.TLB", fb), k = open_hl("BACK.TLB", fc);
     {
-        plat::FileSource sa(fa), sb(fb), sc(fc);
+        HeapSrc sa(fa, a), sb(fb, b), sc(fc, k);
         qview::Libs libs;
-        libs.walls[0] = a ? &sa : nullptr;
-        libs.walls[1] = b ? &sb : nullptr;
-        libs.back = k ? &sc : nullptr;
+        libs.walls[0] = sa.s;
+        libs.walls[1] = sb.s;
+        libs.back = sc.s;
         qview::draw(c, libs, d->map, d->gs.x, d->gs.y, d->gs.dir, qview::look_of(d->map, d->save.look), q_col(),
                     q_pal());
         q_take();
@@ -498,7 +512,7 @@ __attribute__((noinline)) void q_pm_hide(pic::Canvas& c)
     plat::File fa, fb;
     const bool a = open_hl("GEN.TLB", fa), b = open_hl("FRAME.TLB", fb);
     {
-        plat::FileSource sa(fa), sb(fb);
+        HeapSrc ha(fa, a), hb(fb, b);
         const int16_t paper = c.paper;
         c.paper = -1;
         hlib::Library lib;
@@ -509,8 +523,8 @@ __attribute__((noinline)) void q_pm_hide(pic::Canvas& c)
                 hlib::read_part(s, pos, len, p))
                 hlpic::draw(s, p, q_col(), c, hlpic::place_x(p, 0), hlpic::place_y(p, 0), hlpic::Clip{0, 111, 320, 200});
         };
-        if (a) part(sa, 1);
-        if (b) for (int i : {2, 3, 4}) part(sb, i);
+        if (ha.s) part(*ha.s, 1);
+        if (hb.s) for (int i : {2, 3, 4}) part(*hb.s, i);
         c.paper = paper;
     }
     if (a) fa.close();

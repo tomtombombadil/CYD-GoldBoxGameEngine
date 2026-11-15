@@ -7,6 +7,8 @@ namespace hlpic {
 void Colours::reset()
 {
     for (int i = 0; i < 256; ++i) ega[i] = static_cast<uint8_t>(i & 15);
+    for (int i = 0; i < 16; ++i) regs[i] = pic::kEga[i];
+    regs_changed = true;
 }
 
 bool load_colours(hlib::ByteSource& src, uint32_t pos, uint32_t len, Colours& c, pic::VgaPalette* pal)
@@ -15,6 +17,15 @@ bool load_colours(hlib::ByteSource& src, uint32_t pos, uint32_t len, Colours& c,
     if (!hlib::read_colours(src, pos, len, h)) return false;
     if (h.first + h.count > 256) return false;
     if (h.vga) hlib::ega_table(src, h, c.ega + h.first, 256 - h.first);
+    // (the entries under 16: the EGA palette registers - DQK.EXE 0x178E2)
+    for (int i = 0; i < h.count && h.first + i < 16; ++i) {
+        uint8_t rgb[3] = {};
+        if (!hlib::colour_rgb(src, h, i, rgb)) break;
+        uint8_t v[3];
+        for (int k = 0; k < 3; ++k) v[k] = static_cast<uint8_t>(((rgb[k] + 8) / 17 >> 2) * 0x55);
+        c.regs[h.first + i] = pic::Rgb{v[0], v[1], v[2]};
+        c.regs_changed = true;
+    }
     if (pal) {
         const int n = h.vga ? h.count : 16;
         if (pal->count > 0) {

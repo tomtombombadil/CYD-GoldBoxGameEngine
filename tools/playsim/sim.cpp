@@ -165,7 +165,14 @@ static void shot(const char* tag)
         if (getenv("COMPANION")) panel_shot(name);
         return;
     }
-    for (uint8_t v : (getenv("LCD") ? lcd : all)) { int k = v & 15; if (swap == 1 && (k == 0 || k == 8)) k ^= 8; else if (swap == 2 && k == 8) k = 0; else if (swap == 3 && k == 8) k = 1; const pic::Rgb& c = pic::kEga[k]; fputc(c.r, f); fputc(c.g, f); fputc(c.b, f); }
+    // (the Dark Queen in 16 colours: its EGA palette registers - play::palette)
+    const pic::Rgb* ega = play::palette(&vpal, true) ? vpal : pic::kEga;
+    if (getenv("REGSLOG")) {        // REGSLOG=1: the 16 colours each snapshot is shown in
+        printf("  regs %s:", name);
+        for (int i = 0; i < 16; ++i) printf(" %02X%02X%02X", ega[i].r, ega[i].g, ega[i].b);
+        printf("\n");
+    }
+    for (uint8_t v : (getenv("LCD") ? lcd : all)) { int k = v & 15; if (swap == 1 && (k == 0 || k == 8)) k ^= 8; else if (swap == 2 && k == 8) k = 0; else if (swap == 3 && k == 8) k = 1; const pic::Rgb& c = ega[k]; fputc(c.r, f); fputc(c.g, f); fputc(c.b, f); }
     fclose(f);
     if (getenv("COMPANION")) panel_shot(name);
 }

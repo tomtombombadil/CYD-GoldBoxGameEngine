@@ -890,7 +890,22 @@ the Project as claude/TODO.md.
 - [ ] S3 / C5 follow-ups once Tom has run them: fix what his reports show
       (colours, touch direction, sound level - the codec's volume is
       0 dB); then the 8-bit canvas for the VGA games there.
-- [ ] Dark Queen on the classic boards: try it in its own EGA mode (Tom,
+- [x] Dark Queen on the classic boards (2026-11-15, v0.203.2): QEMU's
+      2.8" ILI9341 (the classic ESP32, no PSRAM) plays its demo - the
+      scan (its 8 songs rendered, 85 s in QEMU), the title, the story, the
+      3 NPCs and the 3-against-13 fight to its end: heap lowest 23 KB, the
+      largest block 27 KB in the fight; the loop's stack was down to 896
+      bytes at the fight's start (then a QEMU panic) - q_draw_view's three
+      file readers, q_draw_frame's / q_pm_hide's two and q_icon_screen's
+      one now on the heap (HeapSrc): 1,312 bytes left at the lowest, no
+      panic. (QEMU's "not enough memory to hold the sound": its build has
+      no sound output.) The EGA screen's 16 colours: DQK.EXE sets the
+      palette registers from any colour part with entries under 16
+      (0x178E2, in its EGA modes "ega16" / "ega64": each channel's (v + 8)
+      / 17, its top two bits the 2/3 and 1/3 levels; the VGA DAC at 0x5266)
+      - modelled (hlpic::Colours::regs, play::palette on the 16-colour
+      canvas); TITLE's own 16 come out as the standard 16.
+      Dark Queen on the classic boards: try it in its own EGA mode (Tom,
       2026-10-12) when we get to the Krynn games. Decided (2026-10-24,
       branch darkqueen, queen_facts.md): its EGA install's pictures are
       the VGA ones through each picture's own EGA table, pixel for pixel

@@ -19561,6 +19561,16 @@ int canvas_depth(games::Game g)
 
 bool palette(const pic::Rgb** rgb, bool all)
 {
+    // The Dark Queen in 16 colours: its EGA palette registers (hlpic::Colours)
+    if (d && d->hl_col && cv && cv->bpp == 4 && (d->hl_col->regs_changed || all)) {
+        static pic::Rgb* regs = nullptr;           // (made once, for the Dark Queen only)
+        if (!regs) regs = new (std::nothrow) pic::Rgb[256]();
+        if (!regs) return false;
+        for (int i = 0; i < 16; ++i) regs[i] = d->hl_col->regs[i];
+        d->hl_col->regs_changed = false;
+        *rgb = regs;
+        return true;
+    }
     if (!vga || (!vga->changed && !all)) return false;
     vga->changed = false;
     *rgb = vga->now;

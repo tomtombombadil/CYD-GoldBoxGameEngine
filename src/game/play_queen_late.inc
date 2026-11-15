@@ -1059,13 +1059,13 @@ __attribute__((noinline)) void q_icon_screen(pic::Canvas& c)
         // (the marble between the boxes: FRAME.TLB's 8 x 94 bar, twice)
         plat::File f;
         if (open_hl("FRAME.TLB", f)) {
-            plat::FileSource src(f);
+            HeapSrc hs(f, true);
             hlib::Library lib;
             const int16_t paper = c.paper;
             c.paper = -1;
-            if (hlib::open(src, 0, src.size(), lib) == hlib::Status::Ok) {
-                q_frame_part_at(c, src, lib, 11, 176, 16);
-                q_frame_part_at(c, src, lib, 11, 176, 7);
+            if (hs.s && hlib::open(*hs.s, 0, hs.s->size(), lib) == hlib::Status::Ok) {
+                q_frame_part_at(c, *hs.s, lib, 11, 176, 16);
+                q_frame_part_at(c, *hs.s, lib, 11, 176, 7);
             }
             c.paper = paper;
             f.close();
