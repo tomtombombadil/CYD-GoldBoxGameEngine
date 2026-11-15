@@ -17178,6 +17178,7 @@ bool panel_member(int i, PanelMember& m)
         if (m.lv[c] && lv <= 0) m.stopped |= static_cast<uint8_t>(1u << c);
     }
     m.krynn = krynn_rules();
+    m.knight = m.krynn || hl();       // (the Dark Queen's knights read "Monk" on the Party view)
     m.ready = static_cast<uint8_t>(ready_bits(i) & ~m.stopped);
     return true;
 }
