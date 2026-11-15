@@ -1269,6 +1269,11 @@ the Project as claude/TODO.md.
       credits and maps should look like the original's.
 
 ## Done
+- [x] v0.201.1 (found by the PortMaster port's button test, 2026-11-15): the Dark Queen's Create
+      Character form showed TWO boxes (a choice and Done) and Select / A acted on the choice - now one
+      highlight as Modify's (Tom's rule, 2026-11-14): Done unboxed while the cursor keys are on the
+      choices; Left / Right take the highlight to the menu line (the first press lights Done), Up /
+      Down back. A tap on Done still picks it.
 - [x] v0.200.9 (Tom, 2026-11-15, from the PortMaster port's session): `play::titles()` -
       the title screens are up (the port keeps its Companion off them). The boards don't call it.
 
