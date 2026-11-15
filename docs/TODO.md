@@ -899,9 +899,12 @@ the Project as claude/TODO.md.
 - [x] Party names in the originals' colours (Tom, 2026-11-14, v0.200.7): the
       chosen one white, the others cyan (was gold / cream); the map's secret
       doors' S and the legend's "S: Secret" cyan (doors stay gold).
-- [ ] Map labels for towns (Tom, 2026-11-14, later): one letter on a square
-      (Inn, Tavern, Healer, Trainer, shops ...) - a 5 x 7 letter fits a 12 or
-      11 px square; where each place is would come from the scripts.
+- [ ] Map labels for towns (Tom, 2026-11-14, later): one 5 x 7 letter on a
+      square (fits 12 or 11 px): I Inn, T Tavern, H Healer / temple, L Trainer
+      (Level up - Tom), S Shop (not "$" - unreadable that small - Tom), V
+      Vault; where each place is from the scripts (shops / temples /
+      training: their calls; inns / taverns: their text). Mockup 2026-11-14:
+      PoolRad's New Phlan (playtest_poolrad.md's event squares), white letters.
 - [ ] Tom: pick the 320x240 Map page (mockups 2026-11-14: map 12 / 11 px, party with / without icons - CYD_MOCKUP in viewer.cpp draw_map_page; Claude suggested map 12, no icons).
 - [x] Checks 2026-11-15 (v0.200.6): fight budgets after the day's merges
       (BUDGET=150, 153,600 bytes): Curse 134,203, PoolRad 136,043, Darkness
