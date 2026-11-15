@@ -3812,7 +3812,7 @@ void draw_list(pic::Canvas& c, const char* prompt, const char* what)
 
 enum class Ask : uint8_t { None, Overwrite, Drop, DropSure, Reroll, SaveNew, OverwriteNew, DropItem, SellDeal, IdDeal,
                           LeaveCoins, CureAnyway, PayCure, Train, MemorizeThese, StopRest, LoseIt, AlterDrop, QuitDos,
-                          ScribeThese, ScribeThese2, UseIt, PaladinCure, AlterSure, Knight, CampLoad };
+                          ScribeThese, ScribeThese2, UseIt, PaladinCure, AlterSure, Knight, CampLoad, QDelete, QDeleteSure };
 void ask_yes_no(pic::Canvas& c, Ask what, const char* prompt);
 void ask_create(pic::Canvas& c, Ask what, const char* prompt);
 bool view_yes_no(Ask what, char k, pic::Canvas& c);
@@ -5724,6 +5724,9 @@ void remove_character(pic::Canvas& c, bool overwrite_ok)
 bool create_yes_no(Ask what, char k, pic::Canvas& c);
 
 void yes_no_key(char k, pic::Canvas& c);
+void q_find_deletable();
+void draw_add_list(pic::Canvas& c);
+extern bool q_deleting;
 
 // The place of the last Yes / No answered (0 / 1): Darkness's icon editor
 // after creation's "Reroll stats?" starts with that place lit (its menus
@@ -5752,6 +5755,29 @@ void yes_no_key(char k, pic::Canvas& c)
     if (magic_yes_no(what, k, c)) return;
     if (alter_yes_no(what, k, c)) return;
     if (camp_load_yes_no(what, k, c)) return;
+    if (what == Ask::QDelete || what == Ask::QDeleteSure) {
+        if (what == Ask::QDelete && k == 'Y') {
+            ask_yes_no(c, Ask::QDeleteSure, rw(Data::kSure));
+            return;
+        }
+        if (what == Ask::QDeleteSure && k == 'Y' && plist.index >= 0 && plist.index < d->guys) {
+            char base[16];
+            strncpy(base, d->guy_file[plist.index], sizeof base - 1);
+            base[sizeof base - 1] = 0;
+            if (char* dot = strrchr(base, '.')) *dot = 0;
+            delete_character(base);
+            q_find_deletable();
+        }
+        if (!d->guys) {
+            q_deleting = false;
+            screen = Screen::PartyMenu;
+            draw_party_menu(c);
+            return;
+        }
+        screen = Screen::AddList;
+        draw_add_list(c);
+        return;
+    }
     party::Character* ch = pt->sel();
     char nm[20] = {}, t[64];
     if (ch) ch->name(nm, sizeof nm);
@@ -6074,6 +6100,32 @@ bool load_secret_guy(int i, party::Character& ch)
     return true;
 }
 
+// (the Dark Queen's saved characters that aren't in the party - Delete Character's list)
+void q_find_deletable()
+{
+    find_guys();
+    int n = 0;
+    for (int i = 0; i < d->guys; ++i) {
+        if (d->guy_added[i]) continue;
+        if (n != i) {
+            memcpy(d->guy_file[n], d->guy_file[i], sizeof d->guy_file[0]);
+            memcpy(d->guy_name[n], d->guy_name[i], sizeof d->guy_name[0]);
+            d->guy_src[n] = d->guy_src[i];
+        }
+        d->guy_added[n++] = false;
+    }
+    d->guys = n;
+    if (plist.index >= n) plist.index = n ? n - 1 : 0;
+}
+
+// The Dark Queen's Delete Character (DOSBox, 2026-11-14): its saved characters
+// that aren't in the party, listed as Add Character lists them, under "delete
+// a character: " with "Delete Exit"; Delete asks "Delete NAME forever? " then
+// "Are you sure? " (both Yes: the character's file goes; No or Esc: the list
+// again); nobody to list: "No characters to delete." and the party menu stays
+bool q_deleting = false;
+void ow(uint32_t at, char* out, size_t cap);
+
 void draw_add_list(pic::Canvas& c)
 {
     c.clear(0);
@@ -6082,6 +6134,14 @@ void draw_add_list(pic::Canvas& c)
     plist.row1 = 22;
     plist.col0 = 1;
     plist.n = d->guys;
+    if (q_deleting) {
+        char prompt[28], words[16];
+        ow(d->prof->party.del_prompt, prompt, sizeof prompt);
+        ow(d->prof->party.del_menu, words, sizeof words);
+        if (char* sp = strchr(words, ' ')) *sp = 0;       // ("Delete Exit": the list adds its Exit)
+        draw_list(c, prompt, words);
+        return;
+    }
     char what[12];
     strncpy(what, rw(Data::kAdd), sizeof what - 1);
     what[sizeof what - 1] = 0;
@@ -8900,6 +8960,7 @@ void list_tap(int x, int y, pic::Canvas& c)
         return;
     } else if (k == 'E' && screen != Screen::Loot) {     // (the treasure's Exit: below)
         if (screen == Screen::AddList) {
+            q_deleting = false;
             screen = Screen::PartyMenu;
             draw_party_menu(c);
         } else if (screen == Screen::ShopBuy) {
@@ -8946,7 +9007,17 @@ void list_tap(int x, int y, pic::Canvas& c)
         case 'I': identify_item(l.index, c); break;
         }
         return;
-    } else if (k == 'A' && screen == Screen::AddList) {
+    } else if (k == 'D' && screen == Screen::AddList && q_deleting) {
+        if (l.index >= 0 && l.index < d->guys) {
+            char f[32], t[64];
+            ow(d->prof->party.del_ask, f, sizeof f);
+            const char* pc = strstr(f, "%s");
+            if (pc) snprintf(t, sizeof t, "%.*s%s%s", static_cast<int>(pc - f), f, d->guy_name[l.index], pc + 2);
+            else snprintf(t, sizeof t, "%s%s", f, d->guy_name[l.index]);
+            ask_yes_no(c, Ask::QDelete, t);
+        }
+        return;
+    } else if (k == 'A' && screen == Screen::AddList && !q_deleting) {
         add_character(l.index, c);
         return;
     } else {
@@ -12189,6 +12260,7 @@ void pm_choose_key(char key, pic::Canvas& c)
         show_menu_line(c);
         return;
     }
+    const bool was_picked = pm_picked;      // (the member was just picked at "Pick Character")
     pm_picked = false;
     switch (key) {
     case 'L':
@@ -12265,8 +12337,22 @@ void pm_choose_key(char key, pic::Canvas& c)
         remove_character(c, false);
         return;
     case 'D':
+        if (hl() && d->prof->party.del_prompt) {
+            q_find_deletable();
+            if (!d->guys) {
+                char t[40];
+                ow(d->prof->party.del_none, t, sizeof t);
+                note(c, t);
+                return;
+            }
+            q_deleting = true;
+            screen = Screen::AddList;
+            plist = PickList{};
+            draw_add_list(c);
+            return;
+        }
         if (pt->sel()) {
-            if (d->prof->alter.pick) {
+            if (d->prof->alter.pick && !was_picked) {
                 // Darkness: the party menu's Drop is the camp's (GAME.OVR
                 // 0x164AA): "Pick Character Select" first (darkness_alter_facts.md A2)
                 char prompt[20], words[12];
@@ -19254,6 +19340,15 @@ bool back(pic::Canvas& c)
         draw_party_menu(c);
         return true;
     }
+    if (screen == Screen::PartyMenu && (pm_pick_for || pm_picking) && input_mode == Input::None) {
+        // Esc at "Pick Character": the party menu again, nobody picked (DOSBox:
+        // Death Knights' View - no Exit word there; Champions' Exit does the same)
+        pm_pick_for = 0;
+        pm_picking = false;
+        train_payer = -1;
+        draw_party_menu(c);
+        return true;
+    }
     if (input_mode != Input::None && input_engine && engine_ask == EngineAsk::FileName) {
         input_key('\n', c);                      // Esc ends the file name as Enter does (the original)
         return true;
@@ -19331,8 +19426,13 @@ bool back(pic::Canvas& c)
         end_create(c);
         return true;
     }
+    if (screen == Screen::YesNo && (ask == Ask::QDelete || ask == Ask::QDeleteSure)) {
+        yes_no_key('N', c);                 // (Esc at "Delete NAME forever?": the list again - DOSBox)
+        return true;
+    }
     if (screen == Screen::AddFrom || screen == Screen::AddList || screen == Screen::YesNo) {
         ask = Ask::None;
+        q_deleting = false;
         screen = Screen::PartyMenu;
         draw_party_menu(c);
         return true;

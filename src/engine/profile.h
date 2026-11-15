@@ -374,6 +374,10 @@ struct Profile {
         // unless saved in this camp, then the party menu's Load with the
         // party gone (0: no Load in the camp)
         uint32_t camp_load_anyway = 0;
+        // The Dark Queen's Delete Character (DOSBox, 2026-11-14): the saved characters
+        // not in the party listed under "delete a character: " with "Delete Exit",
+        // "Delete %s forever? " Yes No, "Are you sure? "; none: "No characters to delete."
+        uint32_t del_prompt = 0, del_menu = 0, del_ask = 0, del_none = 0;
     } party;
 
     // View Character: name tables in the program and the screen's words

@@ -165,6 +165,35 @@ the Project as claude/TODO.md.
       characters one by one).
 
 ## Claude
+- [x] v0.200.4 (Tom, 2026-11-14: "check the DOSbox versions ... make sure
+      we're following what the actual games do"; the originals run side by
+      side with the engine on the party menu, GOG copies):
+      - **Esc at "Pick Character"** goes back to the party menu in the
+        originals (Death Knights, Darkness: no Exit word; Champions,
+        Treasures: Exit does the same) - `play::back` does it now (the
+        PortMaster port's B). Esc at a Yes / No does nothing in the
+        originals; Back answering No there stays ours.
+      - **Darkness and Treasures ask "Pick Character" for Drop, Modify,
+        View and Remove** (Darkness "Select", Treasures "Select Exit") -
+        the engine asked only for Darkness's Drop and went straight on for
+        the rest (Remove took the selected member at once). `party.pick`
+        / `pick_menu` set for both; Drop no longer asks twice
+        (`was_picked`).
+      - **The Dark Queen's Delete Character** is not a party member's
+        drop: it lists the saved characters that aren't in the party under
+        "delete a character: " with "Delete Exit"; Delete asks "Delete
+        NAME forever? ", then "Are you sure? "; Esc at the question: the
+        list again; nobody saved: "No characters to delete." (`q_deleting`,
+        `q_find_deletable`, profile `del_*`). Its Remove Character takes
+        the selected member at once, as the engine did.
+      - Checked and the same as the engine: Champions' and Death Knights'
+        party menus (lines, the highlight on Modify after a load, "Load
+        from where?" only in Death Knights, Champions' "Pick Character
+        Select Exit"), Death Knights' Drop ("DROP NAME FOREVER" on No).
+      - **Not rechecked**: PoolRad, Curse, Secret (Secret's Load did
+        nothing in this DOSBox copy - its save path) and Gateway (no saved
+        game ships). The engine leaves out "Initialize Mouse/Joystick" in
+        every game (nothing to initialize).
 - [x] `play::walking()` was false on the marker overland maps (Champions,
       Death Knights, Darkness) even after Move was picked, so a front end
       whose direction keys follow it - the PortMaster port's D-pad - could
@@ -195,8 +224,6 @@ the Project as claude/TODO.md.
       character: " / "Delete Exit" / "No characters to delete." - the
       original's Delete Character may list the saved characters' file
       rather than the party; a DOSBox look is owed.
-- [ ] "Pick Character" (Gateway's / the Krynn games' View, Modify ..., Darkness's
-      Drop) has no way back by `play::back` (the port's B): asked Tom.
 - [x] Journal scan misses (Tom, 2026-11-14, from the PortMaster port: the
       Steam Treasures' Introduction "doesn't exist"; every game's journal
       checked in both releases with the port's `tools/jlist`): v0.198.1 -
