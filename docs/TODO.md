@@ -878,7 +878,8 @@ the Project as claude/TODO.md.
       into 16 colours - done in v0.118.0 (each palette entry's EGA nibble,
       `pic::draw_vga_block`; DOSBox's EGA mode matched pixel for pixel -
       SPEC 6d); closed 2026-11-15.
-- [x] Checks 2026-11-15 (v0.200.5+): fight budgets after the day's merges
+- [ ] Tom: pick the 320x240 Map page (mockups 2026-11-14: map 12 / 11 px, party with / without icons - CYD_MOCKUP in viewer.cpp draw_map_page; Claude suggested map 12, no icons).
+- [x] Checks 2026-11-15 (v0.200.6): fight budgets after the day's merges
       (BUDGET=150, 153,600 bytes): Curse 134,203, PoolRad 136,043, Darkness
       150,601, Champions 136,599, Knights 136,420, Queen 143,726, Treasures
       152,400 - all within (each ~0.5 KB up on round 11's); the Dark Queen's

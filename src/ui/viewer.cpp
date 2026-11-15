@@ -2924,17 +2924,14 @@ void draw_map_page()
     if (draw_battle_page()) return;
     LGFX& g = ui::gfx();
     g.fillRect(0, 0, pic::kScreenW, pic::kScreenH, style::kBackground);     // (black: the map's)
-    // (Tom, 2026-11-14: the map in the corner, its legend under it where the
-    // menu line was, the party beside it - Companion Views; no "tap to go back")
 #if CYD_MOCKUP
-    // (mockups for Tom, 2026-11-14: each Map key press the next of map 12 / 11 px x icons / none)
+    // (mockups for Tom, 2026-11-14 - not chosen yet: the map in the corner,
+    // its legend under it where the menu line was, the party beside it; each
+    // Map key press the next of map 12 / 11 px x party icons / none)
     static int variant = 0;
     const int v = variant++ % 4;
     const int cell = v & 2 ? 11 : 12, mx = 0, my = 0, side = mx + cell * geo::kSize + 3;
     companion::set_party_icon(v & 1 ? 0 : 24);
-#else
-    const int cell = 12, mx = 0, my = 0, side = mx + cell * geo::kSize + 3;
-#endif
     const geo::Map* m = kPlayMap.map();
     if (m) {
         draw_map_grid(g, *m, kPlayMap, mx, my, cell);
@@ -2943,6 +2940,19 @@ void draw_map_page()
         wrap_text(4, 4, side - 8, "No map here.", ui::Font::Normal, style::kText, true);
     }
     if (comp_on()) map_page_party(side, pic::kScreenW - side);
+    companion::set_party_icon(24);
+#else
+    // (no "Tap to go back" - Tom, 2026-11-14: any tap goes back)
+    const int cell = 12, mx = 4, my = (pic::kScreenH - cell * geo::kSize - 1) / 2;
+    const int tx = mx + cell * geo::kSize + 8, tw = pic::kScreenW - tx - 4;
+    const geo::Map* m = kPlayMap.map();
+    if (m) draw_map_grid(g, *m, kPlayMap, mx, my, cell);
+    else wrap_text(mx, my, tx - mx - 8, "No map here.", ui::Font::Normal, style::kText, true);
+    if (m) {
+        const int y = wrap_text(tx, my, tw, "Red: Locked", ui::Font::Small, style::kWarn, true);
+        wrap_text(tx, y, tw, "S: Secret", ui::Font::Small, style::kGold, true);
+    }
+#endif
 }
 
 void draw_walk_keys(const char* side_label, const char* area_label, bool cursor)
