@@ -165,6 +165,18 @@ the Project as claude/TODO.md.
       characters one by one).
 
 ## Claude
+- [x] `play::walking()` was false on the marker overland maps (Champions,
+      Death Knights, Darkness) even after Move was picked, so a front end
+      whose direction keys follow it - the PortMaster port's D-pad - could
+      not cross them (found by the port's button test, 2026-11-14; the
+      boards' movement keys call `play::act` whatever it says). True now
+      while Move mode is on there - v0.200.1. On 320x240 the key row turns
+      to the movement arrows after Move, as in the 3D areas.
+- [ ] From the port's button test (2026-11-14), not changed: the Dark
+      Queen's Delete Character "Pick Character / Select" can't be answered
+      by the cursor keys (`nav_point` leaves the Dark Queen out: Select acts
+      on the party menu's line instead) - a tap works; and "Pick Character"
+      (Krynn's View, Darkness's Drop) has no way back by `play::back`.
 - [x] Journal scan misses (Tom, 2026-11-14, from the PortMaster port: the
       Steam Treasures' Introduction "doesn't exist"; every game's journal
       checked in both releases with the port's `tools/jlist`): v0.198.1 -

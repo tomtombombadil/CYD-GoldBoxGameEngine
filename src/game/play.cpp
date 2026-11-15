@@ -18357,9 +18357,12 @@ bool walking()
 {
     if (!d || input_mode != Input::None) return false;
     if (screen == Screen::Fight) return fg && (fg->st == FSt::Move || (fg->st == FSt::Aim && fg->manual));
-    // (the Dark Queen's overland too: its menu is Encamp alone, the movement keys step)
+    // (the Dark Queen's overland too: its menu is Encamp alone, the movement keys step;
+    // Champions' / Death Knights' / Darkness's overland once Move is picked - its menu is
+    // Exit alone then and the arrow keys step: without this a front end whose direction
+    // keys follow walking(), the PortMaster port's D-pad, could never cross those maps)
     return screen == Screen::Game && !waiting && then == Then::Idle &&
-           (vm->get(0x4BE6) != 0 || pool_overland() || gw_wild() || q_overland());
+           (vm->get(0x4BE6) != 0 || pool_overland() || gw_wild() || q_overland() || (moving && marker_overland()));
 }
 
 void set_present_now(void (*fn)()) { g_present_now = fn; }
