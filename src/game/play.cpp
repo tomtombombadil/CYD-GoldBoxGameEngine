@@ -17008,6 +17008,8 @@ bool available(games::Game g) { return profile::program_name(g) != nullptr; }
 
 bool icon_editing() { return d && screen == Screen::Icon && ie; }
 
+bool titles() { return d && screen == Screen::Title && title_run; }
+
 int flash(int& index)
 {
     if (!d || screen != Screen::Title || !title_run) return -1;

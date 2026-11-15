@@ -170,6 +170,10 @@ void set_options(const Options& o);
 // The title's lightning (Pool): the colour palette entry `index` shows now,
 // or -1 (as itself)
 int flash(int& index);
+// The title screens are up (Tom, 2026-11-15, for the PortMaster port: no
+// Companion beside them): the title's pictures and its Play / Demo line -
+// not the demo's own game screens, and not once the party menu is reached
+bool titles();
 // The icon editor's NEW icon (Alter -> Icon, Create New Character) for the
 // big preview (Tom, v0.59.0): its 24 x 24 colour indexes (0xFF: see-through)
 // in the ready or action pose; false when the editor isn't up. (An engine

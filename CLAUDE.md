@@ -827,7 +827,8 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   depends on: change a signature there and the port must follow. From that
   session only bug fixes come here, plus what Tom OKs for the port (v0.196.52:
   `play::exit_point`, the menu line's Exit word for a handheld's Back
-  button - Tom, 2026-11-14; the boards don't call it). The game code may
+  button - Tom, 2026-11-14; the boards don't call it; v0.200.9:
+  `play::titles()`, the title screens are up - Tom, 2026-11-15). The game code may
   use only standard C / C++ library calls plus strlcpy / strlcat (the port
   supplies those two for old glibc).
 - Game screens (Walk Test, Play Test now, the games later): canvas 1:1 at the top left

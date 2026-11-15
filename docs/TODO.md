@@ -1260,6 +1260,8 @@ the Project as claude/TODO.md.
       credits and maps should look like the original's.
 
 ## Done
+- [x] v0.200.9 (Tom, 2026-11-15, from the PortMaster port's session): `play::titles()` -
+      the title screens are up (the port keeps its Companion off them). The boards don't call it.
 
 - v0.116.4: Secret's temple Raise Dead checked in DOSBox (Con - 1, own
   and in use; the maximum HP kept) and made so.
