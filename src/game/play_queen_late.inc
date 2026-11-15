@@ -585,7 +585,11 @@ void q_form_draw(pic::Canvas& c)
     text::build(menu, "", words);
     menu.selected = 0;
     hl_first();
+    // (ONE highlight - as Modify, Tom 2026-11-14: Done boxed only while the
+    //  cursor keys are on the menu line; a tap on a word still picks it)
+    menu_unlit = mk->q_cur >= 0 && pm_lit();
     show_menu_line(c);
+    menu_unlit = false;
     dirty(0, pic::kScreenH);
 }
 

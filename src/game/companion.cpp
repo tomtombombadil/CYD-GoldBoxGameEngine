@@ -108,8 +108,8 @@ int class_spans(const play::PanelMember& m, bool full, Span* sp, int* ns)
             sp[n++].col = style::kTextMuted;
             ++len;
         }
-        const char* nm = full ? (m.krynn && c == 5 ? "Mage" : m.krynn && c == 7 ? "Knight" : kName[c])
-                              : (m.krynn && c == 7 ? "K" : kLetter[c]);
+        const char* nm = full ? (m.krynn && c == 5 ? "Mage" : m.knight && c == 7 ? "Knight" : kName[c])
+                              : (m.knight && c == 7 ? "K" : kLetter[c]);
         len += snprintf(sp[n].t, sizeof sp[n].t, full ? "%s %d" : "%s%d", nm, m.lv[c]);
         sp[n++].col = (m.stopped >> c & 1) ? style::kTextMuted : (m.ready >> c & 1) ? kYellow : kWhite;
     }

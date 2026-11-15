@@ -17178,6 +17178,7 @@ bool panel_member(int i, PanelMember& m)
         if (m.lv[c] && lv <= 0) m.stopped |= static_cast<uint8_t>(1u << c);
     }
     m.krynn = krynn_rules();
+    m.knight = m.krynn || hl();       // (the Dark Queen's knights read "Monk" on the Party view)
     m.ready = static_cast<uint8_t>(ready_bits(i) & ~m.stopped);
     return true;
 }
@@ -18417,7 +18418,13 @@ bool nav(Nav n, pic::Canvas& c)
     // (the Dark Queen's creation form and god list: up / down through them)
     if ((n == Nav::Up || n == Nav::Down) && mk && screen == Screen::QForm) return q_form_nav(step, c);
     if ((n == Nav::Up || n == Nav::Down) && mk && screen == Screen::QGod) return q_god_nav(step, c);
-    if ((n == Nav::Left || n == Nav::Right) && mk && screen == Screen::QForm) mk->q_cur = -1;
+    // (Left / Right there: the menu line takes the highlight - the first
+    //  press lights Done and takes the choices' box away, the next ones move)
+    if ((n == Nav::Left || n == Nav::Right) && mk && screen == Screen::QForm && mk->q_cur >= 0) {
+        mk->q_cur = -1;
+        q_form_draw(c);
+        return true;
+    }
     if ((n == Nav::Up || n == Nav::Down) && (nav_list(step, c) || party_nav(step, c))) return true;
     // The party menu has no menu line: left / right pick the character
     if (screen == Screen::PartyMenu && (n == Nav::Left || n == Nav::Right) && !(pm_pick_for || pm_picking)) {

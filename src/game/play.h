@@ -259,6 +259,7 @@ struct PanelMember {
     bool     krynn;                     // (magic-user = Mage, monk's place = Knight)
     bool     drained;                   // levels lost to a drain, not restored (create::drained)
     uint8_t  ready;                     // bit k: class k has the experience for its next level
+    bool     knight;                    // monk's place = Knight (the three Krynn games; the Dark Queen keeps "Magic-User")
 };
 int  panel_members();
 bool panel_member(int i, PanelMember& m);
