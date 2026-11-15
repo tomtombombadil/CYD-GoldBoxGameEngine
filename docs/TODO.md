@@ -165,6 +165,38 @@ the Project as claude/TODO.md.
       characters one by one).
 
 ## Claude
+- [x] `play::walking()` was false on the marker overland maps (Champions,
+      Death Knights, Darkness) even after Move was picked, so a front end
+      whose direction keys follow it - the PortMaster port's D-pad - could
+      not cross them (found by the port's button test, 2026-11-14; the
+      boards' movement keys call `play::act` whatever it says). True now
+      while Move mode is on there - v0.200.1. On 320x240 the key row turns
+      to the movement arrows after Move, as in the 3D areas.
+- [x] v0.200.2 (Tom on a handheld, 2026-11-14): **Death Knights' fight
+      field** - its open squares were black and only the trees / rocks
+      grey. Death Knights has no RANDCOM.DAX: its WILDCOM block has 38
+      frames, the last four the ones RANDCOM holds in the other games (the
+      open ground's dotted tile among them); they are read now, and a
+      square whose picture isn't there is the field's empty colour.
+      Checked against the original in DOSBox (save A's first fight).
+      Indoors (DUNGCOM, 25 frames, no RANDCOM): pictures 34-39 - tables,
+      chairs, a body - still have no source; squares that ask for them are
+      plain floor. To check in DOSBox when a Death Knights indoor fight
+      with furniture is at hand.
+- [x] v0.200.2 (Tom): **the Dark Queen's Delete Character** - "Pick
+      Character / Select" took no cursor keys (the Dark Queen was left out
+      of the pick's nav / nav_point: Select acted on the party menu's
+      button behind it, Up / Down left the prompt). Up / Down pick the
+      member, Select asks now, as Darkness's Drop. Its question was the
+      name alone: the Dark Queen's own words added to its profile ("drop "
+      " forever " "Are you sure? " " is dumped out back." " bids you
+      farewell." " breathe a sigh of relief."). **Not checked against the
+      original**: DQK.EXE also has "Delete %s forever? " and "delete a
+      character: " / "Delete Exit" / "No characters to delete." - the
+      original's Delete Character may list the saved characters' file
+      rather than the party; a DOSBox look is owed.
+- [ ] "Pick Character" (Gateway's / the Krynn games' View, Modify ..., Darkness's
+      Drop) has no way back by `play::back` (the port's B): asked Tom.
 - [x] Journal scan misses (Tom, 2026-11-14, from the PortMaster port: the
       Steam Treasures' Introduction "doesn't exist"; every game's journal
       checked in both releases with the port's `tools/jlist`): v0.198.1 -

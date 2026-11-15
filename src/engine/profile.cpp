@@ -4350,6 +4350,11 @@ const Profile kProfiles[] = {
                // (Add: "add from where? " "Tdqk Dkk Exit", "add a character: ", "Add Exit")
                .add_from = qw(0x4885), .add_sources = qw(0x500C), .add_prompt = qw(0x4896), .add = qw1(0x501A),
                // (Modify: " can't be modified.", "Modify:", "Next Previous Add Sub Keep Exit")
+               // (Drop / Delete: "drop " " forever " "Are you sure? " " is dumped out back."
+               // " bids you farewell." " breathe a sigh of relief." - without them the question
+               // was the name alone)
+               .drop = qw(0x480E), .forever = qw(0x4814), .sure = qw(0x481E), .out_back = qw(0x482D),
+               .farewell = qw(0x4842), .relief = qw(0x4856),
                .cant_modify = qw(0x4871), .modify = qw(0x74D2), .keep_exit = qw(0x74DA),
                .load_from = qw(0x4E13), .load_sources = qw(0x500C),
                .words = kQueenPartyMenu, .n_words = sizeof kQueenPartyMenu / sizeof kQueenPartyMenu[0],
