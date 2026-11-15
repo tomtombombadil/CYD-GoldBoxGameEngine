@@ -220,7 +220,7 @@ the Project as claude/TODO.md.
       Queen journal has no table (its entries are text from the PDF's
       layer - 13 and 26 have no heading there; the Companion's Game.dat
       has both). Darkness's Introduction runs on into the rules pages.
-- [x] Curse's "INTRODUCTION - or -" (v0.200.1): only a title over
+- [x] Curse's "INTRODUCTION - or -" (v0.200.3): only a title over
       Journal Entry 1 in the book, so no Introduction section; the Steam
       Gateway journal's Introduction was its contents page (the contents
       line "Introduction: First Night in Yartar ..... 1" taken as the
@@ -835,7 +835,7 @@ the Project as claude/TODO.md.
       into 16 colours (facts from the player's file), so Darkness plays on
       the classic boards as its own EGA mode shows it.
 - [x] QEMU: the cache-error panic inside play::open - not seen again
-      (2026-11-15, v0.200.1: Curse's Play in the 2.8" classic build three
+      (2026-11-15, v0.200.3: Curse's Play in the 2.8" classic build three
       times, no panic; Play free 84 KB, largest block 64 KB, loop stack
       1.7 KB never used). What remains is Espressif QEMU's own panic at
       boot, before the firmware's first line (one boot in a few;
@@ -1448,7 +1448,7 @@ the Project as claude/TODO.md.
       routine; the Dark Queen's turn and caster routines; Darkness's /
       Treasures' caster levels; training spells, items outside fights,
       dual-class, Haste / rest in the later games - not reached.
-      Done 2026-11-15 (v0.200.1): Haste's "ages once" mark is 0x20 in
+      Done 2026-11-15 (v0.200.3): Haste's "ages once" mark is 0x20 in
       Darkness, Treasures and the Dark Queen (GAME.OVR 0x1B89D, 0x21423;
       DQK.EXE 0x4E574; 0x10 elsewhere), Champions says "ages"; poison
       over a rest / in fights: Secret, Darkness and Treasures' damage
