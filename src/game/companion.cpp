@@ -172,9 +172,10 @@ struct Rows {
 Rows party_rows(const Area& a, int n)
 {
     Rows r;
-    r.y0 = a.y + 11;
+    // (no heading over them - Tom, 2026-11-14: the view speaks for itself)
+    r.y0 = a.y + 1;
     // (2 px between members when they fit - Tom, 2026-11-10)
-    r.pitch = n ? (a.h - 11) / n : 26;
+    r.pitch = n ? (a.h - 1) / n : 26;
     if (r.pitch > 26) r.pitch = 26;
     r.icon = r.pitch < 24 ? r.pitch : 24;
     r.tx = a.x + 2 + 24 + 3;
@@ -338,8 +339,7 @@ void draw_party(Painter& p, const Area& a, bool all, bool tabs)
     const Rows r = party_rows(a, n);
     if (all) {
         p.fill(a.x, a.y, a.w, a.h, style::kBackground);
-        if (tabs) draw_tabs(p, a.x + 2, a.y + 1, View::Party, play::fighting());
-        else p.text(a.x + 2, a.y + 1, "Party", style::kGold);
+        (void)tabs;
         if (!n) put(p, a.x + 2, r.y0 + 2, "No party yet.", style::kTextMuted);
     }
     for (int i = 0; i < n; ++i) {
@@ -362,12 +362,10 @@ void draw_battle(Painter& p, const Area& a, bool blink_on, bool big, bool tabs)
     char line[64];
     int ty = a.y + 1;
     // (Tom, 2026-11-10: no round / "x v y" line - the field right under the heading)
+    // (no "Map / Party / Battle" heading - Tom, 2026-11-14; the 320x240 page keeps its hint)
+    (void)tabs;
     if (big) {
-        put(p, a.x + 2, ty, "Battle", style::kGold, cols);
         put(p, a.x + a.w - 2 - 18 * kCharW, ty, "Tap to go back.", style::kTextMuted, 18);
-        ty += kLineH + 1;
-    } else if (tabs) {
-        draw_tabs(p, a.x + 2, ty, View::Battle, true);
         ty += kLineH + 1;
     }
     int bx0 = combat::kW, by0 = combat::kH, bx1 = -1, by1 = -1;
