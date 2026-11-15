@@ -216,10 +216,21 @@ the Project as claude/TODO.md.
       ("A letter from the general") comes out as its heading lines only -
       its OCR text layer is unreadable (pdftotext: "Soth and his ruthless
       consonCe, y ou have help ed to ... dark influe"), so nothing better
-      can come from it; the book's page picture shows it. GOG's Dark
-      Queen journal has no table (its entries are text from the PDF's
-      layer - 13 and 26 have no heading there; the Companion's Game.dat
-      has both). Darkness's Introduction runs on into the rules pages.
+      can come from it; the book's page picture shows it.
+- [x] Journals' text (v0.200.4, 2026-11-15; jbook.cpp on 11 journals with
+      a text layer - Steam Curse, Darkness, Gateway, PoolRad, Secret,
+      Champions, Death Knights, Dark Queen and GOG's Champions, Death
+      Knights, Dark Queen): every entry found but 13 in Darkness, Death
+      Knights and the Dark Queen (their pages go 12 -> 14; the Companion's
+      Game.dat has none for Darkness / Knights and "-" for the Queen) -
+      Tom to confirm in the PDFs. Fixed: Champions' check boxes read as
+      letters before the heading ("L7 Journal Entry 1", ",J ...", "U
+      journal ...", "JJournal ...", ".JJournal ..." - 18 entries were lost
+      into the one before, now all 88); Death Knights' map entry 44 (its
+      title on the heading's line, and a speck above it); the Dark
+      Queen's 26 (OCR'd "20": a number seen before, right after 25, is
+      taken as 26); Darkness's and Gateway's Introductions end where
+      their next chapter starts (they ran on into the rules).
 - [x] Curse's "INTRODUCTION - or -" (v0.200.3): only a title over
       Journal Entry 1 in the book, so no Introduction section; the Steam
       Gateway journal's Introduction was its contents page (the contents

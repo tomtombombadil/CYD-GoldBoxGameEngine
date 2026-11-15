@@ -250,6 +250,10 @@ struct Book : pdf::TextSink {
     bool    intro = false;            // the section is the Introduction
     float   lead = 0;                 // its first paragraph's letter size when not the body's (0: none)
     int     body_lines = 0;           // lines at the page body's size taken
+    float   head_size = 0;            // the section heading's letter size
+    int     heads_page = -1;          // the page of other_head_x
+    float   other_head_x = -1;        // the rightmost left end of a chapter heading (capitals, big) on it
+    float   head_x = 0;               // the section heading's left end
     int     bare_intro = -1;          // the last section: an Introduction of no body-size line
 
     void close()
@@ -269,6 +273,14 @@ struct Book : pdf::TextSink {
     bool line(const pdf::TextLine& l) override
     {
         if (page_number(l)) return true;
+        // (a scan's specks read as a mark or two - ",." over Death Knights'
+        // "JOURNAL ENTRY 44": not text; kept, they made the heading under them
+        // read as their paragraph's next line)
+        if (l.len <= 2) {
+            bool word = false;
+            for (int i = 0; i < l.len; ++i) word = word || is_letter(l.text[i]) || is_digit(l.text[i]);
+            if (!word) return true;
+        }
         const bool bottom = near_bottom(l, st);
         // The book
         const bool top = near_top(l, st);
@@ -277,6 +289,25 @@ struct Book : pdf::TextSink {
         char kind = 0;
         int num = 0;
         const bool heading = f != 2 && section_heading(l.text, l.len, &kind, &num);
+        if (heads_page != page) {
+            // (another chapter began on the page before: an Introduction there ended with it)
+            // (a chapter after it: right of its heading - Gateway's Important Features; one
+            // to its left came before it, as Credits)
+            if (open && intro && in_body && body_lines > 0 && heads_page >= 0 && other_head_x > head_x + 20) {
+                close();
+                open = false;
+            }
+            heads_page = page;
+            other_head_x = -1;
+        }
+        if (!heading && l.size >= st.body() + 3) {
+            bool caps = true, letter = false;
+            for (int i = 0; i < l.len && caps; ++i) {
+                if (l.text[i] >= 'a' && l.text[i] <= 'z') caps = false;
+                if (l.text[i] >= 'A' && l.text[i] <= 'Z') letter = true;
+            }
+            if (caps && letter && l.x > other_head_x) other_head_x = l.x;
+        }
         bj.add(l, f >= 2 && !heading, page, bottom);
         if (heading) {
             bj.p.solo = heading_alone(l.text, l.len);
@@ -289,6 +320,18 @@ struct Book : pdf::TextSink {
             open = true;
             bool dup = false;
             for (int i = 0; i < info->sections && !dup; ++i) dup = secs[i].kind == kind && secs[i].number == num;
+            // (a scan's digit misread - the Dark Queen's "JOURNAL ENTRY 20" between 25
+            // and 27 is 26: a number seen before, right after the entry before a
+            // number not seen yet - that number)
+            if (dup && kind == 'J' && info->sections > 0 && secs[info->sections - 1].kind == 'J') {
+                const int want = secs[info->sections - 1].number + 1;
+                bool seen = false;
+                for (int i = 0; i < info->sections && !seen; ++i) seen = secs[i].kind == 'J' && secs[i].number == want;
+                if (!seen && want != num) {
+                    num = want;
+                    dup = false;
+                }
+            }
             keep = !dup && info->sections < max && num > 0 && num < 65536;
             body = st.body();
             sj.reset();
@@ -313,6 +356,8 @@ struct Book : pdf::TextSink {
             intro = kind == 'I';
             lead = 0;
             body_lines = 0;
+            head_size = l.size;
+            head_x = l.x;
             return true;
         }
         if (!open) return true;
@@ -334,6 +379,29 @@ struct Book : pdf::TextSink {
             const float dy = sj.p.y - l.y, big = l.size > sj.p.size ? l.size : sj.p.size;
             first_under = dy > 0 && dy <= 4.5f * big;
             if (first_under && !same_size(l.size, body)) lead = l.size;
+        }
+        // The Introduction's end: the next chapter's heading - capitals at its
+        // own heading's size, past its text ("CHARACTERS AND PARTIES" after
+        // the Steam Darkness journal's Introduction: it ran on into the rules)
+        if (intro && in_body && body_lines > 0 && same_size(l.size, head_size) && !same_size(l.size, body)) {
+            bool caps = true, letter = false;
+            for (int i = 0; i < l.len && caps; ++i) {
+                if (l.text[i] >= 'a' && l.text[i] <= 'z') caps = false;
+                if (l.text[i] >= 'A' && l.text[i] <= 'Z') letter = true;
+            }
+            if (caps && letter) {
+                close();
+                return true;
+            }
+        }
+        // ... or a chapter's sub-head after its text: a short line larger than
+        // the body and its first paragraph, smaller than the heading ("Towns and
+        // Cities" - the Steam Gateway Introduction ran on into its Important
+        // Features, whose heading the page draws before the Introduction's)
+        if (intro && in_body && body_lines > 0 && l.len <= 40 && l.size > body + 1 && l.size < head_size - 1 &&
+            !(lead > 0 && same_size(l.size, lead))) {
+            close();
+            return true;
         }
         const bool is_body = same_size(l.size, body) || (lead > 0 && same_size(l.size, lead));
         int g = flow(sj.p, l, page, top);
@@ -414,9 +482,29 @@ bool parse_heading(const char* s, int n, char* kind, int* number, int* end)
     // (a scanned heading's bullet read as a letter - "U Tavern Tale 12",
     // "0 Tavern Tale 9", the Steam Champions journal: one character, then
     // the heading in its capitals)
-    if (i + 2 < n && s[i] != ' ' && s[i + 1] == ' ' && (s[i + 2] == 'T' || s[i + 2] == 'J')) {
-        int k = i + 2;
-        if (word_ci(s, n, &k, "tavern") || word_ci(s, n, &k, "journal")) i += 2;
+    // ("JJournal Entry 41", ".JJournal Entry 69": the box read as a mark or two
+    // against the word - its capital J)
+    for (int w = 1; w <= 2; ++w) {
+        if (i + w + 7 >= n || s[i + w] != 'J' || s[i] == ' ' || s[i + w - 1] == ' ') continue;
+        int k = i + w;
+        if (word_ci(s, n, &k, "journal")) {
+            i += w;
+            break;
+        }
+    }
+    // (or two - "L7 Journal Entry 1", ",J Journal Entry 12", "U journal Entry 5": the
+    // GOG / Steam Champions journals' check boxes)
+    for (int w = 1; w <= 2; ++w) {
+        if (i + w + 1 >= n || s[i + w] != ' ') continue;
+        bool mark = true;
+        for (int k = i; k < i + w; ++k) mark = mark && s[k] != ' ';
+        int k = i + w + 1;
+        // ("Tavern" in its capital - not "A tavern tale 3"; the box's "journal" either way)
+        const bool cap_t = s[i + w + 1] == 'T';
+        if (mark && ((cap_t && word_ci(s, n, &k, "tavern")) || word_ci(s, n, &k, "journal"))) {
+            i += w + 1;
+            break;
+        }
     }
     const int start = i;
     if (word_ci(s, n, &i, "journal")) {
@@ -424,7 +512,18 @@ bool parse_heading(const char* s, int n, char* kind, int* number, int* end)
         if (!word_ci(s, n, &i, "entry")) return false;
         spaces(s, n, &i);
         const int v = digits(s, n, &i);
-        if (v <= 0 || !heading_end(s, n, i, false)) return false;
+        if (v <= 0) return false;
+        if (!heading_end(s, n, i, false)) {
+            // ("JOURNAL ENTRY 44 THE RUFFIAN'S MAP" - Death Knights' map entry: its
+            // title in capitals on the heading's own baseline; not prose's
+            // "Journal Entry 12 tells ...")
+            bool caps = i < n && s[i] == ' ', letter = false;
+            for (int k = i; caps && k < n; ++k) {
+                if (s[k] >= 'a' && s[k] <= 'z') caps = false;
+                if (s[k] >= 'A' && s[k] <= 'Z') letter = true;
+            }
+            if (!caps || !letter) return false;
+        }
         *kind = 'J';
         *number = v;
         *end = i;

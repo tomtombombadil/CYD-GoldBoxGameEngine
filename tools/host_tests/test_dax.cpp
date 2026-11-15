@@ -3956,6 +3956,13 @@ static void test_journal_typeset()
         const char* toc = "Introduction: First Night in Yartar .......... 1";
         CHECK(!journal::section_heading(toc, static_cast<int>(strlen(toc)), &k, &n));
         CHECK(journal::section_heading("INTRODUCTION:", 13, &k, &n) && k == 'I');
+        // (scans' check boxes before the heading, glued or not; a map entry's title on its line)
+        CHECK(journal::section_heading("L7 Journal Entry 1", 18, &k, &n) && k == 'J' && n == 1);
+        CHECK(journal::section_heading("U journal Entry 5", 17, &k, &n) && k == 'J' && n == 5);
+        CHECK(journal::section_heading("JJournal Entry 41", 17, &k, &n) && k == 'J' && n == 41);
+        CHECK(journal::section_heading(".JJournal Entry 69", 18, &k, &n) && k == 'J' && n == 69);
+        CHECK(journal::section_heading("JOURNAL ENTRY 44 THE RUFFIAN'S MAP", 34, &k, &n) && k == 'J' && n == 44);
+        CHECK(!journal::section_heading("Journal Entry 12 tells of it", 28, &k, &n));
     }
     CHECK(journal::section_heading("TAVERN TALE #7", 14, &k, &n) && k == 'T' && n == 7);
     CHECK(journal::section_heading("Journal Entry 44:", 17, &k, &n) && k == 'J' && n == 44);
