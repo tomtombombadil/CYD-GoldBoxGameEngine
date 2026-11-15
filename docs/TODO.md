@@ -239,18 +239,20 @@ the Project as claude/TODO.md.
       the page's foot, a line in pieces, specks. Now: Steam Champions 88
       entries + 57 tales (as GOG's table), Treasures' and Gateway's
       Introductions whole, Dark Queen's entries from GOG's PDF text.
-- [ ] Journals, still weak (2026-11-14): the Dark Queen's Introduction
-      ("A letter from the general") comes out as its heading lines only -
-      its OCR text layer is unreadable (pdftotext: "Soth and his ruthless
-      consonCe, y ou have help ed to ... dark influe"), so nothing better
-      can come from it; the book's page picture shows it.
+- [x] The Dark Queen's Introduction ("A letter from the general"): its OCR
+      text layer is unreadable, but the game never refers to it (2026-11-15:
+      no "introduction" in its scripts - ECL.GLB unpacked with
+      hlib_unpack.cpp, strings by ecl_strings.cpp - nor in DQK.EXE), so it
+      doesn't matter; the book's page picture shows it. Tom confirmed
+      (2026-11-14): no entry 13 in Darkness, Death Knights or the Dark Queen,
+      GOG or Steam.
 - [x] Journals' text (v0.200.5, 2026-11-15; jbook.cpp on 11 journals with
       a text layer - Steam Curse, Darkness, Gateway, PoolRad, Secret,
       Champions, Death Knights, Dark Queen and GOG's Champions, Death
       Knights, Dark Queen): every entry found but 13 in Darkness, Death
       Knights and the Dark Queen (their pages go 12 -> 14; the Companion's
       Game.dat has none for Darkness / Knights and "-" for the Queen) -
-      Tom to confirm in the PDFs. Fixed: Champions' check boxes read as
+      confirmed by Tom: those books have no 13. Fixed: Champions' check boxes read as
       letters before the heading ("L7 Journal Entry 1", ",J ...", "U
       journal ...", "JJournal ...", ".JJournal ..." - 18 entries were lost
       into the one before, now all 88); Death Knights' map entry 44 (its
