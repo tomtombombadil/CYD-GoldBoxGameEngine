@@ -460,6 +460,12 @@ bool heading_end(const char* s, int n, int i, bool colon)
     return s[i] == ':';
 }
 
+// "Journal" - or a scan's "JOVRNAL" (the Steam Treasures journal's 17, 20, 21, 23)
+bool journal_word(const char* s, int n, int* i)
+{
+    return word_ci(s, n, i, "journal") || word_ci(s, n, i, "jovrnal");
+}
+
 bool parse_heading(const char* s, int n, char* kind, int* number, int* end)
 {
     // A contents line ("Introduction: First Night in Yartar ......... 1" - the
@@ -487,7 +493,7 @@ bool parse_heading(const char* s, int n, char* kind, int* number, int* end)
     for (int w = 1; w <= 2; ++w) {
         if (i + w + 7 >= n || s[i + w] != 'J' || s[i] == ' ' || s[i + w - 1] == ' ') continue;
         int k = i + w;
-        if (word_ci(s, n, &k, "journal")) {
+        if (journal_word(s, n, &k)) {
             i += w;
             break;
         }
@@ -501,13 +507,13 @@ bool parse_heading(const char* s, int n, char* kind, int* number, int* end)
         int k = i + w + 1;
         // ("Tavern" in its capital - not "A tavern tale 3"; the box's "journal" either way)
         const bool cap_t = s[i + w + 1] == 'T';
-        if (mark && ((cap_t && word_ci(s, n, &k, "tavern")) || word_ci(s, n, &k, "journal"))) {
+        if (mark && ((cap_t && word_ci(s, n, &k, "tavern")) || journal_word(s, n, &k))) {
             i += w + 1;
             break;
         }
     }
     const int start = i;
-    if (word_ci(s, n, &i, "journal")) {
+    if (journal_word(s, n, &i)) {
         spaces(s, n, &i);
         if (!word_ci(s, n, &i, "entry")) return false;
         spaces(s, n, &i);

@@ -260,6 +260,9 @@ the Project as claude/TODO.md.
       Queen's 26 (OCR'd "20": a number seen before, right after 25, is
       taken as 26); Darkness's and Gateway's Introductions end where
       their next chapter starts (they ran on into the rules).
+      Steam Treasures (Tom split it in two, 2026-11-14): its scan reads
+      "JOVRNAL ENTRY" for 17, 20, 21, 23 - taken now; all 83 and its whole
+      Introduction (unchanged by the Introduction-end rules).
 - [x] Curse's "INTRODUCTION - or -" (v0.200.3): only a title over
       Journal Entry 1 in the book, so no Introduction section; the Steam
       Gateway journal's Introduction was its contents page (the contents

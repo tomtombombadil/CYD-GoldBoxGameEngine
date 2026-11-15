@@ -3963,6 +3963,7 @@ static void test_journal_typeset()
         CHECK(journal::section_heading(".JJournal Entry 69", 18, &k, &n) && k == 'J' && n == 69);
         CHECK(journal::section_heading("JOURNAL ENTRY 44 THE RUFFIAN'S MAP", 34, &k, &n) && k == 'J' && n == 44);
         CHECK(!journal::section_heading("Journal Entry 12 tells of it", 28, &k, &n));
+        CHECK(journal::section_heading("JOVRNAL ENTRY 17", 16, &k, &n) && k == 'J' && n == 17);
     }
     CHECK(journal::section_heading("TAVERN TALE #7", 14, &k, &n) && k == 'T' && n == 7);
     CHECK(journal::section_heading("Journal Entry 44:", 17, &k, &n) && k == 'J' && n == 44);
