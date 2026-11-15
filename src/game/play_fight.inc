@@ -5442,9 +5442,10 @@ void fight_start(pic::Canvas& c)
     // (Pool: the picture before the fight isn't come back to - its treasure's
     // Exit shows the 3D view, DOSBox)
     if (pool_files()) last_pic_id = -1;
-    // (Dark Queen: indoors only under a roof - its forests are 3D maps
-    // fought on WILDCOM's ground: q_load_tiles)
-    if (hl() && geo::flags(d->map, d->gs.x, d->gs.y) < 0x80) b.indoors = false;
+    // (Dark Queen: game byte 0x22 - vm 0x4BE6 - as the others: set, the
+    // field from the 3D map on DungCom1's look, else WildCom1 and the outdoor
+    // builder - DQK.EXE 0x2CC04 / 0x2CC52; a square's roof plays no part,
+    // DOSBox: Caergoth's dragons on its sandstone ruins)
     if (d->prof->variant.tr) {
         b.weather = d->gs.area1[0x52];
         b.weather_free = 0x9E;

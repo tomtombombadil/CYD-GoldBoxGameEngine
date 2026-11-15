@@ -325,12 +325,13 @@ __attribute__((noinline)) uint8_t* q_load_pic4(const char* file, int id, int* w,
     return out;
 }
 
-// The field's pictures: DUNGCOM.TLB's picture of the look under a roof
-// (the square's flags 0x80), else WILDCOM's - the other when that one has
-// none; its parts 1.. the ground table's pictures 0..
+// The field's pictures: DUNGCOM.TLB's picture of the look in a 3D area
+// (game byte 0x22, the fight's indoors), else WILDCOM's - the other when
+// that one has none (DQK.EXE 0x2CC04: "DungCom1" / "WildCom1" entry [0xCA03],
+// LOAD FILES' look); its parts 1.. the ground table's pictures 0..
 __attribute__((noinline)) void q_load_tiles()
 {
-    const bool roof = geo::flags(d->map, d->gs.x, d->gs.y) >= 0x80;
+    const bool roof = fg->b.indoors;
     const int look = d->save.look & 0xFF;
     const char* files[2] = {roof ? "DUNGCOM.TLB" : "WILDCOM.TLB", roof ? "WILDCOM.TLB" : "DUNGCOM.TLB"};
     for (const char* name : files) {

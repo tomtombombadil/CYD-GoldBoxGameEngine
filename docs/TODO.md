@@ -2191,11 +2191,35 @@ the Project as claude/TODO.md.
       (Tom, 2026-11-15: "Test it and replicate it"): watched in DOSBox
       (Caergoth's dragons, tools/devkit/queenburst), built as the original's
       routine (Fx::Explode; the Project's queen_explode_facts.md), fx_check F4.
-- [ ] The Dark Queen's Caergoth dragon fight (save A, the walk in
+- [x] The Dark Queen's Caergoth dragon fight (save A, the walk in
       tools/devkit/queenburst/walk.txt): DOSBox's field is brown ground with
       sandstone walls, the engine's grass and trees - the fight's set-up
       0x2CC04 picks its look by game byte 0x22 (0x19 / 0x27); not checked
-      yet (found 2026-11-15). The scripts do
+      yet (found 2026-11-15). v0.202.1: game byte 0x22 decides (DungCom1 /
+      WildCom1 and the builder), the square's roof no longer - the engine's
+      field now matches DOSBox's (VGA).
+- [x] Battlefields, every game (Tom, 2026-11-15: "spot check each game and
+      each map"): each original's fight set-up read (Curse / Secret /
+      Gateway / Champions GAME.OVR area word +0x1CC, Death Knights +0xE6,
+      PoolRad view mode 0x49FA, Darkness / Treasures / the Queen game byte
+      0x22 (block +0x21); the 16-colour games have ONE DUNGCOM / WILDCOM
+      picture block each - every indoor field of a game looks alike in the
+      original too, only the 3D map's walls shape it; Darkness / Treasures
+      / the Queen take the area's look) - only the Queen's differed. Every
+      script block's field drawn in the engine
+      (tools/devkit/fieldsurvey/survey.py: 251 blocks, nine games); DOSBox:
+      the demos' fights (Curse outdoors, Death Knights, Treasures in VGA
+      and in its EGA mode) and the Queen's Caergoth look as the engine's;
+      PoolRad's fields were compared ground byte for ground byte in the
+      play test (kobolds, slums, Podol Plaza).
+- [ ] Death Knights' demo: DOSBox plays scenes and a fight (Sir Dryden,
+      Tanar, Flavius - the ghouls, Delayed Blast Fireball); the engine's
+      demo loads ECL3 block 82 and ends at once with no party (found
+      2026-11-15, playsim DEMO=1).
+- [ ] Treasures' demo: DOSBox goes on after its fight ("You will meet
+      the beautiful residents...", the maps); the playsim's ends after
+      the fight (screen 24) - check whether the engine's demo stops there
+      (found 2026-11-15). The scripts do
       set it: sweep events VMWATCH=3c (Queen, 44 of its blocks swept) -
       ECL.GLB blocks 1, 2, 3, 14, 15. The Dark Queen's ground 0x46: done
       (v0.196.24) - 0x50A77 is inside the kapak's acid layer 0x50A0E
