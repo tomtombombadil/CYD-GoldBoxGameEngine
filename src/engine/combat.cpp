@@ -8204,9 +8204,10 @@ int special(Battle& b, const Tables& t, int i, create::Dice& d, Event* out, int 
         }
         if (!f.up()) return n;
     }
-    // Death Knights' death knights' one spell (0x4E, GAME.OVR 0x2EBA3)
+    // Death Knights' death knights' one spell (0x4E, GAME.OVR 0x2EBA3): the
+    // effect goes once the spell is cast (the front end's special_cast) -
+    // while it's on, the spell is cast at 15th level (0x34EFB, fire15)
     if (m.cast_once && m.cast_spell && hasx(f, m.cast_once) && special_target(b, t, i, 12, false, d) >= 0) {
-        lose_aff(f, m.cast_once);
         *ends_turn = true;
         Event* e = ev(i, Ev::Cast, -1);
         if (e) e->amount = m.cast_spell;

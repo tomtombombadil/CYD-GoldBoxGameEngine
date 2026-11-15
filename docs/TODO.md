@@ -873,10 +873,16 @@ the Project as claude/TODO.md.
       CYD-only are the engine's own screens (Settings, journal viewer,
       library, logs - `ui/viewer.cpp` etc. draw with LovyanGFX). For a
       PortMaster port: draw them through ui:: primitives a port supplies.
-- [ ] Memory, next cuts (measure each with heapprof): the party's unused
-      member slots (1.7 KB each), Data's words read on demand (the spell
-      names' read buffer: already in 1 KB pieces - load_magic, checked
-      2026-11-13).
+- [x] Memory, next cuts (measure each with heapprof): the party's unused
+      member slots (1.7 KB each) - done v0.203.1: party::Members makes a
+      slot as it's first written and gives back those past the party
+      (pt->trim at the party's end, the demo, every 5 s while exploring -
+      never inside a join); the fight budgets' highest points (save A):
+      Curse 133.8 -> 130.7 KB, PoolRad 135.4 -> 132.5, Darkness 149.8 ->
+      147.1, Champions 136.0 -> 133.1, Knights 136.0 -> 132.9, Queen 143.3
+      -> 140.2, Treasures 152.0 -> 146.9 (ASAN: saveload, monkeys, fuzz
+      clean). Data's words read on demand: the spell names' read buffer
+      already in 1 KB pieces (load_magic, checked 2026-11-13).
 - [x] The plain C5's scan: "The Unlimited Adventures journal couldn't be
       processed (card full, or not enough memory)" (the Companion's) - moot
       since 2026-10-24: the scan passes Unlimited Adventures' folder over
@@ -1191,8 +1197,10 @@ the Project as claude/TODO.md.
       book has no entry 13), Gateway 62 - checked by eye; Darkness's
       mentions now offered at a key wait too. Small leftovers: neighbouring
       text at the edges of four maps (Secret 45, Darkness 36 / 38, Gateway
-      7). Open: Treasures' GOG PDF (72 dpi, several pictures a page) needs
-      the PDF reader to take more than one image a page first.
+      7). Treasures' GOG PDF (72 dpi, several pictures a page): its table
+      (84 entries) came with v0.171.0, the reader takes each page's
+      pictures by index - checked again 2026-11-15 (journal_dump: entries
+      1, 5, 20, 47, 82 whole).
 - [x] Darkness's fight memory (v0.136.1): the 30-monster test fight 169
       -> 150.6 KB (Curse 146 -> 132, Pool 147 -> 133): the script's code
       parked during fights and its memory the fight's arena, the monster
@@ -1532,7 +1540,17 @@ the Project as claude/TODO.md.
       Move) spent the 12 moves before the check looked (traced: round 3's
       menu with 12 moves, then Move to under 2). sweep.cpp checks a turn's
       start after the probe too; seed 2 replayed clean (same 2004 probes).
-- [ ] Rule-check gaps left from round 4: items used outside fights for
+- [x] Rule-check gaps left from round 4 - closed 2026-11-15 (v0.203.1):
+      each part below was done in rounds 6-22; the last two pieces now -
+      Death Knights' death knights cast their one Fireball at 15th level
+      (GAME.OVR 0x2EBA3 takes effect 0x4E away only AFTER the cast, and its
+      caster routine 0x34EFB gives 0x2F 15 while 0x4E is on - the engine
+      took it away first, so its fire15 never counted); [0xC447] (set while
+      an item is used, 0x25A77) 6 for a non-item spell = the engine's
+      power_of(item). Training's list shown: train_offers_spell (each
+      original's training routine, cited there). Still open from it: Death
+      Knights' Cure Disease routine (its "is not diseased." has no caller).
+      Rule-check gaps left from round 4 (the history): items used outside fights for
       Pool / Darkness / Gateway / Treasures / Krynn (Curse and Secret have
       checks - 2026-11-08: done, below); spells offered at training (Curse's list stops at 5th level -
       later games' own code not read); dual-class beyond Curse's checks;
@@ -2158,7 +2176,12 @@ the Project as claude/TODO.md.
       without a 20 is 5% - R10's window is 100 rounds now (0.6%); a fight
       once unharmable (the dragon's body, fleeing but idle) is skipped; R3
       skips an Aurak getting up. Queen seeds 1-35 clean.
-- [ ] The Dark Queen underwater (found round 21): game byte 0x3C set =
+- [x] The Dark Queen underwater - closed 2026-11-15: every site of the
+      24 handled (below); the last unread call, 0x95's 0x1D99:0x1017 (file
+      0x2488F), read: the holder's readied weapon's type has a range over
+      1 - the engine's test. Where the scripts set byte 0x3C: ECL.GLB
+      blocks 1, 2, 3, 14, 15 (VMWATCH).
+      The Dark Queen underwater (found round 21): game byte 0x3C set =
       under water; DQK.EXE tests it in 24 places. v0.196.10 (round 22,
       the Project's rules_round21_facts.md 3): the fire spells (Burning
       Hands, Fireball, Flame Strike, Delayed Blast Fireball, Fire Touch,

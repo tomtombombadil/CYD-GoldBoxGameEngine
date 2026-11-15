@@ -132,13 +132,35 @@ struct Character {
     bool npc() const { return rec[0xF7] >= 0x80; }
 };
 
+// The party's member slots, each a block of its own made the first time it's
+// written to (memory, Tom 2026-10-11: an unused slot is ~1.7 KB - a party of
+// 6 of 8 slots keeps 3.4 KB free); `trim` gives back the slots from `keep`
+// on. Reading a slot never made gives an empty character; a slot that can't
+// be made (no memory) gives a spare one, `failed` then says so.
+class Members {
+public:
+    Members() = default;
+    Members(const Members& o) { *this = o; }
+    Members& operator=(const Members& o);
+    ~Members() { trim(0); }
+    Character& operator[](int i);
+    const Character& operator[](int i) const;
+    bool made(int i) const { return i >= 0 && i < kMaxParty && p_[i]; }
+    void trim(int keep);
+    bool failed = false;
+private:
+    Character* p_[kMaxParty] = {};
+};
+
 struct Party {
-    Character m[kMaxParty];
+    Members m;
     int count = 0;
     int selected = 0;
     Character* sel() { return count ? &m[selected] : nullptr; }
     const Character* sel() const { return count ? &m[selected] : nullptr; }
-    void clear() { count = selected = 0; }
+    // (the slots past the party given back)
+    void clear() { count = selected = 0; m.trim(0); }
+    void trim() { m.trim(count); }
 };
 
 // Reads a character record (.SAV / .GUY): false if the file is too short.

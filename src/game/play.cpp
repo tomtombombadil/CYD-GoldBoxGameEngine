@@ -4994,6 +4994,7 @@ void camp_load_go(pic::Canvas& c)
     waiting = false;
     then = Then::Idle;
     while (pt->count) leave_party(pt->count - 1);
+    pt->trim();
     anim_stop();
     pic_shown = false;
     vm->set(0x4BFC, start_speed());                 // (the programs' per-run reset, as a lost party's)
@@ -14370,6 +14371,7 @@ void handle(ecl::Stop r)
         // DAMAGE killed everyone: the party menu
         party_dead = false;
         while (pt->count) leave_party(pt->count - 1);
+        pt->trim();
         anim_stop();
         vm->set(0x4BFC, start_speed());     // (the programs' per-run reset)
         screen = Screen::PartyMenu;
@@ -16367,6 +16369,7 @@ void start_demo(pic::Canvas& c)
     menu_on = false;
     in_demo = true;
     while (pt->count) leave_party(pt->count - 1);
+    pt->trim();
     ecl::GameState& gs = d->gs;
     int block = 0, area = 1;
     demo_place(&block, &area);
@@ -16424,6 +16427,7 @@ void end_demo(pic::Canvas& c)
 {
     in_demo = false;
     while (pt->count) leave_party(pt->count - 1);
+    pt->trim();
     anim_stop();
     waiting = false;
     then = Then::Idle;
@@ -17503,6 +17507,9 @@ void tidy_memory()
     static uint32_t next = 0;
     if (plat::now_ms() < next) return;
     next = plat::now_ms() + 5000;
+    // (the member slots past the party given back - a slot is ~1.7 KB;
+    // party::Members: made as they're written, never inside a join here)
+    if (pt && !fg) pt->trim();
     if (fg || memlog::largest_kb() >= 32) return;
     make_room(32, "the next fight");
 }

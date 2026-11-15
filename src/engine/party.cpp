@@ -1,8 +1,58 @@
 #include "party.h"
 
 #include <cstring>
+#include <new>
 
 namespace party {
+
+namespace {
+Character g_none;           // a slot never made, read
+Character g_spare;          // a slot that couldn't be made
+}
+
+Character& Members::operator[](int i)
+{
+    if (i < 0 || i >= kMaxParty) {
+        g_spare = Character{};
+        return g_spare;
+    }
+    if (!p_[i]) {
+        p_[i] = new (std::nothrow) Character;
+        if (!p_[i]) {
+            failed = true;
+            g_spare = Character{};
+            return g_spare;
+        }
+    }
+    return *p_[i];
+}
+
+const Character& Members::operator[](int i) const
+{
+    return i >= 0 && i < kMaxParty && p_[i] ? *p_[i] : g_none;
+}
+
+Members& Members::operator=(const Members& o)
+{
+    if (this == &o) return *this;
+    for (int i = 0; i < kMaxParty; ++i) {
+        if (o.p_[i]) (*this)[i] = *o.p_[i];
+        else if (p_[i]) {
+            delete p_[i];
+            p_[i] = nullptr;
+        }
+    }
+    return *this;
+}
+
+void Members::trim(int keep)
+{
+    if (keep < 0) keep = 0;
+    for (int i = keep; i < kMaxParty; ++i) {
+        delete p_[i];
+        p_[i] = nullptr;
+    }
+}
 
 void Character::name(char* out, size_t cap) const
 {

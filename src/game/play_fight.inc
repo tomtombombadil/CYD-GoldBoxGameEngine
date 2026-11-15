@@ -2953,6 +2953,13 @@ void special_cast(int i, int sp, int at)
     const combat::FightSpell* fs = fight_spell(sp);
     if (!fs) return;
     const int pw = combat::power_of(b.f[i], mrules->tables, sp, false);
+    // (Death Knights' death knights: their one spell's effect goes after the
+    // cast - GAME.OVR 0x2EBA3; its 15th level counted with it on)
+    struct OneSpell {
+        combat::Fighter& f;
+        uint8_t type;
+        ~OneSpell() { if (type) combat::lose_aff(f, type); }
+    } once{b.f[i], static_cast<uint8_t>(b.fx && b.fx->mon.cast_once && sp == b.fx->mon.cast_spell ? b.fx->mon.cast_once : 0)};
     int tg[combat::kMaxFighters], nt = 0;
     if (at >= 0 && at < b.n) {
         tg[nt++] = at;
@@ -6215,6 +6222,7 @@ void fight_done(pic::Canvas& c)
     if (lost) {
         // The party is gone: back to the party menu
         while (pt->count) leave_party(pt->count - 1);
+        pt->trim();
         screen = Screen::PartyMenu;
         draw_party_menu(c);
         // (Pool: its THE END screen's key ends the game - back to DOS, the
