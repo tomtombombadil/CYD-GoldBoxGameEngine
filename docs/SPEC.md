@@ -2980,7 +2980,8 @@ the game's Settings (As Original: all of them).
   while Bestow Curse gives 0x24 - the curse stays; Death Knights' Heal
   cures effect 0x3D, not Feeblemind's 0x44, and none of the other ills
   (Cure Disease, spell 0x27, is an empty routine there - kept). With Game
-  Fixes Remove Curse lifts the bestowed curse and Heal ends Feeblemind.
+  Fixes Remove Curse lifts the bestowed curse as well (0x2B still
+  first) and Heal ends Feeblemind.
 - **Poison's slow damage** (Game Fixes, v0.200.3): in Secret, Darkness and
   Treasures the poison damage effect (0x0F, under Slow Poison), run out,
   renews effect 0x1A - the dwarves' to-hit effect - instead of itself
