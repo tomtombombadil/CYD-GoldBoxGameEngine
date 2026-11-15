@@ -6898,7 +6898,9 @@ void create_after_icon(pic::Canvas& c);
 void ask_create(pic::Canvas& c, Ask what, const char* prompt)
 {
     ask_yes_no(c, what, prompt);
-    if (darkness_files() && !dkk()) {       // (Death Knights' start on No - DOSBox)
+    // (Secret's start on Yes too - "Reroll stats?", "Is this icon ok?", "Save NAME?":
+    // DOSBox, 2026-11-14)
+    if ((darkness_files() && !dkk()) || d->prof->game == games::Game::SecretOfTheSilverBlades) {       // (Death Knights' start on No - DOSBox)
         menu.selected = 0;
         show_menu_line(c);
     } else if (gateway() && what == Ask::Reroll) {
@@ -14960,14 +14962,15 @@ void icon_menu(pic::Canvas& c)
     case 5: text::build(menu, "", ie->menus[4]); break;
     default: text::build(menu, ie->words[profile::kIconOk], rw(Data::kYesNo)); break;
     }
-    // The question starts on No, as Curse / Pool / Secret do; Darkness's on
+    // The question starts on No, as Curse / Pool do; Darkness's on
     // Yes (GAME.OVR 0x18465), and its menus keep the highlight's place
     if (kept_hl()) {
         if (ie->level == 6) menu.selected = 0;
         else keep_place(at);
     } else {
-        // (Gateway's on Yes too: its question routine - DOSBox)
-        menu.selected = ie->level == 6 && !gateway() ? 1 : 0;
+        // (Gateway's on Yes too: its question routine - DOSBox; Secret's as well -
+        // DOSBox, 2026-11-14, GOG's 1.30: "Is this icon ok?" with Yes lit)
+        menu.selected = ie->level == 6 && !gateway() && d->prof->game != games::Game::SecretOfTheSilverBlades ? 1 : 0;
     }
     show_menu_line(c);
 }
