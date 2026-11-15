@@ -2376,6 +2376,21 @@ the Project as claude/TODO.md.
       d8 / d4 / d7 rolls); the wyvern fight's first turn order (8:13,
       after a surprise); Dirten's small icon 2-3 pixels at the head
       (fixed v0.176.x, below).
+      2026-11-15 (tried, not done): tools/devkit/differ/mkscen.py can't
+      reach these - it starts a block by AREA / BLOCK and walks its 3D
+      map's event bytes, but the wildernesses (6:25, 8:27) start in their
+      overland mode (game word 4C9E 0: LOAD FILES 4 4 0, the rider over
+      the map; 0xFF: map 25 in 3D) and their places are a table by the
+      overland square (block 25's search entry 0x8177: rows by y 0x94D6,
+      counts 0x94F5, x 0x94DE, cases 0x94FD - the silver dragon's cave
+      "ENTER CAVE / IGNORE CAVE" at square 10,9, case 2; the dragon seen
+      at 10,8 / 11,8 / 9,9 / 11,9), and the cave (6:19) has no map of its
+      own (GEO6 holds 1, 25, 28 - DOSBox: "Unable to load geo in
+      Load3DMap" from mkscen's save). Its 129 / 200 "identical" runs on
+      6:25 / 6:19 mean nothing. Next: a save made by walking there (both
+      games, the old ls.py way - its tools and part 16's saves were lost
+      with the machine), or mkscen taught the overland start (4C9E 0,
+      the overland position words 0xFB / 0xFC) and the table's squares.
 - [x] Tom: Dirten's graphics (PoolRad). The original builds a character
       icon by loading head / body with a see-through plane made from
       their colour 0 (ANDed, ovr18 +0x32F), then recolours (START
