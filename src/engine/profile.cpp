@@ -1409,6 +1409,8 @@ constexpr combat::Facts kTreasuresFacts = [] {
                 // (its Feeblemind - GAME.OVR Darkness 0x2E902 / effect 0x44's handler
                 // 0x1C2F3, Treasures 0x37E08 / 0x21F6x - as the Dark Queen's: round 15)
                 .feeble_lost = true, .feeble_direct = true, .hit_needs_damage = true};
+    f.haste_mark = 0x20;                // (Haste's "ages once" mark - GAME.OVR 0x21423)
+    f.poison_renew = 0x1A;              // (its poison damage renews 0x1A - GAME.OVR 0x2096F)
     // (the round 22 effects sweep - GAME.OVR's handlers, table DS 0x9E34)
     f.mon.missile_proof = 0x29;         // a missile of plus 0 avoided (0x215D5)
     f.gw.harpy = 0x84;                  // the harpy's charm on a hit - Gateway's 0x9A (0x240ED)
@@ -1476,6 +1478,8 @@ constexpr combat::Facts kKnightsFacts = [] {
                 // (its Feeblemind - GAME.OVR 0x2E610: the row's effect 0x44 is its
                 // drain-2, its handler 0x1D3F8 called at once - round 15)
                 .feeble_drain = true, .hit_needs_damage = true, .yell_unheld = 0x33};
+    // (no Cause Disease course: its 0x22 is Dispel Evil's, 0x2B / 0x2C have empty handlers)
+    f.sp.ill = f.sp.weak = f.sp.sick = 0;
     // (the round 22 effects sweep - GAME.OVR's handlers, table DS 0xBE82)
     f.mon.no_elec = 0x41;               // the lich's: no electricity (0x1CDEA)
     f.mon.charm_sleep = 0x60;           // charm / sleep proof (0x1DE23, Champions' 0x60)
@@ -2316,7 +2320,8 @@ constexpr combat::Facts kQueenFightFacts = {.held = {0x33, 0x34, 0x35, 0x1F}, .b
                       .fire_dice = 0xA8, .magic_half = 0xA9, .fear_aura = 0xAB, .rot_guard = 0x32, .rot_shift = 5,
                       .dissolve = 0xBA, .fire_cold = 0xAE, .blow_half = 0xAF, .regen1 = 0xB5, .no_heal = 0xD7, .hold_ends = true, .engulf_not = 0x96,
                       .spore = 0xB6, .spent = 0xC2, .spore_proof = 0xB7, .spore_touch = 0xB8,
-                      .spore_ward = 0x4C, .spore_ill = 0xB9, .death_cast = {0xBC, 0xBD}, .death_spell = {0x57, 0x7C}}};
+                      .spore_ward = 0x4C, .spore_ill = 0xB9, .death_cast = {0xBC, 0xBD}, .death_spell = {0x57, 0x7C}},
+                 .haste_mark = 0x20};       // (Haste's "ages once" mark - DQK.EXE 0x4E574)
 // The Dark Queen's spells (queen_facts_4.md 8): Darkness's numbers 1-126 and
 // their workings (its handler table DS 0xAF45 + 4 x spell shares handlers as
 // Darkness's), its words found again among its C strings; "is " + an effect's
@@ -3117,7 +3122,7 @@ const Profile kProfiles[] = {
      // damage 0x0F, Bestow Curse 0x24; the disease's course 0x22 / 0x2B /
      // 0x2C, helpless 0x1F
      .cures = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-               0x21, {0x1F, 0x22, 0x2B, 0x2C, 0, 0}, 0x44, 0x37, 0x16, 0x0F, 0, 0x24, 0x22, 0x2B, 0x2C, 0x1F},
+               0x21, {0x1F, 0x22, 0x2B, 0x2C, 0, 0}, 0x44, 0x37, 0x16, 0x0F, 0, 0x24, 0x22, 0x2B, 0x2C, 0x1F, 0x1A},
      // A kept gem / jewel: type 47, words 122 / 123 (its Appraise's)
      .gem_type = 47, .gem_word = 0x7A, .jewel_word = 0x7B,
      // Camp magic (secret_facts.md 13): its menu, level names "1st".."7th" +
@@ -3220,7 +3225,9 @@ const Profile kProfiles[] = {
                           .boots = 0x4A, .no_disease = 0x4C, .displace_unused = true,
                           .scrolls = {39, 40}, .barkskin = 0x0D},
                 .berserk = 0x6B, .secret = true, .globe_major = 0x39,
-                .cloud_ground = 0x1D, .poison_ground = 0x1B, .cleric_xp_wis = 15, .hit_needs_damage = true},
+                .cloud_ground = 0x1D, .poison_ground = 0x1B, .cleric_xp_wis = 15, .hit_needs_damage = true,
+                // (its poison damage renews 0x1A - GAME.OVR 0x112AE; SPEC 12)
+                .poison_renew = 0x1A},
                kSecretFight, sizeof kSecretFight / sizeof kSecretFight[0]},
      // The script machine's words (GAME.OVR): the encounter's "Both sides
      // wait." / "The monsters flee.", DAMAGE's " dies. " / " is hit FOR " /
@@ -3572,7 +3579,7 @@ const Profile kProfiles[] = {
      // 0x2B 0x2C, feeblemind 0x44 (its Feeblemind's row), poison 0x37, Slow
      // Poison 0x16, poison's damage 0x0F, a curse 0x24
      .cures = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-               0x21, {0x1F, 0x22, 0x2B, 0x2C, 0, 0}, 0x44, 0x37, 0x16, 0x0F, 0, 0x24, 0x22, 0x2B, 0x2C, 0x1F},
+               0x21, {0x1F, 0x22, 0x2B, 0x2C, 0, 0}, 0x44, 0x37, 0x16, 0x0F, 0, 0x24, 0, 0, 0, 0x1F},  // (no disease course)
      .gem_type = 70, .gem_word = 0x7A, .jewel_word = 0x7B,
      // Magic (camp): "Cast Memorize Scribe Display Rest Exit" (DS 0x36F5),
      // its level names ("1st Level", DS 0x377B, 11 apart), spell names (DS
@@ -3802,7 +3809,7 @@ const Profile kProfiles[] = {
      // blindness 0x21, diseases 0x1F 0x22 0x2B 0x2C (DS 0x4012), feeblemind
      // 0x44, poison 0x37, Slow Poison 0x16, poison's damage 0x0F, a curse 0x24
      .cures = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-               0x21, {0x1F, 0x22, 0x2B, 0x2C, 0, 0}, 0x44, 0x37, 0x16, 0x0F, 0, 0x24, 0x22, 0x2B, 0x2C, 0x1F},
+               0x21, {0x1F, 0x22, 0x2B, 0x2C, 0, 0}, 0x44, 0x37, 0x16, 0x0F, 0, 0x24, 0x22, 0x2B, 0x2C, 0x1F, 0x1A},
      // A kept gem / jewel (its Appraise, facts_shops.md 2.4): type 0x2F, words 0x7A / 0x7B
      .gem_type = 47, .gem_word = 0x7A, .jewel_word = 0x7B,
      // Magic (camp): "Cast Memorize Scribe Display Rest Exit" (DS 0x32CE),
@@ -3926,7 +3933,8 @@ const Profile kProfiles[] = {
                        .no_disease = 0x4C, .disease = 0x22, .gaze_pic = 6},
                 // (its Feeblemind - GAME.OVR Darkness 0x2E902 / effect 0x44's handler
                 // 0x1C2F3, Treasures 0x37E08 / 0x21F6x - as the Dark Queen's: round 15)
-                .feeble_lost = true, .feeble_direct = true, .hit_needs_damage = true},
+                .feeble_lost = true, .feeble_direct = true, .hit_needs_damage = true, .haste_mark = 0x20,
+                .poison_renew = 0x1A},       // (its poison damage renews 0x1A - GAME.OVR 0x1AE7B)
                kDarknessFight, sizeof kDarknessFight / sizeof kDarknessFight[0],
                // COMSPR (its 22 blocks, + 0x80 the second pictures; loaded at a
                // fight's start as slots 13-34 - GAME.OVR 0xD34A): 0-2 the arrows, 3
@@ -4234,7 +4242,7 @@ const Profile kProfiles[] = {
                     kP | 0xF5E8, 0x6132, 0x6139, kP | 0xF594, kP | 0xE9AA, kP | 0xE9D4, kP | 0xF666},
      // The effects (Darkness's numbers 1-127; Treasures' 128-160 its own)
      .cures = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-               0x21, {0x1F, 0x22, 0x2B, 0x2C, 0, 0}, 0x44, 0x37, 0x16, 0x0F, 0, 0x24, 0x22, 0x2B, 0x2C, 0x1F},
+               0x21, {0x1F, 0x22, 0x2B, 0x2C, 0, 0}, 0x44, 0x37, 0x16, 0x0F, 0, 0x24, 0x22, 0x2B, 0x2C, 0x1F, 0x1A},
      .gem_type = 47, .gem_word = 0x7A, .jewel_word = 0x7B,
      // Magic: the effect names from BORD.DAX block 9 (161 with effect 0)
      .magic = {.menu = 0xF79F, .levels = {0xCFED, 41, 9}, .names = {0x10A1D, 35, 127},
@@ -4657,6 +4665,8 @@ uint32_t duel_word(const Profile& p, int word)
         {games::Game::ChampionsOfKrynn, kGetsZapped, 0x142BD},
         {games::Game::ChampionsOfKrynn, kLostImage, 0x11609},
         {games::Game::ChampionsOfKrynn, kGainsItem, 0x1138F},
+        // (Champions' Haste: "ages" - its handler GAME.OVR 0x11B60)
+        {games::Game::ChampionsOfKrynn, kAges, 0x11B5B},
         {games::Game::DeathKnightsOfKrynn, kGazesCharm, kP | 0xDFAD},     // (the vampire's 0x51: DS 0x22CD)
         {games::Game::DeathKnightsOfKrynn, kReflectsSpell, kP | 0xDBE6},  // (the death knights' 0x47: DS 0x1F06)
         {games::Game::DeathKnightsOfKrynn, kEmitsStench, kP | 0xDC1B},   // (the stench 0x4F: DS 0x1F3B / 0x4580)

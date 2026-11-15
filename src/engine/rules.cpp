@@ -1326,9 +1326,22 @@ bool poison_clock(party::Character& c, int minutes, const CureFacts& f)
     const int left = c.affects[sp][1] | c.affects[sp][2] << 8;
     const bool over = left > 0 && minutes >= left;
     const int pd = f.poison_damage ? find_effect(c, f.poison_damage) : -1;
-    if (pd >= 0) {
+    const int span = over ? left - 1 : minutes;
+    if (pd >= 0 && f.poison_renew && f.poison_renew != f.poison_damage && !fixes()) {
+        // (Secret / Darkness / Treasures: one point, then the other effect for 10)
+        uint8_t* a = c.affects[pd];
+        const int m = a[1] | a[2] << 8;
+        if (m > 0 && span >= m) {
+            if (c.rec[0x1A4] > 1) --c.rec[0x1A4];
+            a[0] = f.poison_renew;
+            const int t = 10 - (minutes - m) + minutes;      // (magic::tick_affects takes `minutes`)
+            const int v = t > minutes ? t : minutes;
+            a[1] = static_cast<uint8_t>(v);
+            a[2] = static_cast<uint8_t>(v >> 8);
+        }
+    } else if (pd >= 0) {
         // (when Slow Poison runs out, only the minutes before it count)
-        for (int n = repeat_clock(c.affects[pd], over ? left - 1 : minutes, 10); n > 0; --n)
+        for (int n = repeat_clock(c.affects[pd], span, 10); n > 0; --n)
             if (c.rec[0x1A4] > 1) --c.rec[0x1A4];
     }
     if (!over || find_effect(c, f.poisoned) < 0) return false;

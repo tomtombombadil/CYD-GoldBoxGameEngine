@@ -499,6 +499,25 @@ void rest()
     expect(P, "slow-poisoned over a rest: 1 hit point every 10 minutes (50 minutes: 20 -> 15), dead when Slow Poison runs out (60), poison damage gone",
            hp50 == 15 && alive50 && c.rec[0x195] == party::Dead && !c.has_affect(cu.poison_damage) && !c.has_affect(cu.slow_poison),
            "HP at 50 %d alive %d, status after %d, damage effect %d", hp50, alive50, c.rec[0x195], c.has_affect(cu.poison_damage));
+    // Secret / Darkness / Treasures with Game Fixes off: the damage effect, run
+    // out, renews 0x1A instead of itself (GAME.OVR 0x112AE / 0x1AE7B / 0x2096F) -
+    // one point lost, then none; still dead when Slow Poison runs out
+    if (cu.poison_renew) {
+        const bool fx0 = rules::fixes();
+        rules::set_fixes(false);
+        reset(20);
+        add_aff(c, cu.poisoned, 0, 0xFF);
+        add_aff(c, cu.slow_poison, 60, 0xFF);
+        add_aff(c, cu.poison_damage, 10, 0xFF);
+        rest_minutes(50);
+        const int hp = c.hp();
+        const bool renewed = !c.has_affect(cu.poison_damage);
+        rest_minutes(20);
+        expect(P, "the original's poison (Game Fixes off): one hit point, the damage effect renewed as 0x1A, dead when Slow Poison runs out",
+               hp == 19 && renewed && c.rec[0x195] == party::Dead, "HP at 50 %d, damage effect gone %d, status %d", hp, renewed,
+               c.rec[0x195]);
+        rules::set_fixes(fx0);
+    }
     // Poison damage never below 1 HP
     reset(3);
     add_aff(c, cu.poisoned, 0, 0xFF);

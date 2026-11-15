@@ -903,6 +903,12 @@ struct Facts {
     // An effect of held that the Yell's held routine doesn't list (round 19:
     // Death Knights' 0xCF:0x48 has 0x1F 0x34 0x35 - not the snake charm 0x33)
     uint8_t yell_unheld = 0;
+    // Haste's "ages once" mark in the effect's data byte: 0x10 (Curse's
+    // family, Gateway, the Krynn DAX games); Darkness, Treasures and the Dark
+    // Queen 0x20 (their handlers: GAME.OVR 0x1B89D, 0x21423; DQK.EXE 0x4E574)
+    uint8_t haste_mark = 0x10;
+    // the poison damage effect's renewal (rules::CureFacts::poison_renew): 0 = itself
+    uint8_t poison_renew = 0;
 };
 
 // ---- Monsters (LOAD MONSTER): a group per load (the record its copies

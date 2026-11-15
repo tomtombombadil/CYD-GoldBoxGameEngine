@@ -8944,6 +8944,33 @@ static void test_spells_batch3()
     magic::tick_affects(ch, 4);
     CHECK(ch.n_affects == 3 && ch.affects[2][1] == 10);
     CHECK(rules::poison_clock(ch, 200, cf) && ch.rec[0x195] == party::Dead && ch.n_affects == 1);
+    // Secret / Darkness / Treasures: run out, the damage renews 0x1A instead (one
+    // point, then none); with the fixes as the others
+    {
+        cf.poison_renew = 0x1A;
+        for (int fx = 0; fx < 2; ++fx) {
+            rules::set_fixes(fx == 1);
+            ch = party::Character{};
+            ch.rec[0x1A4] = 10; ch.rec[0x195] = party::Okay;
+            ch.affects[0][0] = 0x37; ch.affects[0][3] = 0xFF;
+            ch.affects[1][0] = 0x16; ch.affects[1][1] = 120; ch.affects[1][3] = 0xFF;
+            ch.affects[2][0] = 0x0F; ch.affects[2][1] = 10; ch.affects[2][3] = 0xFF;
+            ch.n_affects = 3;
+            CHECK(!rules::poison_clock(ch, 35, cf) && ch.rec[0x1A4] == (fx ? 7 : 9));
+            magic::tick_affects(ch, 35);
+            CHECK(fx ? ch.n_affects == 3 && ch.affects[2][0] == 0x0F : ch.n_affects == 2);
+        }
+        rules::set_fixes(true);
+        ch = party::Character{};
+        ch.affects[0][0] = 0x37; ch.affects[1][0] = 0x16; ch.affects[1][1] = 120;
+        ch.affects[2][0] = 0x0F; ch.affects[2][1] = 10; ch.n_affects = 3; ch.rec[0x1A4] = 10;
+        rules::set_fixes(false);
+        CHECK(!rules::poison_clock(ch, 12, cf) && ch.rec[0x1A4] == 9 && ch.affects[2][0] == 0x1A);
+        magic::tick_affects(ch, 12);
+        CHECK(ch.affects[2][1] == 8);
+        cf.poison_renew = 0;
+        rules::set_fixes(true);
+    }
     // Constitution: the Girdle of the Dwarves rebuilds the hit points; 20+ heals
     {
         static party::Character gc;

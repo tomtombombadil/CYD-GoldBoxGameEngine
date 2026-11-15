@@ -1666,7 +1666,9 @@ int tick(Battle& b, Event* out, int cap)
         // Slowed poison: a hit point every 10 minutes (down to 1); run out
         // while still poisoned - "dies from poison"
         if (sting && !slow_over && hasx(f, b.fx->sp.slow_poison)) {
-            give_aff(f, b.fx->sp.poison_damage, 10, 0xFF, true);
+            // (Secret / Darkness / Treasures renew another effect - SPEC 12)
+            const uint8_t re = b.fx->poison_renew && !rules::fixes() ? b.fx->poison_renew : b.fx->sp.poison_damage;
+            give_aff(f, re, 10, 0xFF, true);
             if (f.hp() > 1) f.rec[kHp] = static_cast<uint8_t>(f.hp() - 1);
         }
         if (slow_over && hasx(f, mf.poisoned)) {
@@ -1951,10 +1953,12 @@ int start_round(Battle& b, create::Dice& d, Event* out, int cap)
             continue;
         }
         // Hasted: a year older the first time ("ages"; the effect's data +
-        // 0x10 marks it - listing ovr013:0BA5)
+        // 0x10 marks it - listing ovr013:0BA5; 0x20 in Darkness's family -
+        // Facts::haste_mark)
         const int hk = b.fx && b.fx->haste ? find_aff(f, b.fx->haste) : -1;
-        if (hk >= 0 && !(f.aff[hk][3] & 0x10)) {
-            f.aff[hk][3] = static_cast<uint8_t>(f.aff[hk][3] + 0x10);
+        const uint8_t mark = b.fx && b.fx->haste_mark ? b.fx->haste_mark : 0x10;
+        if (hk >= 0 && !(f.aff[hk][3] & mark)) {
+            f.aff[hk][3] = static_cast<uint8_t>(f.aff[hk][3] + mark);
             const int age = (f.rec[0x76] | f.rec[0x77] << 8) + 1;
             f.rec[0x76] = static_cast<uint8_t>(age);
             f.rec[0x77] = static_cast<uint8_t>(age >> 8);

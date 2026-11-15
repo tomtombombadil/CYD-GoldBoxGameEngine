@@ -217,6 +217,11 @@ struct CureFacts {
     uint8_t  blinded, disease[8], feeblemind, poisoned, slow_poison, poison_damage, animate_dead, curse;
     // Cause Disease's course (combat.h SpellFx): the disease, weakness, sickness; helpless
     uint8_t  ill, weak, sick, helpless;
+    // Secret / Darkness / Treasures: their poison damage effect, run out,
+    // renews this one instead of itself (0x1A, the dwarves' to-hit effect - the
+    // originals' mistake: one point of damage, then none; GAME.OVR 0x112AE /
+    // 0x1AE7B / 0x2096F); 0 = itself. rules::fixes(): itself (SPEC 12)
+    uint8_t  poison_renew;
 };
 // Removes a character's effects of a type; how many
 int remove_affects(party::Character& c, uint8_t type);

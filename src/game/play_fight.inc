@@ -3195,7 +3195,7 @@ void event_words(const combat::Event& e)
     case combat::Ev::Regenerates: said(profile::kRegeneratesGw); break;
     case combat::Ev::FallsDead: fallen(profile::kFallsDeadGw); break;
     case combat::Ev::Ages:
-        if (fw(profile::kAges)[0]) said(profile::kAges);        // (none in the Krynn DAX games' programs)
+        if (fw(profile::kAges)[0]) said(profile::kAges);
         age_check = true;               // (old age is looked at when the fight ends - Treasures' [0x9318])
         break;
     case combat::Ev::Regen: {
