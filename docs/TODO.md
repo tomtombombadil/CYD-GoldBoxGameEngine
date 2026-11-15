@@ -181,11 +181,20 @@ the Project as claude/TODO.md.
       entries + 57 tales (as GOG's table), Treasures' and Gateway's
       Introductions whole, Dark Queen's entries from GOG's PDF text.
 - [ ] Journals, still weak (2026-11-14): the Dark Queen's Introduction
-      ("A letter from the general") comes out as its heading lines only
-      (the scan's text layer is in fragments); GOG's Dark Queen journal
-      has no table (its entries are text from the PDF's layer - 13 and 26
-      have no heading there; the Companion's Game.dat has both); Curse's
-      "INTRODUCTION - or -" is only the title over Journal Entry 1.
+      ("A letter from the general") comes out as its heading lines only -
+      its OCR text layer is unreadable (pdftotext: "Soth and his ruthless
+      consonCe, y ou have help ed to ... dark influe"), so nothing better
+      can come from it; the book's page picture shows it. GOG's Dark
+      Queen journal has no table (its entries are text from the PDF's
+      layer - 13 and 26 have no heading there; the Companion's Game.dat
+      has both). Darkness's Introduction runs on into the rules pages.
+- [x] Curse's "INTRODUCTION - or -" (v0.200.1): only a title over
+      Journal Entry 1 in the book, so no Introduction section; the Steam
+      Gateway journal's Introduction was its contents page (the contents
+      line "Introduction: First Night in Yartar ..... 1" taken as the
+      heading) - a contents line is no heading now; checked with
+      tools/devkit/tools/jbook.cpp on the Steam Curse, Darkness, Gateway,
+      PoolRad, Secret and GOG Dark Queen journals (only those two change).
 - [x] The Dark Queen's ending pictures (PROGRAM 1, block 60): v0.200.0 -
       FINAL.TLB's three animations over the screen with song 8, as
       DQK.EXE's 0x3878B (its steps from qfinal.py; DOSBox: the same frame
@@ -1394,6 +1403,23 @@ the Project as claude/TODO.md.
       routine; the Dark Queen's turn and caster routines; Darkness's /
       Treasures' caster levels; training spells, items outside fights,
       dual-class, Haste / rest in the later games - not reached.
+      Done 2026-11-15 (v0.200.1): Haste's "ages once" mark is 0x20 in
+      Darkness, Treasures and the Dark Queen (GAME.OVR 0x1B89D, 0x21423;
+      DQK.EXE 0x4E574; 0x10 elsewhere), Champions says "ages"; poison
+      over a rest / in fights: Secret, Darkness and Treasures' damage
+      effect renews 0x1A (the dwarves' effect) instead of itself - one
+      point, then none (GAME.OVR 0x112AE / 0x1AE7B / 0x2096F) - kept,
+      AD&D's behind Game Fixes (SPEC 12); Death Knights has no Cause
+      Disease course (its 0x22 is Dispel Evil's effect, 0x2B / 0x2C have
+      empty handlers). rules4 rest checks the original's poison; all nine
+      games rules4 clean (PoolRad 48, Curse 50, Secret 48, Darkness 54,
+      Champions 59, Knights 61, Queen 93, Gateway 47, Treasures 58).
+      Dual-class (behave classes ONLY=dual on Secret, Darkness, Gateway,
+      Treasures): all pass but Darkness / Treasures' "saves the new
+      class's only" - Curse's rule; theirs count the former level
+      (0x38C8A, classes.cpp), as built. Open: Death Knights' Cure Disease
+      routine not found (its "is not diseased." is never referenced) -
+      its cure list kept.
       2026-11-08 (rules4 ONLY=learn, every game but the Dark Queen): the
       training's new-spell list read in each original (its spell-list
       mode 4): PoolRad 1-56 with slots, not known (no can-learn check);

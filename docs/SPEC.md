@@ -2963,6 +2963,13 @@ the originals is a bug. Engine comforts with a `features.h` switch are
 marked (switch); since v0.72.0 the player can also turn each one off in
 the game's Settings (As Original: all of them).
 
+- **Poison's slow damage** (Game Fixes, v0.200.1): in Secret, Darkness and
+  Treasures the poison damage effect (0x0F, under Slow Poison), run out,
+  renews effect 0x1A - the dwarves' to-hit effect - instead of itself
+  (GAME.OVR 0x112AE / 0x1AE7B / 0x2096F): one hit point lost, then none,
+  and the poisoned holds 0x1A for 10 minutes. Kept so; with Game Fixes a
+  point every 10 minutes, as the other games (rules::poison_clock,
+  combat's round end).
 - **Secret's Barkskin** (Game Fixes, v0.196.17): the original runs Heal's
   routine for it (hit points, cures, no effect); fixed: no healing, its
   effect 0x0D for 4 + the caster's level rounds. Effect 0x0D itself (in
