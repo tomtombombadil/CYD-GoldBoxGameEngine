@@ -165,6 +165,24 @@ the Project as claude/TODO.md.
       characters one by one).
 
 ## Claude
+- [x] v0.200.5 (Tom, 2026-11-14: "If you run into trouble with a savegame
+      ... create a party quickly and save them"; the rest of the party
+      menus beside the originals in DOSBox, a character made and added in
+      each):
+      - **Secret asks "Pick Character" "Select Exit"** for Drop (seen; its
+        Modify / View / Remove taken to be the same routine's, as
+        Gateway's) - the engine acted on the selected member. `party.pick`
+        set (GAME.OVR 0x2B1ED / 0x2B1FD).
+      - **Secret's creation questions start on Yes** - "Reroll stats?",
+        "Is this icon ok?", "Save NAME?" (GOG's 1.30; the engine had No,
+        from an earlier note).
+      - Gateway: the same as the engine - the saved character isn't added
+        by itself; Add goes straight to "Add a character: Add Exit"; back
+        at the menu the highlight is on Drop Character; "Pick Character
+        Select Exit"; Reroll on No, the icon and Save questions on Yes.
+      - **Curse and PoolRad not run**: their code wheel question stands
+        before the party menu. Neither program has a "Pick Character"
+        string (searched), so no pick prompt there.
 - [x] v0.200.4 (Tom, 2026-11-14: "check the DOSbox versions ... make sure
       we're following what the actual games do"; the originals run side by
       side with the engine on the party menu, GOG copies):

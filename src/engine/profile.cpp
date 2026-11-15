@@ -3040,7 +3040,10 @@ const Profile kProfiles[] = {
                // ("Add from where? ", "Secret Curse Exit" ...)
                0x209E0, 0x209F1, 0x20A03, 0x20A15, 0x20A1A, 0x20A1D, 0x20A41, 0x20A5B, 0x24665, 0x24670, 0x1F8F2, 0x1F8F8,
                0x1F903, 0x1F912, 0x1F91C, 0x1F927, 0x1F93B, 0x3120D,
-               0x1FB9B, 0x1FBCF, 0x1FBD8, 0x238F2, 0x24673},   // (Modify: "Add Subtract Keep Exit")
+               0x1FB9B, 0x1FBCF, 0x1FBD8, 0x238F2, 0x24673,    // (Modify: "Add Subtract Keep Exit")
+               // (no "Load from where?"; Drop / Modify / View / Remove ask "Pick Character "
+               // "Select Exit" first - DOSBox, 2026-11-14; they acted on the selected member)
+               0, 0, 0x2B1ED, 0x2B1FD},
      // View Character's name tables (races in Secret's own order: the
      // engine reorders them); its words where they are Curse's
      .view = {{0xE9AB, 27, 18}, {0xEB91, 9, 8}, {0xEBD9, 17, 9}, {0xEC72, 7, 2}, {0xEC80, 11, 7}, {0xECCD, 13, 9},
