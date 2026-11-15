@@ -802,7 +802,20 @@ the Project as claude/TODO.md.
 - [ ] Darkness's EGA mode: how the original's EGA.DRV turns VGA pictures
       into 16 colours (facts from the player's file), so Darkness plays on
       the classic boards as its own EGA mode shows it.
-- [ ] QEMU: the cache-error panic inside play::open (parked).
+- [x] QEMU: the cache-error panic inside play::open - not seen again
+      (2026-11-15, v0.200.1: Curse's Play in the 2.8" classic build three
+      times, no panic; Play free 84 KB, largest block 64 KB, loop stack
+      1.7 KB never used). What remains is Espressif QEMU's own panic at
+      boot, before the firmware's first line (one boot in a few;
+      run_qemu.py starts it again).
+- [x] Music on the classic board (2026-11-15, QEMU 2.8" ILI9341, v0.200.0):
+      the scan renders the Dark Queen's 8 songs (the longest 64 s of
+      music in 24 s) and Champions' - the lowest free heap during the
+      scan 55 KB, loop stack 2.2 KB never used; no crash.
+- [x] Screens on the real firmware (2026-11-15, the 4.0" S3 in QEMU,
+      qemu_shots.sh): the Companion's Map and Party views, the Quick tab
+      (open, Spells, the NPC's row, Bandage First, help), Settings and
+      Cheats - all drawn right.
 - [ ] **Secret of the Silver Blades** (started 2026-10-12; facts and the
       work plan in the Project's claude/secret_facts.md; SPEC 6c). Done:
       program layout, words, scripts, frame, font, title, Screen / Walk

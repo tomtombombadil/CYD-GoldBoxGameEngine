@@ -5,7 +5,7 @@
 # 480x320; the 5.0" qemus3_50: Panel_Double, 320x240) and TAPS.TXT's
 # "shot <name>" dumps them (run_qemu.py --shots). Goes Home -> Curse (GOG
 # folder) -> Play -> Load Saved Game A -> the Game key -> the Quick tab: the
-# tab as it opens, after tapping Spells (its words), the NPC's row, Bandage
+# tab as it opens (first the Companion's Map and, tapped, Party views - 4.0"), after tapping Spells (its words), the NPC's row, Bandage
 # First on it, the "?"; then the Settings and Cheats tabs.
 # Save A is made with an NPC first (the playsim: MAKENPC=5 SAVENOW=A on a copy
 # of the scratch Curse folder - the GOG sample party's PHILIPPE as an NPC).
@@ -37,6 +37,10 @@ mem 8000
 256 195 8000
 60 115 6000
 139 195 15000
+shot s40_map 1000
+400 100 4000
+shot s40_party 1000
+400 100 4000
 400 231 5000
 341 20 5000
 shot s40_quick_open 1000
@@ -84,7 +88,7 @@ shot s50_settings 1000
 shot s50_cheats 1000
 mem 1000
 T
-for env in qemus3 qemus3_50; do
+for env in ${ENVS:-qemus3 qemus3_50}; do
   t=$W/taps40.txt; [ $env = qemus3_50 ] && t=$W/taps50.txt
   python3 "$R/tools/qemu/run_qemu.py" --qemu "$QEMU" --s3 --env $env --game "$G" --taps "$t" --seconds 700 \
     --out "$W/$env" --shots "$OUT" > "$W/$env.log" 2>&1 || true
