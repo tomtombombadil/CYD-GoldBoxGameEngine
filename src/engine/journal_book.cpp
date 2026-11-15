@@ -249,6 +249,8 @@ struct Book : pdf::TextSink {
     bool    headed = false;           // nothing under the heading taken yet
     bool    intro = false;            // the section is the Introduction
     float   lead = 0;                 // its first paragraph's letter size when not the body's (0: none)
+    int     body_lines = 0;           // lines at the page body's size taken
+    int     bare_intro = -1;          // the last section: an Introduction of no body-size line
 
     void close()
     {
@@ -258,7 +260,11 @@ struct Book : pdf::TextSink {
         sj.end();
         Section& s = secs[info->sections - 1];
         s.len = sect.pos - s.at;
+        // (an Introduction that is only its title over the first entry - Curse's
+        // "INTRODUCTION - or - What Are We Doing in Tilverton, Anyway?" above
+        // Journal Entry 1: no section of its own; the book still shows it)
         if (s.len == 0) --info->sections;
+        else if (intro && body_lines == 0) bare_intro = info->sections - 1;
     }
     bool line(const pdf::TextLine& l) override
     {
@@ -275,6 +281,11 @@ struct Book : pdf::TextSink {
         if (heading) {
             bj.p.solo = heading_alone(l.text, l.len);
             close();
+            if (kind == 'J' && bare_intro >= 0 && bare_intro == info->sections - 1) {
+                --info->sections;
+                --info->count[3];
+            }
+            bare_intro = -1;
             open = true;
             bool dup = false;
             for (int i = 0; i < info->sections && !dup; ++i) dup = secs[i].kind == kind && secs[i].number == num;
@@ -301,6 +312,7 @@ struct Book : pdf::TextSink {
             headed = true;
             intro = kind == 'I';
             lead = 0;
+            body_lines = 0;
             return true;
         }
         if (!open) return true;
@@ -341,6 +353,7 @@ struct Book : pdf::TextSink {
         }
         headed = false;
         if (is_body) in_body = true;
+        if (same_size(l.size, body)) ++body_lines;
         if (keep) {
             sj.add(l, g >= 2, page, bottom);
             if (sect.pos - secs[info->sections - 1].at > 12000) close();      // (something went wrong: enough)
@@ -381,6 +394,21 @@ bool heading_end(const char* s, int n, int i, bool colon)
 
 bool parse_heading(const char* s, int n, char* kind, int* number, int* end)
 {
+    // A contents line ("Introduction: First Night in Yartar ......... 1" - the
+    // Steam Gateway journal's first page): dot leaders, a page number at the
+    // end - never a section's heading
+    {
+        int e = n;
+        while (e > 0 && s[e - 1] == ' ') --e;
+        int d = e;
+        while (d > 0 && is_digit(s[d - 1])) --d;
+        if (d < e) {
+            while (d > 0 && s[d - 1] == ' ') --d;
+            int dots = 0;
+            while (d > 0 && s[d - 1] == '.') --d, ++dots;
+            if (dots >= 4) return false;
+        }
+    }
     int i = 0;
     while (i < n && (s[i] == ' ' || s[i] == '*')) ++i;
     // (a scanned heading's bullet read as a letter - "U Tavern Tale 12",

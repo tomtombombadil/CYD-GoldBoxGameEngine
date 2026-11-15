@@ -3951,6 +3951,12 @@ static void test_journal_typeset()
     int n = 0;
     CHECK(journal::section_heading("Tale 12: A bedraggled adventurer", 32, &k, &n) && k == 'T' && n == 12);
     CHECK(journal::section_heading("Tavern Tale 3", 13, &k, &n) && k == 'T' && n == 3);
+    {
+        // (a contents line - the Steam Gateway journal's - is no heading)
+        const char* toc = "Introduction: First Night in Yartar .......... 1";
+        CHECK(!journal::section_heading(toc, static_cast<int>(strlen(toc)), &k, &n));
+        CHECK(journal::section_heading("INTRODUCTION:", 13, &k, &n) && k == 'I');
+    }
     CHECK(journal::section_heading("TAVERN TALE #7", 14, &k, &n) && k == 'T' && n == 7);
     CHECK(journal::section_heading("Journal Entry 44:", 17, &k, &n) && k == 'J' && n == 44);
     CHECK(journal::section_heading("JOURNAL ENTRY 2", 15, &k, &n) && k == 'J' && n == 2);
