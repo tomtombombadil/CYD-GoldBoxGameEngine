@@ -244,7 +244,7 @@ the Project as claude/TODO.md.
       its OCR text layer is unreadable (pdftotext: "Soth and his ruthless
       consonCe, y ou have help ed to ... dark influe"), so nothing better
       can come from it; the book's page picture shows it.
-- [x] Journals' text (v0.200.4, 2026-11-15; jbook.cpp on 11 journals with
+- [x] Journals' text (v0.200.5, 2026-11-15; jbook.cpp on 11 journals with
       a text layer - Steam Curse, Darkness, Gateway, PoolRad, Secret,
       Champions, Death Knights, Dark Queen and GOG's Champions, Death
       Knights, Dark Queen): every entry found but 13 in Darkness, Death
