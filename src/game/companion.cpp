@@ -169,6 +169,8 @@ struct Rows {
     int y0, pitch, icon, tx, tw;
 };
 
+int g_icon = 24;     // (the party's icon size; 0: none)
+
 Rows party_rows(const Area& a, int n)
 {
     Rows r;
@@ -177,8 +179,9 @@ Rows party_rows(const Area& a, int n)
     // (2 px between members when they fit - Tom, 2026-11-10)
     r.pitch = n ? (a.h - 1) / n : 26;
     if (r.pitch > 26) r.pitch = 26;
-    r.icon = r.pitch < 24 ? r.pitch : 24;
-    r.tx = a.x + 2 + 24 + 3;
+    const int ic = g_icon;
+    r.icon = r.pitch < ic ? r.pitch : ic;
+    r.tx = a.x + 2 + (ic ? ic + 3 : 0);
     r.tw = a.x + a.w - 2 - r.tx;
     return r;
 }
@@ -324,6 +327,8 @@ void marks(Painter& p)
 
 } // namespace
 
+void set_party_icon(int px) { g_icon = px; }
+
 void draw_tabs(Painter& p, int x, int y, View v, bool fight)
 {
     static const char* const kNames[3] = {"Map", "Party", "Battle"};
@@ -346,7 +351,7 @@ void draw_party(Painter& p, const Area& a, bool all, bool tabs)
         play::PanelMember m;
         if (!play::panel_member(i, m)) continue;
         const int y = r.y0 + i * r.pitch;
-        if (all) party_icon(p, i, a.x + 2, y, r.icon);
+        if (all && r.icon) party_icon(p, i, a.x + 2, y, r.icon);
         else p.fill(r.tx, y, r.tw, r.pitch, style::kBackground);
         party_row(p, r, i, m);
     }

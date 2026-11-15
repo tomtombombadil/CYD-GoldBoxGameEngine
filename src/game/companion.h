@@ -34,6 +34,8 @@ void draw_tabs(Painter& p, int x, int y, View v, bool fight);
 // views' names along the top (the 4.0" panel); else the heading "Party"
 // (the 5.0" Companion Strip, where every view has a place of its own)
 void draw_party(Painter& p, const Area& a, bool all, bool tabs = true);
+// The Party view's icon size (24; 0: no icons)
+void set_party_icon(int px);
 
 // The Battle view: the field fitted into the area (as large as fits, the
 // part of the 50 x 25 squares the fight uses), the lines under it.

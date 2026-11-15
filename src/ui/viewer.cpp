@@ -2917,22 +2917,32 @@ bool draw_battle_page();    // (below: in a fight, Companion Views on - the batt
 
 // 320x240's Map key: the map over the game screen, what the 480x320
 // Companion strip shows beside it
+void map_page_party(int x, int w);
+bool comp_on();
 void draw_map_page()
 {
     if (draw_battle_page()) return;
     LGFX& g = ui::gfx();
     g.fillRect(0, 0, pic::kScreenW, pic::kScreenH, style::kBackground);     // (black: the map's)
-    const int cell = 12, mx = 4, my = (pic::kScreenH - cell * geo::kSize - 1) / 2;
-    const int tx = mx + cell * geo::kSize + 8, tw = pic::kScreenW - tx - 4;
+    // (Tom, 2026-11-14: the map in the corner, its legend under it where the
+    // menu line was, the party beside it - Companion Views; no "tap to go back")
+#if CYD_MOCKUP
+    // (mockups for Tom, 2026-11-14: each Map key press the next of map 12 / 11 px x icons / none)
+    static int variant = 0;
+    const int v = variant++ % 4;
+    const int cell = v & 2 ? 11 : 12, mx = 0, my = 0, side = mx + cell * geo::kSize + 3;
+    companion::set_party_icon(v & 1 ? 0 : 24);
+#else
+    const int cell = 12, mx = 0, my = 0, side = mx + cell * geo::kSize + 3;
+#endif
     const geo::Map* m = kPlayMap.map();
-    if (m) draw_map_grid(g, *m, kPlayMap, mx, my, cell);
-    else wrap_text(mx, my, tx - mx - 8, "No map here.", ui::Font::Normal, style::kText, true);
-    int y = my;
     if (m) {
-        y = wrap_text(tx, y, tw, "Red: Locked", ui::Font::Small, style::kWarn, true);
-        y = wrap_text(tx, y, tw, "S: Secret", ui::Font::Small, style::kGold, true) + 8;
+        draw_map_grid(g, *m, kPlayMap, mx, my, cell);
+        draw_map_legend(g, 2, my + cell * geo::kSize + 1);
+    } else {
+        wrap_text(4, 4, side - 8, "No map here.", ui::Font::Normal, style::kText, true);
     }
-    wrap_text(tx, y, tw, "Tap to go back to the game.", ui::Font::Small, style::kText, true);
+    if (comp_on()) map_page_party(side, pic::kScreenW - side);
 }
 
 void draw_walk_keys(const char* side_label, const char* area_label, bool cursor)
@@ -5347,6 +5357,15 @@ bool comp_tappable(int x, int y)
 {
     return screen == Screen::Play && ui::large() && comp_on() && !big_icon_on() && !kb_shown && x > pic::kScreenW &&
            y < pic::kScreenH;
+}
+
+// 320x240's Map page: the party beside the map (outside fights; no
+// startWrite round it - the icons are read from the card, which shares the
+// C5's display bus)
+void map_page_party(int x, int w)
+{
+    LgfxPainter p;
+    companion::draw_party(p, {x, 0, w, pic::kScreenH}, true, false);
 }
 
 // 320x240's Map key in a fight: the battlefield over the game screen

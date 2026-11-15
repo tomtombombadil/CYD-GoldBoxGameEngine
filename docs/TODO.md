@@ -874,9 +874,17 @@ the Project as claude/TODO.md.
       the 3D view, items / effects / spells, View, fights, sound, 256
       colours on the PSRAM boards. Undecoded: picture kinds 0x03 and
       0x19, SOUNDS.GLB's DIG4, colour cycles.
-- [ ] Darkness's EGA mode: how the original's EGA.DRV turns VGA pictures
-      into 16 colours (facts from the player's file), so Darkness plays on
-      the classic boards as its own EGA mode shows it.
+- [x] Darkness's EGA mode: how the original's EGA.DRV turns VGA pictures
+      into 16 colours - done in v0.118.0 (each palette entry's EGA nibble,
+      `pic::draw_vga_block`; DOSBox's EGA mode matched pixel for pixel -
+      SPEC 6d); closed 2026-11-15.
+- [x] Checks 2026-11-15 (v0.200.5+): fight budgets after the day's merges
+      (BUDGET=150, 153,600 bytes): Curse 134,203, PoolRad 136,043, Darkness
+      150,601, Champions 136,599, Knights 136,420, Queen 143,726, Treasures
+      152,400 - all within (each ~0.5 KB up on round 11's); the Dark Queen's
+      ending (playsim WINPATCH=1, heapprof): the heap's highest point 114.8 KB
+      - below a fight's; the yellow trainable class on the real firmware
+      (the 5.0" in QEMU: LEDERA F4/M4 at 22,000 XP - "F4" yellow, "M4" white).
 - [x] QEMU: the cache-error panic inside play::open - not seen again
       (2026-11-15, v0.200.3: Curse's Play in the 2.8" classic build three
       times, no panic; Play free 84 KB, largest block 64 KB, loop stack
