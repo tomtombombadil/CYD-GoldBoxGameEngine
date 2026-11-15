@@ -17332,7 +17332,7 @@ uint32_t panel_field_sig()
     PanelField pf;
     panel_field(pf);
     h = sig_mix(h, static_cast<uint32_t>(pf.vx | pf.vy << 8 | pf.round << 16));
-    h = sig_mix(h, static_cast<uint32_t>((pf.tx & 0xFF) | (pf.ty & 0xFF) << 8 | fg->cur << 16));
+    h = sig_mix(h, static_cast<uint32_t>((pf.tx & 0xFF) | (pf.ty & 0xFF) << 8 | static_cast<uint32_t>(fg->cur) << 16));   // (cur is -1 between turns)
     for (int i = 0; i < b.n; ++i) {
         const combat::Fighter& f = b.f[i];
         if ((!f.size && f.member < 0) || (f.member < 0 && f.rec.monster() && !ml)) continue;

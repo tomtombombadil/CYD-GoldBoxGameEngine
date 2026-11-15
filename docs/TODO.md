@@ -1269,6 +1269,8 @@ the Project as claude/TODO.md.
       credits and maps should look like the original's.
 
 ## Done
+- [x] v0.202.1 (the port's sanitizer run, 2026-11-15): `panel_field_sig` shifted -1 left (no fighter's
+      turn) - undefined before C++20, the port builds C++17; the value is the same.
 - [x] v0.201.2 (the port's button test): the Dark Queen's knights read "Monk 9" on the Companion's
       Party view - `PanelMember::knight` (the Krynn games and the Dark Queen; its magic-users stay
       "Magic-User" as that game calls them).
