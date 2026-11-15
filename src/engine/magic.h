@@ -43,6 +43,10 @@ int moon(int i);                    // (0 white, 1 red, 2 black: its phase)
 // set from the game's profile when Play starts)
 void set_empower(int type);
 int empower();
+// Death Knights: Fireball (0x2F) cast at 15th level by one with this effect
+// (GAME.OVR 0x34EFB; profile variant.fire15); 0: none
+void set_fire15(int type);
+int fire15();
 int moon_bonus(const party::Character& c, const classes::Tables& t);
 // The spell levels the moon's extra spells count over (Champions 1-5, the
 // Dark Queen 1-9)

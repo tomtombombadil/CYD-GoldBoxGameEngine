@@ -2239,10 +2239,69 @@ void queen_caster()
            "%d of %d wrong (%s)", bad, n, first);
 }
 
+// Darkness's / Treasures' caster levels (GAME.OVR 0x36C2E / 0x40CC7, their
+// skill level 0x392EE / 0x4392C: a class's level, or its former one when
+// larger for a human past it): 6 when the cleric's, the magic-user's skill
+// is 0 and the ranger's under 8 - no paladin test; cleric spells max(cleric,
+// paladin) (no - 8: the paladin never reaches it - 6 first), druid max(ranger
+// - 7, 0), magic-user max(magic-user, ranger - 8), items 12. With the Game
+// Fixes: AD&D's paladin (past 8th, - 8). Expected values from the routine
+// as read, never the engine's
+void dk_caster()
+{
+    if (!fight()) return;
+    combat::Fighter& f = F(0);
+    const classes::Tables& t = m->tables;
+    int sp[3] = {};
+    for (int s = 1; s < t.lay.spell_count; ++s) {
+        const int c = t.spell_class(s);
+        if (c >= 0 && c <= 2 && !sp[c] && t.spell_level(s) >= 1) sp[c] = s;
+    }
+    struct Case { int cl, pa, ra, mu, cls, orig, fixed; };
+    // (cleric 0, paladin 3, ranger 4, magic-user 5)
+    const Case cases[] = {
+        {0, 12, 0, 0, 0, 6, 4},     // a paladin: 6 (AD&D: 12 - 8)
+        {0, 8, 0, 0, 0, 6, 6},
+        {9, 0, 0, 0, 0, 9, 9},
+        {0, 0, 9, 0, 1, 2, 2},      // a ranger's druid spells
+        {0, 0, 7, 0, 1, 6, 6},
+        {0, 0, 10, 4, 2, 4, 4},     // a ranger-mage: the larger
+        {0, 0, 14, 4, 2, 6, 6},
+        {0, 0, 0, 11, 2, 11, 11},
+        {3, 0, 0, 7, 0, 3, 3},
+    };
+    int bad = 0, n = 0;
+    char first[140] = "";
+    for (int fx = 0; fx < 2; ++fx) {
+        rules::set_fixes(fx == 1);
+        for (const Case& c : cases) {
+            levels(0, {{0, c.cl}, {3, c.pa}, {4, c.ra}, {5, c.mu}});
+            const int want = fx ? c.fixed : c.orig;
+            party::Character ch;
+            f.rec.read(ch.rec);
+            const int a = combat::power_of(f, t, sp[c.cls]), b = spells::power(ch, t, sp[c.cls]);
+            n += 2;
+            if (a != want || b != want) {
+                bad += (a != want) + (b != want);
+                if (!*first)
+                    snprintf(first, sizeof first, "fixes %d cl %d pa %d ra %d mu %d class %d: fight %d, camp %d, want %d", fx,
+                             c.cl, c.pa, c.ra, c.mu, c.cls, a, b, want);
+            }
+        }
+    }
+    rules::set_fixes(true);
+    expect(P, "Darkness-type caster levels: no paladin test (6), skill levels, ranger - 7 / - 8; AD&D's paladin with the fixes",
+           bad == 0 && sp[0] && sp[1] && sp[2], "%d of %d wrong (%s; spells %d %d %d)", bad, n, first, sp[0], sp[1], sp[2]);
+}
+
 void caster()
 {
     if (m->tables.lay.queen) {
         queen_caster();
+        return;
+    }
+    if (m->tables.lay.dk) {
+        dk_caster();
         return;
     }
     if (!m->tables.lay.krynn) return;

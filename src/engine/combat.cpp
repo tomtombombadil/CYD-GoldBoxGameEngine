@@ -4878,6 +4878,13 @@ int moon_level(const classes::Tables& st, int robe, int mage_level)
     return ph == 0 ? -1 : ph == 2 && mage_level > 5 ? 1 : 0;
 }
 
+int fire15(const Fighter& f, int spell)
+{
+    // (GAME.OVR 0x34EFB: after the level's sum, Fireball 15 with the effect)
+    const int e = magic::fire15();
+    return e && spell == 0x2F && f.has(static_cast<uint8_t>(e)) ? 15 : 0;
+}
+
 int empowered(const Fighter& f)
 {
     // (Treasures' caster routine, GAME.OVR 0x40DEF: the caster with its
@@ -4937,16 +4944,25 @@ int power_of(const Rec& r, const classes::Tables& st, int s, bool item, int robe
         default: return 0;
         }
     }
-    // (Secret, GAME.OVR 0x3AFD7: no paladin in either test - spells::power)
-    const bool pal_rule = !st.lay.secret || rules::fixes();
-    if (!kr && cl == 0 && mu == 0 && (!pal_rule || pa < 9) && ra < 8) return 6;
+    // (Secret, GAME.OVR 0x3AFD7, and Darkness / Treasures, 0x36C2E /
+    // 0x40CC7: no paladin in either test - spells::power)
+    const bool pal_rule = !(st.lay.secret || st.lay.dk) || rules::fixes();
     // The levels that count (classes::skill_level): a human who changed
     // class adds the old class's levels once the new class has passed them
-    // (coab's facts: spellMaxTargetCount uses the skill levels)
+    // (coab's facts: spellMaxTargetCount uses the skill levels) - Darkness /
+    // Treasures take the larger of the two (their skill level 0x392EE)
     int k = 0;
     while (k < 7 && r[0x109 + k] == 0) ++k;
     const bool past = r[0x74] == 7 && r[0x109 + k] > r[0xE6];
-    auto skill = [&](int cls) { return r[0x109 + cls] + (past ? r[0x111 + cls] : 0); };
+    auto skill = [&](int cls) -> int {
+        const int lv = r[0x109 + cls], old = past ? static_cast<int>(r[0x111 + cls]) : 0;
+        if (st.lay.dk) return old > lv ? old : lv;
+        return lv + old;
+    };
+    // (Darkness / Treasures test the skill levels: cleric, magic-user 0 and
+    // ranger under 8)
+    if (st.lay.dk && skill(0) == 0 && skill(5) == 0 && (!pal_rule || skill(3) < 9) && skill(4) < 8) return 6;
+    if (!kr && !st.lay.dk && cl == 0 && mu == 0 && (!pal_rule || pa < 9) && ra < 8) return 6;
     if (kr) {
         switch (st.spell_code(s)) {
         case 0: case 2: return most(skill(0), skill(7) - 8);
@@ -5729,7 +5745,8 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
     case SpellDoes::RemoveCurse:
         for (int k = 0; k < m; ++k) {
             Fighter& f = b.f[who[k]];
-            const int at = b.fx && b.fx->bestow ? find_aff(f, b.fx->bestow) : -1;
+            const uint8_t cz = b.fx && b.fx->curse_slip && !rules::fixes() ? b.fx->curse_slip : b.fx ? b.fx->bestow : 0;
+            const int at = cz ? find_aff(f, cz) : -1;
             if (at >= 0) {
                 drop_aff(f, at);
                 say(who[k], Did::Word2, 0);         // "is Cured"
@@ -5876,6 +5893,7 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
                 bool ill = false;
                 const uint8_t ills[4] = {b.fx->held[3], b.fx->sp.ill, b.fx->sp.weak, b.fx->sp.sick};
                 for (uint8_t dz : ills) {
+                    if (b.fx->heal_no_ills) break;
                     const int at = dz ? find_aff(f, dz) : -1;
                     if (at >= 0) {
                         drop_aff(f, at);
@@ -5888,7 +5906,10 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
                     drop_aff(f, at);
                     if (fs.word2) say(who[k], Did::Word2, 0);
                 }
-                at = b.fx->feeble ? find_aff(f, b.fx->feeble) : -1;
+                // (Death Knights: 0x3D - and its Feeblemind's 0x44 with the Game Fixes)
+                const uint8_t fb = b.fx->heal_feeble ? b.fx->heal_feeble : b.fx->feeble;
+                at = fb ? find_aff(f, fb) : -1;
+                if (at < 0 && b.fx->heal_feeble2 && rules::fixes()) at = find_aff(f, b.fx->heal_feeble2);
                 if (at >= 0) {
                     drop_aff(f, at);
                     if (fs.word4) say(who[k], Did::Word4, 0);

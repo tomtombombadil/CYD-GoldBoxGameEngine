@@ -180,6 +180,9 @@ int g_empower = 0;
 }
 void set_empower(int type) { g_empower = type; }
 int empower() { return g_empower; }
+namespace { int g_fire15 = 0; }
+void set_fire15(int type) { g_fire15 = type; }
+int fire15() { return g_fire15; }
 
 int moon_levels(const classes::Tables& t) { return t.lay.queen ? 9 : 5; }
 

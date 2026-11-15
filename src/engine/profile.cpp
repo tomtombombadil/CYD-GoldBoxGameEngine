@@ -1480,6 +1480,12 @@ constexpr combat::Facts kKnightsFacts = [] {
                 .feeble_drain = true, .hit_needs_damage = true, .yell_unheld = 0x33};
     // (no Cause Disease course: its 0x22 is Dispel Evil's, 0x2B / 0x2C have empty handlers)
     f.sp.ill = f.sp.weak = f.sp.sick = 0;
+    // (its Heal, GAME.OVR 0x2D454: no disease cured, intellect back from 0x3D -
+    // Feeblemind's 0x44 too with the Game Fixes)
+    f.heal_no_ills = true;
+    f.heal_feeble = 0x3D;
+    f.heal_feeble2 = 0x44;
+    f.curse_slip = 0x2B;                // (its Remove Curse, GAME.OVR 0x2CD27)
     // (the round 22 effects sweep - GAME.OVR's handlers, table DS 0xBE82)
     f.mon.no_elec = 0x41;               // the lich's: no electricity (0x1CDEA)
     f.mon.charm_sleep = 0x60;           // charm / sleep proof (0x1DE23, Champions' 0x60)
@@ -3602,10 +3608,13 @@ const Profile kProfiles[] = {
                .camp = kDeathKnightsCamp, .n_camp = sizeof kDeathKnightsCamp / sizeof kDeathKnightsCamp[0],
                // (its spell rows: speed gives 0x27, giant strength 0x26; the timed
                // ones as Darkness's at Death Knights' numbers)
-               .facts = {2, 0x2A, {0x22, 0x2B, 0}, {{0, 0}, {0x2C, 0x1F}, {0, 0}}, 0x0C, 0x17, 0x32, 0x36, 0x70, 0x26,
+               // (its Cure Disease - the spell handler table DS 0xC150 + 4 x 0x27 -
+               // and its Heal's disease part are an empty routine, GAME.OVR
+               // 0x2C978: no diseases to cure)
+               .facts = {2, 0x2A, {0, 0, 0}, {{0, 0}, {0, 0}, {0, 0}}, 0x0C, 0x17, 0x32, 0x36, 0x70, 0x26,
                          {{0x39, 5, 4, 0, 1}, {0x3D, 5, 4, 0, 1}, {0x3B, 1, 4, 4, 10}, {0x1A, 0, 0, 3780, 1},
                           {0x70, 0, 0, 1440, 1}, {0x71, 1, 4, 1, 1}},
-                         0, 0x14},
+                         0x2B, 0x14, 0x3D},      // (its Remove Curse looks for 0x2B too - GAME.OVR 0x2CD27)
                .spell_named = nullptr, .n_spell_named = 0, .named = nullptr, .n_named = 0,
                .scroll_one_spell = 100, .read_magic = 0x10,
                .level_word = 0, .effect_names = {0x1026F, 38, 128}},
@@ -3679,7 +3688,7 @@ const Profile kProfiles[] = {
                  .qbreath_words = {kP | 0xDFB8, kP | 0xDFD9, 0, kP | 0xDFC3, kP | 0xDFCE, 0},
                  .knight_words = {kP | 0xF128, kP | 0xD17A, kP | 0xD199, kP | 0xD1A4, kP | 0xD1AF, kP | 0xD1C4,
                                   kP | 0xD1D9, kP | 0xD1EE, 0, kP | 0xF041, kP | 0xD1C4, 0},
-                 .dkk = true},
+                 .dkk = true, .fire15 = 0x4E},
      .overland = nullptr,
      .font_file = "8X8D1.DAX",
      .joined = kDeathKnightsJoined, .n_joined = sizeof kDeathKnightsJoined / sizeof kDeathKnightsJoined[0]},
@@ -3940,7 +3949,8 @@ const Profile kProfiles[] = {
                 // (its Feeblemind - GAME.OVR Darkness 0x2E902 / effect 0x44's handler
                 // 0x1C2F3, Treasures 0x37E08 / 0x21F6x - as the Dark Queen's: round 15)
                 .feeble_lost = true, .feeble_direct = true, .hit_needs_damage = true, .haste_mark = 0x20,
-                .poison_renew = 0x1A},       // (its poison damage renews 0x1A - GAME.OVR 0x1AE7B)
+                .poison_renew = 0x1A,        // (its poison damage renews 0x1A - GAME.OVR 0x1AE7B)
+                .curse_slip = 0x2B},         // (its Remove Curse looks for 0x2B - facts L6)
                kDarknessFight, sizeof kDarknessFight / sizeof kDarknessFight[0],
                // COMSPR (its 22 blocks, + 0x80 the second pictures; loaded at a
                // fight's start as slots 13-34 - GAME.OVR 0xD34A): 0-2 the arrows, 3

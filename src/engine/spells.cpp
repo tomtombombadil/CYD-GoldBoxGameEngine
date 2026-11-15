@@ -97,7 +97,11 @@ int base_power(const party::Character& c, const classes::Tables& t, int s);
 
 int power(const party::Character& c, const classes::Tables& t, int s)
 {
-    return s <= 0 ? 0 : base_power(c, t, s) + empowered(c);
+    if (s <= 0) return 0;
+    // (Death Knights, GAME.OVR 0x34EFB: Fireball 15 with the effect)
+    const int f15 = magic::fire15();
+    if (f15 && s == 0x2F && find_affect(c, f15) >= 0) return 15 + empowered(c);
+    return base_power(c, t, s) + empowered(c);
 }
 
 namespace {
@@ -107,7 +111,9 @@ int base_power(const party::Character& c, const classes::Tables& t, int s)
     using classes::skill_level;
     // Secret's (GAME.OVR 0x3AFD7) has no paladin in either test - a paladin
     // casts at 6th level; AD&D's (Curse's) paladin - 8 with rules::fixes()
-    const bool pal_rule = !t.lay.secret || rules::fixes();
+    // (Darkness / Treasures - GAME.OVR 0x36C2E / 0x40CC7 - the same, and by
+    // their skill levels: the larger of a class's level and its former one)
+    const bool pal_rule = !(t.lay.secret || t.lay.dk) || rules::fixes();
     auto most = [](int a, int b) { return a > b ? a : b; };
     // Champions (GAME.OVR 0x38FA4) and Death Knights (0x34DCA) count their
     // knights (class 7), not paladins: Champions a cleric's spells at
@@ -141,6 +147,26 @@ int base_power(const party::Character& c, const classes::Tables& t, int s)
         case 1: return most(skill_level(c, classes::Ranger) - 7, 0);
         case 3: return most(skill_level(c, classes::MagicUser) + moon, skill_level(c, classes::Ranger) - 8);
         case 4: return 12;
+        default: return 0;
+        }
+    }
+    if (t.lay.dk) {
+        auto sk = [&](int cls) {
+            const int lv = c.level(cls);
+            if (c.race() != 7) return lv;
+            int k = 0;
+            while (k < 7 && c.level(k) == 0) ++k;
+            const int old = c.level(k) > c.rec[0xE6] ? c.old_level(cls) : 0;
+            return lv > old ? lv : old;
+        };
+        if (sk(classes::Cleric) == 0 && sk(classes::MagicUser) == 0 && (!pal_rule || sk(classes::Paladin) < 9) &&
+            sk(classes::Ranger) < 8)
+            return 6;
+        switch (t.spell_class(s)) {
+        case 0: case 4: return most(sk(classes::Cleric), sk(classes::Paladin) - (pal_rule ? 8 : 0));
+        case 1: return most(sk(classes::Ranger) - 7, 0);
+        case 2: return most(sk(classes::MagicUser), sk(classes::Ranger) - 8);
+        case 3: return 12;
         default: return 0;
         }
     }
@@ -493,8 +519,8 @@ int cast(party::Party& p, int caster, int target, const CampSpell& cs, const cla
         for (int k = 0; k < n; ++k) {
             party::Character& c = p.m[who[k]];
             bool ill = false;
-            if (t.lay.dk) {
-                // Darkness (GAME.OVR 0x2CA54): its cure says "is Cured" for each
+            if (t.lay.dk || f.heal_feeble) {
+                // Darkness (GAME.OVR 0x2CA54; Death Knights 0x2D454): its cure says "is Cured" for each
                 // effect it takes away (0x32E1B) - the diseases (Cure Disease's
                 // helper 0x2C99B), blindness, feeblemind - then the word
                 for (int i = 0; i < 4; ++i) {
@@ -509,7 +535,10 @@ int cast(party::Party& p, int caster, int target, const CampSpell& cs, const cla
                     o.say(who[k], Said::Cured);
                     if (cs.word2) o.say(who[k], Said::Word2);
                 }
-                if (cures.feeblemind && cure(c, cures.feeblemind)) {
+                const uint8_t fb = f.heal_feeble ? f.heal_feeble : cures.feeblemind;
+                bool fed = fb && cure(c, fb);
+                if (!fed && f.heal_feeble && rules::fixes() && cures.feeblemind) fed = cure(c, cures.feeblemind);
+                if (fed) {
                     o.say(who[k], Said::Cured);
                     if (cs.word4) o.say(who[k], Said::Word4);
                 }

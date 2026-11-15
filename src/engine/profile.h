@@ -896,6 +896,9 @@ struct Profile {
         // bytes, then bodies [sex * 5 + d5] 10 each: cleric, fighter,
         // magic-user, thief - its ovr18 +0x1262); 0: none
         uint16_t npc_look = 0;
+        // Death Knights: its Fireball at 15th level for a caster with this
+        // effect (its caster routine GAME.OVR 0x34EFB, magic::set_fire15); 0: none
+        uint8_t  fire15 = 0;
     } variant;
     // Pool's wilderness map (overland.h; null: none)
     const overland::Facts* overland;

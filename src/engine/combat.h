@@ -909,6 +909,16 @@ struct Facts {
     uint8_t haste_mark = 0x10;
     // the poison damage effect's renewal (rules::CureFacts::poison_renew): 0 = itself
     uint8_t poison_renew = 0;
+    // Death Knights' Heal (GAME.OVR 0x2D454): its disease cure is an empty
+    // routine (0x2C978 - nothing cured, nothing said), and the intellect it
+    // gives back is effect 0x3D (its Feeblemind gives 0x44: the original's
+    // slip, kept - Game Fixes: the spell's effect too)
+    bool    heal_no_ills = false;
+    uint8_t heal_feeble = 0, heal_feeble2 = 0;
+    // Darkness's / Death Knights' Remove Curse looks for this effect (0x2B)
+    // instead of Bestow Curse's (its handler's slip - spells::Facts::curse_dk;
+    // Game Fixes: the curse); 0: the curse
+    uint8_t curse_slip = 0;
 };
 
 // ---- Monsters (LOAD MONSTER): a group per load (the record its copies
@@ -1813,9 +1823,11 @@ inline int power_of(const uint8_t* rec, const classes::Tables& st, int spell, bo
     return power_of(Rec(const_cast<uint8_t*>(rec)), st, spell, item);
 }
 int empowered(const Fighter& f);       // Treasures' effect 0x9F: + 3 (magic::set_empower)
+int fire15(const Fighter& f, int spell);  // Death Knights' 15th-level Fireball (magic::set_fire15), else 0
 inline int power_of(const Fighter& f, const classes::Tables& st, int spell, bool item = false)
 {
-    return power_of(f.rec, st, spell, item, f.robe) + empowered(f);
+    const int f15 = item ? 0 : fire15(f, spell);
+    return (f15 ? f15 : power_of(f.rec, st, spell, item, f.robe)) + empowered(f);
 }
 // The moons' change to a mage's caster level (robe 1-3, its current mage
 // level): new -1, full +1 past 5th; 0 otherwise (and outside Krynn)

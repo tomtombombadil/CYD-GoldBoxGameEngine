@@ -127,6 +127,10 @@ struct Facts {
     // (its program's slip - 0x2B; Game Fixes: the curse), Resist Fire's
     // effect (Protection from Fire on a non-ranger)
     uint8_t curse_dk = 0, resist_fire = 0;
+    // Death Knights' Heal (GAME.OVR 0x2D454 - Darkness's shape, "is cured."
+    // before each word): no disease, the intellect back from this effect (its
+    // Feeblemind's - the cures' - too with the Game Fixes); 0: the cures'
+    uint8_t heal_feeble = 0;
 };
 // A spell's time in minutes outside fights: the rolled ones as `f.timed`
 // says, else the spell table's (fixed + per level)
