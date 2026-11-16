@@ -1817,7 +1817,13 @@ int main(int argc, char** argv)
             for (int k = 0; k < m.n_affects; ++k) printf(" %02X", m.affects[k][0]);
             printf("\n");
         }
+    const char* yes_skip_from = nullptr;    // (#NAME;yes~no~: the no part skipped when found)
+    const char* yes_skip_to = nullptr;
     for (const char* m = moves; *m || auto_next(m); tp_note(m), ++m) {
+        if (*m == '~') {
+            if (m == yes_skip_from) { m = yes_skip_to; yes_skip_from = nullptr; }
+            continue;
+        }
         if (*m == 'M') {
             // "M": the area's squares - event byte (flags) and the open sides N E S W
             for (int y = 0; y < play::d->map.h; ++y) {
@@ -1847,6 +1853,37 @@ int main(int argc, char** argv)
             continue;
         }
         if (*m == '`') { g_quiet = !g_quiet; continue; }
+        if (*m == '#' && m[1]) {
+            // "#NAME;": in a fight's aim, the Next word until the aimed fighter's name starts with NAME
+            // (a play-through's "focus on that one": the board's own Next / Target words)
+            ++m;
+            std::string want;
+            while (*m && *m != ';') want += *m++;
+            if (!*m) --m;
+            auto tap_word = [](char k) { for (int i = 0; i < play::menu.count; ++i) if (text::key(play::menu, i) == k) { int cx, cy; text::item_cell(play::menu, i, &cx, &cy); play::tap(cx * 8 + 2, cy * 8 + 2, C); return true; } return false; };
+            bool found = false;
+            for (int k = 0; play::fg && k < 80 && !found; ++k) {
+                const int n = play::fg->n_cand ? play::fg->n_cand : 0;
+                if (!n) break;
+                const combat::Fighter& f = play::fg->b.f[play::fg->cand[play::fg->ci]];
+                const int nl = f.rec[0] < 15 ? f.rec[0] : 15;
+                std::string nm;
+                for (int q = 0; q < nl; ++q) nm += static_cast<char>(f.rec[1 + q]);
+                if (nm.compare(0, want.size(), want) == 0) { found = true; break; }
+                if (!tap_word('N')) break;
+                settle();
+            }
+            printf("  aim %s: %s\n", want.c_str(), found ? "on it" : "not found");
+            // "#NAME;yes~no~": the tokens before the first ~ when found, those between the ~s when not
+            if (m[1] && std::strchr(m + 1, '~')) {
+                const char* t1 = std::strchr(m + 1, '~');
+                const char* t2 = std::strchr(t1 + 1, '~');
+                if (!t2) t2 = t1 + std::strlen(t1) - 1;
+                if (found) { yes_skip_from = t1; yes_skip_to = t2; }
+                else m = t1;                // the no part runs on from after the first ~
+            }
+            continue;
+        }
         if (*m == '"' && m[1]) {        // "\"n": the Cheats tab's 0 Healer, 1 Merchant, 2 Sanctuary; then CAMPRUN2's ops
             ++m;
             const bool ok = play::cheat_open(*m - '0', C);
@@ -1868,6 +1905,12 @@ int main(int argc, char** argv)
             printf("  ? screen %d menu [%s|%s] wait %d text [%s] selected %d\n", (int)play::screen, play::menu.prompt,
                    play::menu.s, (int)play::vm->wait(), play::vm->wait() == ecl::Wait::Print ? play::vm->text() : "",
                    play::pt ? play::pt->selected : -1);
+            if (play::fg && play::fg->cur >= 0 && play::fg->cur < play::fg->b.n) {     // (a fight: whose turn)
+                const combat::Fighter& f = play::fg->b.f[play::fg->cur];
+                std::string nm;
+                for (int q = 0; q < (f.rec[0] < 15 ? f.rec[0] : 15); ++q) nm += static_cast<char>(f.rec[1 + q]);
+                printf("  ? turn %s\n", nm.c_str());
+            }
             continue;
         }
 #ifdef CYD_TEST_HOOKS
