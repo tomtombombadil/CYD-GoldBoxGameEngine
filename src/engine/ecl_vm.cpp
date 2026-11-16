@@ -806,7 +806,10 @@ bool Vm::init_script(bool reload)
         return true;
     }
     if (!reload) {
-        for (uint16_t a = 0x4C00; a <= 0x4C20; ++a) set(a, 0);
+        // (Pool: 0x4C00-0x4C1F - DOSBox, a load in the city's block 14: its
+        // 0x4C20 kept)
+        const uint16_t last = set_.pool_map ? 0x4C1F : 0x4C20;
+        for (uint16_t a = 0x4C00; a <= last; ++a) set(a, 0);
         for (uint16_t a = 0x7F79; a <= 0x7F82; ++a) set(a, 0);
     }
     set(0x4BE6, 1);                    // in a 3D area unless the script says

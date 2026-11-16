@@ -138,6 +138,10 @@ struct Data {
     // Pool's view modes: the wilderness screen drawn by the menu / the view
     // mode before the last new block (DS 0x49F9 > 1), the block's own (0x49FA > 1)
     bool           ov_up = false, ov_cur = false;
+    // (Pool: the block of the script loaded last - the program's own, 0
+    // as it starts; BEGIN after a load keeps the per-block words only in
+    // that block - begin_adventuring)
+    uint8_t        last_block = 0;
     bool           main_start = false;      // a game loaded: its first new block is the main loop's start
 
     // The wilderness map's places (from the program)
@@ -13259,6 +13263,7 @@ struct Host : ecl::Host {
     bool load_script(int block, uint8_t* code, uint32_t* len) override
     {
         if (hl()) return q_load_script(block, code, len);
+        d->last_block = static_cast<uint8_t>(block);
         char name[24];
         {
             char t[40];
@@ -14654,8 +14659,17 @@ void begin_adventuring()
     const bool resume = d->loaded && (last != 0 || d->prof->start_script == 0);
     const bool dungeon = !d->loaded || vm->get(0x4BE6) != 0;
     gs.script = static_cast<uint8_t>(resume ? last : d->prof->start_script);
+    // (Pool: its per-block words 0x4C00-0x4C1F - here - are cleared as any
+    // new block's unless the saved block is the one the program was in -
+    // the block before the load, 0 as it starts: DOSBox, a save in the
+    // city's block 14 with them set loads with them 0, its 0x4C20 kept; the
+    // graveyard's (4:10) first run then finds 0x4C00 = 0 and puts the
+    // party at its entrance 0,4 E; Phlan's block 0 keeps them - its city
+    // hall's 0x4C13)
+    bool keep_block = resume;
+    if (resume && pool_files() && gs.script != d->last_block) keep_block = false;
     screen = Screen::Game;
-    if (!host->load_script(gs.script, ecl::code_of(gs), &gs.code_len) || !vm->init_script(resume)) {
+    if (!host->load_script(gs.script, ecl::code_of(gs), &gs.code_len) || !vm->init_script(keep_block)) {
         snprintf(msg, sizeof msg, "Script %d of ECL%d.DAX didn't load.", gs.script, gs.game_area);
         screen = Screen::PartyMenu;
         draw_party_menu(c);

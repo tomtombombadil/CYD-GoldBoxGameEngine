@@ -108,7 +108,10 @@ Round 10 (2026-11-08) - the last oracles, behave levels' oracle, the DOSBox diff
                          from its seed at each load - far places from a base near them)
     where.py             where a run's steps differ (above / on the menu row) + engine | DOSBox pictures
   A scenario's "begin": true for any save the original loads to its party menu (all PoolRad saves).
-  Known: a save TELE0 made in the graveyard (4:10) loads in the original at its entrance 0,4 E.
+  PoolRad loads clear the per-block words but in the block the program was in (v0.203.4): a block whose
+  first run starts the party at its entrance (the graveyard 4:10) puts every load there - mkscen's saves
+  can't test its squares; walk them instead: the playsim's MAPPATH=x,y (+ MAPAVOID=x,y;...) and
+  mkwalk.py STEPWISE=1. The graveyard's random encounters (the original's dice) end such walks.
   NOT in the repo (GPL, kept in the Project): build_dosbox.sh + autodos.inc (DOSBox 0.74-3 patched: the key
   script, quiet / shot / poke, AUTODOS_MEM, AUTODOS_FRAMES) -> /tmp/claude-0/differ/bin/dosbox-auto.
   Still NOT rebuilt: Curse's oracle_events.txt (needs the Project's ecl_stub_facts.md - Curse's opcodes and

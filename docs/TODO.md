@@ -2400,12 +2400,17 @@ the Project as claude/TODO.md.
       word / boxed list line, the seam's position line, a fight's
       scattered field pieces - the dice) and DOSBox's monster loading at
       12000 cycles (the text before a fight still up at its shot).
-      Left: the graveyard (4:10) - a save made at another square by
-      TELE0 loads in the original at the entrance 0,4 E (status line
-      still the saved square until redrawn), so mkscen's saves don't
-      fit there: how the original's load picks that square is not
-      known yet (SAVGAM differs only in the position bytes 0x3201-03);
-      the finale (Tyranthraxus); 26's nomad camp (part 15 already).
+      v0.203.4 (the graveyard): BEGIN after a load clears the per-block
+      words 0x4C00-0x4C1F (0x4C20 kept) unless the saved block is the one
+      the program was in (0 as it starts - Phlan's block 0 keeps them) -
+      DOSBox memory: a city block 14 save with them set loads with them
+      0; the graveyard's first run then finds 0x4C00 = 0 and puts the
+      party at its entrance 0,4 E, as the original does after every load
+      there (the engine kept the saved square). Its squares can't be
+      reached by saves then, and walks to them meet the original's
+      random encounters (skeletons at 2,5 on the third step - its dice,
+      not the engine's), so its events are still unchecked. Left too:
+      the finale (Tyranthraxus).
 - [x] Tom: Dirten's graphics (PoolRad). The original builds a character
       icon by loading head / body with a see-through plane made from
       their colour 0 (ANDed, ovr18 +0x32F), then recolours (START

@@ -8,6 +8,7 @@
 # first word), lists 'v!', typed '=FRIEND;' / numbers '=1;', the treasure /
 # shop screens '/E'; a scenario ends at a fight, back exploring, or after
 # MAXTOK tokens past the walk.
+# STEPWISE=1: the walk crosses other events (texts answered on the way).
 # Usage: mkwalk.py <out dir> <base> <slot> <walk tokens> [name]
 # Env: SIM (default /tmp/claude-0/ag7/bin/simh0), BEGIN=1 (the original
 # BEGINs after its load - a wilderness save), BRANCH (2), MAXTOK (14),
@@ -51,6 +52,24 @@ def state(moves):
     return int(mm.group(1)), words, int(mm.group(4))
 
 
+if os.environ.get('STEPWISE') == '1':
+    # (a walk through other events: each move's text answered '.', a
+    # one-word menu its word; a menu of several ends the walk there)
+    toks, i = '', 0
+    while i < len(walk):
+        j = walk.index('$', i) + 1 if walk.startswith('~', i) else i + 1
+        toks += walk[i:j]; i = j
+        for _ in range(6):
+            st = state(toks)
+            if st is None or st[2] == 0:
+                break
+            if st[2] == 1 or (st[2] == 2 and len(st[1]) == 1):
+                toks += '.'
+            else:
+                i = len(walk)
+                break
+    walk = toks
+    print('walk', walk, file=sys.stderr)
 todo, done = [(walk, 0)], []
 while todo and len(done) < MAXSC:
     toks, menus = todo.pop()

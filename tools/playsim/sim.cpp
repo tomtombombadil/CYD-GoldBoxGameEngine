@@ -2128,6 +2128,54 @@ int main(int argc, char** argv)
         }
         printf("  OVPATH %d:%d,%d -> %d:%d,%d: %s\n", sa, sx, sy, ta, tx, ty, from[goal] < 0 ? "no way" : path.c_str());
     }
+    if (getenv("MAPPATH") && play::d->map.loaded) {
+        // MAPPATH=x,y: the shortest walk in the 3D map from where the party
+        // stands to x,y (open sides only - geo::passage 1), as moves (F a
+        // step, L / R a turn, B turning round); MAPAVOID=x,y;x,y... squares
+        // not to cross (other events on the way)
+        int tx = 0, ty = 0;
+        sscanf(getenv("MAPPATH"), "%d,%d", &tx, &ty);
+        const geo::Map& mp = play::d->map;
+        static int from3[16 * 16];
+        static bool avoid3[16 * 16];
+        for (int& v : from3) v = -1;
+        for (bool& v : avoid3) v = false;
+        for (const char* q = getenv("MAPAVOID"); q && *q;) {
+            int x, y;
+            if (sscanf(q, "%d,%d", &x, &y) == 2) avoid3[(y & 15) * 16 + (x & 15)] = true;
+            q = strchr(q, ';');
+            if (q) ++q;
+        }
+        const int sx = play::d->gs.x, sy = play::d->gs.y;
+        std::vector<int> q{sy * 16 + sx};
+        from3[sy * 16 + sx] = 1 << 30;
+        const int goal = (ty & 15) * 16 + (tx & 15);
+        for (size_t k = 0; k < q.size() && from3[goal] < 0; ++k)
+            for (int dir = 0; dir < 8; dir += 2) {
+                int x = q[k] % 16, y = q[k] / 16;
+                const int ox = x, oy = y;
+                if (geo::passage(mp, x, y, dir) != 1 || !geo::step(mp, x, y, dir)) continue;
+                if (abs(x - ox) + abs(y - oy) != 1) continue;       // (no wrapping: the edges are the scripts')
+                const int kk = y * 16 + x;
+                if (from3[kk] >= 0 || (avoid3[kk] && kk != goal)) continue;
+                from3[kk] = static_cast<int>(k) * 8 + dir;
+                q.push_back(kk);
+            }
+        std::vector<int> dirs;
+        for (int kk = goal; from3[kk] >= 0 && from3[kk] != 1 << 30;) {
+            dirs.insert(dirs.begin(), from3[kk] % 8);
+            kk = q[from3[kk] / 8];
+        }
+        std::string path;
+        int face = play::d->gs.dir;
+        for (int dir : dirs) {
+            const int t = ((dir - face) / 2 + 4) % 4;
+            path += t == 1 ? "R" : t == 2 ? "B" : t == 3 ? "L" : "";
+            path += 'F';
+            face = dir;
+        }
+        printf("  MAPPATH %d,%d -> %d,%d: %s\n", sx, sy, tx, ty, from3[goal] < 0 ? "no way" : path.c_str());
+    }
     if (getenv("SAVENOW")) {
         // SAVENOW=slot: saved as it stands, without the camp (a save for the original to load)
         const bool ok = play::save_game(getenv("SAVENOW")[0]);
