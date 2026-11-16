@@ -1107,6 +1107,9 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   over. No grinding (Tom, 2026-11-16): one or two random encounters to
   see they work, then the experience granted (a save edited on the PC)
   to the levels the guides give for the next area - never go in too low.
+  No trips back to town to rest, sell or train: the Cheats tab's Healer,
+  Sanctuary, Merchant and Trainer do it where the party stands (Tom: part
+  of why they're in).
   The check: every triggered event fires at the right time and
   place, every chain of events that leads to the ending works, and a
   player can play and enjoy the game to its completion. Findings and
