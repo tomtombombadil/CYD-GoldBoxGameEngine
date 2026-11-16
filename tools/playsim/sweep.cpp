@@ -113,6 +113,27 @@ static int (*on_menu)() = nullptr;
 // over (false), or it seems stuck (false, reported)
 static const char* stuck_why = "";
 static bool god = false;          // (events: the party can't fall - the scripts are what's tested)
+// EVMAP=1 (events): a line for what each square's script shows - its menu's
+// words, a fight, another screen - and each block's map with its walls: the
+// cluebook a play test walks by (the PortMaster port's tools/newgame_test.py;
+// Tom, 2026-11-16: "You already KNOW where the encounters / fights / inns /
+// shops / trainers are. Use that information"). Made from the player's files:
+// its output stays in scratch.
+static std::set<std::string> evmap_seen;
+static int evmap_from[3] = { 0, 0, 0 };
+static void evmap(const char* kind, const char* a = "", const char* b = "")
+{
+    using namespace play;
+    if (!getenv("EVMAP") || !d) return;
+    char t[260];
+    // (the square and facing the step was taken FROM - a walk goes there, turns
+    // that way and steps: where the party stands when a script speaks is often
+    // not where it was met)
+    snprintf(t, sizeof t, "  @ %d,%d,%d %s [%s%s]", evmap_from[0], evmap_from[1], evmap_from[2], kind, a, b);
+    for (char* q = t; *q; ++q) if (*q == '\n' || *q == '\r') *q = ' ';
+    if (evmap_seen.insert(t).second) printf("%s\n", t);
+}
+
 static bool pump(int max_iter = 400000)
 {
     using namespace play;
@@ -240,12 +261,15 @@ static bool pump(int max_iter = 400000)
             }
             switch (vm->wait()) {
             case ecl::Wait::Print:
+                if (getenv("EVMAP")) { char tx[90]; snprintf(tx, sizeof tx, "%.84s", vm->text()); evmap("TEXT", tx); }
                 if (page_prompt) play::tap(10, 10, C);
                 break;
             case ecl::Wait::Menu:
+                evmap("MENU", menu.prompt, menu.s);
                 if (anim_block >= 0 || true) tap_item(vm->items() > 1 ? pick(vm->items()) : 0);
                 break;
             case ecl::Wait::ListMenu:
+                evmap("LIST", menu.prompt, menu.s);
                 if (list_wait) play::tap(12, (list_row0 + pick(vm->items())) * 8 + 2, C);
                 else if (page_prompt) play::tap(10, 10, C);
                 break;
@@ -259,6 +283,7 @@ static bool pump(int max_iter = 400000)
             break;
         case Screen::Fight:
             if (!fg) break;
+            evmap("FIGHT");
             switch (fg->st) {
             case FSt::Menu: {
                 const int r = on_menu ? on_menu() : 0;
@@ -299,6 +324,7 @@ static bool pump(int max_iter = 400000)
         case Screen::Won: play::tap(100, 100, C); break;
         case Screen::Title: return false;      // (the party is gone: the title again)
         case Screen::PartyMenu:
+            evmap("HALL");
             if (in_game_menu && pt->count) {
                 { int px_, py_; play::pm_line_point(pm_line('B'), &px_, &py_); play::tap(px_, py_, C); };
                 break;
@@ -315,6 +341,7 @@ static bool pump(int max_iter = 400000)
         case Screen::Rest:
             break;
         default:
+            { char sn[12]; snprintf(sn, sizeof sn, "%d", (int)screen); evmap("SCREEN", sn, menu.s); }
             if (!play::back(C)) {
                 char t[80];
                 snprintf(t, sizeof t, "Esc does nothing on screen %d", (int)screen);
@@ -1038,6 +1065,18 @@ static void sweep_events(int only)
                 printf("  first run: %s (screen %d)\n", stuck_why, d ? (int)screen : -1);
                 stuck_why = "";
             }
+            if (getenv("EVMAP") && d && d->map.loaded) {
+                // (the block's map: a square's four walls N E S W, two hex digits each)
+                evmap_seen.clear();
+                printf("  MAP %d %d\n", d->map.w, d->map.h);
+                for (int y = 0; y < d->map.h; ++y) {
+                    printf("  M");
+                    for (int x = 0; x < d->map.w; ++x)
+                        printf(" %02X%02X%02X%02X", geo::wall(d->map, x, y, 0) & 255, geo::wall(d->map, x, y, 2) & 255,
+                               geo::wall(d->map, x, y, 4) & 255, geo::wall(d->map, x, y, 6) & 255);
+                    printf("\n");
+                }
+            }
             int steps = 0, lost = 0, reentries = 0;
             // (the map's own size - the Dark Queen's up to 39 x 20; its overland
             // of Taladas the script's own 38 x 30 squares)
@@ -1080,6 +1119,7 @@ static void sweep_events(int only)
                     if (getenv("EVTRACE"))
                         printf("  step at %d,%d dir %d: 0x22 %d 0x24 %d bigpic %d pic_shown %d\n", x, y, d->gs.dir, vm->get(0x22),
                                vm->get(0x24), bigpic, (int)pic_shown);
+                    evmap_from[0] = d->gs.x; evmap_from[1] = d->gs.y; evmap_from[2] = d->gs.dir;
                     play::act(play::Act::Forward, C);
                     ++steps;
                     // (VMWATCH=addr: say where a step leaves that script byte set -
