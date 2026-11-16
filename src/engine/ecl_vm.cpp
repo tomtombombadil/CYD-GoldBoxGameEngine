@@ -1230,6 +1230,11 @@ Stop Vm::answer(int v)
         break;
     case 0x2D:                          // (Gateway's CALL 0x80C: Yes 0, No 1)
         set(dest_, static_cast<uint16_t>(v ? 1 : 0));
+        // its scripts test the answer with the IF right after the call:
+        // "=" on No, "<>" on Yes (every use in the game's blocks reads so -
+        // "WOULD YOU LIKE TO REST" / IF = / leave)
+        for (bool& f : flags_) f = false;
+        flags_[v ? 0 : 1] = true;
         break;
     default: break;
     }
