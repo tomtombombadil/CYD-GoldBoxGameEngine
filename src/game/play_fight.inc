@@ -231,9 +231,11 @@ int read_monster_items(const char* file, int block, uint8_t* out, int cap)
 // (variant.npc_look: heads 16 bytes, then bodies 10 each - cleric,
 // fighter, magic-user, thief; [sex * n + die]), then its class values
 // worked out (THAC0, saves, slots - the file's are its own)
-__attribute__((noinline)) void pool_npc_look(party::Character& ch)
+// (the icon's size and colours: the program's record loader does it for
+// every record it loads - LOAD MONSTER's too, once a load, GAME.OVR
+// 0x1EEAA: its five d6, the dice go as the original's)
+void pool_icon_look(uint8_t* r)
 {
-    uint8_t* r = ch.rec;
     const int race = r[0x74];
     if (race == 1 || race == 3 || race == 5) r[0x144] = 1;
     else if (race == 2 || race == 4 || race == 6 || race == 7) r[0x144] = 2;
@@ -245,6 +247,12 @@ __attribute__((noinline)) void pool_npc_look(party::Character& ch)
         const int dd = rng.roll(6, 1);
         r[0x144 + k] = static_cast<uint8_t>((dd + 8) * 16 + dd);
     }
+}
+
+__attribute__((noinline)) void pool_npc_look(party::Character& ch)
+{
+    uint8_t* r = ch.rec;
+    pool_icon_look(r);
     r[0x126] = static_cast<uint8_t>(rng.roll(256, 1) - 1);
     const uint16_t look = d->prof->variant.npc_look;
     int cls[8], n = 0;
@@ -366,6 +374,7 @@ void fight_load_monster(int id, int copies, int icon, bool reserve)
         plat::log("[play] %s #%d: no monster\n", cha, id);
         return;
     }
+    if (pool_files() && !reserve) pool_icon_look(rec);
     // Secret's Level (GAME.OVR 0x101A): the other side's (record 0x197 = 1)
     // hit points and maximum x (level + 2) / 4 - Novice half, Squire three
     // quarters, Veteran as they are, Adept 5/4, Champion 3/2 - kept in a
@@ -5104,6 +5113,16 @@ void ai_step(pic::Canvas& c)
     }
     if (!fg->ai_checked) {
         fg->ai_checked = true;
+#ifdef CYD_TEST_HOOKS
+        if (getenv("AILOG")) {
+            const int nl = f.rec[0] < 15 ? f.rec[0] : 15;
+            char nm[16];
+            for (int q = 0; q < nl; ++q) nm[q] = static_cast<char>(f.rec[1 + q]);
+            nm[nl] = 0;
+            printf("  AI turn %d %s team %d items %d target %d seen %d\n", i, nm, f.team(), f.n_items, f.target,
+                   f.target >= 0 && f.target < b.n ? (int)b.f[f.target].up() : -1);
+        }
+#endif
         // The computer's magic items (monsters, NPCs and Quick members), then
         // spells, then Turn Undead - one fleeing too: the original tries them
         // before it runs (Pool ovr10 +0x10F on, coab's PlayerQuickFight -
@@ -5116,7 +5135,11 @@ void ai_step(pic::Canvas& c)
         // either; the Dark Queen's (DQK.EXE 0x2E105) an empty body too
         // (Quick Actions' Items unticked: none)
         const bool ai_items = !darkness_files() && !hl() && (f.qa & quickacts::kItems);
-        if (ai_items && f.n_items && f.can_use && combat::standing(b, f.team() ? 0 : 1) && load_magic()) {
+        const bool item_step = ai_items && f.n_items && f.can_use && combat::standing(b, f.team() ? 0 : 1) && load_magic();
+        // (PoolRad's item routine rolls its d7 before it looks at anything -
+        // GAME.OVR 0xAFBA: the dice go as the original's)
+        if (!item_step && pool_files()) rng.roll(7, 1);
+        if (item_step) {
             int tg[combat::kMaxFighters], nt = 0;
             const int k = combat::choose_item(b, fg->t, mrules->tables, i, *names, d->prof->fight.spells,
                                               d->prof->fight.n_spells, rng, tg, &nt);
@@ -5200,8 +5223,17 @@ void ai_step(pic::Canvas& c)
         // 0xAE2C, Death Knights 0xA830, DQK.EXE 0x2E15B: the control byte
         // over 0x7F or the flag; Alt-M toggles it, each fight starts it off.
         // Here: Quick Actions' Spells, a character at a time - quick_mask)
-        if ((f.qa & quickacts::kSpells) && f.can_cast && !no_magic_area() &&
-            load_magic()) {
+        // (Pool: a cleric on Quick - or any computer fighter with cleric
+        // levels - that hasn't turned yet turns undead when an enemy undead
+        // is in sight, before its spells and fighting: ovr10 +0x169 calls
+        // +0x203 before +0x545; DOSBox, Sokal Keep - Brother Sean's first
+        // act; the graveyard's skeletons, the dice of a Quick round)
+        if (pool_files() && ai_turns()) return;
+        const bool spell_step = (f.qa & quickacts::kSpells) && f.can_cast && !no_magic_area() && load_magic();
+        // (PoolRad's spell routine rolls its d7 before its tests - GAME.OVR
+        // 0xB165: the computer's or Magic On after it)
+        if (!spell_step && pool_files()) rng.roll(7, 1);
+        if (spell_step) {
             int tg[combat::kMaxFighters], nt = 0;
             const int sp = combat::choose_spell(b, fg->t, mrules->tables, i, d->prof->fight.spells,
                                                 d->prof->fight.n_spells, rng, tg, &nt);
@@ -5241,11 +5273,6 @@ void ai_step(pic::Canvas& c)
                 return;
             }
         }
-        // (Pool: a cleric on Quick - or any computer fighter with cleric
-        // levels - that hasn't turned yet turns undead when an enemy undead
-        // is in sight, before fighting: ovr10 +0x203; DOSBox, Sokal Keep -
-        // Brother Sean's first act)
-        if (pool_files() && ai_turns()) return;
         // The best weapon for now (the panel shows it)
         if (ai_ready_weapon(i)) draw_panel_for(c, i);
         // Its special actions (breath, spit, gazes, rays, thrown lightning)

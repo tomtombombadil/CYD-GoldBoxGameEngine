@@ -185,6 +185,10 @@ def run(path, keep=False):
     env = dict(os.environ, SDL_VIDEODRIVER='dummy', SDL_AUDIODRIVER='dummy', AUTODOS_SCRIPT=w + '/dos.script',
                AUTODOS_OUT=w + '/dshots')
     if sc.get('mem'): env['AUTODOS_MEM'] = '1'
+    # ("randlog": every draw of the original's generator (its RandNext, PoolRad
+    # START.EXE 0xC18F) with its caller -> runs/<name>/rand.txt; dosbox-auto
+    # from the Project's build_dosbox.sh with its core hook)
+    if sc.get('randlog'): env.update(AUTODOS_RANDAT='C18F', AUTODOS_RANDLOG=w + '/rand.txt')
     subprocess.run([DOSBOX, '-conf', w + '/dos.conf'], env=env, capture_output=True, timeout=1800)
     # the engine
     os.makedirs(w + '/eng/out'); os.makedirs(w + '/eng/_CYD', exist_ok=True)

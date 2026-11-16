@@ -2163,11 +2163,14 @@ int start_round(Battle& b, create::Dice& d, Event* out, int cap)
 
 int next(Battle& b, create::Dice& d)
 {
+    // (every fighter on the list rolls its d100 as the scan passes it, the
+    // ones that can't act too - PoolRad GAME.OVR 0x9938, the original's
+    // FindNextCombatant: the dice go as the original's, roll for roll)
     int best = -1, best_delay = 0, best_roll = -1;
     for (int i = 0; i < b.n; ++i) {
         const Fighter& f = b.f[i];
-        if (f.delay <= 0 || !f.up() || !f.size || helpless(b, f) || stunned(b, f)) continue;  // the held lose their turns
         const int r = d.roll(100, 1);
+        if (f.delay <= 0 || !f.up() || !f.size || helpless(b, f) || stunned(b, f)) continue;  // the held lose their turns
         if (f.delay > best_delay) {
             best = i;
             best_delay = f.delay;
@@ -7038,8 +7041,10 @@ int choose_spell(Battle& b, const Tables& t, const classes::Tables& st, int i, c
         const uint8_t v = f.rec[0x1E + k];
         if (v && (!ai || ai->high_too || v < 0x80)) list[n++] = v;
     }
-    if (!n) return 0;
+    // (the d7 is rolled with or without spells - PoolRad GAME.OVR 0xB165:
+    // the dice go as the original's)
     const int rounds = d.roll(7, 1);
+    if (!n) return 0;
     int chosen = 0;
     for (int r = 0, level = 7; r < rounds && !chosen; ++r, --level)
         for (int pick = 0; pick < 3 && !chosen; ++pick) {
@@ -7061,8 +7066,9 @@ int choose_item(Battle& b, const Tables& t, const classes::Tables& st, int i, co
 {
     *n_targets = 0;
     Fighter& f = b.f[i];
-    if (!f.items || !f.n_items) return -1;
+    // (the d7 first, items or not - PoolRad GAME.OVR 0xAFBA)
     const int rounds = d.roll(7, 1);
+    if (!f.items || !f.n_items) return -1;
     for (int r = 0, level = 7; r < rounds; ++r, --level)
         for (int k = 0; k < f.n_items; ++k) {
             const uint8_t* it = f.items[k];

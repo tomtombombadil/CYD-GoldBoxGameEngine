@@ -757,6 +757,16 @@ static void shop_run(const char* ops)
     }
 }
 
+// (TPSEED: after each move the original's call count - its draws since seed 0)
+static void tp_note(const char* m)
+{
+    if (!create::g_tp_seed || !getenv("TPLOG")) return;
+    uint32_t x = 0;
+    long k = 0;
+    while (x != *create::g_tp_seed && k < 5000000) { x = x * 0x08088405u + 1u; ++k; }
+    printf("  TP after '%c': %08X call %ld\n", *m, *create::g_tp_seed, k);
+}
+
 // (TPSEED: the generator's seed after each move, as the differ's .mem files have it)
 static const char* tp_text()
 {
@@ -1725,7 +1735,41 @@ int main(int argc, char** argv)
         q = strchr(q, ',');
         if (q) ++q;
     }
-    const char* moves = argc > 2 ? argv[2] : "FFFF";
+    // AUTOTOK=n: after the moves, up to n more chosen by the playsim as the
+    // differ's walker does (texts '.', a one-word menu '.', an encounter's
+    // Combat '/C' with AUTOFIGHT=1, a fighter's Quick '/Q', the after-fight
+    // screens '/E'), stopping back at the exploring menu or a choice of
+    // several; "AUTOTOKENS <all moves>" at the end (mkwalk.py STEPWISE)
+    static std::string mv_buf;
+    mv_buf.reserve(1 << 16);
+    mv_buf = argc > 2 ? argv[2] : "FFFF";
+    const char* moves = mv_buf.c_str();
+    int auto_left = getenv("AUTOTOK") ? atoi(getenv("AUTOTOK")) : 0;
+    auto auto_next = [&](const char* at) -> bool {
+        if (auto_left <= 0 || mv_buf.size() + 4 >= mv_buf.capacity()) return false;
+        --auto_left;
+        const ecl::Wait w = play::vm->wait();
+        auto has = [&](char k) {
+            for (int i = 0; i < play::menu.count; ++i)
+                if (text::key(play::menu, i) == k) return true;
+            return false;
+        };
+        const int scr = (int)play::screen;
+        const char* t = nullptr;
+        if (scr == 1) { auto_left = 0; return false; }     // (the party menu: all dead)
+        if (scr == 24) t = has('Q') ? "/Q" : ".";
+        else if (scr == 5 || scr == 16 || scr == 25) t = has('E') ? "/E" : ".";
+        else if (w == ecl::Wait::Print || w == ecl::Wait::Key || w == ecl::Wait::Pause) t = ".";
+        else if (w == ecl::Wait::Menu && play::menu.count <= 1) t = ".";
+        else if (w == ecl::Wait::Menu && getenv("AUTOFIGHT") && has('C') && has('F')) t = "/C";
+        else if (w == ecl::Wait::Combat || w == ecl::Wait::Treasure) t = ".";
+        if (!t) { auto_left = 0; return false; }
+        const size_t off = static_cast<size_t>(at - mv_buf.c_str());
+        mv_buf += t;
+        (void)off;
+        printf("  AUTOTOKENS %s\n", mv_buf.c_str());
+        return true;
+    };
     if (getenv("FIGHTALL"))
         for (int i = 0; i < play::pt->count; ++i) {
             const party::Character& m = play::pt->m[i];
@@ -1736,7 +1780,7 @@ int main(int argc, char** argv)
             for (int k = 0; k < m.n_affects; ++k) printf(" %02X", m.affects[k][0]);
             printf("\n");
         }
-    for (const char* m = moves; *m; ++m) {
+    for (const char* m = moves; *m || auto_next(m); tp_note(m), ++m) {
         if (*m == 'M') {
             // "M": the area's squares - event byte (flags) and the open sides N E S W
             for (int y = 0; y < play::d->map.h; ++y) {

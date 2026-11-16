@@ -2411,6 +2411,21 @@ the Project as claude/TODO.md.
       random encounters (skeletons at 2,5 on the third step - its dice,
       not the engine's), so its events are still unchecked. Left too:
       the finale (Tyranthraxus).
+      v0.203.5-6 (Tom, 2026-11-15: "play them out"): the original's own
+      dice in the engine for the differ (playsim TPSEED / TPSKIP: Turbo
+      Pascal's Random, seed 0 as the DOS copy's - the seed equal after every
+      step, DOSBox DS:0x4428), and dosbox-auto's "randlog" (every draw with
+      its callers; tools/devkit/differ/dicediff.py lines both lists up).
+      The graveyard's skeletons (2,5) now meet in both, the battlefield and
+      placement the same; the fight matched draw for draw to 954 after
+      fixing the dice's order (LOAD MONSTER's icon colours' five d6, every
+      fighter's d100 in the next-fighter scan, the computer's item and
+      spell d7s rolled before their tests) and Pool's Quick cleric turning
+      undead before its spells (as the original's ovr10 +0x169). Next
+      difference: draw 954, Rhiannon's second turn - the engine's target
+      finder rolls (her target 6 down), the original keeps a target (its
+      [cmb+0xA] rule after a kill - 0x15FDF / the step routine 0xB3C).
+      Then on through the graveyard.
 - [x] Tom: Dirten's graphics (PoolRad). The original builds a character
       icon by loading head / body with a see-through plane made from
       their colour 0 (ANDed, ovr18 +0x32F), then recolours (START
