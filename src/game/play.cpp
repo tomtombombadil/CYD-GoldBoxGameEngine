@@ -17991,6 +17991,15 @@ const char* open(const char* data_dir, games::Game g, pic::Canvas& c, const char
         vm->set(0x4CF4, 3);
         vm->set(0x4BE6, 1);
     }
+    if (d->prof->game == games::Game::PoolsOfDarkness) {
+        // (Pools of Darkness' new game is in 3D - New Phlan, Rolf's tour: its
+        // scripts never set the mode (area byte 0x21) and Vm::init_script
+        // leaves it to the saves, so a new game stood outside the 3D view
+        // after the tour: no map loaded (LOAD FILES asks the mode), no
+        // exploring menu, nothing to press - found by the PortMaster port's
+        // new-game test, 2026-11-16; GOG's save A, made in Phlan, has it 1)
+        vm->set(0x4BE6, 1);
+    }
     if (hl()) {
         // (Dark Queen: a new game's block as its GOG save A - a new game -
         // has it: in 3D, difficulty 3; queen_facts_2.md 10)

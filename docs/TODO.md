@@ -6,6 +6,18 @@ to the bottom with their version, then drop off after a while. Synced to
 the Project as claude/TODO.md.
 
 ## Tom
+- [x] **Pools of Darkness: a NEW game hung after Rolf's tour** (found by the
+      PortMaster port's new-game test, 2026-11-16; v0.203.7): the party
+      stood outside the 3D view - no map loaded, a black view, no exploring
+      menu, nothing to press. Its scripts never set the mode (area byte
+      0x21 / vm 0x4BE6) and `Vm::init_script` leaves it to the saves, so a
+      new game had it 0 and LOAD FILES passed the map over. A new game of
+      Darkness starts in 3D now (`play::open`, as Death Knights'). Checked:
+      the playsim's `GAME=4 NEWGAME=1` - map 16 loads, the tour ends at 2,6
+      W, the party walks; the port with six made characters. NOT checked
+      against the original in DOSBox (where its program sets the byte) -
+      Tom / the CYD session: if a new Darkness game has ever worked on a
+      board for you, say so (then something else changed).
 - [ ] Music (v0.197.0, Tom 2026-11-14: "convert the adlib music into wave
       files ... during the sd card scanning"): flash, tap Rescan (or just
       start: a card scanned before renders the songs first, "Preparing
