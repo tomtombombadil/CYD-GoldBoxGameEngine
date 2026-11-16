@@ -2433,11 +2433,16 @@ the Project as claude/TODO.md.
       fixing the dice's order (LOAD MONSTER's icon colours' five d6, every
       fighter's d100 in the next-fighter scan, the computer's item and
       spell d7s rolled before their tests) and Pool's Quick cleric turning
-      undead before its spells (as the original's ovr10 +0x169). Next
-      difference: draw 954, Rhiannon's second turn - the engine's target
-      finder rolls (her target 6 down), the original keeps a target (its
-      [cmb+0xA] rule after a kill - 0x15FDF / the step routine 0xB3C).
-      Then on through the graveyard.
+      undead before its spells (as the original's ovr10 +0x169).
+      Dropped (Tom, 2026-11-16: function checks, not reproductions - CLAUDE.md):
+      no more draw-for-draw chasing. The graveyard by function instead:
+      each of its events (texts, menus, the marble chest, the tower doors,
+      the stinging trap, the fumes, the robed man's join, the knight's
+      gifts, the crypt's body) driven in the engine and checked against
+      its script's own conditions and effects; its monsters (skeletons,
+      zombies, wights, wraith, spectre, mummies, the giant skeleton)
+      against their records and AD&D (drains, immunities, paralysis,
+      disease, turning); DOSBox only for what a screen shows.
 - [x] Tom: Dirten's graphics (PoolRad). The original builds a character
       icon by loading head / body with a see-through plane made from
       their colour 0 (ANDed, ovr18 +0x32F), then recolours (START
