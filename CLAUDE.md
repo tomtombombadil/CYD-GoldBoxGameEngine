@@ -1100,6 +1100,14 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   long identical run (the differ's TPSEED / randlog only to reach a
   place or to answer one specific question). DOSBox side by side only
   for what the screen shows.
+- **Play-throughs** (Tom, 2026-11-16): play each game through in the
+  engine as a player would, PoolRad first - a new party rolled up, then
+  adventuring to the end, a walkthrough guide from the web for where to
+  go, cheats (the Cheats tab, saves, healing) rather than failing over and
+  over. The check: every triggered event fires at the right time and
+  place, every chain of events that leads to the ending works, and a
+  player can play and enjoy the game to its completion. Findings and
+  progress in the Project's claude/playtest_<game>.md and docs/TODO.md.
 - **Standing answer for originals' mistakes** (Tom, 2026-10-23): the game
   keeps the original's behaviour; the fixed (AD&D) version goes behind
   Game Fixes - don't ask, just do it and list each such case in the
