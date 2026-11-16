@@ -10,6 +10,7 @@ folder stay in scratch (test saves to the Project).
                           AUTONO=1 answers Yes/No with No; MAPAVOID= squares passed by; PV=OVPATH
                           walks the wilderness instead);
                           after a fight the party fixed on slot J; stops at a choice
+  (go.sh AUTOPICK="Attack,Take,...": a menu answered by its first word starting so; WHO=n a "WHO WILL" pick)
   hop.sh <from> <x,y> <to>     go.sh, then saved (HOPTOK= tokens first, e.g. F into the next area)
   tour.sh <a> <b> x,y ... hops in turn, fix.sh after each, alternating the slots
   fix.sh <slot> [rest]    the Cheats tab's Healer (Raise Dead, Cure Critical), MEMSET= the casters'

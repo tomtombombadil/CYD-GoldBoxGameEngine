@@ -20,6 +20,22 @@ for i in $(seq 1 80); do
   fights=$nf
   if echo "$st" | grep -q "Locked."; then T="$T${DOORTOK:-/B}"; echo "  (locked: ${DOORTOK:-/B})"; TN=4 $P/bin/auto.sh "$T" SAVE=$S "$@" > /dev/null; T=$(cat $P/tok.txt); continue; fi
   if [ -n "$AUTONO" ] && echo "$st" | grep -q "menu \[|Yes No\]"; then T="$T/N"; echo "  (answered No)"; TN=4 $P/bin/auto.sh "$T" SAVE=$S "$@" > /dev/null; T=$(cat $P/tok.txt); continue; fi
+  if [ -n "$AUTOPICK" ] && echo "$st" | grep -q "WHO WILL"; then T="$T%${WHO:-2}/S"; echo "  (who: ${WHO:-2})"; TN=4 $P/bin/auto.sh "$T" SAVE=$S "$@" > /dev/null; T=$(cat $P/tok.txt); continue; fi
+  if [ -n "$AUTOPICK" ] && ! echo "$st" | grep -q "Cast View Encamp"; then
+    # (AUTOPICK="Attack,Take,...": the first menu word that starts with one of these, in this order)
+    k=$(python3 -c "
+import re,sys
+st=sys.argv[1]; pref=sys.argv[2].split(',')
+m=re.search(r'menu \[[^|]*\|([^\]]*)\]', st)
+w=m.group(1) if m else ''
+# words: split on two spaces or a capital after a space
+ws=re.findall(r'[A-Z][a-z]*(?: [a-z][a-z]*)*', w)
+for p in pref:
+  for x in ws:
+    if x.lower().startswith(p.lower()): print(x[0]); sys.exit()
+" "$st" "$AUTOPICK")
+    if [ -n "$k" ]; then T="$T/$k"; echo "  (picked /$k)"; TN=4 $P/bin/auto.sh "$T" SAVE=$S "$@" > /dev/null; T=$(cat $P/tok.txt); continue; fi
+  fi
   if ! echo "$st" | grep -q "Cast View Encamp"; then echo "STOP: $st"; break; fi
   if [ -z "$path" ] || [ "$path" = "no way" ]; then echo "AT GOAL or no way ($path)"; break; fi
   m=${path:0:1}
