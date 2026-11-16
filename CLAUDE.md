@@ -1089,6 +1089,17 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   bug Tom reports: fix it, then check every screen / game of that kind
   so it can't recur elsewhere. Never report "tested" without saying what
   the checks compared against what.
+- **Function checks, not reproductions** (Tom, 2026-11-16: "You're
+  function checking not reproducing a long string of events ... it is the
+  randomness that makes the game replayable"): a test asks, when the
+  player does X, does the engine treat it as the game does, and are the
+  results within the bounds the rules and the original's code allow -
+  Hold Person: a save? held on a failure, not on a pass, for how long,
+  what held means. Expected behaviour from the AD&D rules, the
+  original's code and its tables; never chase the same dice rolls or a
+  long identical run (the differ's TPSEED / randlog only to reach a
+  place or to answer one specific question). DOSBox side by side only
+  for what the screen shows.
 - **Standing answer for originals' mistakes** (Tom, 2026-10-23): the game
   keeps the original's behaviour; the fixed (AD&D) version goes behind
   Game Fixes - don't ask, just do it and list each such case in the
