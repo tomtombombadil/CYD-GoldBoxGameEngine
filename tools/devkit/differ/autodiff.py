@@ -15,7 +15,8 @@
 #   autodiff.py batch <dir> [report]         every *.json there; a line each + the totals
 #
 # A scenario: {"name", "game": "poolrad", "base": name, "save": a SAVGAMx.DAT
-# to load (null: the base's own), "slot": "B", "tokens": "...", "env": {...}}.
+# to load (null: the base's own), "slot": "B", "tokens": "...", "env": {...},
+# "begin": true (the original BEGINs after the load - wilderness saves)}.
 # Tokens (the playsim's moves): F L R B steps / turns, A Area, K Look, "."
 # Return / a tap, "/X" the menu word X, "|X" the party menu's line X, "^" "v"
 # a list's Up / Down (the original: Home / End), "!" Select (Return),
@@ -33,7 +34,8 @@ ROOT = '/tmp/claude-0/differ'
 DOSBOX = os.environ.get('DOSBOX_AUTO', ROOT + '/bin/dosbox-auto')
 SIM = os.environ.get('SIM', '/tmp/claude-0/ag7/bin/simh0')
 GAMES = {'poolrad': dict(num=1, sub='POOLRAD', exe='START.EXE', save='SAVGAM%s.DAT', keys={'F': 'up', 'L': 'left', 'R': 'right',
-                                                                                        'B': 'down', 'A': 'a', 'K': 'l'})}
+                                                                                        'B': 'down', 'A': 'a', 'K': 'l',
+                                                                                        '<': 'left', '>': 'right'})}
 ENG_ENV = {'MANUAL': '1', 'NOCAMPFIX': '1', 'NOFIXES': '1', 'NOPORTRAIT': '1'}
 CONF = """[sdl]
 fullscreen=false
@@ -155,7 +157,12 @@ def run(path, keep=False):
     toks = tokens(sc['tokens'])
     # the original
     script = ['wait 2000', 'quiet 1500 30000', 'key enter', 'quiet 1000 20000', 'key enter', 'quiet 1000 20000',
-              'key l', 'quiet 1000 20000', 'key ' + slot.lower(), 'quiet 1500 30000', 'shot start']
+              'key l', 'quiet 1000 20000', 'key ' + slot.lower(), 'quiet 1500 30000']
+    # ("begin": the original's load leaves it at the party menu - BEGIN
+    # Adventuring, as the playsim's SAVE= does by itself; a wilderness save)
+    if sc.get('begin'):
+        script += ['key b', 'quiet 1500 30000']
+    script.append('shot start')
     n = 0
     for t, shot in toks:
         if t[0] == '&':

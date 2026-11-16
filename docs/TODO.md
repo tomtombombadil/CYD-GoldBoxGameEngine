@@ -2376,21 +2376,36 @@ the Project as claude/TODO.md.
       d8 / d4 / d7 rolls); the wyvern fight's first turn order (8:13,
       after a surprise); Dirten's small icon 2-3 pixels at the head
       (fixed v0.176.x, below).
-      2026-11-15 (tried, not done): tools/devkit/differ/mkscen.py can't
-      reach these - it starts a block by AREA / BLOCK and walks its 3D
-      map's event bytes, but the wildernesses (6:25, 8:27) start in their
-      overland mode (game word 4C9E 0: LOAD FILES 4 4 0, the rider over
-      the map; 0xFF: map 25 in 3D) and their places are a table by the
-      overland square (block 25's search entry 0x8177: rows by y 0x94D6,
-      counts 0x94F5, x 0x94DE, cases 0x94FD - the silver dragon's cave
-      "ENTER CAVE / IGNORE CAVE" at square 10,9, case 2; the dragon seen
-      at 10,8 / 11,8 / 9,9 / 11,9), and the cave (6:19) has no map of its
-      own (GEO6 holds 1, 25, 28 - DOSBox: "Unable to load geo in
-      Load3DMap" from mkscen's save). Its 129 / 200 "identical" runs on
-      6:25 / 6:19 mean nothing. Next: a save made by walking there (both
-      games, the old ls.py way - its tools and part 16's saves were lost
-      with the machine), or mkscen taught the overland start (4C9E 0,
-      the overland position words 0xFB / 0xFC) and the table's squares.
+      2026-11-15 / 16 (v0.203.3): the wildernesses walked - saves the
+      playsim makes and both games load ("begin": the original stops at
+      its party menu), walks from OVPATH (the shortest way across 25 /
+      26 / 27, the place squares avoided), the menus after each place
+      worked out by mkwalk.py, each move's encounter die told 1 (CALM -
+      the original met none on those walks; its dice restart from its
+      seed at each load, so far places got bases of their own:
+      walkbase.py). Places run against the original: 25 - the silver
+      dragon's cave (every branch of ENTER / STATE NAME / the dragon's
+      menu), the anhkhegs (8,24), the caravan / guards squares (nothing
+      happens there with this save, in both); 26 - the abandoned camp,
+      the city's north edge (CITY / LEAVE / GRAVEYARD), east edge (NORTH
+      / LEAVE / BOAT / SOUTH), west edge, the rowboat (YES -> the
+      pyramid, ENTER; NO); 27 - the ruined castle (ENTER / LEAVE), the
+      kobold horde (6,14), the boat at 9,29 (TAKE BOAT / STAY). Fixed:
+      the status line kept as the wilderness drew it when a block
+      without a map is entered (the cave: 10,9 where the engine showed
+      the 3D square 15,4); a block's first run entered from the
+      wilderness redraws with the wilderness frame (state 3) - no rope
+      round the 3D view until the new-block handler draws it (the ruined
+      castle). Same in both but for the kept differences (the lit menu
+      word / boxed list line, the seam's position line, a fight's
+      scattered field pieces - the dice) and DOSBox's monster loading at
+      12000 cycles (the text before a fight still up at its shot).
+      Left: the graveyard (4:10) - a save made at another square by
+      TELE0 loads in the original at the entrance 0,4 E (status line
+      still the saved square until redrawn), so mkscen's saves don't
+      fit there: how the original's load picks that square is not
+      known yet (SAVGAM differs only in the position bytes 0x3201-03);
+      the finale (Tyranthraxus); 26's nomad camp (part 15 already).
 - [x] Tom: Dirten's graphics (PoolRad). The original builds a character
       icon by loading head / body with a see-through plane made from
       their colour 0 (ANDed, ovr18 +0x32F), then recolours (START

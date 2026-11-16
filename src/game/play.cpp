@@ -1621,8 +1621,10 @@ bool dk_overland();
 void krynn_moons(pic::Canvas* c = nullptr);
 bool dkk();
 bool krynn_rules();
+bool pos_kept = false;      // (the status line left as it was - Then::NewFirst)
 void draw_position(pic::Canvas& c)
 {
+    if (pos_kept) return;
     krynn_moons(&c);            // (Champions: a day passed - the moons' tiles; its clock routine)
     if (marker_overland() && !(q_overland() && pic_shown)) return;   // (the Dark Queen's: under an event picture the exploring screen)
     if (d->prof->variant.tr && !tr_position) return;
@@ -13818,6 +13820,19 @@ struct Host : ecl::Host {
             return;
         }
         draw_frame(c);
+        if (pool_files() && d->ov_cur) {
+            // (a block's first run entered from the wilderness: the state
+            // is still 3 (DS 0x49F3 - the new-block handler sets 4 after
+            // the first run, ovr4 +0x31F5) and the view mode 1 - the
+            // wilderness frame, main_frame(0), round the 3D view, no rope
+            // round it until the handler's framebox; DOSBox, the ruined
+            // castle 8:16 from 27's 11,8: the knot at 16,16 as ever, cells
+            // 2 / 14 black)
+            c.fill(16, 16, 104, 8, 0);
+            c.fill(16, 112, 104, 8, 0);
+            c.fill(16, 24, 8, 88, 0);
+            c.fill(112, 24, 8, 88, 0);
+        }
         draw_view(c);
         draw_panel(c);
     }
@@ -14435,7 +14450,14 @@ void handle(ecl::Stop r)
             }
         }
         pool_map_edge();
+        // (Pool: the wilderness left for a block without a map - the silver
+        // dragon's cave - keeps the status line as the wilderness drew it,
+        // its X,Y the wilderness square: the handler draws only the frame
+        // box, DS 0x49FA = 1 then and the line would read the 3D square;
+        // DOSBox, 10,9 where the 3D square was 15,4)
+        pos_kept = pool_files() && d->ov_up && !d->ov_cur;
         after_move_redraw();
+        pos_kept = false;
         run_entry(0, Then::NewStep);
         return;
     case Then::NewStep:

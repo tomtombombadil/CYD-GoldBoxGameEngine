@@ -100,6 +100,15 @@ Round 10 (2026-11-08) - the last oracles, behave levels' oracle, the DOSBox diff
     mkscen.py            a block's scenarios from the engine alone: event entries from the map ('M'), a save at
                          each (TELE0 + SAVENOW), tokens step by step from the engine's state ('?')
     runall.sh            base + blocks -> /tmp/claude-0/differ/batch_report.txt
+    mkwalk.py            scenarios along a walk from a base's save (the wilderness: overland moves < > F B),
+                         then every way through the menus after it; CALM=1 no encounters on the walk, BEGIN=1
+                         (the original stops at its party menu after a load). Walks: the playsim's
+                         OVPATH=[a:]x,y (+ OVAVOID=a:x,y;...) - the shortest across PoolRad's three wildernesses
+    walkbase.py          a new base saved by the playsim at a walk's end (the original's dice start again
+                         from its seed at each load - far places from a base near them)
+    where.py             where a run's steps differ (above / on the menu row) + engine | DOSBox pictures
+  A scenario's "begin": true for any save the original loads to its party menu (all PoolRad saves).
+  Known: a save TELE0 made in the graveyard (4:10) loads in the original at its entrance 0,4 E.
   NOT in the repo (GPL, kept in the Project): build_dosbox.sh + autodos.inc (DOSBox 0.74-3 patched: the key
   script, quiet / shot / poke, AUTODOS_MEM, AUTODOS_FRAMES) -> /tmp/claude-0/differ/bin/dosbox-auto.
   Still NOT rebuilt: Curse's oracle_events.txt (needs the Project's ecl_stub_facts.md - Curse's opcodes and

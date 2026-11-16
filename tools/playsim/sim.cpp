@@ -2078,6 +2078,56 @@ int main(int argc, char** argv)
         if (k >= 0 && k < play::pt->count) play::pt->m[k].rec[0xF7] = static_cast<uint8_t>(0x80 | 50);
         printf("  member %d made an NPC\n", k);
     }
+    if (getenv("OVPATH") && play::pool_overland() && play::ov_load()) {
+        // OVPATH=[a:]x,y: the shortest walk on PoolRad's overland (overland::
+        // step - healed or not as now - and the scripts' edges and seams,
+        // poolrad_overland_facts.md 7.1) from where the party is to x,y of
+        // wilderness a (0-2 = areas 25-27; this one when not given), as moves
+        // (F north, B south, < west, > east); OVAVOID=a:x,y;a:x,y... squares
+        // not to cross (other places on the way)
+        int ta = play::ov_area(), tx = 0, ty = 0;
+        const char* o = getenv("OVPATH");
+        if (strchr(o, ':')) sscanf(o, "%d:%d,%d", &ta, &tx, &ty);
+        else sscanf(o, "%d,%d", &tx, &ty);
+        const overland::Facts& of = *play::d->prof->overland;
+        const bool healed = play::vm->get(of.healed) != 0;
+        auto key = [](int a, int x, int y) { return (a * 16 + (x & 15)) * 64 + (y & 63); };
+        static int from[3 * 16 * 64];
+        static bool avoid[3 * 16 * 64];
+        for (int& v : from) v = -1;
+        for (bool& v : avoid) v = false;
+        for (const char* q = getenv("OVAVOID"); q && *q;) {
+            int a, x, y;
+            if (sscanf(q, "%d:%d,%d", &a, &x, &y) == 3) avoid[key(a, x, y)] = true;
+            q = strchr(q, ';');
+            if (q) ++q;
+        }
+        const int sa = play::ov_area(), sx = play::vm->get(0x4BC3) & 0xFF, sy = play::vm->get(0x4BC4) & 0xFF;
+        struct S { int a, x, y; };
+        std::vector<S> q{{sa, sx, sy}};
+        from[key(sa, sx, sy)] = 1 << 30;
+        const char mv[4] = {'F', '>', 'B', '<'};
+        const int goal = key(ta, tx, ty);
+        for (size_t k = 0; k < q.size() && from[goal] < 0; ++k)
+            for (int dir = 0; dir < 4; ++dir) {
+                int a = q[k].a, x = q[k].x, y = q[k].y;
+                if (dir == 0 && y <= 2) continue;
+                if (dir == 3 && x <= 2) { if (a == 0) continue; --a; x = 14; }
+                else if (dir == 1 && x >= 15) { if (a == 2) continue; ++a; x = 3; }
+                else if (overland::step(*play::d->ov, of, a, &x, &y, dir * 2, healed) != overland::Step::Moved) continue;
+                const int kk = key(a, x, y);
+                if (from[kk] >= 0 || (avoid[kk] && kk != goal)) continue;
+                from[kk] = k * 4 + dir;
+                q.push_back({a, x, y});
+            }
+        std::string path;
+        for (int kk = goal; from[kk] >= 0 && from[kk] != 1 << 30;) {
+            path.insert(path.begin(), mv[from[kk] % 4]);
+            const S& p = q[from[kk] / 4];
+            kk = key(p.a, p.x, p.y);
+        }
+        printf("  OVPATH %d:%d,%d -> %d:%d,%d: %s\n", sa, sx, sy, ta, tx, ty, from[goal] < 0 ? "no way" : path.c_str());
+    }
     if (getenv("SAVENOW")) {
         // SAVENOW=slot: saved as it stands, without the camp (a save for the original to load)
         const bool ok = play::save_game(getenv("SAVENOW")[0]);
