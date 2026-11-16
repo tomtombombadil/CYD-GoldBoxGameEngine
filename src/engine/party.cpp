@@ -868,6 +868,17 @@ bool script_value(const uint8_t* r, int index, uint16_t off, uint16_t* out, bool
         *out = static_cast<uint16_t>(r[0x10E] + (r[0x74] == 7 && cur > r[0xE6] ? r[0x116] : 0));
         return true;
     }
+    // (the programs' field table goes on as Secret's - script_value_secret: Dexterity between
+    // Int 0x15 and Con 0x18, Charisma, the other classes' levels. Gateway's Kraken cell reads
+    // 0x17 and 0xCB - "someone good at climbing": as plain memory they were 0 and nobody could
+    // ever get through the grating; in the original the thief does - DOSBox, 2026-11-16)
+    case 0x17:  if (pool) return false; *out = r[0x17]; return true;    // Dex
+    case 0x19:  if (pool) return false; *out = r[0x1B]; return true;    // Cha
+    case 0xCA:  if (pool) return false; *out = r[0x109]; return true;   // cleric level
+    case 0xCB:  if (pool) return false; *out = r[0x10F]; return true;   // thief level
+    case 0xCC:  if (pool) return false; *out = r[0x10B]; return true;   // fighter level
+    case 0xCF:  if (pool) return false; *out = r[0x10C]; return true;   // paladin level
+    case 0xD0:  if (pool) return false; *out = r[0x10D]; return true;   // ranger level
     case 0xD6:  *out = r[0x119]; return true;   // sex
     case 0xD8:  *out = r[0x11B]; return true;   // alignment
     case 0xE4:  *out = r[0x192] & 1; return true;
