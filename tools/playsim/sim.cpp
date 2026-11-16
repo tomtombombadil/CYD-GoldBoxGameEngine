@@ -1642,6 +1642,14 @@ int main(int argc, char** argv)
         q = strchr(q, ',');
         if (q) ++q;
     }
+    if (getenv("MAPFLAGS")) {           // MAPFLAGS=1: each square's flags & 0x7F (the scripts' event number, [C04F])
+        printf("  MAPFLAGS map %dx%d\n", play::d->map.w, play::d->map.h);
+        for (int y = 0; y < play::d->map.h; ++y) {
+            printf("  %2d:", y);
+            for (int x = 0; x < play::d->map.w; ++x) printf(" %2X", geo::flags(play::d->map, x, y) & 0x7F);
+            printf("\n");
+        }
+    }
     if (getenv("TELE")) { int x, y, dd; sscanf(getenv("TELE"), "%d,%d,%d", &x, &y, &dd); play::d->gs.x = x; play::d->gs.y = y; play::d->gs.dir = dd; play::after_move_redraw(); }
     if (getenv("TELE0")) { int x, y, dd; sscanf(getenv("TELE0"), "%d,%d,%d", &x, &y, &dd); play::d->gs.x = x; play::d->gs.y = y; play::d->gs.dir = dd; play::after_move_redraw(); }
     // SETEXP=m:exp,...: member m's experience (the Companion's ready classes)
