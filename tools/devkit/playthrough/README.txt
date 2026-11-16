@@ -7,7 +7,8 @@ folder stay in scratch (test saves to the Project).
   auto.sh <tokens> [env]  the same with AUTOTOK / AUTOFIGHT (NOAF=1: an encounter menu stops it) (texts, Quick fights, "Continue Battle"
                           No, "treasure left" No); the tokens that ran in tok.txt
   go.sh <slot> <tokens> <x,y>  a step at a time to x,y (MAPPATH, locked doors bashed - MAPLOCKED;
-                          AUTONO=1 answers Yes/No with No; MAPAVOID= squares passed by);
+                          AUTONO=1 answers Yes/No with No; MAPAVOID= squares passed by; PV=OVPATH
+                          walks the wilderness instead);
                           after a fight the party fixed on slot J; stops at a choice
   hop.sh <from> <x,y> <to>     go.sh, then saved (HOPTOK= tokens first, e.g. F into the next area)
   tour.sh <a> <b> x,y ... hops in turn, fix.sh after each, alternating the slots
