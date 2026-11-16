@@ -186,6 +186,19 @@ the Project as claude/TODO.md.
       characters one by one).
 
 ## Claude
+- [x] PoolRad play-through to the end (Tom, 2026-11-16; the Project's
+      claude/playthrough_poolrad.md): a new party, the clerk's chain to
+      "CONGRATULATIONS! YOUR QUEST IS OVER!" - no engine bug found. Big
+      fights by Quick were skipped by flags (trolls, Mace, kobold throne,
+      Zhentil dwarf wave, Stojanow towers, the hall guards); three places
+      reached by the playsim's TELE / AREA jumps (pyramid north wing and
+      exit, Valjevo inner castle's upstairs). Open:
+  - [ ] DOSBox: Valjevo laundry "USE THE CLOTHING AS A DISGUISE?" - YES
+        sets the disguise but prints "WELL THEN, GOOD LUCK", NO prints
+        "THEY HELP YOU PUT ON THE CLOTHES" (ECL5 6 0x84DA / 0x8096: the
+        script's AND then IF) - is the original's text the same way round?
+  - [ ] Side quests not played: the lizardmen keep, Bivant (Buccaneers),
+        the silver dragon, Valjevo's NE / NW quadrants.
 - [x] v0.200.5 (Tom, 2026-11-14: "If you run into trouble with a savegame
       ... create a party quickly and save them"; the rest of the party
       menus beside the originals in DOSBox, a character made and added in

@@ -23,6 +23,9 @@ folder stay in scratch (test saves to the Project).
   tour2.sh <a> <b> x,y ...     try.sh square by square
   relevel.sh <slot>       members retrained to the party's target XP (SETEXP + the Trainer)
   morning.sh <slot>       the Sanctuary's rest to hour 0 (PoolRad's City Hall is locked from 14)
-The playsim's play-through helpers: SETMONEY, SETEXP, MEMSET, VMSET, MAPLOCKED, GOODSLOG on the
+  walk.sh <slot> <tokens> <x,y>  go.sh with encounters answered (friendly text -> Wait, else Combat)
+  stage.sh <slot> <x,y> <dir> <to>  walk to x,y, face dir, one more step (an edge / exit), save in <to>
+  macefight.sh / fightdrv.sh  a fight turn by turn on Tom's tactics against a caster (TGT=, spell queues)
+The playsim's play-through helpers: SETMONEY, SETEXP, MEMSET, VMSET, MAPLOCKED, MAPSECRET, MAPFLAGS, #NAME;yes~no~, GOODSLOG on the
 Merchant token, AUTOFIGHT's "Continue Battle" / "treasure left" answers.
 MEMSET's default comes from /tmp/claude-0/play/memset.txt (p.sh); MEMSET= (empty) for none.
