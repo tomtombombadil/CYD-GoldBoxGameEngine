@@ -15,6 +15,8 @@ folder stay in scratch (test saves to the Project).
                           spells, the Sanctuary's rest
   buy.sh "m:i,i m:i"      Merchant tokens (goods index as GOODSLOG prints them)
   bk.sh save|load <slot> <name>  a slot's files kept / put back
+  look.sh <slot> <tokens> <n>  Look n times where the party stands (Yes to "take it?"; the books)
   morning.sh <slot>       the Sanctuary's rest to hour 0 (PoolRad's City Hall is locked from 14)
 The playsim's play-through helpers: SETMONEY, SETEXP, MEMSET, VMSET, MAPLOCKED, GOODSLOG on the
 Merchant token, AUTOFIGHT's "Continue Battle" / "treasure left" answers.
+MEMSET's default comes from /tmp/claude-0/play/memset.txt (p.sh); MEMSET= (empty) for none.
