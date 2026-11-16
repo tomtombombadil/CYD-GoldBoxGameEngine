@@ -29,3 +29,15 @@ folder stay in scratch (test saves to the Project).
 The playsim's play-through helpers: SETMONEY, SETEXP, MEMSET, VMSET, MAPLOCKED, MAPSECRET, MAPFLAGS, #NAME;yes~no~, GOODSLOG on the
 Merchant token, AUTOFIGHT's "Continue Battle" / "treasure left" answers.
 MEMSET's default comes from /tmp/claude-0/play/memset.txt (p.sh); MEMSET= (empty) for none.
+
+curse/ (2026-11-16): the same kit for the Curse play-through - play folder /tmp/claude-0/cplay (card/CURSE the
+game's copy, card/"Pool of Radiance" the PoolRad folder the party is added from, memset.txt the casters' spells),
+GAME=2 (GAMEN=), the last snapshot by number (sort -V). New there:
+  cbuy.sh "m:p.k,..."     Curse shop tokens: member m buys page p (1-3) line k (0-based)
+  st.sh <tokens>          a fight a step at a time (FSLOT= the save): the field rows with fighters, every fighter's
+                          place / team / HP ("FIG"), whose turn, the last pages
+  endfight.sh <slot> <f>  a fight's remaining turns passed (Guard, else Quick; Continue Battle No), tokens in f
+The playsim's fight tokens: "}d" a direction key (0 north ... 7 north-west: Move's steps, a step into a foe an
+attack), "{" Select (the move ends), "[" the field and fighters now (FIELDNOW / FIG lines), "#@k;" aims at
+fighter k (the FIG number). ITEMDUMP=1: each member's AC, HP, THAC0, experience, coins and items (* readied).
+POOLDIR applies from PARTYMENU too (Add Character -> Pool).

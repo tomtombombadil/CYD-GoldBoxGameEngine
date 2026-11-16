@@ -1074,6 +1074,7 @@ int main(int argc, char** argv)
         fresh_gs = play::d->gs;
         for (unsigned a = 0x4B00; a < 0x10000; ++a) fresh_words[a - 0x4B00] = play::vm->get((uint16_t)a);
     }
+    if (getenv("POOLDIR")) play::set_import_dir(getenv("POOLDIR"));   // (the earlier game's folder for Add Character, as the board's library gives)
     if (!getenv("PARTYMENU")) {      // (PARTYMENU=1: no load - the moves start at the party menu)
         if (getenv("LOADFROM") && getenv("POOLDIR")) play::set_import_dir(getenv("POOLDIR"));
         pm_tap_line('L');
@@ -1877,7 +1878,8 @@ int main(int argc, char** argv)
                 const int nl = f.rec[0] < 15 ? f.rec[0] : 15;
                 std::string nm;
                 for (int q = 0; q < nl; ++q) nm += static_cast<char>(f.rec[1 + q]);
-                if (nm.compare(0, want.size(), want) == 0) { found = true; break; }
+                // ("#@k;": fighter k itself - the field's FIG numbers)
+                if (want[0] == '@' ? play::fg->cand[play::fg->ci] == atoi(want.c_str() + 1) : nm.compare(0, want.size(), want) == 0) { found = true; break; }
                 if (!tap_word('N')) break;
                 settle();
             }
@@ -1907,6 +1909,42 @@ int main(int argc, char** argv)
             }
             shot("cheat");
             if (getenv("CAMPRUN2")) run_ops(getenv("CAMPRUN2"));
+            continue;
+        }
+        if (*m == '}' && m[1] >= '0' && m[1] <= '7') {   // "}d": a fight's direction key (0 north ... 7 north-west)
+            const bool ok = play::fight_dir(*++m - '0', C);
+            settle();
+            printf("  fight dir %c: %s\n", *m, ok ? "ok" : "not now");
+            continue;
+        }
+        if (*m == '{') {                // "{": a fight's Select (the move ends / Target)
+            const bool ok = play::fight_select(C);
+            settle();
+            printf("  fight select: %s\n", ok ? "ok" : "not now");
+            continue;
+        }
+        if (*m == '[') {                // "[": the fight's field and fighters now (party 0-5, monsters a-z)
+            if (play::fg) {
+                const auto& b = play::fg->b;
+                printf("  FIELDNOW (view %d,%d)\n", b.vx, b.vy);
+                for (int y = 0; y < combat::kH; ++y) {
+                    printf("  %2d ", y);
+                    for (int x = 0; x < combat::kW; ++x) {
+                        const int w = b.who[y][x];
+                        const uint8_t* g = combat::tile(b, *b.tables, x, y);
+                        char ch = !b.ground[y][x] ? ' ' : (!g || g[0] == 0xFF) ? '#' : '.';
+                        if (w) ch = w - 1 < b.party_size ? static_cast<char>('0' + w - 1) : static_cast<char>('a' + (w - 1 - b.party_size) % 26);
+                        putchar(ch);
+                    }
+                    printf("\n");
+                }
+                for (int i = 0; i < b.n; ++i) {
+                    std::string nm;
+                    for (int q = 0; q < (b.f[i].rec[0] < 15 ? b.f[i].rec[0] : 15); ++q) nm += static_cast<char>(b.f[i].rec[1 + q]);
+                    printf("  FIG %d %c %s at %d,%d team %d hp %d\n", i, i < b.party_size ? '0' + i : 'a' + (i - b.party_size) % 26,
+                           nm.c_str(), b.f[i].x, b.f[i].y, (int)b.f[i].team(), b.f[i].hp());
+                }
+            }
             continue;
         }
         if (*m == '?') {                // "?": the screen, the menu line, what the script waits for
@@ -2182,6 +2220,20 @@ int main(int argc, char** argv)
             printf("  member %d %s mem:", i, nm);
             for (int k = 0; k < 84; ++k) if (play::pt->m[i].rec[magic::kListAt + k]) printf(" %02X@%d", play::pt->m[i].rec[magic::kListAt + k], k);
             printf("\n");
+        }
+    if (getenv("ITEMDUMP") && play::names)   // ITEMDUMP=1: each member's AC, HP, coins and items (* = readied)
+        for (int i = 0; i < play::pt->count; ++i) {
+            const party::Character& ch = play::pt->m[i];
+            char nm[32];
+            ch.name(nm, sizeof nm);
+            printf("  member %d %s AC %d HP %d/%d THAC0 %d exp %u enc %d coins", i, nm, ch.ac(), ch.hp(), ch.hp_max(), ch.thac0(), (unsigned)ch.exp(), ch.encumbrance());
+            for (int c = 0; c < 7; ++c) printf(" %d", ch.money(c));
+            printf("\n");
+            for (int k = 0; k < ch.n_items; ++k) {
+                char in[48];
+                play::names->name(items::Item{ch.items[k]}, in, sizeof in);
+                printf("    %c %s\n", ch.items[k][0x34] ? '*' : ' ', in);
+            }
         }
     if (getenv("RECSET"))               // RECSET=m:off=v,...: party member m's record bytes (hex) before SAVESLOT
         for (const char* q = getenv("RECSET"); q && *q;) {

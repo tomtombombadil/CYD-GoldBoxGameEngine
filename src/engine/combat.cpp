@@ -7620,7 +7620,9 @@ int choose_weapon(const Battle& b, int i)
                 const int t = f.items[j][0x2E];
                 if (((ti.flags & 0x01) && t == b.arrow) || ((ti.flags & 0x80) && t == b.quarrel)) loaded = true;
             }
-            int rating = ai_rating(b, i, f.items[k], hands);
+            // (its turn target only while it is a foe up in sight: none up at
+            // all - the last foes dying - no launcher readied)
+            int rating = seen_enemy(b, i, f.target) ? ai_rating(b, i, f.items[k], hands) : 0;
             // (its target one it can't hurt - Darkness's iron golem, a foe
             // needing a better plus, out of sight - another foe in sight it
             // can: it shoots that one, think below)
