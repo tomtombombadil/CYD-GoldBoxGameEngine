@@ -36,7 +36,10 @@ SIM = os.environ.get('SIM', '/tmp/claude-0/ag7/bin/simh0')
 GAMES = {'poolrad': dict(num=1, sub='POOLRAD', exe='START.EXE', save='SAVGAM%s.DAT', keys={'F': 'up', 'L': 'left', 'R': 'right',
                                                                                         'B': 'down', 'A': 'a', 'K': 'l',
                                                                                         '<': 'left', '>': 'right'})}
-ENG_ENV = {'MANUAL': '1', 'NOCAMPFIX': '1', 'NOFIXES': '1', 'NOPORTRAIT': '1'}
+# (TPSEED / TPSKIP: the engine's dice from the original's own generator at
+# the DOS copy's seed 0 - its two draws before a load's first screen
+# skipped; fights then go roll for roll)
+ENG_ENV = {'MANUAL': '1', 'NOCAMPFIX': '1', 'NOFIXES': '1', 'NOPORTRAIT': '1', 'TPSEED': '0', 'TPSKIP': '2'}
 CONF = """[sdl]
 fullscreen=false
 output=surface

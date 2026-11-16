@@ -757,6 +757,15 @@ static void shop_run(const char* ops)
     }
 }
 
+// (TPSEED: the generator's seed after each move, as the differ's .mem files have it)
+static const char* tp_text()
+{
+    static char b[24];
+    b[0] = 0;
+    if (create::g_tp_seed) snprintf(b, sizeof b, " | tp %08X", *create::g_tp_seed);
+    return b;
+}
+
 int main(int argc, char** argv)
 {
     setvbuf(stdout, nullptr, _IOLBF, 0);       // (lines out at once: a hang or a crash keeps them)
@@ -816,6 +825,15 @@ int main(int argc, char** argv)
     if (getenv("CAMPWORDS")) { char cw[48]; play::camp_words(cw, sizeof cw); printf("  camp words [%s] -> [%s]\n", play::d->w_camp_menu, cw); return 0; }    // CAMPWORDS=1: the camp menu's words, read from the program
     // VMSEED=n: the scripts' random numbers from seed n (the board seeds them at every Play)
     if (getenv("VMSEED") && play::vm) play::vm->seed(static_cast<uint32_t>(strtoul(getenv("VMSEED"), nullptr, 10)));
+    // TPSEED=n: every die from the original's Turbo Pascal generator, seed n
+    // (the differ's DOS copy: 0 - fixseed.py), TPSKIP=k draws first (calls
+    // the engine doesn't make); each "now" line then ends with the seed
+    static uint32_t tp_seed = 0;
+    if (getenv("TPSEED")) {
+        tp_seed = static_cast<uint32_t>(strtoul(getenv("TPSEED"), nullptr, 0));
+        create::g_tp_seed = &tp_seed;
+        for (int k = getenv("TPSKIP") ? atoi(getenv("TPSKIP")) : 0; k > 0; --k) create::tp_random(1);
+    }
     // NOGALLERY=1: the icon editor opens as the original's (the gallery comfort off)
     if (getenv("NOGALLERY")) { play::Options o = play::opts; o.gallery = false; play::set_options(o); }
     // (NOFIXES also as the game's own setting: Play's start sets the rules' switch from it)
@@ -1835,7 +1853,7 @@ int main(int argc, char** argv)
                 for (int i = 0; i < b.n; ++i) printf("  at %d,%d fighter %d facing %d\n", b.f[i].x, b.f[i].y, i, b.f[i].facing);
             }
             char l1[48], l2[48]; play::describe(l1, l2, 48);
-            printf("   now %d,%d %s | %s | %s | sel %d\n", play::pos_x(), play::pos_y(), geo::dir_name(play::dir()), l1, l2, play::pt ? play::pt->selected : -1);
+            printf("   now %d,%d %s | %s | %s | sel %d%s\n", play::pos_x(), play::pos_y(), geo::dir_name(play::dir()), l1, l2, play::pt ? play::pt->selected : -1, tp_text());
             continue;
         }
         play::Act a = play::Act::Forward;
@@ -1919,7 +1937,7 @@ int main(int argc, char** argv)
         }
 #endif
         char l1[48], l2[48]; play::describe(l1, l2, 48);
-        printf("   now %d,%d %s | %s | %s | sel %d\n", play::pos_x(), play::pos_y(), geo::dir_name(play::dir()), l1, l2, play::pt ? play::pt->selected : -1);
+        printf("   now %d,%d %s | %s | %s | sel %d%s\n", play::pos_x(), play::pos_y(), geo::dir_name(play::dir()), l1, l2, play::pt ? play::pt->selected : -1, tp_text());
         if (play::q_overland())      // (the Dark Queen's overland: its square, the whole map's, the picture)
             printf("   overland %d,%d (map %d,%d) picture %d clock %d %d %d %d %d\n", play::vm->get(0x25), play::vm->get(0x26),
                    play::vm->get(0x111), play::vm->get(0x112), play::vm->get(0x3E), play::vm->get(0x4BC6),

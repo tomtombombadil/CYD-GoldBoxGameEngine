@@ -23,6 +23,14 @@ namespace create {
 extern int (*g_die_hook)(int n);
 #endif
 
+// The originals' own generator (Turbo Pascal's Random: seed = seed x
+// 0x08088405 + 1, Random(n) = (seed >> 16) mod n - PoolRad START.EXE 0xC18F):
+// when set, every die of every Dice and the scripts' RANDOM draw from this
+// one seed, in turn, as the original's single generator does - the DOSBox
+// differ's fights then match roll for roll (the playsim's TPSEED)
+extern uint32_t* g_tp_seed;
+int tp_random(int n);
+
 class Dice {
 public:
     explicit Dice(uint32_t seed = 0x2545F491u) : s_(seed ? seed : 1) {}

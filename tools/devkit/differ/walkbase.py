@@ -18,7 +18,7 @@ shutil.rmtree(n, ignore_errors=True)
 shutil.copytree(b, n)
 w = n + '/eng'
 os.makedirs(w + '/out', exist_ok=True); os.makedirs(w + '/_CYD', exist_ok=True)
-env = dict(os.environ, GAME='1', MANUAL='1', NOCAMPFIX='1', NOFIXES='1', NOPORTRAIT='1', SAVE=slot, SAVENOW=nslot)
+env = dict(os.environ, GAME='1', MANUAL='1', NOCAMPFIX='1', NOFIXES='1', NOPORTRAIT='1', TPSEED='0', TPSKIP='2', SAVE=slot, SAVENOW=nslot)
 o = subprocess.run([SIM, w + '/' + SUB, walk + '?'], env=env, cwd=w, capture_output=True, text=True, timeout=600).stdout
 print('\n'.join(l for l in o.splitlines() if 'saved now' in l or l.startswith('  ? screen') or l.startswith('   now'))[-600:])
 shutil.rmtree(w + '/out'); shutil.rmtree(w + '/_CYD')

@@ -2977,6 +2977,12 @@ the originals is a bug. Engine comforts with a `features.h` switch are
 marked (switch); since v0.72.0 the player can also turn each one off in
 the game's Settings (As Original: all of them).
 
+- **PoolRad's loads forget the block's state** (Game Fixes, v0.203.5):
+  Begin after a load clears the saved block's own words 0x4C00-0x4C1F
+  unless the program was already in that block (0 as it starts: Phlan),
+  as entering a new block does - DOSBox. A save's one-time events then
+  happen again, and the graveyard (4:10) puts every load at its entrance
+  0,4 E. Kept so; with Game Fixes the saved words stay.
 - **Paladins' casting level in Darkness and Treasures** (Game Fixes,
   v0.201.0): their caster-level routine (GAME.OVR 0x36C2E / 0x40CC7)
   takes max(level, former level) a class and returns 6 for one with no

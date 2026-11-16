@@ -877,6 +877,16 @@ void Vm::party_size()
 // 0 .. n - 1 (n > 0): every random number the scripts use
 uint32_t Vm::rnd(uint32_t n)
 {
+    if (create::g_tp_seed) {
+        const int r = create::tp_random(static_cast<int>(n));
+#ifdef CYD_TEST_HOOKS
+        if (create::g_die_hook && n > 0) {
+            const int v = create::g_die_hook(static_cast<int>(n));
+            if (v >= 0) return static_cast<uint32_t>(v) < n ? static_cast<uint32_t>(v) : n - 1;
+        }
+#endif
+        return static_cast<uint32_t>(r);
+    }
     rng_ ^= rng_ << 13;
     rng_ ^= rng_ >> 17;
     rng_ ^= rng_ << 5;

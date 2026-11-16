@@ -287,17 +287,26 @@ uint32_t Dice::next()
 int (*g_die_hook)(int n) = nullptr;
 #endif
 
+uint32_t* g_tp_seed = nullptr;
+
+int tp_random(int n)
+{
+    *g_tp_seed = *g_tp_seed * 0x08088405u + 1u;
+    return n > 0 ? static_cast<int>((*g_tp_seed >> 16) % static_cast<uint32_t>(n)) : 0;
+}
+
 int Dice::random(int n)
 {
 #ifdef CYD_TEST_HOOKS
     if (g_die_hook && n > 0) {
         const int v = g_die_hook(n);
         if (v >= 0) {
-            next();                     // (the sequence moves on as usual)
+            if (g_tp_seed) tp_random(n); else next();     // (the sequence moves on as usual)
             return v < n ? v : n - 1;
         }
     }
 #endif
+    if (g_tp_seed) return tp_random(n);
     return n > 0 ? static_cast<int>(next() % static_cast<uint32_t>(n)) : 0;
 }
 

@@ -14665,9 +14665,10 @@ void begin_adventuring()
     // city's block 14 with them set loads with them 0, its 0x4C20 kept; the
     // graveyard's (4:10) first run then finds 0x4C00 = 0 and puts the
     // party at its entrance 0,4 E; Phlan's block 0 keeps them - its city
-    // hall's 0x4C13)
+    // hall's 0x4C13). The original's mistake - a save's block state lost
+    // on loading it - so Game Fixes keeps them (SPEC 12)
     bool keep_block = resume;
-    if (resume && pool_files() && gs.script != d->last_block) keep_block = false;
+    if (resume && pool_files() && gs.script != d->last_block && !rules::fixes()) keep_block = false;
     screen = Screen::Game;
     if (!host->load_script(gs.script, ecl::code_of(gs), &gs.code_len) || !vm->init_script(keep_block)) {
         snprintf(msg, sizeof msg, "Script %d of ECL%d.DAX didn't load.", gs.script, gs.game_area);

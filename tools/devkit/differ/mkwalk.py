@@ -8,6 +8,7 @@
 # first word), lists 'v!', typed '=FRIEND;' / numbers '=1;', the treasure /
 # shop screens '/E'; a scenario ends at a fight, back exploring, or after
 # MAXTOK tokens past the walk.
+# FIGHT=1: fights played out (each fighter Quick, the pages answered).
 # STEPWISE=1: the walk crosses other events (texts answered on the way).
 # Usage: mkwalk.py <out dir> <base> <slot> <walk tokens> [name]
 # Env: SIM (default /tmp/claude-0/ag7/bin/simh0), BEGIN=1 (the original
@@ -21,7 +22,8 @@ import json, os, re, shutil, subprocess, sys
 ROOT = '/tmp/claude-0/differ'
 SIM = os.environ.get('SIM', '/tmp/claude-0/ag7/bin/simh0')
 SUB = 'POOLRAD'
-ENV = {'GAME': '1', 'MANUAL': '1', 'NOCAMPFIX': '1', 'NOFIXES': '1', 'NOPORTRAIT': '1'}
+ENV = {'GAME': '1', 'MANUAL': '1', 'NOCAMPFIX': '1', 'NOFIXES': '1', 'NOPORTRAIT': '1', 'TPSEED': '0', 'TPSKIP': '2'}
+FIGHT = os.environ.get('FIGHT') == '1'
 BRANCH, MAXTOK, MAXSC = int(os.environ.get('BRANCH', '2')), int(os.environ.get('MAXTOK', '14')), int(os.environ.get('MAXSC', '60'))
 out, base, slot, walk = sys.argv[1:5]
 if os.environ.get('CALM') == '1':
@@ -59,12 +61,16 @@ if os.environ.get('STEPWISE') == '1':
     while i < len(walk):
         j = walk.index('$', i) + 1 if walk.startswith('~', i) else i + 1
         toks += walk[i:j]; i = j
-        for _ in range(6):
+        for _ in range(400 if FIGHT else 6):
             st = state(toks)
             if st is None or st[2] == 0:
                 break
             if st[2] == 1 or (st[2] == 2 and len(st[1]) == 1):
                 toks += '.'
+            elif FIGHT and st[0] == 24:
+                toks += '/Q' if 'Quick' in st[1] else '.'
+            elif FIGHT and st[2] == 2 and 'Combat' in st[1]:
+                toks += '/C'
             else:
                 i = len(walk)
                 break
@@ -78,6 +84,11 @@ while todo and len(done) < MAXSC:
         if st is None:
             break
         scr, words, wait = st
+        if scr == 24 and FIGHT:
+            # (a fight played out: every fighter Quick - the engine's dice the
+            # original's own, TPSEED - its pages answered)
+            toks += '/Q' if 'Quick' in words else '.'
+            continue
         if scr in (1, 24) or (scr == 0 and wait == 0 and words[-5:] == EXPLORE and toks != walk):
             break
         if wait == 1:
