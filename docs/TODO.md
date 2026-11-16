@@ -6,6 +6,15 @@ to the bottom with their version, then drop off after a while. Synced to
 the Project as claude/TODO.md.
 
 ## Tom
+- [ ] **Buck Rogers games? (Tom, 2026-11-16: Countdown to Doomsday, Matrix
+      Cubed - same engine, XXVc rules, no GOG / Steam, only 90s backups)**:
+      Claude's assessment sent. The plan, if Tom goes ahead: after the Krynn
+      games. First a file survey of his copies (zips in the Project, plus
+      manual / log book scans if he has them). New work: the XXVc rules layer
+      (races, careers, percentile skills, tech in place of spells), shared by
+      both games, and Countdown's space travel / ship combat. Library art:
+      the scan makes the picture from the game's own title screen; no art of
+      ours, no logos (Buck Rogers is a trademark). Tom to decide and upload.
 - [x] **Pools of Darkness: a NEW game hung after Rolf's tour** (found by the
       PortMaster port's new-game test, 2026-11-16; v0.203.7): the party
       stood outside the 3D view - no map loaded, a black view, no exploring

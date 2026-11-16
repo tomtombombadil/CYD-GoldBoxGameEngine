@@ -1329,6 +1329,42 @@ int main(int argc, char** argv)
                 const uint32_t v = static_cast<uint32_t>(strtoul(getenv("SETXP"), nullptr, 0));
                 for (int b = 0; b < 4; ++b) play::pt->m[i].rec[0x127 + b] = static_cast<uint8_t>(v >> (8 * b));
             }
+        // VMSET=addr=value,...: script words set (hex address, decimal value) after the load - a
+        // play-through's cheat past a fight it can't win by Quick (the place's flags, counters)
+        for (const char* q = getenv("VMSET"); q && *q;) {
+            unsigned a, v;
+            if (sscanf(q, "%x=%u", &a, &v) == 2) play::vm->set((uint16_t)a, (uint16_t)v);
+            q = strchr(q, ',');
+            if (q) ++q;
+        }
+        // MEMSET=m:id,id,...;m:...: member m's memorized spells replaced by these (hex ids) - a
+        // play-through's stand-in for picking them again after every fight (the camp's Memorize
+        // was played through by hand)
+        for (const char* q = getenv("MEMSET"); q && *q;) {
+            int m = atoi(q);
+            const char* c = strchr(q, ':');
+            if (!c || m < 0 || m >= play::pt->count) break;
+            uint8_t* r = play::pt->m[m].rec;
+            for (int k = 0; k < 84; ++k) r[magic::kListAt + k] = 0;
+            int k = 0;
+            for (++c; *c && *c != ';'; ) {
+                char* e;
+                const long v = strtol(c, &e, 16);
+                if (e == c) break;
+                if (k < 84) r[magic::kListAt + k++] = static_cast<uint8_t>(v);
+                c = *e == ',' ? e + 1 : e;
+            }
+            q = *c == ';' ? c + 1 : c;
+        }
+        if (getenv("SETMONEY")) {
+            // SETMONEY=coin:n: every member's coins of that kind n (0 copper ... 3 gold, 4 platinum; a play-through's cheat)
+            int coin = 3, v = 0;
+            sscanf(getenv("SETMONEY"), "%d:%d", &coin, &v);
+            for (int i = 0; i < play::pt->count && coin >= 0 && coin < 7; ++i) {
+                play::pt->m[i].rec[0xFB + coin * 2] = static_cast<uint8_t>(v);
+                play::pt->m[i].rec[0xFC + coin * 2] = static_cast<uint8_t>(v >> 8);
+            }
+        }
         if (getenv("KNIGHT")) {
             // KNIGHT=n: a training hall's party menu (0x7EA8 set), character n,
             // the Krynn games' Knight Change; KNIGHTYES=1 then takes Change
@@ -1757,8 +1793,9 @@ int main(int argc, char** argv)
         const int scr = (int)play::screen;
         const char* t = nullptr;
         if (scr == 1) { auto_left = 0; return false; }     // (the party menu: all dead)
-        if (scr == 24) t = has('Q') ? "/Q" : ".";
+        if (scr == 24) t = has('Q') ? "/Q" : has('Y') && has('N') && getenv("AUTOFIGHT") ? "/N" : ".";   // ("Continue Battle": No)
         else if (scr == 5 || scr == 16 || scr == 25) t = has('E') ? "/E" : ".";
+        else if (scr == 11 && getenv("AUTOFIGHT") && has('Y') && has('N')) t = "/N";     // ("There is still treasure left ...": No)
         else if (w == ecl::Wait::Print || w == ecl::Wait::Key || w == ecl::Wait::Pause) t = ".";
         else if (w == ecl::Wait::Menu && play::menu.count <= 1) t = ".";
         else if (w == ecl::Wait::Menu && getenv("AUTOFIGHT") && has('C') && has('F')) t = "/C";
@@ -1816,6 +1853,13 @@ int main(int argc, char** argv)
             settle(0, 3000);
             printf("  cheat %c: %s, screen %d menu [%s%s], %d goods\n", *m, ok ? "open" : "not ready", (int)play::screen,
                    play::menu.prompt, play::menu.s, play::ground ? play::goods_count() : -1);
+            for (int i = 0; getenv("GOODSLOG") && play::ground && i < play::goods_count(); ++i) {     // (GOODSLOG=1: each good)
+                const uint8_t* it = play::goods(i);
+                char nm[48];
+                play::names->name(items::Item{it}, nm, sizeof nm);
+                printf("  good %2d: %-30s type %3d plus %d price %d\n", i, nm, it[0x2E], (int8_t)it[0x35],
+                       rules::price(it, play::vm->get(0x7F6D) & 0xFF));
+            }
             shot("cheat");
             if (getenv("CAMPRUN2")) run_ops(getenv("CAMPRUN2"));
             continue;
@@ -2085,7 +2129,7 @@ int main(int argc, char** argv)
             char nm[32];
             play::pt->m[i].name(nm, sizeof nm);
             printf("  member %d %s mem:", i, nm);
-            for (int k = 0; k < 84 && play::pt->m[i].rec[magic::kListAt + k]; ++k) printf(" %02X", play::pt->m[i].rec[magic::kListAt + k]);
+            for (int k = 0; k < 84; ++k) if (play::pt->m[i].rec[magic::kListAt + k]) printf(" %02X@%d", play::pt->m[i].rec[magic::kListAt + k], k);
             printf("\n");
         }
     if (getenv("RECSET"))               // RECSET=m:off=v,...: party member m's record bytes (hex) before SAVESLOT
@@ -2216,7 +2260,9 @@ int main(int argc, char** argv)
             for (int dir = 0; dir < 8; dir += 2) {
                 int x = q[k] % 16, y = q[k] / 16;
                 const int ox = x, oy = y;
-                if (geo::passage(mp, x, y, dir) != 1 || !geo::step(mp, x, y, dir)) continue;
+                // (MAPLOCKED=1: locked doors passable too - the party bashes / picks them)
+                const int pg = geo::passage(mp, x, y, dir);
+                if ((pg != 1 && !(pg == 2 && getenv("MAPLOCKED"))) || !geo::step(mp, x, y, dir)) continue;
                 if (abs(x - ox) + abs(y - oy) != 1) continue;       // (no wrapping: the edges are the scripts')
                 const int kk = y * 16 + x;
                 if (from3[kk] >= 0 || (avoid3[kk] && kk != goal)) continue;
