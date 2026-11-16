@@ -19,6 +19,7 @@ for i in $(seq 1 80); do
   fi
   fights=$nf
   if echo "$st" | grep -q "Locked."; then T="$T${DOORTOK:-/B}"; echo "  (locked: ${DOORTOK:-/B})"; TN=4 $P/bin/auto.sh "$T" SAVE=$S "$@" > /dev/null; T=$(cat $P/tok.txt); continue; fi
+  if [ -n "$AUTONO" ] && echo "$st" | grep -q "menu \[|Yes No\]"; then T="$T/N"; echo "  (answered No)"; TN=4 $P/bin/auto.sh "$T" SAVE=$S "$@" > /dev/null; T=$(cat $P/tok.txt); continue; fi
   if ! echo "$st" | grep -q "Area Cast View"; then echo "STOP: $st"; break; fi
   if [ -z "$path" ] || [ "$path" = "no way" ]; then echo "AT GOAL or no way ($path)"; break; fi
   m=${path:0:1}

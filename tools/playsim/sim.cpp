@@ -1798,7 +1798,7 @@ int main(int argc, char** argv)
         else if (scr == 11 && getenv("AUTOFIGHT") && has('Y') && has('N')) t = "/N";     // ("There is still treasure left ...": No)
         else if (w == ecl::Wait::Print || w == ecl::Wait::Key || w == ecl::Wait::Pause) t = ".";
         else if (w == ecl::Wait::Menu && play::menu.count <= 1) t = ".";
-        else if (w == ecl::Wait::Menu && getenv("AUTOFIGHT") && has('C') && has('F')) t = "/C";
+        else if (w == ecl::Wait::Menu && getenv("AUTOFIGHT") && atoi(getenv("AUTOFIGHT")) != 2 && has('C') && has('F')) t = "/C";   // (AUTOFIGHT=2: not at an encounter menu)
         else if (w == ecl::Wait::Combat || w == ecl::Wait::Treasure) t = ".";
         if (!t) { auto_left = 0; return false; }
         const size_t off = static_cast<size_t>(at - mv_buf.c_str());

@@ -4,9 +4,10 @@ tools/playsim/sim.cpp) on a play folder /tmp/claude-0/play/poolrad (the game's f
 POOLRAD/, the saves in it; _CYD/QUICK.TXT the casters' Quick Actions). Saves, screenshots and the
 folder stay in scratch (test saves to the Project).
   p.sh <tokens> [env]     a run (PARTYMENU=1 or SAVE=x), state lines, the last snapshot to last.png
-  auto.sh <tokens> [env]  the same with AUTOTOK / AUTOFIGHT (texts, Quick fights, "Continue Battle"
+  auto.sh <tokens> [env]  the same with AUTOTOK / AUTOFIGHT (NOAF=1: an encounter menu stops it) (texts, Quick fights, "Continue Battle"
                           No, "treasure left" No); the tokens that ran in tok.txt
-  go.sh <slot> <tokens> <x,y>  a step at a time to x,y (MAPPATH, locked doors bashed - MAPLOCKED);
+  go.sh <slot> <tokens> <x,y>  a step at a time to x,y (MAPPATH, locked doors bashed - MAPLOCKED;
+                          AUTONO=1 answers Yes/No with No; MAPAVOID= squares passed by);
                           after a fight the party fixed on slot J; stops at a choice
   hop.sh <from> <x,y> <to>     go.sh, then saved (HOPTOK= tokens first, e.g. F into the next area)
   tour.sh <a> <b> x,y ... hops in turn, fix.sh after each, alternating the slots
