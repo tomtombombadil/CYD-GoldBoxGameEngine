@@ -1104,7 +1104,10 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   engine as a player would, PoolRad first - a new party rolled up, then
   adventuring to the end, a walkthrough guide from the web for where to
   go, cheats (the Cheats tab, saves, healing) rather than failing over and
-  over. The check: every triggered event fires at the right time and
+  over. No grinding (Tom, 2026-11-16): one or two random encounters to
+  see they work, then the experience granted (a save edited on the PC)
+  to the levels the guides give for the next area - never go in too low.
+  The check: every triggered event fires at the right time and
   place, every chain of events that leads to the ending works, and a
   player can play and enjoy the game to its completion. Findings and
   progress in the Project's claude/playtest_<game>.md and docs/TODO.md.
