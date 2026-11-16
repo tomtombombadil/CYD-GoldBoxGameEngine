@@ -1,34 +1,43 @@
 #!/bin/bash
 # macefight.sh: the altar's fight played turn by turn with Tom's tactics - the archer (KESTREL) shoots MACE,
-# MIRA Magic Missiles him, SELENE / BRAN cast Silence 15' on him (once each); the rest Quick. A caster
-# who can't see MACE yet does Done/Guard; the archer then shoots the nearest. Tokens in fight.tok.
+# SELENE / BRAN Silence 15' on him, the mages' area spells (Sleep, Fireball) on the orcs, then Magic Missiles
+# on MACE; the rest Quick. Per caster a spell queue (list positions as the fight's "Spells in Memory":
+# sorted by level, one line a copy). Aims: Silence / Magic Missile at MACE, others the first offered.
+# Tokens in fight.tok.
 P=/tmp/claude-0/play; S=$(cat $P/altar.slot); T=${START_T:-$(cat $P/altar.tok)}
-last=""
-for i in $(seq 1 ${STEPS:-60}); do
+# queues: "position:kind ..." (kind m = aim at MACE, a = the first offered)
+declare -A Q=( [MIRA]="${QMIRA:-2:a 6:a 2:a 0:m 0:m}" [SELENE]="${QSELENE:-9:m 13:a 6:a 6:a 4:m}" [BRAN]="${QBRAN:-5:m}" )
+declare -A AIM
+for i in $(seq 1 ${STEPS:-80}); do
   TAILN=0 $P/bin/p.sh "$T" SAVE=$S MAPLOCKED=1 "$@" > /dev/null
   who=$(grep "^  ? turn" $P/run.log | tail -1 | awk '{print $3}')
   st=$(grep -E "^  \? screen" $P/run.log | tail -1)
-  if ! echo "$st" | grep -q "screen 2[0-9]\|screen 19"; then echo "out of the fight: ${st:0:90}"; break; fi
+  if ! echo "$st" | grep -qE "screen (1|19|2[0-9]) "; then echo "out of the fight: ${st:0:90}"; break; fi
   if echo "$st" | grep -q "Choose Spell"; then T="$T/E"; continue; fi
-  if echo "$st" | grep -q "Aim:"; then echo "aim ($who)"; T="$T#MACE;/T~/T~"; continue; fi
+  if echo "$st" | grep -q "Aim:"; then
+    if [ "${AIM[$who]}" = m ]; then T="$T#MACE;/T~/T~"; else T="$T/T"; fi
+    echo "aim ($who ${AIM[$who]})"; continue
+  fi
   if echo "$st" | grep -q "Continue Battle"; then T="$T/N"; continue; fi
   if ! echo "$st" | grep -q "Move View Aim"; then T="$T."; continue; fi
+  if [ -z "$who" ]; then echo "no one's turn: ${st:0:90}"; break; fi
   mace_gone=$(grep "^\[page" $P/run.log | grep -ciE "MACE (goes down|is killed|is dying|flees)")
-  again=0; [ "$who" = "$last" ] && again=1
   cast=0; echo "$st" | grep -q "Cast" && cast=1
+  a="/Q"
   case "$who" in
-    KESTREL) [ $mace_gone -gt 0 ] && a="/Q" || a="/A#MACE;/T~/T~" ;;
-    MIRA) if [ $mace_gone -gt 0 ]; then a="/Q"; elif [ $cast = 1 ]; then a="/C/C"; else a="/D/G"; fi ;;
-    SELENE) if [ $mace_gone -gt 0 ]; then a="/Q"; elif [ $cast = 1 ] && [ "${sil_s:-0}" -lt 1 ]; then a="/Cvvvvvvvvv/C"; else a="/D/G"; fi ;;
-    BRAN) if [ $mace_gone -gt 0 ]; then a="/Q"; elif [ $cast = 1 ] && [ "${sil_b:-0}" -lt 1 ]; then a="/Cvvvvv/C"; else a="/D/G"; fi ;;
-    *) a="/Q" ;;
+    KESTREL) [ $mace_gone -gt 0 ] || a="/A#MACE;/T~/T~" ;;
+    MIRA|SELENE|BRAN)
+      q=(${Q[$who]})
+      if [ $cast = 1 ] && [ ${#q[@]} -gt 0 ]; then
+        it=${q[0]}; pos=${it%%:*}; kind=${it##*:}
+        if [ $kind = m ] && [ $mace_gone -gt 0 ]; then a="/Q"; else
+          a="/C$(printf 'v%.0s' $(seq 1 $pos 2>/dev/null))/C"; [ $pos = 0 ] && a="/C/C"
+          AIM[$who]=$kind; Q[$who]="${q[*]:1}"
+        fi
+      elif [ $cast = 0 ] && [ $mace_gone = 0 ]; then a="/D/G"; fi ;;
   esac
-  # a silence counts once it was aimed at MACE
-  [ "$who" = "$last" ] || true
   echo "turn $who -> $a"
-  T="$T$a"; last=$who
+  T="$T$a"
   echo "$T" > $P/fight.tok
-  [ "$who" = SELENE ] && [ "${a:0:3}" = "/Cv" ] && sil_s=1
-  [ "$who" = BRAN ] && [ "${a:0:3}" = "/Cv" ] && sil_b=1
 done
-grep "^\[page\|aim MACE\|AI spell" $P/run.log | grep -iE "MACE|silenc|Casting|lost a spell|Casts" | cut -c1-100 | tail -30
+grep "^\[page" $P/run.log | grep -iE "MACE|silenc|Casting|lost a spell|Casts|asleep|Fire" | grep -v "ORC is silenced" | cut -c1-90 | tail -30
