@@ -17,6 +17,10 @@ folder stay in scratch (test saves to the Project).
   buy.sh "m:i,i m:i"      Merchant tokens (goods index as GOODSLOG prints them)
   bk.sh save|load <slot> <name>  a slot's files kept / put back
   look.sh <slot> <tokens> <n>  Look n times where the party stands (Yes to "take it?"; the books)
+  try.sh <from> <x,y> <to> [n]  hop.sh kept only without a drain / loss, else again with SEED=1..n
+                          (RELEVEL=1: a drained member retrained instead - relevel.sh)
+  tour2.sh <a> <b> x,y ...     try.sh square by square
+  relevel.sh <slot>       members retrained to the party's target XP (SETEXP + the Trainer)
   morning.sh <slot>       the Sanctuary's rest to hour 0 (PoolRad's City Hall is locked from 14)
 The playsim's play-through helpers: SETMONEY, SETEXP, MEMSET, VMSET, MAPLOCKED, GOODSLOG on the
 Merchant token, AUTOFIGHT's "Continue Battle" / "treasure left" answers.
