@@ -8697,6 +8697,7 @@ bool shop_yes_no(Ask what, char k, pic::Canvas& c)
     party::Character& ch = *pt->sel();
     const int cost = d->prof->cures.cost[cure_at];
     const bool paid = cheat == Cheat::Healer || shop_pay(ch, cost);      // (the Cheats tab's Healer: free)
+    plat::log("[play] temple: cure %d, cost %d, %s\n", cure_at, cost, paid ? "paid" : "not enough");
     draw_heal(c);
     if (!paid) {
         char t[24];
