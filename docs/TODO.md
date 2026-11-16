@@ -186,6 +186,19 @@ the Project as claude/TODO.md.
       characters one by one).
 
 ## Claude
+- [ ] Curse play-through (Tom, 2026-11-16; the Project's claude/playthrough_curse.md; Tom's
+      tactics: a line, the best-armoured on the corners, casters behind, missiles for all,
+      Sleep / Hold Person / Stinking Cloud, focus fire). Open questions found on the way:
+  - [ ] DOSBox: after the Thieves' Guild master's PROGRAM 9 camp the engine runs his speech
+        and the fight at the party's next step (4C17 = 1); the original sets byte_1D8AA = 1
+        there - does it run the square's script at once after the camp?
+  - [ ] DOSBox / the original's code: the Girdle of the Dwarves' +1 Constitution rebuilt
+        Thorin's maximum hit points to his rolled ones (56 -> 40: record 0xE6 = his hit dice, so
+        con_rebuild adds no level's Constitution; imported characters get 0xE6 = 0xE5, and
+        creation sets 0xE6 = hit dice too) - the original's bug? If so: Game Fixes.
+  - [ ] Curse's dwarf poison save: Thorin's shows 14 in Curse vs 10 in PoolRad (classes.cpp
+        adds the Constitution bonus to the save number "as the games do") - check it.
+  - [ ] Add Character lists 48 entries at most (a save folder with many slots hides some).
 - [x] PoolRad play-through to the end (Tom, 2026-11-16; the Project's
       claude/playthrough_poolrad.md): a new party, the clerk's chain to
       "CONGRATULATIONS! YOUR QUEST IS OVER!" - no engine bug found. Big

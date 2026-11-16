@@ -1651,6 +1651,24 @@ int main(int argc, char** argv)
             printf("\n");
         }
     }
+    if (getenv("MAPWALLS")) {           // MAPWALLS=1: the map in ASCII - each side's passage (' ' open, | - wall,
+                                        // L locked, S secret / barred), the party's square '@'
+        printf("  MAPWALLS map %dx%d\n", play::d->map.w, play::d->map.h);
+        auto side = [](int pg, char wall) { return pg == 1 ? ' ' : pg == 2 ? 'L' : pg >= 3 ? 'S' : wall; };
+        for (int y = 0; y < play::d->map.h; ++y) {
+            std::string top = "    ", mid = "  ";
+            char yy[4];
+            snprintf(yy, sizeof yy, "%2d", y);
+            mid = std::string(yy);
+            for (int x = 0; x < play::d->map.w; ++x) {
+                top += "+";
+                top += side(geo::passage(play::d->map, x, y, 0), '-');
+                mid += side(geo::passage(play::d->map, x, y, 6), '|');
+                mid += (x == play::pos_x() && y == play::pos_y()) ? '@' : (geo::flags(play::d->map, x, y) & 0x7F) ? '*' : '.';
+            }
+            printf("  %s\n  %s\n", top.c_str(), mid.c_str());
+        }
+    }
     if (getenv("TELE")) { int x, y, dd; sscanf(getenv("TELE"), "%d,%d,%d", &x, &y, &dd); play::d->gs.x = x; play::d->gs.y = y; play::d->gs.dir = dd; play::after_move_redraw(); }
     if (getenv("TELE0")) { int x, y, dd; sscanf(getenv("TELE0"), "%d,%d,%d", &x, &y, &dd); play::d->gs.x = x; play::d->gs.y = y; play::d->gs.dir = dd; play::after_move_redraw(); }
     // SETEXP=m:exp,...: member m's experience (the Companion's ready classes)
@@ -1802,6 +1820,7 @@ int main(int argc, char** argv)
         const int scr = (int)play::screen;
         const char* t = nullptr;
         if (scr == 1) { auto_left = 0; return false; }     // (the party menu: all dead)
+        if (scr == 24 && has('Q') && getenv("FIGHTSTOP")) { auto_left = 0; return false; }   // (FIGHTSTOP=1: a fight is the player's)
         if (scr == 24) t = has('Q') ? "/Q" : has('Y') && has('N') && getenv("AUTOFIGHT") ? "/N" : ".";   // ("Continue Battle": No)
         else if (scr == 5 || scr == 16 || scr == 25) t = has('E') ? "/E" : ".";
         else if (scr == 11 && getenv("AUTOFIGHT") && has('Y') && has('N')) t = "/N";     // ("There is still treasure left ...": No)
@@ -2221,6 +2240,11 @@ int main(int argc, char** argv)
             for (int k = 0; k < 84; ++k) if (play::pt->m[i].rec[magic::kListAt + k]) printf(" %02X@%d", play::pt->m[i].rec[magic::kListAt + k], k);
             printf("\n");
         }
+    if (getenv("ITEMDUMP") && play::d) {    // (the rule facts' highest hit dice a class, Constitution's rebuild)
+        printf("  max_hd");
+        for (int k = 0; k < 8; ++k) printf(" %d", play::d->facts.max_hd[k]);
+        printf("\n");
+    }
     if (getenv("ITEMDUMP") && play::names)   // ITEMDUMP=1: each member's AC, HP, coins and items (* = readied)
         for (int i = 0; i < play::pt->count; ++i) {
             const party::Character& ch = play::pt->m[i];
@@ -2228,6 +2252,8 @@ int main(int argc, char** argv)
             ch.name(nm, sizeof nm);
             printf("  member %d %s AC %d HP %d/%d THAC0 %d exp %u enc %d coins", i, nm, ch.ac(), ch.hp(), ch.hp_max(), ch.thac0(), (unsigned)ch.exp(), ch.encumbrance());
             for (int c = 0; c < 7; ++c) printf(" %d", ch.money(c));
+            printf(" stats");
+            for (int k = 0; k < 6; ++k) printf(" %d/%d", ch.stat(k), ch.stat_now(k));
             printf("\n");
             for (int k = 0; k < ch.n_items; ++k) {
                 char in[48];
