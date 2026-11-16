@@ -2313,7 +2313,7 @@ int main(int argc, char** argv)
                 const int ox = x, oy = y;
                 // (MAPLOCKED=1: locked doors passable too - the party bashes / picks them)
                 const int pg = geo::passage(mp, x, y, dir);
-                if ((pg != 1 && !(pg == 2 && getenv("MAPLOCKED"))) || !geo::step(mp, x, y, dir)) continue;
+                if ((pg != 1 && !(pg == 2 && getenv("MAPLOCKED")) && !(pg >= 3 && getenv("MAPSECRET"))) || !geo::step(mp, x, y, dir)) continue;   // (MAPSECRET=1: the other passages too - secret doors)
                 if (abs(x - ox) + abs(y - oy) != 1) continue;       // (no wrapping: the edges are the scripts')
                 const int kk = y * 16 + x;
                 if (from3[kk] >= 0 || (avoid3[kk] && kk != goal)) continue;
