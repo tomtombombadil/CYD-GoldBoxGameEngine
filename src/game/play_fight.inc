@@ -5119,8 +5119,8 @@ void ai_step(pic::Canvas& c)
             char nm[16];
             for (int q = 0; q < nl; ++q) nm[q] = static_cast<char>(f.rec[1 + q]);
             nm[nl] = 0;
-            printf("  AI turn %d %s team %d items %d target %d seen %d\n", i, nm, f.team(), f.n_items, f.target,
-                   f.target >= 0 && f.target < b.n ? (int)b.f[f.target].up() : -1);
+            printf("  AI turn %d %s team %d items %d target %d seen %d qa %02X cast %d\n", i, nm, f.team(), f.n_items, f.target,
+                   f.target >= 0 && f.target < b.n ? (int)b.f[f.target].up() : -1, f.qa, (int)f.can_cast);
         }
 #endif
         // The computer's magic items (monsters, NPCs and Quick members), then
@@ -5237,6 +5237,13 @@ void ai_step(pic::Canvas& c)
             int tg[combat::kMaxFighters], nt = 0;
             const int sp = combat::choose_spell(b, fg->t, mrules->tables, i, d->prof->fight.spells,
                                                 d->prof->fight.n_spells, rng, tg, &nt);
+#ifdef CYD_TEST_HOOKS
+            if (getenv("AILOG")) {
+                printf("  AI spell %d: chose %d targets %d, memorized", i, sp, nt);
+                for (int k = 0; k < 84; ++k) if (f.rec[0x1E + k]) printf(" %d@%d", (int)f.rec[0x1E + k], k);
+                printf("\n");
+            }
+#endif
             if (sp && nt == 0) {
                 // (round 20: the spell chosen, no target for it - Curse GAME.OVR
                 // 0x2F5A3 "Spell Aborted", the spell lost, the turn over)
