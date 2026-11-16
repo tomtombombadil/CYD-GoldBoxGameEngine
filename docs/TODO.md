@@ -199,6 +199,8 @@ the Project as claude/TODO.md.
   - [ ] Curse's dwarf poison save: Thorin's shows 14 in Curse vs 10 in PoolRad (classes.cpp
         adds the Constitution bonus to the save number "as the games do") - check it.
   - [ ] Add Character lists 48 entries at most (a save folder with many slots hides some).
+  - [ ] Curse's hideout leader fight: Mira's unidentified Dust (Dust of Disappearance) - Use in the
+        fight left the items list up and nothing happened; what does the original do?
 - [x] PoolRad play-through to the end (Tom, 2026-11-16; the Project's
       claude/playthrough_poolrad.md): a new party, the clerk's chain to
       "CONGRATULATIONS! YOUR QUEST IS OVER!" - no engine bug found. Big
