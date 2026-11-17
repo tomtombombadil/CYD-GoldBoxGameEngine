@@ -462,14 +462,19 @@ void recalc_values(party::Character& c, const items::Names& names, const ItemFac
         const items::Item it{weapon};
         const items::TypeInfo& t = names.type(it.type());
         hit = static_cast<int8_t>(r[kThac0]);
-        if (t.flags & 0x02) hit += dex_missile(c);
+        // (Thrown Weapons - AD&D 1E, Tom 2026-11-17: a hurled weapon takes
+        // Dexterity's missile bonus to hit and Strength's damage bonus. The
+        // originals give a thrown-only weapon (darts, javelins: flags 0x10
+        // without melee's 4) neither; with the switch it gets both. A weapon
+        // both melee and thrown keeps the melee bonuses here - one figure
+        // for both uses, as the originals' record. SPEC 12)
+        const bool thrown_1e = (t.flags & 0x10) && !(t.flags & 0x04) && fixes();
+        if ((t.flags & 0x02) || thrown_1e) hit += dex_missile(c);
         dmg = t.bonus;
-        // (Strength: the melee weapons' (flags 4) only - a thrown one that
-        // isn't also a melee weapon (darts, javelins: flags 0x10 alone) gets
-        // none in the originals; AD&D's hurled weapons take it, to hit and
-        // damage, with the Game Fixes - Tom, 2026-11-06; SPEC 12)
-        if ((t.flags & 0x04) || ((t.flags & 0x10) && fixes())) {
+        if (t.flags & 0x04) {
             hit += str_hit(c);
+            dmg += str_damage(c.rec);
+        } else if (thrown_1e) {
             dmg += str_damage(c.rec);
         }
         int plus = it.plus();

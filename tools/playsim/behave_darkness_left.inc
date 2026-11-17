@@ -318,7 +318,7 @@ void camp_checks()
            mem(1).health() == party::Okay && mem(1).hp() == 1 && mem(1).rec[0x18] == 11 && caff(1, fx(3)) < 0 &&
                csaid(1, spells::Said::Raised) == 1,
            "status %d hp %d con %d", mem(1).health(), mem(1).hp(), mem(1).rec[0x18]);
-    // Resurrection (0x2EF05): dead only, all hit points; Con kept - AD&D's -1 with Game Fixes
+    // Resurrection (0x2EF05): dead only, all hit points; Con kept either way (AD&D 1E has no cost - Tom, 2026-11-17)
     for (bool fix : {false, true}) {
         rules::set_fixes(fix);
         member(1, classes::Fighter, 8, 70);
@@ -327,8 +327,8 @@ void camp_checks()
         mem(1).rec[0x1A4] = 0;
         ccast(0, 1, 0x69);
         const int con = mem(1).rec[0x18];
-        snprintf(w, sizeof w, "camp: Resurrection (Game Fixes %s) - okay with all hit points, Con %d", fix ? "on" : "off", fix ? 11 : 12);
-        expect(D_, w, mem(1).health() == party::Okay && mem(1).hp() == mem(1).hp_max() && con == (fix ? 11 : 12) &&
+        snprintf(w, sizeof w, "camp: Resurrection (Game Fixes %s) - okay with all hit points, Con %d", fix ? "on" : "off", 12);
+        expect(D_, w, mem(1).health() == party::Okay && mem(1).hp() == mem(1).hp_max() && con == 12 &&
                           csaid(1, spells::Said::Word) == 1,
                "status %d hp %d/%d con %d", mem(1).health(), mem(1).hp(), mem(1).hp_max(), con);
         member(1, classes::Fighter, 8, 70);

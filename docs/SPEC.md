@@ -3137,12 +3137,15 @@ the game's Settings (As Original: all of them).
   answer with, read from the player's files; the same rune the same
   letter across the words: `ecl::rune_word`); nothing from
   the wheel or the game in the repo. Other games' PROTECTION: skipped.
-- **Thrown weapons and Strength** (Tom, 2026-11-06; Game Fixes): the
-  originals add Strength's to-hit and damage only to melee weapons
-  (ITEMS flags 4) - darts and javelins (flags 0x10 alone) get none. With
-  Game Fixes every thrown weapon takes it (AD&D's hurled weapons,
-  `rules::recalc`). Darts throw 3 a round in every game (the ITEMS
-  file's 6 half attacks - as the originals).
+- **Thrown Weapons** (Tom, 2026-11-06 / 2026-11-17, AD&D 1E: a hurled
+  weapon takes Dexterity's missile bonus to hit and Strength's damage
+  bonus; for now under Game Fixes, its own "Thrown Weapons" switch with
+  the menu rework): the originals give darts and javelins (ITEMS flags
+  0x10 without melee's 4) neither; with the switch on they get both
+  (`rules::recalc`). Weapons both melee and thrown keep the melee
+  figure (Strength to hit and damage) - the record has one. Darts throw
+  3 a round in every game (the ITEMS file's 6 half attacks - as the
+  originals).
 - **Quick Actions** (Tom, 2026-11-09; switch `CYD_QUICK_ACTIONS` -
   section 11): the player may stop a Quick character's melee, missiles,
   spells, items, moving, Turn Undead or guarding, and have it bandage a
@@ -3592,10 +3595,6 @@ the game's Settings (As Original: all of them).
   effect 0x2B (a disease's weakness) instead of the curse 0x24 (Secret's
   same handler takes 0x24); with Game Fixes on the engine takes the curse,
   off as the original.
-- **Darkness's Resurrection** (`rules::fixes()`; Tom, 2026-10-23): the
-  original costs no Constitution; with Game Fixes on the one raised loses
-  a point as AD&D says (its hit points worked out again); the caster's
-  days of rest AD&D asks for aren't in the engine either way.
 - **A new game's vault** (Darkness, Treasures, Gateway; `rules::fixes()`;
   code review 2026-10-31): the original leaves the vault in use
   (TMPVAULT.DAT / VAULT.DAT) as the last game left it - a new party
