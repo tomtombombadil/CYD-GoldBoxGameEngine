@@ -64,6 +64,11 @@ struct StepCloud {
     bool    driven, save, hd7;
 };
 struct Tables {
+    // Gateway (the original in DOSBox, 2026-11-16, Ascore's arena at the
+    // map's last row): indoors the field ends where the map does - two
+    // steps south of the party's place the fighter was off the field and
+    // away, no wall there. The other games: walls round the map (coab).
+    bool field_ends_at_map;
     uint8_t ground[kGroundValues][4];   // move cost (0xFF: can't), eye height, obstacle height, picture
     uint8_t fallback[4][4];             // [team facing][attempt 1-3]: dungeon facing to move the start
     uint8_t formation[4][4];            // [team facing][attempt]: the formation's facing (dungeon facing)
