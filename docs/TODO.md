@@ -43,7 +43,7 @@ the Project as claude/TODO.md.
       Original Games turns the cheats OFF (not the Cheats menu); each can be turned on again with it on.
       Coin Exchange (new behaviour): any purchase pays from any mix of coins, and Pool at a Merchant /
       Healer / other paid service changes the coins; Share gives back the highest denominations.
-      Done (v0.208.4): the AD&D 1E Rules switches exist (Settings keys Thrown Weapons, Raising the Dead;
+      Done (v0.208.5): the AD&D 1E Rules switches exist (Settings keys Thrown Weapons, Raising the Dead;
       `rules::adnd`) - Thrown Weapons (darts / javelins Dex to hit, Str damage; dagger / hand axe / spear
       Str in melee, Dex to hit thrown) and no Constitution cost for Raise Dead / Resurrection. The other
       1E rules still under Game Fixes (Magic Missile, multi-class HP, Magic Items, Coin Exchange, Age with
