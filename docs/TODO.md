@@ -208,6 +208,10 @@ the Project as claude/TODO.md.
       Open questions found on the way:
   - [x] The Cheats tab at Curse's travel menu and menu-only towns too (Tom, 2026-11-16) -
         v0.204.0
+  - [ ] Curse's sphere duel in the Wizard's Tower: a fighter (Aldric) won it though its text
+        says only a mage controls the sphere - what decides the outcome in the original?
+  - [ ] Tom: the scripted fight driver loses the big Curse fights (the stair guard, two owl-bear
+        rooms, Dracandros's courtyard); guard rooms passed by their flags so far - how to go on?
   - [ ] DOSBox: after the Thieves' Guild master's PROGRAM 9 camp the engine runs his speech
         and the fight at the party's next step (4C17 = 1); the original sets byte_1D8AA = 1
         there - does it run the square's script at once after the camp?

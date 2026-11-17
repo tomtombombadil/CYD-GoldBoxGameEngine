@@ -26,6 +26,10 @@ for step in range(int(os.environ.get("STEPS","120"))):
     me=[k for k,v in F.items() if v['name']==who and v['team']==0]
     foes=[k for k,v in F.items() if v['team']==1 and v['hp']>0]
     party=[k for k,v in F.items() if v['team']==0 and v['hp']>0]
+    sig=(who,menu,tuple(sorted((k,v['hp'],v['x'],v['y']) for k,v in F.items())))
+    if sig==lastsig:
+        T+=('/E,/Q,' if 'Aim:' in menu else '{,/Q,'); lastsig=None; continue
+    lastsig=sig
     if 'Continue Battle' in menu: T+='/N,'; continue
     if 'Aim:' in menu:
         tgt=min(foes,key=lambda k:F[k]['hp']) if foes else None
@@ -36,9 +40,6 @@ for step in range(int(os.environ.get("STEPS","120"))):
     if 'Delay' in menu or 'Guard' in menu: T+='/E/Q,'; continue
     if not me: T+='/Q,'; continue
     prev=lastwho; lastwho=who
-    sig=(who,menu,tuple(sorted((k,v['hp'],v['x'],v['y']) for k,v in F.items())))
-    if sig==lastsig: T+='/Q,'; continue
-    lastsig=sig
     m=F[me[0]]; d=lambda k: max(abs(F[k]['x']-m['x']),abs(F[k]['y']-m['y']))
     near=[k for k in foes if d(k)<=1 and not (who in MUND and any(x in F[k]['name'] for x in IMM))]
     if who in MUND and not near and any(d(k)<=1 for k in foes): T+='/D,'; continue
