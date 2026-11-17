@@ -308,6 +308,21 @@ int price(const uint8_t* item, int factor);
 // so and is listed in SPEC section 12.
 void set_fixes(bool on);
 bool fixes();
+// The AD&D 1E Rules (Tom, 2026-11-17): rules of the 1st edition books the
+// originals left out - not mistakes in their code, so not Game Fixes. Each
+// rule its own switch (a bit; all on by default); off: as the original.
+enum Adnd : uint8_t {
+    kAdndThrown = 1,    // Thrown Weapons: a hurled weapon takes Dexterity's missile bonus to hit and
+                        // Strength's damage; a weapon both melee and thrown (dagger, hand axe, spear)
+                        // Strength to hit in melee, Dexterity to hit when thrown
+    kAdndRaise  = 2,    // Raise Dead / Resurrection cost no Constitution (the 1E books have none)
+};
+void set_adnd(uint8_t bits);
+bool adnd(uint8_t rule);
+// A weapon both melee and thrown, thrown (Thrown Weapons): the record's
+// to-hit holds the melee figure (Strength's), this is the change for a throw
+// - Dexterity's missile bonus less Strength's to-hit
+int thrown_hit_shift(int dex, int uses_strength, int str_full, int str00);
 // The record's lost levels (0xE7, the hit points they took 0xE8). PoolRad's
 // NPCs come from monster records with 0xFF there (unused for monsters - its
 // MON1CHA / MON3CHA's Dirten, Tom 2026-11-11): the original counts 255

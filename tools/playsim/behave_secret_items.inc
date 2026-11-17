@@ -186,7 +186,7 @@ SVals s_expect(const party::Character& c)
         v.dmg += r[0x125] ? s_str(g, 2) : 0;
     } else {
         const SType t = s_type(weapon[0x2E]);
-        const bool thrown_1e = (t.flags & 0x10) && !(t.flags & 4) && rules::fixes();   // (Thrown Weapons, AD&D 1E: Dex to hit, Str to damage)
+        const bool thrown_1e = (t.flags & 0x10) && !(t.flags & 4) && rules::adnd(rules::kAdndThrown);   // (Thrown Weapons, AD&D 1E Rules: Dex to hit, Str to damage)
         if ((t.flags & 2) || thrown_1e) v.hit += s_dex(dex, 2);
         v.dmg = t.b;
         if (t.flags & 4) {

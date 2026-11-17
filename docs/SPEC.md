@@ -532,7 +532,8 @@ can't get the memory says "Not enough memory to show this log."
    PC Speaker / Off; more than 8 keys: pages, arrows bottom right since v0.90.0), each
    key lit when on, with a circled "?" at its right (Tom, v0.84.0) that opens what the option does
    (the next tap closes it; Game Font's shows a line in each font, the player's own fonts read from
-   the card); below them **As Original** (every comfort off; then the
+   the card); below them **As Original** (every comfort off, the AD&D 1E Rules and
+   Max Hit Points too - the Cheats tab stays, Tom 2026-11-17; then the
    key reads All On) and **Dev Tools** (Resource Test, Screen Test, Walk
    Test; their Back returns there). The in-game Game menu's Options tab
    shows the same switches. v0.91.0 (Tom, 2026-10-12): **one Settings
@@ -3137,15 +3138,25 @@ the game's Settings (As Original: all of them).
   answer with, read from the player's files; the same rune the same
   letter across the words: `ecl::rune_word`); nothing from
   the wheel or the game in the repo. Other games' PROTECTION: skipped.
-- **Thrown Weapons** (Tom, 2026-11-06 / 2026-11-17, AD&D 1E: a hurled
-  weapon takes Dexterity's missile bonus to hit and Strength's damage
-  bonus; for now under Game Fixes, its own "Thrown Weapons" switch with
-  the menu rework): the originals give darts and javelins (ITEMS flags
-  0x10 without melee's 4) neither; with the switch on they get both
-  (`rules::recalc`). Weapons both melee and thrown keep the melee
-  figure (Strength to hit and damage) - the record has one. Darts throw
-  3 a round in every game (the ITEMS file's 6 half attacks - as the
-  originals).
+- **AD&D 1E Rules** (Tom, 2026-11-17; `CYD_ADND_RULES`, `rules::adnd`,
+  Settings::rules_off - each rule its own Settings key, on by default, As
+  Original turns them off): rules of the 1st edition books the originals
+  left out - not mistakes in their code, so not Game Fixes.
+  - **Thrown Weapons**: a hurled weapon takes Dexterity's missile bonus to
+    hit and Strength's damage bonus. The originals give darts and javelins
+    (ITEMS flags 0x10 without melee's 4) neither (`rules::recalc`). A weapon
+    both melee and thrown (dagger, hand axe, spear: flags 4 and 0x10) keeps
+    Strength to hit and damage in melee; thrown at one not next to the
+    thrower its to-hit takes Dexterity's missile bonus in place of
+    Strength's, its damage Strength's (`combat::attack`,
+    `rules::thrown_hit_shift`; the party's members - monsters' records are
+    their own). Darts throw 3 a round in every game (the ITEMS file's 6 half
+    attacks - as the originals).
+  - **Raising the Dead**: Raise Dead and Resurrection take no Constitution
+    (the 1E books have no such cost - Tom). The originals take a point for
+    Raise Dead (spell and temple: Secret's, the Darkness-type temples) -
+    kept with the rule off. Curse's / PoolRad's temple never took one.
+    Darkness's Resurrection costs nothing in the original either way.
 - **Quick Actions** (Tom, 2026-11-09; switch `CYD_QUICK_ACTIONS` -
   section 11): the player may stop a Quick character's melee, missiles,
   spells, items, moving, Turn Undead or guarding, and have it bandage a

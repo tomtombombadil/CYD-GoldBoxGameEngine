@@ -298,6 +298,19 @@
 #define CYD_AUTO_JOIN 1
 #endif
 
+// CYD_ADND_RULES (Tom, 2026-11-17: "We implemented the AD&D rules. We didn't
+// find an error in the game code"): the AD&D 1E Rules - 1st edition rules the
+// originals left out, each its own switch (rules::Adnd; Settings::rules_off),
+// on by default; As Original turns them off. Thrown Weapons: a hurled weapon
+// takes Dexterity's missile bonus to hit and Strength's damage (a dagger /
+// hand axe / spear: Strength to hit in melee, Dexterity thrown) -
+// rules::recalc, combat::attack. Raising the Dead: Raise Dead and
+// Resurrection cost no Constitution (spells.cpp, play.cpp's temples). The
+// other 1E rules still under Game Fixes move here with the menu rework.
+#ifndef CYD_ADND_RULES
+#define CYD_ADND_RULES 1
+#endif
+
 // CYD_SAVE_INFO (Tom, 2026-11-17: "The textbox above the menu is mostly
 // empty when either saving or loading a savegame"): Save Which Game's
 // letters grey for an empty slot, white for one with a save; while Save /

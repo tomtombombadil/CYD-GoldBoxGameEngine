@@ -646,9 +646,13 @@ int cast(party::Party& p, int caster, int target, const CampSpell& cs, const cla
             cure(c, cures.poisoned);
             c.rec[kHealth] = party::Okay;
             c.rec[kInCombat] = 1;
-            if (c.rec[kConFull] == c.rec[kConNow]) --c.rec[kConFull];    // (no item raising it)
-            --c.rec[kConNow];
-            if (t.lay.dk) create::dk_con_recompute(c, t);          // (Darkness: the Constitution's hit points again)
+            // (the originals take a point of Constitution; AD&D 1E Rules: none -
+            // the 1E books have no such cost, Tom 2026-11-17)
+            if (!rules::adnd(rules::kAdndRaise)) {
+                if (c.rec[kConFull] == c.rec[kConNow]) --c.rec[kConFull];    // (no item raising it)
+                --c.rec[kConNow];
+                if (t.lay.dk) create::dk_con_recompute(c, t);          // (Darkness: the Constitution's hit points again)
+            }
             c.rec[kHp] = 1;
             o.say(who[k], Said::Raised);
         }

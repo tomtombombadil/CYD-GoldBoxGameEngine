@@ -764,7 +764,10 @@ void temple_checks()
     secret_cure(rules::kNeutralizePoison, C);
     expect(P, "temple Neutralize Poison on the unpoisoned: nothing", ch.hp() == 5);
     // Raise Dead (0x5FC5): the dead only; elves never; Con - 1 (own, in use), 1 HP, max kept
+    for (uint8_t ad : {uint8_t{0}, uint8_t{0xFF}})
     for (int elf = 0; elf < 2; ++elf) {
+        rules::set_adnd(ad);           // (the AD&D 1E Rules' Raising the Dead: no Constitution lost)
+        const int lose = ad ? 0 : 1;
         reset(0);
         ch.rec[0x195] = party::Dead;
         if (elf) ch.rec[0x74] = 2;
@@ -773,10 +776,12 @@ void temple_checks()
         if (elf)
             expect(P, "temple Raise Dead: an elf can't be raised", ch.health() == party::Dead);
         else
-            expect(P, "temple Raise Dead: 1 HP, okay, Constitution - 1, maximum kept",
-                   ch.health() == party::Okay && ch.hp() == 1 && ch.rec[0x19] == con - 1 && ch.rec[0x18] == con - 1 && ch.hp_max() == mx,
+            expect(P, ad ? "temple Raise Dead (1E Rules): 1 HP, okay, Constitution kept, maximum kept"
+                         : "temple Raise Dead: 1 HP, okay, Constitution - 1, maximum kept",
+                   ch.health() == party::Okay && ch.hp() == 1 && ch.rec[0x19] == con - lose && ch.rec[0x18] == con - lose && ch.hp_max() == mx,
                    "status %d HP %d/%d Con %d", ch.health(), ch.hp(), ch.hp_max(), ch.rec[0x19]);
     }
+    rules::set_adnd(0xFF);
     reset(5);
     secret_cure(rules::kRaiseDead, C);
     expect(P, "temple Raise Dead on the living: nothing", ch.health() == party::Okay && ch.rec[0x19] == orig.rec[0x19]);

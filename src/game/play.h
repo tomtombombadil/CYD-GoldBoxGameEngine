@@ -161,6 +161,7 @@ struct Options {
     bool cheats = true;           // the Game menu's Cheats tab (CYD_CHEATS)
     bool quick_acts = true;       // the per-character Quick Actions and the Game menu's Quick tab (CYD_QUICK_ACTIONS)
     bool read_time = true;        // timed messages at least 1 s (CYD_READ_TIME)
+    uint8_t adnd = 0xFF;          // the AD&D 1E Rules on (rules::Adnd bits - CYD_ADND_RULES)
     bool auto_join = true;        // a taken item joins its taker's same pile (CYD_AUTO_JOIN)
     bool save_info = true;        // Save / Load Which show the slots' saves (CYD_SAVE_INFO)
     bool max_hp = false;          // hit dice at their highest (training, creation) - a cheat the player opts into (CYD_MAX_HP)

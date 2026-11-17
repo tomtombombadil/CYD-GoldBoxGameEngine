@@ -354,6 +354,16 @@ int adnd_str_hit(int s, int e)
     if (s == 18 && e <= 99) return 2;
     return 3;                           // 18/00
 }
+int adnd_dex_missile(int d)
+{
+    // (the PHB's Dexterity table: reaction / missile adjustment)
+    if (d <= 3) return -3;
+    if (d == 4) return -2;
+    if (d == 5) return -1;
+    if (d <= 15) return 0;
+    if (d <= 18) return d - 15;
+    return 3;
+}
 int adnd_str_dmg(int s, int e)
 {
     if (s <= 5) return -1;
@@ -410,24 +420,84 @@ void darts()
     ch.n_items = 1;
     memset(ch.items[0], 0, sizeof ch.items[0]);
     memcpy(ch.items[0], pile[0], items::kRecordSize);
+    // (Thrown Weapons - the AD&D 1E Rules, Tom 2026-11-17: Dexterity's missile
+    // bonus to hit, Strength's damage; off: the original's - neither)
+    static const int kStr[3][2] = {{18, 100}, {17, 0}, {12, 0}};
+    static const int kDex[3] = {18, 16, 4};
     for (int s = 0; s < 3; ++s) {
-        static const int kStr[3][2] = {{18, 100}, {17, 0}, {12, 0}};
         ch.rec[0x10] = ch.rec[0x11] = static_cast<uint8_t>(kStr[s][0]);
         ch.rec[0x1C] = ch.rec[0x1D] = static_cast<uint8_t>(kStr[s][1]);
+        ch.rec[0x16] = ch.rec[0x17] = static_cast<uint8_t>(kDex[s]);
         ch.rec[0x125] = 1;
         int hit[2], dmg[2];
-        for (int fix = 0; fix < 2; ++fix) {
-            rules::set_fixes(fix == 1);
+        for (int on = 0; on < 2; ++on) {
+            rules::set_adnd(on ? 0xFF : 0);
             rules::recalc(ch, *play::names, play::d->facts);
-            hit[fix] = static_cast<int8_t>(ch.rec[0x199]);
-            dmg[fix] = static_cast<int8_t>(ch.rec[0x1A2]);
+            hit[on] = static_cast<int8_t>(ch.rec[0x199]);
+            dmg[on] = static_cast<int8_t>(ch.rec[0x1A2]);
         }
-        rules::set_fixes(true);
-        const int wh = adnd_str_hit(kStr[s][0], kStr[s][1]), wd = adnd_str_dmg(kStr[s][0], kStr[s][1]);
-        snprintf(w, sizeof w, "darts x Strength %d/%02d: +%d to hit, +%d damage with the Game Fixes, none without",
-                 kStr[s][0], kStr[s][1], wh, wd);
+        rules::set_adnd(0xFF);
+        // (a game whose darts already count Dexterity - ITEMS flags 2: the rule adds none to hit)
+        const bool has_dex = play::names->type(dart).flags & 0x02;
+        if (s == 0) printf("  (matrix: darts type %d flags %02X)\n", dart, play::names->type(dart).flags);
+        const int wh = has_dex ? 0 : adnd_dex_missile(kDex[s]), wd = adnd_str_dmg(kStr[s][0], kStr[s][1]);
+        snprintf(w, sizeof w, "darts x Dex %d, Str %d/%02d: %+d to hit, %+d damage with Thrown Weapons, none without",
+                 kDex[s], kStr[s][0], kStr[s][1], wh, wd);
         expect(P, w, hit[1] - hit[0] == wh && dmg[1] - dmg[0] == wd, "hit %d -> %d, damage %d -> %d", hit[0], hit[1], dmg[0],
                dmg[1]);
+    }
+    // A dagger (melee and thrown): Strength to hit and damage in the record
+    // (melee); thrown at one 3 squares off, Dexterity's to hit in place of
+    // Strength's (Thrown Weapons), the same as melee without the rule
+    int dagger = 0;                              // (the first type both melee and thrown: Curse's hand axe 2)
+    for (int t = 1; t < items::kTypes && !dagger; ++t)
+        if (play::names->type(t).range > 1 && (play::names->type(t).flags & 0x14) == 0x14)
+            dagger = t;
+    if (dagger) {
+        memset(ch.items[0], 0, sizeof ch.items[0]);
+        ch.items[0][0x2E] = static_cast<uint8_t>(dagger);
+        ch.items[0][0x34] = 1;
+        ch.items[0][0x39] = 1;
+        ch.rec[0x10] = ch.rec[0x11] = 18;
+        ch.rec[0x1C] = ch.rec[0x1D] = 100;       // (Strength 18/00: +3 to hit, +6 damage)
+        ch.rec[0x16] = ch.rec[0x17] = 16;        // (Dexterity 16: +1 missiles)
+        ch.rec[0x125] = 1;
+        F(A).items = ch.items;
+        F(A).n_items = 1;
+        int mods[2][2];                          // [rule][next to / thrown]
+        for (int on = 0; on < 2; ++on) {
+            rules::set_adnd(on ? 0xFF : 0);
+            rules::recalc(ch, *play::names, play::d->facts);
+            for (int far = 0; far < 2; ++far) {
+                put(B, 1, far ? 13 : 11, 10, 200);
+                combat::occupancy(b);
+                static combat::RollLog log;
+                log = combat::RollLog{};
+                combat::g_rolls = &log;
+                F(A).attacks[0] = 1;
+                F(A).attacks[1] = 0;
+                dice(2);
+                play::fg->cur = A;
+                combat::attack(b, A, B, play::names, play::rng);
+                dice_off();
+                combat::g_rolls = nullptr;
+                mods[on][far] = -999;
+                for (int k = 0; k < log.n; ++k)
+                    if (log.r[k].kind == combat::RollKind::Hit) {
+                        mods[on][far] = log.r[k].mod;
+                        break;
+                    }
+            }
+        }
+        rules::set_adnd(0xFF);
+        const int want = adnd_dex_missile(16) - adnd_str_hit(18, 100);
+        snprintf(w, sizeof w, "a dagger thrown x Dex 16, Str 18/00: %+d to hit against melee with Thrown Weapons, 0 without", want);
+        expect(P, w, mods[0][0] != -999 && mods[1][1] - mods[1][0] == want && mods[0][1] == mods[0][0],
+               "rule off: next to %d thrown %d; on: next to %d thrown %d", mods[0][0], mods[0][1], mods[1][0], mods[1][1]);
+        F(A).items = keep;
+        F(A).n_items = keep_n;
+    } else {
+        printf("  (matrix: no dagger that throws)\n");
     }
     ch = save;
     rules::recalc(ch, *play::names, play::d->facts);

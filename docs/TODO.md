@@ -30,8 +30,13 @@ the Project as claude/TODO.md.
       Original Games turns the cheats OFF (not the Cheats menu); each can be turned on again with it on.
       Coin Exchange (new behaviour): any purchase pays from any mix of coins, and Pool at a Merchant /
       Healer / other paid service changes the coins; Share gives back the highest denominations.
-      Done already (v0.208.2): Thrown Weapons (1E: Dex to hit, Str to damage; under Game Fixes until its
-      own switch); Darkness's Resurrection Constitution cost removed (Tom: no such cost in 1E).
+      Done (v0.208.4): the AD&D 1E Rules switches exist (Settings keys Thrown Weapons, Raising the Dead;
+      `rules::adnd`) - Thrown Weapons (darts / javelins Dex to hit, Str damage; dagger / hand axe / spear
+      Str in melee, Dex to hit thrown) and no Constitution cost for Raise Dead / Resurrection. The other
+      1E rules still under Game Fixes (Magic Missile, multi-class HP, Magic Items, Coin Exchange, Age with
+      Time, Power Word Kill, Protection from Evil) move to their own switches with the menu rework.
+      Cheats (Tom, 2026-11-17): the Cheats page fires the cheats (Healer, Merchant, ...); its switches
+      (Max Hit Points) are what Original Games turns off - the page itself stays.
       For the PortMaster session: the PDF viewer of the games' journal PDFs is the port's alone (Tom).
 - [ ] Treasures play-through leftovers (2026-11-17): a fight page read "LORDSMAN goes down LORDSMAN" /
       "COCKATRICE goes down COCKATRICE" in the playsim's PAGELOG (two pages joined, or a wrong second line?);

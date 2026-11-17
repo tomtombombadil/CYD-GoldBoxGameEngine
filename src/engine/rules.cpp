@@ -23,10 +23,10 @@ void put16(uint8_t* r, int o, int v)
     r[o + 1] = static_cast<uint8_t>(v >> 8);
 }
 
-int str_hit(const party::Character& c)
+int str_hit_of(int uses, int group)
 {
-    if (!c.rec[kUsesStrength]) return 0;
-    const int s = strength_group(c);
+    if (!uses) return 0;
+    const int s = group;
     if (s >= 1 && s <= 3) return -3;
     if (s == 4 || s == 5) return -2;
     if (s == 6 || s == 7) return -1;
@@ -69,9 +69,8 @@ int str_damage_of(int uses, int str_full, int str00)
 }
 int str_damage(const uint8_t* r) { return str_damage_of(r[kUsesStrength], r[kStrFull], r[kStr00]); }
 
-int dex_missile(const party::Character& c)
+int dex_missile_of(int d)
 {
-    const int d = c.rec[kDexFull];
     if (d <= 2) return -4;
     if (d <= 5) return d - 6;
     if (d >= 16 && d <= 18) return d - 15;
@@ -80,6 +79,9 @@ int dex_missile(const party::Character& c)
     if (d == 24 || d == 25) return 5;
     return 0;
 }
+
+int dex_missile(const party::Character& c) { return dex_missile_of(c.rec[kDexFull]); }
+int str_hit(const party::Character& c) { return str_hit_of(c.rec[kUsesStrength], group_of(c.rec)); }
 
 // The fighter level that counts (a human who changed class adds the old
 // one once the new class has passed it)
@@ -99,6 +101,11 @@ constexpr int kPerCopper[5] = {1, 10, 100, 200, 1000};
 } // namespace
 
 int strength_group(const party::Character& c) { return group_of(c.rec); }
+
+int thrown_hit_shift(int dex, int uses_strength, int str_full, int str00)
+{
+    return dex_missile_of(dex) - str_hit_of(uses_strength, group_of(str_full, str00));
+}
 
 int strength_damage(const uint8_t* rec) { return str_damage(rec); }
 int strength_damage(int uses_strength, int str_full, int str00) { return str_damage_of(uses_strength, str_full, str00); }
@@ -462,13 +469,14 @@ void recalc_values(party::Character& c, const items::Names& names, const ItemFac
         const items::Item it{weapon};
         const items::TypeInfo& t = names.type(it.type());
         hit = static_cast<int8_t>(r[kThac0]);
-        // (Thrown Weapons - AD&D 1E, Tom 2026-11-17: a hurled weapon takes
-        // Dexterity's missile bonus to hit and Strength's damage bonus. The
+        // (Thrown Weapons - AD&D 1E Rules, Tom 2026-11-17: a hurled weapon
+        // takes Dexterity's missile bonus to hit and Strength's damage. The
         // originals give a thrown-only weapon (darts, javelins: flags 0x10
-        // without melee's 4) neither; with the switch it gets both. A weapon
-        // both melee and thrown keeps the melee bonuses here - one figure
-        // for both uses, as the originals' record. SPEC 12)
-        const bool thrown_1e = (t.flags & 0x10) && !(t.flags & 0x04) && fixes();
+        // without melee's 4) neither; with the rule it gets both. A weapon
+        // both melee and thrown keeps the melee figure here (Strength to hit
+        // and damage) - the attack changes its to-hit for a throw:
+        // thrown_hit_shift, combat::attack. SPEC 12)
+        const bool thrown_1e = (t.flags & 0x10) && !(t.flags & 0x04) && adnd(kAdndThrown);
         if ((t.flags & 0x02) || thrown_1e) hit += dex_missile(c);
         dmg = t.bonus;
         if (t.flags & 0x04) {
@@ -1511,6 +1519,9 @@ bool g_fixes = true;
 }
 void set_fixes(bool on) { g_fixes = on; }
 bool fixes() { return g_fixes; }
+uint8_t g_adnd = 0xFF;
+void set_adnd(uint8_t bits) { g_adnd = bits; }
+bool adnd(uint8_t rule) { return (g_adnd & rule) != 0; }
 
 int lost_levels(uint8_t lost) { return g_fixes && lost >= 0x80 ? 0 : lost; }
 

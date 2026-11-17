@@ -306,7 +306,10 @@ void camp_checks()
     expect(D_, "camp: the effects' spells - on whom, the effect, its time (dice highest)", bad == 0, "%d wrong; %s", bad,
            first.c_str());
 
-    // Raise Dead (GAME.OVR 0x2DF05): dead, Con 12 -> 11, okay with 1 HP
+    // Raise Dead (GAME.OVR 0x2DF05): dead, Con 12 -> 11, okay with 1 HP (the
+    // AD&D 1E Rules' Raising the Dead: Con kept)
+    for (uint8_t ad : {uint8_t{0}, uint8_t{0xFF}}) {
+    rules::set_adnd(ad);
     member(0, classes::Cleric, 14);
     member(1, classes::Fighter, 8, 70);
     mem(1).rec[0x195] = party::Dead;
@@ -314,10 +317,13 @@ void camp_checks()
     mem(1).rec[0x1A4] = 0;
     spells::add_affect(mem(1), fx(3), 0, 0, false);
     ccast(0, 1, 0x4B);
-    expect(D_, "camp: Raise Dead - okay, 1 HP, Con 11, the poison gone, \"is raised\"",
-           mem(1).health() == party::Okay && mem(1).hp() == 1 && mem(1).rec[0x18] == 11 && caff(1, fx(3)) < 0 &&
+    expect(D_, ad ? "camp: Raise Dead (1E Rules) - okay, 1 HP, Con 12, the poison gone, \"is raised\""
+                  : "camp: Raise Dead - okay, 1 HP, Con 11, the poison gone, \"is raised\"",
+           mem(1).health() == party::Okay && mem(1).hp() == 1 && mem(1).rec[0x18] == (ad ? 12 : 11) && caff(1, fx(3)) < 0 &&
                csaid(1, spells::Said::Raised) == 1,
            "status %d hp %d con %d", mem(1).health(), mem(1).hp(), mem(1).rec[0x18]);
+    }
+    rules::set_adnd(0xFF);
     // Resurrection (0x2EF05): dead only, all hit points; Con kept either way (AD&D 1E has no cost - Tom, 2026-11-17)
     for (bool fix : {false, true}) {
         rules::set_fixes(fix);

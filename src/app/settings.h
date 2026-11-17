@@ -37,6 +37,8 @@ struct Settings {
                                   // older files too): a board setting, not in As Original
     uint8_t music_off = 0;        // Music (Tom, 2026-11-14): the games' songs, rendered by the scan, off
                                   // (0 = on, the default and older files')
+    uint8_t rules_off = 0;        // the AD&D 1E Rules switched off (rules::Adnd bits - CYD_ADND_RULES,
+                                  // Tom 2026-11-17; 0 = all on, the default and older files')
 };
 
 // The Volume key (Tom, 2026-10-24): 0-100% in 5% steps, kept in the 0-255

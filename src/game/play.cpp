@@ -8244,8 +8244,11 @@ void secret_cure(int i, pic::Canvas& c)
             // maximum hit points stay - DOSBox, Guy 95 at Con 18 -> 17
             // keeps 95), then 1 HP
             rules::remove_affects(ch, f.poisoned);
-            if (ch.rec[0x18] > 0) --ch.rec[0x18];
-            if (ch.rec[0x19] > 0) --ch.rec[0x19];
+            // (AD&D 1E Rules: no Constitution lost - Tom, 2026-11-17)
+            if (!rules::adnd(rules::kAdndRaise)) {
+                if (ch.rec[0x18] > 0) --ch.rec[0x18];
+                if (ch.rec[0x19] > 0) --ch.rec[0x19];
+            }
             rules::recalc(ch, *names, d->facts);
             ch.rec[0x1A4] = 1;
             ch.rec[0x195] = party::Okay;
@@ -8415,7 +8418,7 @@ void dk_cure(int i, pic::Canvas& c)
         if (ch.rec[0x18] == 0) break;
         rules::remove_affects(ch, f.poisoned);
         okay();
-        --ch.rec[0x18];
+        if (!rules::adnd(rules::kAdndRaise)) --ch.rec[0x18];     // (AD&D 1E Rules: no Constitution lost)
         rules::recalc(ch, *names, d->facts);
         ch.rec[0x1A4] = 1;
         say = profile::kDkRaised;
@@ -13284,6 +13287,7 @@ __attribute__((noinline)) void load_party_text(dax::ByteSource& exe, const exepa
         items::set_passive(pi.passive);
         items::set_flame_fix(&pi.flame, CYD_ITEM_FIXES && opts.item_fixes);
         rules::set_fixes(CYD_ITEM_FIXES && opts.item_fixes);
+        rules::set_adnd(CYD_ADND_RULES ? opts.adnd : 0);
         rules::set_worn_facts(pi.effect_data, pi.stat_fx[1]);
         magic::set_empower(d->prof->variant.tr_empower);
         magic::set_fire15(d->prof->variant.fire15);
@@ -18134,8 +18138,13 @@ void set_options(const Options& o)
     // The items the originals got wrong: as now wanted, the party's too (mid-game)
     items::set_flame_fix(&d->prof->items.flame, CYD_ITEM_FIXES && opts.item_fixes);
     rules::set_fixes(CYD_ITEM_FIXES && opts.item_fixes);
+    static uint8_t adnd_was = 0xFF;
+    const uint8_t adnd_now = CYD_ADND_RULES ? opts.adnd : 0;
+    rules::set_adnd(adnd_now);
     for (int i = 0; pt && i < pt->count; ++i)
-        if (rules::fix_items(pt->m[i]) && names) rules::recalc(pt->m[i], *names, d->facts);
+        // (Thrown Weapons changes the record's to-hit: worked out again when it changes)
+        if ((rules::fix_items(pt->m[i]) || adnd_now != adnd_was) && names) rules::recalc(pt->m[i], *names, d->facts);
+    adnd_was = adnd_now;
     const int letters = font_wanted();
     if (d->font.letters == letters) return;
     // Mid-game (Tom, 2026-10-11): the text on the screen changes font too -

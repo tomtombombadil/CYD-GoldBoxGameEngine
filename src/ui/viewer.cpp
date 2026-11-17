@@ -20,6 +20,7 @@
 #include "engine/inflate.h"
 #include "engine/journal.h"
 #include "engine/resample.h"
+#include "engine/rules.h"
 #include "engine/pdf.h"
 #include "engine/picture.h"
 #include "engine/profile.h"
@@ -3318,7 +3319,7 @@ void tap_sounds(const ui::Tap& t)
 // One set for all games (settings.h comforts_off), on the one Settings
 // screen (below); a comfort compiled out (app/features.h) isn't listed.
 enum Comfort { kCFont, kCGallery, kCBigIcon, kCJournal, kCDemoTap, kCMoreGuys, kCPortrait, kCItemFixes, kCRolls,
-               kCCampFix, kCCheats, kCCompanion, kCMaxHp, kCQuick, kCRead, kCJoin, kCSaveInfo, kComforts };
+               kCCampFix, kCCheats, kCCompanion, kCMaxHp, kCQuick, kCRead, kCJoin, kCSaveInfo, kCThrown, kCRaise, kComforts };
 
 bool comfort_built(int c)
 {
@@ -3340,6 +3341,8 @@ bool comfort_built(int c)
     case kCRead: return CYD_READ_TIME;
     case kCJoin: return CYD_AUTO_JOIN;
     case kCSaveInfo: return CYD_SAVE_INFO;
+    case kCThrown:
+    case kCRaise: return CYD_ADND_RULES;
     default: return true;
     }
 }
@@ -3349,7 +3352,7 @@ uint16_t comfort_bit(int c)
     static const uint16_t kBits[kComforts] = {0, kOffGallery, kOffBigIcon, kOffJournal, kOffDemoTap, kOffMoreGuys,
                                               kOffPortrait, kOffItemFixes, kOffRolls, kOff2CampFix << 8,
                                               kOff2Cheats << 8, kOff2Companion << 8, 0, kOff2Quick << 8,
-                                              kOff2ReadTime << 8, kOff2AutoJoin << 8, kOff2SaveInfo << 8};
+                                              kOff2ReadTime << 8, kOff2AutoJoin << 8, kOff2SaveInfo << 8, 0, 0};
     return kBits[c];
 }
 uint16_t comforts_off() { return static_cast<uint16_t>(cfg->comforts_off | cfg->comforts_off2 << 8); }
@@ -3364,6 +3367,8 @@ bool comfort_on(int c)
     if (c == kCBigIcon && !ui::large()) return cfg->large_icons != 0;      // (320x240: off unless chosen - it covers the editor)
     if (c == kCFont) return cfg->game_font != kFontGame;                   // (the game's own unless chosen - Tom)
     if (c == kCMaxHp) return cfg->max_hp != 0;                             // (a cheat: off unless chosen - Tom)
+    if (c == kCThrown) return !(cfg->rules_off & rules::kAdndThrown);     // (the AD&D 1E Rules: Settings::rules_off)
+    if (c == kCRaise) return !(cfg->rules_off & rules::kAdndRaise);
     return !(comforts_off() & comfort_bit(c));
 }
 
@@ -3386,6 +3391,7 @@ void apply_options()
     o.read_time = comfort_on(kCRead);
     o.auto_join = comfort_on(kCJoin);
     o.save_info = comfort_on(kCSaveInfo);
+    o.adnd = static_cast<uint8_t>(0xFF & ~((comfort_on(kCThrown) ? 0 : rules::kAdndThrown) | (comfort_on(kCRaise) ? 0 : rules::kAdndRaise)));
     play::set_side_panel(ui::large() && comfort_on(kCCompanion));     // (Save Slot Info: the party in the panel)
     o.font = comfort_on(kCFont) ? cfg->game_font : kFontGame;
     play::set_options(o);
@@ -3420,7 +3426,7 @@ const char* const kComfortNames[kComforts] = {"Game Font",        "Icon Gallery"
                                               "Tap to Stop Demo", "More Characters", "Icon Portrait", "Game Fixes",
                                               "Show Rolls",       "Camp Fix",        "Cheats Tab",      "Companion Views",
                                               "Max Hit Points",   "Quick Actions",   "Readable Messages",
-                                              "Auto Join", "Save Slot Info"};
+                                              "Auto Join", "Save Slot Info", "Thrown Weapons", "Raising the Dead"};
 
 // What each option does (sentence case; Tom, v0.84.0)
 const char* comfort_help_text(int c)
@@ -3465,7 +3471,7 @@ const char* comfort_help_text(int c)
                    "character creation (the original never applies them); a cleric's experience bonus from "
                    "Wisdom 16; Power Word Blind lasts its worked-out time (the original blinds for good); "
                    "everyone a year older each year of game time (the original: every hundred). A multi-class character's hit points: each class's as a single class of it gets them (its die and Constitution bonus - a fighter's more from 17), added up and divided by the classes. "
-                   "Thrown weapons (darts, javelins) add Strength to hit and damage. Off: as the original.";
+                   "Off: as the original.";
         if (game_dirs[game_sel].game == games::Game::SecretOfTheSilverBlades)
             return "The original game's mistakes made as AD&D has them: the elves' +1 to hit with their "
                    "weapons for elves alone; a dwarf's or gnome's -4 when giants attack, and the Constitution "
@@ -3474,17 +3480,17 @@ const char* comfort_help_text(int c)
                    "Periapt of Health; a multi-class character's hit points (each class's as a single "
                    "class's, added up and divided by the classes); Sell's weight of coins; "
                    "money: any coins worth a price pay it (the original takes platinum alone), the change "
-                   "exact, and money kept in the highest coins. Thrown weapons (darts, javelins) add Strength to hit and damage. Off: as the original.";
+                   "exact, and money kept in the highest coins. Off: as the original.";
         if (game_dirs[game_sel].game == games::Game::CurseOfTheAzureBonds)
             return "Money as AD&D has it: any coins worth a price pay it (1 platinum = 5 gold = 10 electrum = "
                    "100 silver = 1000 copper, the game's own rates) - the original takes some prices in "
                    "platinum alone - with exact change; afterwards money is kept in the highest coins, so a "
-                   "pile of copper doesn't weigh a character down. A multi-class character's hit points: each class's as a single class of it gets them (its die and Constitution bonus - a fighter's more from 17), added up and divided by the classes. Thrown weapons (darts, javelins) add Strength to hit and damage. Off: as the original.";
+                   "pile of copper doesn't weigh a character down. A multi-class character's hit points: each class's as a single class of it gets them (its die and Constitution bonus - a fighter's more from 17), added up and divided by the classes. Off: as the original.";
         if (game_dirs[game_sel].game == games::Game::GatewayToTheSavageFrontier)
             return "The original game's mistakes made as AD&D has them: the stirge's and the squid's holds "
                    "hurt; the magic and missile sounds; a new game starts with an empty vault; money: any "
                    "coins worth a price pay it, the change exact, and money kept in the highest coins. A multi-class character's hit points: each class's as a single class of it gets them (its die and Constitution bonus - a fighter's more from 17), added up and divided by the classes. "
-                   "Thrown weapons (darts, javelins) add Strength to hit and damage. Off: as the original.";
+                   "Off: as the original.";
         if (game_dirs[game_sel].game != games::Game::PoolOfRadiance)
             return "The original game's mistakes made as AD&D has them (the Krynn games): among them a "
                    "paladin's Constitution hit points and its gain past the hit dice as a fighter's, and a "
@@ -3497,7 +3503,7 @@ const char* comfort_help_text(int c)
                "regenerating creatures such as trolls, +3 against cold-using and flying ones, +4 against undead, "
                "and its blows are fire. Your files keep the original's item. Money: any coins worth a price pay "
                "it - the inn's 1 platinum from 5 gold - with exact change, and money is kept in the highest "
-               "coins. Thrown weapons (darts, javelins) add Strength to hit and damage. A multi-class character's hit points: each class's as a single class of it gets them (its die and Constitution bonus - a fighter's more from 17), added up and divided by the classes. Off: as the original.";
+               "coins. A multi-class character's hit points: each class's as a single class of it gets them (its die and Constitution bonus - a fighter's more from 17), added up and divided by the classes. Off: as the original.";
     case kCRolls:
         return "In a fight, under each message, the dice it tells of: the roll as it came up, the modifiers' "
                "total and the result - \"To Hit: 17+2=19\" and \"Needed: 14\" (the modifiers counted from THAC0 "
@@ -3537,6 +3543,15 @@ const char* comfort_help_text(int c)
                "carries - arrows with arrows, +1 arrows with +1 arrows, the same potions - as the game's "
                "own Join would, so it needs no slot of its own. Off: as the original - each take is a "
                "new item (16 at most); Join them by hand.";
+    case kCThrown:
+        return "AD&D 1st edition's rule for hurled weapons: a thrown weapon gets Dexterity's missile bonus "
+               "to hit and Strength's bonus to damage. The originals give darts and javelins neither. A "
+               "weapon that can be thrown or swung - dagger, hand axe, spear - gets Strength's bonuses in "
+               "melee, and Dexterity's to hit with Strength's damage when thrown. Off: as the original.";
+    case kCRaise:
+        return "AD&D 1st edition's Raise Dead and Resurrection take no Constitution from the one raised. "
+               "The originals take a point for Raise Dead (some for Resurrection too); with this on, no "
+               "point is lost - by spell or at a temple. Off: as the original.";
     case kCSaveInfo:
         return "Save Which Game shows the slots that hold a save in white, the empty ones in grey. While "
                "Save or Load Which Game asks, the text box above the menu tells of the highlighted slot's "
@@ -3678,6 +3693,10 @@ void toggle_comfort(int c)
         cfg->comforts_off2 ^= kOff2Companion;
     } else if (c == kCMaxHp) {
         cfg->max_hp = !cfg->max_hp;
+    } else if (c == kCThrown) {
+        cfg->rules_off ^= rules::kAdndThrown;
+    } else if (c == kCRaise) {
+        cfg->rules_off ^= rules::kAdndRaise;
     } else {
         set_comforts_off(comforts_off() ^ comfort_bit(c));
     }
@@ -3691,15 +3710,20 @@ bool all_comforts_off()
     int list[kComforts];
     const int n = comfort_list(list);
     for (int i = 0; i < n; ++i)
-        if (comfort_on(list[i])) return false;
+        if (list[i] != kCCheats && comfort_on(list[i])) return false;   // (the Cheats tab: not As Original's)
     return true;
 }
 void toggle_original()
 {
     const bool on = all_comforts_off();
     uint16_t all = 0;
-    for (int c = 0; c < kComforts; ++c) all = static_cast<uint16_t>(all | comfort_bit(c));
+    // (Tom, 2026-11-17: Original Games turns the cheats' switches off - Max Hit
+    // Points, below - but never the Cheats tab; its cheats are things the player
+    // fires, not changes to the game)
+    for (int c = 0; c < kComforts; ++c)
+        if (c != kCCheats) all = static_cast<uint16_t>(all | comfort_bit(c));
     set_comforts_off(on ? 0 : all);
+    cfg->rules_off = on ? 0 : static_cast<uint8_t>(rules::kAdndThrown | rules::kAdndRaise);   // (the AD&D 1E Rules too)
     if (!on) cfg->large_icons = 0;
     cfg->max_hp = 0;                    // (a cheat: As Original turns it off, All On leaves it to the player)
     cfg->game_font = on ? kFontClear : kFontGame;

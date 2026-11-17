@@ -831,7 +831,9 @@ void camp_own()
     // Raise Dead (75, GAME.OVR 0x30CB4): the dead (status 6) or animated (1)
     // with own Constitution over 0 and not an elf (Secret's race 1): poison
     // gone, okay, own Constitution - 1, 1 HP, "is raised"
+    for (uint8_t ad : {uint8_t{0}, uint8_t{0xFF}})
     for (int elf = 0; elf < 2; ++elf) {
+        rules::set_adnd(ad);           // (the AD&D 1E Rules' Raising the Dead: no Constitution lost)
         member(0, classes::Cleric, 9);
         member(1, classes::Fighter, 5, 60);
         mem(1).rec[0x1A4] = 0;
@@ -844,10 +846,11 @@ void camp_own()
         give_member(1, cures.poisoned);
         ccast(0, 1, 75);
         const bool raised = mem(1).health() == party::Okay;
-        snprintf(w, sizeof w, "camp: Raise Dead on a dead %s", elf ? "elf: not" : "human");
-        expect(S, w, elf ? !raised : raised && mem(1).hp() == 1 && mem(1).rec[0x18] == 13 && caff(1, cures.poisoned) < 0,
+        snprintf(w, sizeof w, "camp: Raise Dead on a dead %s%s", elf ? "elf: not" : "human", ad ? " (1E Rules: Con kept)" : "");
+        expect(S, w, elf ? !raised : raised && mem(1).hp() == 1 && mem(1).rec[0x18] == (ad ? 14 : 13) && caff(1, cures.poisoned) < 0,
                "status %d HP %d Con %d", mem(1).health(), mem(1).hp(), mem(1).rec[0x18]);
     }
+    rules::set_adnd(0xFF);
     // Stone to Flesh (113, GAME.OVR 0x32120): the stoned okay, 1 HP, "is no
     // longer a statue"; else "is not stoned."
     {

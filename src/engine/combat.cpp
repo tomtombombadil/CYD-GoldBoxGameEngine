@@ -2907,6 +2907,19 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
         }
     }
     int side = at.team() ? b.to_hit_monsters : b.to_hit_party;
+    // Thrown Weapons (AD&D 1E Rules, Tom 2026-11-17): a weapon both melee and
+    // thrown (dagger, hand axe, spear: flags 4 and 0x10) thrown at one not
+    // next to the thrower - Dexterity's missile bonus to hit in place of
+    // Strength's (the record's to-hit is the melee figure: rules::recalc);
+    // its damage keeps Strength's. A party member's record only (recalc's)
+    if (names && a < b.party_size && rules::adnd(rules::kAdndThrown)) {
+        const int w = weapon(at, *names);
+        if (w >= 0) {
+            const items::TypeInfo& ti = names->type(at.items[w][0x2E]);
+            if ((ti.flags & 0x14) == 0x14 && ti.range > 1 && !adjacent(b, a, c))
+                side += rules::thrown_hit_shift(at.rec[kDexFull], at.rec[0x125], at.rec[0x11], at.rec[0x1C]);
+        }
+    }
     int q_hook = 0;                             // (the Dark Queen's: the hooks' change to the roll)
     bool q_miss = false;
     if (qh) {

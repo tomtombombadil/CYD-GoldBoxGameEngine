@@ -1401,8 +1401,12 @@ static void sp_check_camp()
     sp_ccast(4, 1, 0x2B);
     expect(SP, "camp: Remove Curse - Bestow Curse cured, \"is Cured\", \"is un-cursed\"",
            sp_caff(1, 0x24) < 0 && sp_csaid(1, spells::Said::Cured) == 1 && sp_csaid(1, spells::Said::Uncursed) == 1);
-    // Raise Dead: the dead (not elves, Con > 0) - okay, 1 HP, Con - 1
+    // Raise Dead: the dead (not elves, Con > 0) - okay, 1 HP, Con - 1 (the
+    // AD&D 1E Rules' Raising the Dead: no Constitution lost)
+    for (uint8_t ad : {uint8_t{0}, uint8_t{0xFF}})
     for (int race : {7, 2}) {
+        rules::set_adnd(ad);
+        const int con_after = ad ? 12 : 11;
         sp_member(1, classes::Fighter, 3);
         sp_member(1).rec[0x74] = static_cast<uint8_t>(race);
         sp_member(1).rec[0x18] = sp_member(1).rec[0x19] = 12;
@@ -1411,12 +1415,14 @@ static void sp_check_camp()
         sp_member(1).rec[0x196] = 0;
         sp_ccast(4, 1, 0x4B);
         if (race == 7)
-            expect(SP, "camp: Raise Dead on a dead human - okay, 1 HP, Con 12 -> 11, \"is raised\"",
-                   sp_member(1).health() == party::Okay && sp_member(1).hp() == 1 && sp_member(1).rec[0x18] == 11 && sp_csaid(1, spells::Said::Raised) == 1,
+            expect(SP, ad ? "camp: Raise Dead on a dead human (1E Rules) - okay, 1 HP, Con 12 kept, \"is raised\""
+                          : "camp: Raise Dead on a dead human - okay, 1 HP, Con 12 -> 11, \"is raised\"",
+                   sp_member(1).health() == party::Okay && sp_member(1).hp() == 1 && sp_member(1).rec[0x18] == con_after && sp_csaid(1, spells::Said::Raised) == 1,
                    "status %d HP %d Con %d", sp_member(1).health(), sp_member(1).hp(), sp_member(1).rec[0x18]);
         else
             expect(SP, "camp: Raise Dead on a dead elf - nothing", sp_member(1).health() == party::Dead && sp_cn == 0);
     }
+    rules::set_adnd(0xFF);
     // Giant strength (the potion, 0x3B): Strength 21, (d4 + 4) x 10 minutes
     sp_member(1, classes::Fighter, 3);
     sp_member(1).rec[0x10] = sp_member(1).rec[0x11] = 16;
