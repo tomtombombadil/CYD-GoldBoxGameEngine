@@ -128,11 +128,12 @@ struct Sides {
     const geo::Map* m;
     int px, py;
     bool rooms = true;                  // tables and chairs in rooms (Curse's; Pool's builder has none)
+    bool ends = false;                  // (Gateway: the field ends where the map does - Tables::field_ends_at_map)
     // 0 open, 1 wall, 3 door (one square's own side)
     int code(int x, int y, int dir) const
     {
         if (x < 0 || y < 0 || x >= geo::kSize || y >= geo::kSize)
-            return y == py && (dir == 2 || dir == 6) ? 0 : 1;
+            return ends || (y == py && (dir == 2 || dir == 6)) ? 0 : 1;
         if (geo::wall(*m, x, y, dir) == 0) return 0;
         return geo::door(*m, x, y, dir) == 0 ? 1 : 3;
     }
@@ -341,12 +342,17 @@ void pool_debris(Battle& b, const Tables& t, int block, create::Dice& d)
 
 void build_indoors(Battle& b, const Tables& t, const geo::Map& m, int px, int py, create::Dice& d, bool rooms)
 {
-    (void)t;
     memset(b.ground, 0, sizeof b.ground);
     b.indoors = true;
-    const Sides s{&m, px, py, rooms};
+    const Sides s{&m, px, py, rooms, t.field_ends_at_map};
     for (int ddy = -2; ddy <= 2; ++ddy)
-        for (int ddx = -6; ddx <= 6; ++ddx) draw_block(b, s, px + ddx, py + ddy, ddx, ddy, d);
+        for (int ddx = -6; ddx <= 6; ++ddx) {
+            // (Gateway: a square off the map is no part of the field - its
+            // squares stay 0, the field's edge, the way out of the fight)
+            const int x = px + ddx, y = py + ddy;
+            if (t.field_ends_at_map && (x < 0 || y < 0 || x >= geo::kSize || y >= geo::kSize)) continue;
+            draw_block(b, s, x, y, ddx, ddy, d);
+        }
 }
 
 void build_outdoors_dk(Battle& b, const Tables& t, bool river, create::Dice& d)

@@ -186,6 +186,20 @@ the Project as claude/TODO.md.
       characters one by one).
 
 ## Claude
+- [ ] Gateway, from the PortMaster session's play-through (2026-11-16, DOSBox
+      beside the engine at Ascore's arena, v0.203.11): (1) the original has
+      NO "Flee: Yes No" there - the second step off the field's south edge
+      and "The party has fled." at once; the engine asks. Gateway's way
+      everywhere, or only with no enemy near? Check before changing. (2) the
+      original's fight view stops at the field's edge (the fighter two rows
+      from the bottom); the engine keeps him in the middle and shows the
+      squares past the edge as floor. (3) `Tables::field_ends_at_map` and
+      `party_left` are Gateway's only - Treasures (the same family) and the
+      others: unchecked. (4) the Trainer cheat's level-ups gave the
+      magic-users no new spells (level 6, only first-level ones) - the
+      game's own halls? (5) after a town is entered from the overland's
+      Move the menu line still reads "Move (Use arrow keys): Exit" until
+      the next step.
 - [ ] Curse play-through (Tom, 2026-11-16; the Project's claude/playthrough_curse.md; Tom's
       tactics: a line, the best-armoured on the corners, casters behind, missiles for all,
       Sleep / Hold Person / Stinking Cloud, focus fire). 2026-11-17: Tilverton, sewers,

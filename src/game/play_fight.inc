@@ -928,6 +928,7 @@ struct Fight {
     int      mx = 0, my = 0;            // Manual's square
     int      pending = -1;              // an ally to attack (asked)
     int      flee_dir = 8;
+    int      left_dir = -1;         // (Gateway: the way the party's last runner left the field - 0 N, 2 E, 4 S, 6 W)
     // Casting: the spell, the targets picked, how many more, an area's radius (-1: none)
     int      spell = 0;
     int      sp_t[combat::kMaxFighters] = {};
@@ -4473,6 +4474,25 @@ bool enemy_next_to(int i)
     return false;
 }
 
+// Gateway: a party member who got away tells the fight which way - the
+// party comes out of it FACING that way, and Ascore's arena script reads
+// it (block 27: C04D set to north before each fight, tested after it;
+// north the next fight, the rest "had enough" / the goblin rooms; the
+// last fight's north is the ending). The original in DOSBox, 2026-11-16:
+// one fighter stepped off the first arena fight's south edge - "3,15 S"
+// and Vaalgamon's "run away, little ones". A slanted step counts as the
+// edge it crosses.
+void party_left(int i, int dir, int x, int y)
+{
+    if (d->prof->game != games::Game::GatewayToTheSavageFrontier || i >= fg->b.party_size) return;
+    int way = dir & 7;
+    if (dir < 0 || dir > 7 || (way & 1)) {
+        const int nx = x + (dir >= 0 && dir <= 7 ? combat::dx(dir) : 0);
+        way = nx < 0 || x <= 0 ? 6 : nx >= combat::kW || x >= combat::kW - 1 ? 2 : (dir >= 0 && dir <= 7 && (dir == 7 || dir <= 1)) || y <= 0 ? 0 : 4;
+    }
+    fg->left_dir = way;
+}
+
 // One step (or an attack that way) by the fighter whose turn it is
 void try_step(pic::Canvas& c, int dir)
 {
@@ -5370,7 +5390,9 @@ void ai_step(pic::Canvas& c)
         end_turn(c);
         return;
     case combat::Act::Flee: {
+        const int fx = f.x, fy = f.y;
         const bool away = combat::flee(b, fg->t, i, rng);
+        if (away) party_left(i, -1, fx, fy);       // (the computer's: by the edge it stood at)
         add_page(i, fw(away ? profile::kGotAway : profile::kEscapeBlocked));
         draw_fight(c);
         say(c, FSt::Next);
@@ -5535,6 +5557,7 @@ void fight_start(pic::Canvas& c)
     // (Gateway under water - its script word 0x4CF7: no tables and chairs,
     // GAME.OVR 0xF852 skips 0xEF50)
     const bool gw_under = d->prof->game == games::Game::GatewayToTheSavageFrontier && vm && vm->get(0x4CF7) != 0;
+    fg->t.field_ends_at_map = d->prof->game == games::Game::GatewayToTheSavageFrontier;
     if (b.indoors)
         combat::build_indoors(b, fg->t, d->map, d->gs.x, d->gs.y, rng, !pool_files() && !d->prof->variant.vga && !gw_under);
     else if (d->prof->variant.overland_map) combat::build_outdoors_pool(b, pool_place_flags(), rng);
@@ -6020,6 +6043,10 @@ void end_fight(pic::Canvas& c)
     // (Pool's arena leaves the result word 0 - its 0x80 / 0x81 are set on
     // the other paths only)
     vm->set(0x7EC7, static_cast<uint16_t>(arena && pool_files() ? 0 : r));
+    if (r == combat::Fled && fg->left_dir >= 0) {
+        d->gs.dir = static_cast<uint8_t>(fg->left_dir);
+        plat::log("[fight] the party left the field facing %d\n", fg->left_dir);
+    }
     if (in_demo) {
         // The demo (demo_facts.md 5): no clean-up, experience, treasure or
         // results; the script goes on (all down: the demo ends)
@@ -7521,7 +7548,9 @@ void fight_tap(int x, int y, pic::Canvas& c)
         }
         if (k != 'Y') return;
         const int i = fg->cur;
+        const int fx = fg->b.f[i].x, fy = fg->b.f[i].y;
         const bool away = combat::flee(fg->b, fg->t, i, rng);
+        if (away) party_left(i, fg->flee_dir, fx, fy);
         add_page(i, fw(away ? profile::kGotAway : profile::kEscapeBlocked));
         draw_fight(c);
         say(c, FSt::Next);            // (the turn is over: not an attack)
