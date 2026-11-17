@@ -722,6 +722,15 @@ bool party_dead = false;      // DAMAGE killed everyone: the party menu after th
 // experience or treasure after its fight; PROGRAM 3 ends it - the title
 // again, then the version line with a 10 s timeout
 bool in_demo = false;
+// An NPC from the monsters' files (ADD NPC: computer-run, its MON block at
+// 0x126) is drawn with that monster's own picture, not a character's head
+// and body. (A player character's 0x126 is a random number and head / body
+// 0 are ordinary choices.) Its record's head is 0 and its body 0 - or, in
+// Gateway's monster files, the picture's own number again (Krevish: 0x126 =
+// 60, body 60; the original in DOSBox, 2026-11-17: Ascore's arena - his
+// monster picture; the engine drew nothing there). Not Pool: its NPCs are
+// drawn as characters.
+bool npc_own_icon(const party::Character& ch);
 bool game_won = false;                  // PROGRAM 8 ran: training is free (not saved, as in the original)
 void won_key(pic::Canvas& c);
 bool auto_tap = false;                  // (the demo's own "key presses", not the player's)
@@ -2538,6 +2547,11 @@ void load_journal_list(char slot);
 // 439-byte records (NAME.WHO), items .STF (67 bytes each), effects .SFX
 // (variant.secret_files; party::from_secret / to_secret)
 bool pool_files() { return d->prof->variant.pool_files; }
+bool npc_own_icon(const party::Character& ch)
+{
+    return !pool_files() && ch.rec[0xF7] >= 0x80 && ch.rec[0x126] && !ch.rec[0x141] &&
+           (!ch.rec[0x142] || ch.rec[0x142] == ch.rec[0x126]);
+}
 bool secret_files() { return d->prof->variant.secret_files; }
 // Gateway to the Savage Frontier (Curse's files and saves; its own ways)
 bool gateway() { return d->prof->game == games::Game::GatewayToTheSavageFrontier; }
@@ -14900,7 +14914,7 @@ void view_box(pic::Canvas& c, const party::Character& ch)
     // The combat icon, 3 x 3 a pixel (72 x 72) in the middle; an NPC from
     // the monsters' files: its own picture (as in fights)
     Pic4 ic;
-    if (!pool_files() && ch.rec[0xF7] >= 0x80 && ch.rec[0x126] && !ch.rec[0x141] && !ch.rec[0x142]) {
+    if (npc_own_icon(ch)) {
         // (not Pool: its NPCs are drawn as characters - compose_icon)
         char file[16];
         area_fmt(file, sizeof file, "CPIC%d.DAX");
@@ -15952,6 +15966,7 @@ struct WonRun {
     uint32_t at = 0;
     // Pool's ending: its loops of the animation, those played; its frame time
     bool     pool = false;
+    bool     show = false;              // Gateway's: pictures and four lines a page, a key each
     int      loops = 0, loop = 0, last_pic = -1;
     uint8_t  fade[16] = {};
     char     text[320] = {};            // the page's text (the writer reads it while it prints)
@@ -16208,9 +16223,67 @@ void pool_end_tick(uint32_t now, pic::Canvas& c)
     anim_draw(++anim_frame);
 }
 
+// Gateway's ending (PROGRAM 8; GAME.OVR overlay 0x2CF74 +0x3AB; the original
+// in DOSBox, 2026-11-17): the big-picture frame (its bar on row 19), page 1
+// BIGPIC 0x7E, page 2 0x7F, pages 3-6 the pictures 0x80-0x83 set into it at
+// cells (1,1) (1,9) (26,1) (20,9); under each four lines of the program's
+// own words (green, rows 20-23, their "(more)" in them) and a key. Then the
+// screen is cleared and the script goes on.
+void gate_show_page(pic::Canvas& c)
+{
+    const auto& wf = d->prof->won;
+    const int page = won->page;
+    static const uint8_t at[4][2] = {{1, 1}, {1, 9}, {26, 1}, {20, 9}};
+    if (page == 0) {
+        c.clear(0);
+        layout::outer(c, d->tables, d->frame_tiles);
+        layout::bar(c, d->tables, d->frame_tiles, 19);
+    }
+    // (BIGPIC1.DAX by name: the show asks for file 1 itself)
+    if (page < 2) draw_block(c, "BIGPIC1", wf.bigpic + page, 8, 8);
+    else {
+        // (set in: its colour 13 is see-through - the pictures' ragged edges)
+        plat::File f;
+        if (open_dax("BIGPIC1.DAX", f)) {
+            plat::FileSource fs(f);
+            if (const dax::Entry* e = d->idx.find(static_cast<uint8_t>(wf.bigpic + page))) {
+                dax::RleReader r(fs, d->idx, *e);
+                uint8_t hdr[pic::kHeaderSize];
+                pic::Header h;
+                if (r.read(hdr, sizeof hdr) == sizeof hdr && pic::parse_header(hdr, e->raw_size, h))
+                    pic::draw(r, h, 0, c, at[page - 2][0] * 8, at[page - 2][1] * 8, 13);
+            }
+            f.close();
+        }
+    }
+    c.fill(8, 20 * 8, 38 * 8, 4 * 8, 0);
+    OvrWords src;
+    if (src.open())
+        for (int k = 0; k < 4; ++k) {
+            char line[text::kMaxString];
+            if (text::read_pascal(src, wf.text[page * 4 + k], line, sizeof line)) put(c, line, 1, 20 + k, 10);
+        }
+    dirty(0, pic::kScreenH);
+    won->stage = WonRun::Key;
+}
+
 void start_won(pic::Canvas& c)
 {
     anim_stop();
+    if (d->prof->game == games::Game::GatewayToTheSavageFrontier) {
+        if (!d->prof->won.bigpic || !(won ? won : (won = new (std::nothrow) WonRun))) {
+            waiting = false;                // (no show in this program / no memory: the script goes on)
+            handle(vm->resume());
+            return;
+        }
+        won->show = true;
+        won->last_pic = last_pic;
+        clear_menu_line(c);
+        screen = Screen::Won;
+        won->page = 0;
+        gate_show_page(c);
+        return;
+    }
     if (d->prof->variant.final_end) {
         if (!won) won = new (std::nothrow) WonRun;
         if (!won) {
@@ -16249,6 +16322,20 @@ void start_won(pic::Canvas& c)
 void won_key(pic::Canvas& c)
 {
     if (!won || won->pool) return;      // (Pool's plays out: no key, as the original)
+    if (won->show) {
+        if (++won->page < 6) {
+            gate_show_page(c);
+            return;
+        }
+        last_pic = won->last_pic;
+        delete won;
+        won = nullptr;
+        c.clear(0);                     // (its 0x157:0x70: the whole screen)
+        fight_back_to_game(c);
+        waiting = false;
+        handle(vm->resume());
+        return;
+    }
     switch (won->stage) {
     case WonRun::Key:
         clear_menu_line(c);
@@ -16365,6 +16452,7 @@ void won_tick(uint32_t now, pic::Canvas& c)
         pool_end_tick(now, c);
         return;
     }
+    if (won->show) return;
     switch (won->stage) {
     case WonRun::Anim: {
         const uint32_t delay = d->anim.delay[anim_frame] ? d->anim.delay[anim_frame] * 100u : 100u;
@@ -17307,7 +17395,7 @@ bool panel_icon(int i, uint8_t* px, uint8_t* see, int* w, int* h)
         pic::Rgb* keep_pal = vga ? static_cast<pic::Rgb*>(malloc(sizeof vga->now)) : nullptr;
         const bool keep_changed = vga && vga->changed;
         if (keep_pal) memcpy(keep_pal, vga->now, sizeof vga->now);
-        if (!pool_files() && ch.rec[0xF7] >= 0x80 && ch.rec[0x126] && !ch.rec[0x141] && !ch.rec[0x142]) {
+        if (npc_own_icon(ch)) {
             char file[16];
             area_fmt(file, sizeof file, "CPIC%d.DAX");
             int pw = 0, ph = 0;

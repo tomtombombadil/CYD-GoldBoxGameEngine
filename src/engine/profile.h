@@ -643,6 +643,11 @@ struct Profile {
         // Darkness's Kalistes: its six weapons' names and "+4" (R14; shown in
         // the panel's weapon rows at each blow - read when shown, facts L7)
         uint32_t        kalistes_words[7] = {};
+        // Gateway's maze fights (Ascore's arena, its script word 0x4D01 = 1):
+        // "All enemies destroyed. (more)", "Continue through the (more)",
+        // "maze off any map edge. (more)" (GAME.OVR 0x4A536 on - shown by its
+        // fighter-down routine 0x4A87F) and "No enemies remain here." (0x3C033)
+        uint32_t        maze_words[4] = {};
     } fight;
 
     // The script machine's own words (GAME.OVR), in ecl::ScriptWord's order

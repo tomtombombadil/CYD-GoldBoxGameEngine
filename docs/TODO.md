@@ -186,14 +186,42 @@ the Project as claude/TODO.md.
       characters one by one).
 
 ## Claude
+- [x] v0.205.1 - Gateway played to its end (the PortMaster session, 2026-11-17;
+      the original in DOSBox beside the engine, its code read). Ascore's arena
+      is a MAZE fight (script word 0x4D01 = 1): the fight doesn't end with the
+      enemies dead ("All enemies destroyed. (more)" / "Continue through the" /
+      "maze off any map edge."), no "Flee" question at the edge, over as the
+      first member leaves, the party then facing the way in word 0x4CF9 -
+      the engine ended it at the last enemy and always went north. The view
+      stops at the field's edge. Krevish (an NPC from the monsters' file) was
+      not drawn in fights. PROGRAM 8 (the ending) showed six empty pages and
+      dropped to the party menu - now its picture show (BIGPIC1 0x7E-0x83, its
+      24 lines), then the script goes on ("Victory is sweet", Krevish leaves,
+      Yartar). Checked: the field, the south way out, the experience (20 a
+      member when none leaves, 24 when one of seven does) and all six ending
+      pages against DOSBox screenshots.
+- [ ] **The other games' PROGRAM 8** (found 2026-11-17): only Curse and
+      PoolRad have an ending in the profile; Secret, Champions, Death Knights,
+      Darkness, Treasures run Curse's pages with no words (`won = {}`) and
+      then stop the script at the party menu. Each game's handler (Gateway's:
+      GAME.OVR 0x3FA0, "cmp al,8") says what its PROGRAM 8 does and whether
+      the script goes on - read it and watch it in DOSBox (a scratch ECL
+      patched to jump to the ending's script: tools/devkit/tools/daxp.py)
+      before each game's play-through reaches its end.
+- [ ] Gateway, small ones left from that end: (a) after the ending's NEWECL to
+      Yartar the original's text window is empty, the engine keeps "Victory
+      is sweet"; (b) the show's colours - the original's 16 are its own VGA
+      shades (the stone greyer), the engine's the EGA ones, as everywhere in
+      Gateway; (c) the view's limits at a field's west / east edge are taken
+      as the ground's bounding box - only the south edge was seen in DOSBox;
+      (d) a charmed last member: the fight ends "won" with nobody on the
+      party's side standing (every game's rule? check one in DOSBox). (e) the
+      original drops the fallen from the party when a fight is fled, except
+      in a maze fight (GAME.OVR 0x7468-0x74E2) - what does the engine do?
 - [ ] Gateway, from the PortMaster session's play-through (2026-11-16, DOSBox
-      beside the engine at Ascore's arena, v0.203.11): (1) the original has
-      NO "Flee: Yes No" there - the second step off the field's south edge
-      and "The party has fled." at once; the engine asks. Gateway's way
-      everywhere, or only with no enemy near? Check before changing. (2) the
-      original's fight view stops at the field's edge (the fighter two rows
-      from the bottom); the engine keeps him in the middle and shows the
-      squares past the edge as floor. (3) `Tables::field_ends_at_map` and
+      beside the engine at Ascore's arena, v0.203.11): (1) done, v0.205.1:
+      no "Flee" question in a maze fight only (GAME.OVR 0xCA1E). (2) done,
+      v0.205.1. (3) `Tables::field_ends_at_map` and
       `party_left` are Gateway's only - Treasures (the same family) and the
       others: unchecked. (4) the Trainer cheat's level-ups gave the
       magic-users no new spells (level 6, only first-level ones) - the

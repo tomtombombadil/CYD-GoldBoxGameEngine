@@ -1851,6 +1851,10 @@ constexpr TitleStep kGatewayTitle[] = {
 
 constexpr ecl::OpSet kGatewayEcl = [] {
     ecl::OpSet s = kCurseEcl;
+    // (its PROGRAM 8 - the ending's picture show, GAME.OVR 0x3FA0: the
+    // far call 0xBD:0x25 and back - doesn't end the script: "Victory is
+    // sweet", Krevish's leave and Yartar follow it)
+    s.program_ends = false;
     s.duels = false;
     s.parlay_space = false;
     s.sizes[0x32] = 4;
@@ -4121,7 +4125,7 @@ const Profile kProfiles[] = {
                0, 0, 0, 0, 0, 0x385D6, 0, 0x12986},   // (kNoEffectWaterQ: its under-water "Nothing Happens."; kWaterClearsGw)
               {0x03, 0x0B, 0x0D, 0x15, 0x17, 0x1B, 0x23, 0x28, 0x33, 0x34, 0x35, 0x3A, 0x5B, 0x88, 0x89, 0x8B, 0x8E,
                0x90, 0x1F, 0x96},
-              kGatewayFacts, kGatewayFight.s, kGatewayFightN},
+              kGatewayFacts, kGatewayFight.s, kGatewayFightN, {}, {}, {}, {0x4A536, 0x4A554, 0x4A570, 0x3C033}},
      .script_words = {0x2C54, 0x2C65, 0xB76A, 0xB772, 0xB77F, 0x357C, 0x3BE5, 0, 0, 0, 0x3BFF, 0x41D1, 0x4206, 0x4217, 0x41F2},
      .random_items = &kCurseRandom, .random_rows = 0x1058,
      // Its effects (gateway_facts.md 16): DigPak samples, ZOUNDS.DAX block n
@@ -4133,6 +4137,14 @@ const Profile kProfiles[] = {
                // (lent to the older games: its own numbers, 3 and 6 as the fixed ones)
                .lent = {0, 0, 2, 4, 4, 5, 12, 7, 8, 9, 10, 11, 12, 0, 0, 0}},
      .door = {0x1C147, 0x1C14C, 0x1C152, 0x1C159, 0x1C15F, 0x1F},
+     // The ending's show (PROGRAM 8; GAME.OVR overlay 0x2CF74 +0x3AB): six
+     // pages of four lines (its own words, a key each) under BIGPIC1's
+     // pictures - 0x7E, 0x7F whole, then 0x80-0x83 set into the second one
+     // at cells (1,1) (1,9) (26,1) (20,9); the screen cleared, the script on
+     .won = {.text = {0x2CFA8, 0x2CFCC, 0x2CFF1, 0x2D016, 0x2D036, 0x2D05C, 0x2D082, 0x2D0A8, 0x2D0C8, 0x2D0EF, 0x2D116,
+                      0x2D13D, 0x2D163, 0x2D185, 0x2D1AB, 0x2D1D2, 0x2D1F8, 0x2D21D, 0x2D244, 0x2D26A, 0x2D28E, 0x2D2B4,
+                      0x2D2D8, 0x2D2FC},
+             .page_lines = {4, 4, 4, 4, 4, 4}, .bigpic = 0x7E},
      .variant = {.program_words = true, .treasure_pic = 1, .camp_pic = 29, .eight_black = true, .field_swap = true,
                  .party_menu_col = 9,
                  .sf_pics = true,
