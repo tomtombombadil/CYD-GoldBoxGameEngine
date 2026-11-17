@@ -39,6 +39,18 @@ def run(t):
 def cheb(a, b): return max(abs(a['x'] - b['x']), abs(a['y'] - b['y']))
 
 
+CODES = {'magic missile': 'MM', 'fireball': 'FB', 'stinking cloud': 'SC', 'hold person': 'HP', 'prayer': 'Prayer',
+         'cure serious wounds': 'CSW', 'cure light wounds': 'CLW', 'lightning bolt': 'LB', 'cone of cold': 'CoC',
+         'bless': 'Bless', 'sleep': 'Sleep', 'haste': 'Haste'}
+
+
+def spell_list(t):
+    log = run(t + '/C')
+    got = re.findall(r'\[play\] spell list: (.*)', log)
+    if not got: return []
+    return [CODES.get(n.strip().lower(), n.strip()) for n in got[-1].split('|') if n.strip()]
+
+
 def cast(who, name, target=None):
     lst = SPELLS[who]; i = lst.index(name); lst.pop(i)
     a = '/C' + 'v' * i + '/C'
@@ -52,7 +64,7 @@ for step in range(int(os.environ.get('STEPS', '260'))):
     st = re.findall(r'  \? screen (\d+) menu \[([^\]]*)\]', log)
     if not st: print('no state'); break
     scr, menu = st[-1]
-    if scr != '24': print('OUT', scr, menu[:60]); break
+    if scr != '24' and not ('Move' in menu and 'Done' in menu): print('OUT', scr, menu[:60]); break
     figs = re.findall(r'  FIG (\d+) (\S) (.+?) at (\d+),(\d+) team (\d) hp (\d+)', log)
     n = len(set(f[0] for f in figs)); figs = figs[-n:]
     F = {int(f[0]): dict(name=f[2], x=int(f[3]), y=int(f[4]), team=int(f[5]), hp=int(f[6])) for f in figs}
@@ -84,16 +96,17 @@ for step in range(int(os.environ.get('STEPS', '260'))):
         formed.add(who)
         if FORM[who] and 'Move' in menu:
             T += '/M' + ''.join('}%d' % d for d in FORM[who]) + '{,'; continue
-    can_cast = 'Cast' in menu and who in SPELLS
+    can_cast = 'Cast' in menu and who in ('MIRA', 'SELENE', 'BRAN', 'AKABAR BEL AKAS')
+    if can_cast: SPELLS[who] = spell_list(T)
     sp = SPELLS.get(who, [])
-    if can_cast and who == 'BRAN' or (can_cast and who == 'SELENE'):
+    if can_cast and who in ('BRAN', 'SELENE'):
         if 'Prayer' in sp and who not in prayed and any(cheb(F[k], m) <= 6 for k in foes):
             prayed.add(who); a = cast(who, 'Prayer')
         else:
             hurt = sorted([k for k in party if F[k]['hp'] < 0.4 * maxhp[k]], key=lambda k: F[k]['hp'] / maxhp[k])
             for c in ('CSW', 'CLW'):
                 if hurt and c in sp: a = cast(who, c, hurt[0]); break
-    if a is None and can_cast and who in ('MIRA', 'SELENE'):
+    if a is None and can_cast and who in ('MIRA', 'SELENE', 'AKABAR BEL AKAS'):
         lead = [k for k in foes if LEADER and LEADER in F[k]['name'] and cheb(F[k], m) <= int(os.environ.get('RANGE','12'))]
         def best(radius, safe, fireok):
             bestk, bestn = None, 0
@@ -107,6 +120,10 @@ for step in range(int(os.environ.get('STEPS', '260'))):
         if a is None and 'FB' in sp:
             k, c = best(2, 3, False)
             if k is not None and c >= 2: a = cast(who, 'FB', k)
+        for big in ('CoC', 'LB'):
+            if a is None and big in sp:
+                k, c = best(2, 3, True)
+                if k is not None and c >= 2: a = cast(who, big, k)
         if a is None and 'SC' in sp:
             k, c = best(1, 2, True)
             if k is not None and c >= 2: a = cast(who, 'SC', k)

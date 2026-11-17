@@ -7790,6 +7790,9 @@ void take_loot(int i, pic::Canvas& c)
     const bool heavy = rules::too_heavy(*ch, ground->item[at], *names, d->facts, false);
     const bool piled = !heavy && CYD_AUTO_JOIN && opts.auto_join && rules::pile_onto(*ch, ground->item[at], secret_files());
     if (heavy || (!piled && full)) {
+#ifdef CYD_TEST_HOOKS
+        plat::log("[play] take refused, left %d\n", ground->n);
+#endif
         note(c, d->w_over);
         return;
     }
@@ -7797,6 +7800,9 @@ void take_loot(int i, pic::Canvas& c)
     rules::recalc(*ch, *names, d->facts);
     for (int k = at; k + 1 < ground->n; ++k) memcpy(ground->item[k], ground->item[k + 1], items::kRecordSize);
     --ground->n;
+#ifdef CYD_TEST_HOOKS
+    plat::log("[play] take ok, left %d\n", ground->n);
+#endif
     if (!ground->n) {
         screen = Screen::Shop;
         draw_shop(c);

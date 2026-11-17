@@ -4219,6 +4219,9 @@ void sell_item(int i, pic::Canvas& c)
     item_name(i, nm, sizeof nm);
     snprintf(t, sizeof t, "%s%d%s%s", iw(profile::kGiveYou), rules::sell_value(pt->sel()->items[i], d->facts),
              iw(profile::kGoldFor), nm);
+#ifdef CYD_TEST_HOOKS
+    plat::log("[play] sell offer %d\n", rules::sell_value(pt->sel()->items[i], d->facts));
+#endif
     say_item(c, t);
     item_at = i;
     ask_yes_no(c, Ask::SellDeal, iw(profile::kDeal));
@@ -9473,6 +9476,17 @@ void draw_spells(pic::Canvas& c)
         snprintf(t, sizeof t, "%s%s", a, b);
     put(c, t, static_cast<int>(strlen(nm)) + 4, 1, ink);
     const int rows = list_rows();
+#ifdef CYD_TEST_HOOKS
+    {   // (the playsim's drivers read the list's spells in order)
+        char all[600] = "";
+        for (int i = 0; i < sl.n; ++i)
+            if (sl.id[i] && strlen(all) + 40 < sizeof all) {
+                strcat(all, spell_name(sl.id[i]));
+                strcat(all, "|");
+            }
+        plat::log("[play] spell list: %s\n", all);
+    }
+#endif
     // (a turned page: its first spell lit - the engine's rule in every game,
     // SPEC 12; Curse, Secret, Krynn's lit none - navcheck N2)
     if ((darkness_files() || gateway() || sl.sel >= 0) && (sl.sel < sl.top || sl.sel >= sl.top + rows)) dk_page_sel();

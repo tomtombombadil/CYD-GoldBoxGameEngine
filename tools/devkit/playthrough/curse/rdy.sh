@@ -38,6 +38,6 @@ print(out)
 PY
 )
 echo "rdy: $T" >&2
-[ -n "$T" ] && TAILN=0 $P/bin/p.sh "$T" SAVE=$S SAVENOW=$S >/dev/null
+[ -n "$T" ] && TAILN=0 $P/bin/p.sh "${RDYPRE}$T${RDYPOST}" SAVE=$S SAVENOW=$S >/dev/null   # (RDYPRE=/C RDYPOST=/E: the overland, View is in Camp)
 TAILN=0 $P/bin/p.sh "" SAVE=$S ITEMDUMP=1 >/dev/null
 awk '/^  member/{printf "\n%s %s %s:", $3,$4,$5} /^    \*/{sub(/^    \* /,""); printf " %s;", $0}' $P/run.log; echo
