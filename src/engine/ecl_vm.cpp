@@ -1230,6 +1230,11 @@ Stop Vm::answer(int v)
         break;
     case 0x2D:                          // (Gateway's CALL 0x80C: Yes 0, No 1)
         set(dest_, static_cast<uint16_t>(v ? 1 : 0));
+        // its scripts test the answer with the IF right after the call:
+        // "=" on No, "<>" on Yes (every use in the game's blocks reads so -
+        // "WOULD YOU LIKE TO REST" / IF = / leave)
+        for (bool& f : flags_) f = false;
+        flags_[v ? 0 : 1] = true;
         break;
     default: break;
     }
@@ -2243,7 +2248,12 @@ Stop Vm::step()
             if (r == 20) return true;
             return r + bonus + static_cast<int8_t>(c.rec[0x186]) >= c.rec[0xDF + (type > 4 ? 4 : type)];
         };
-        int dmg = roll(sd, n) + p;
+        // (Gateway's one DAMAGE - the Kraken cell's grating, ECL2 block 2 0x88B4: 1, 0x81, 1, 1, 0x64 -
+        // has 0x80 on the dice count: the SELECTED member takes dice + bonus, no roll to hit. The
+        // original in DOSBox, 2026-11-16: "BRON IS HIT FOR 2 POINTS OF DAMAGE.", the climber, 54 -> 52)
+        const bool on_selected = !(f & 0x80) && (n & 0x80);
+        const int nd = on_selected ? n & 0x7F : n;
+        int dmg = roll(sd, nd) + p;
         const int count = party_->count;
         const int random = (f & 0x40) ? 0 : roll(count, 1) - 1;
         if ((f & 0x80) && set_.queen_damage) {
@@ -2274,6 +2284,8 @@ Stop Vm::step()
             } else {
                 one(random, true, type);
             }
+        } else if (on_selected) {
+            if (party_->selected >= 0 && party_->selected < count) hurt(party_->selected, dmg & 0xFF);
         } else {
             for (int k = 0; k < f; ++k) {
                 const int i = roll(count, 1) - 1;
