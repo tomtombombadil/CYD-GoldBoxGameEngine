@@ -3386,6 +3386,7 @@ void apply_options()
     o.read_time = comfort_on(kCRead);
     o.auto_join = comfort_on(kCJoin);
     o.save_info = comfort_on(kCSaveInfo);
+    play::set_side_panel(ui::large() && comfort_on(kCCompanion));     // (Save Slot Info: the party in the panel)
     o.font = comfort_on(kCFont) ? cfg->game_font : kFontGame;
     play::set_options(o);
 }
@@ -5526,6 +5527,13 @@ void comp_update(bool big)
         comp_fight = fight;
         if (fight && comp_on()) comp_view = View::Battle;
         else if (!fight && comp_view == View::Battle) comp_view = comp_kept;
+        comp_force = true;
+    }
+    // (Save Slot Info: the slot's party in the panel while Save / Load Which asks)
+    static bool comp_saves = false;
+    if (play::saves_shown() != comp_saves && comp_on()) {
+        comp_saves = !comp_saves;
+        comp_view = comp_saves ? View::Party : comp_kept;
         comp_force = true;
     }
     if (!comp_on() && comp_view != View::Map) {

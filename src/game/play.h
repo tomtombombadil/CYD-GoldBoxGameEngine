@@ -169,6 +169,13 @@ struct Options {
                                   // 3 Clear Caps (the Clear capitals only)
 };
 void set_options(const Options& o);
+// A Companion panel stands beside the game screen (480x320; a wide
+// handheld): Save Slot Info's screen then leaves the party to it (false,
+// the default: the party drawn in the game screen's right half)
+void set_side_panel(bool on);
+// Save / Load Which show a slot's save (Save Slot Info): the Party view is
+// that save's party meanwhile - a side panel shows it
+bool saves_shown();
 // The title's lightning (Pool): the colour palette entry `index` shows now,
 // or -1 (as itself)
 int flash(int& index);

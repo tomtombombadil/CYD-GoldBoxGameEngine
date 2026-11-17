@@ -6,17 +6,18 @@ to the bottom with their version, then drop off after a while. Synced to
 the Project as claude/TODO.md.
 
 ## Tom
-- [ ] **Save Slot Info's area names (2026-11-17)**: the save / load text box
-      shows "Area 3, square 12,10". Place names ("Slums", "Podol Plaza")
-      would be a table of ours in the repo, a name per game area / block,
-      typed from walkthroughs - close to the "nothing from the games" rule.
-      OK or not? (Asked in chat.)
-- [ ] **PortMaster port, Save Slot Info (v0.206.0)**: the port defines
+- [ ] **PortMaster port, Save Slot Info (v0.207.0)**: the port defines
       `plat::file_time` (stat + localtime: "Nov 17 2026 09:41 PM") so its
-      saves show their time; Y during Save / Load Which shows the Companion,
-      whose Party view is that save's party (panel_* do it); the Settings
-      line Save Slot Info (Options::save_info). For the port's session when
-      the pin moves.
+      saves show their time; `play::set_side_panel(true)` when the Companion
+      stands beside the game (wide panels) - the party then shows in it
+      (`play::saves_shown()`: its Party view), else in the game screen's
+      right half; the Settings line Save Slot Info (Options::save_info).
+      For the port's session when the pin moves.
+- [ ] Places table (`engine/places.cpp`, 2026-11-17): names from the
+      blocks' own words, the Gold Box Companion's map names (facts only)
+      and the guides; a few blocks have none yet (Treasures 22/25/29/49/50,
+      the games' debug / intro blocks) and the Dark Queen none (its saves
+      aren't shown). Tom: say if a name reads wrong.
 - [ ] **Buck Rogers games? (Tom, 2026-11-16: Countdown to Doomsday, Matrix
       Cubed - same engine, XXVc rules, no GOG / Steam, only 90s backups)**:
       Claude's assessment sent. The plan, if Tom goes ahead: after the Krynn
