@@ -6,7 +6,7 @@ TAILN=0 $P/bin/p.sh "|B" SAVE=$S PARTYDUMP=1 > /dev/null
 T='|B"0'
 while read -r i hp mx; do
   [ "$hp" = "$mx" ] && continue
-  [ "$hp" = 0 ] && T="$T%$i/Hvvvvvv/H/N/E"
+  [ "$hp" = 0 ] && T="$T%$i/Hvvvvvvvvv/H/N/E%$i/Hvvvvvvv/H/N/E"
   n=$(( (mx - hp) / 14 + 1 )); [ $n -gt 6 ] && n=6
   for k in $(seq $n); do T="$T%$i/Hvvvv/H/E"; done
 done < <(grep -E "^  [0-7]: " $P/run.log | head -8 | sed -E 's/^  ([0-7]): .* HP ([0-9-]+)\/([0-9]+).*/\1 \2 \3/')

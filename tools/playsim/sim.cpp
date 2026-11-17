@@ -1817,11 +1817,14 @@ int main(int argc, char** argv)
                 if (text::key(play::menu, i) == k) return true;
             return false;
         };
+        static int auto_take = 0;
         const int scr = (int)play::screen;
         const char* t = nullptr;
+        if (scr == 24 || scr == 0) auto_take = 0;
         if (scr == 1) { auto_left = 0; return false; }     // (the party menu: all dead)
         if (scr == 24 && has('Q') && getenv("FIGHTSTOP")) { auto_left = 0; return false; }   // (FIGHTSTOP=1: a fight is the player's)
         if (scr == 24) t = has('Q') ? "/Q" : has('Y') && has('N') && getenv("AUTOFIGHT") ? "/N" : ".";   // ("Continue Battle": No)
+        else if (scr == 5 && has('T') && has('V') && getenv("AUTOTAKE") && !auto_take) { t = getenv("AUTOTAKE"); auto_take = 1; }   // (AUTOTAKE=tokens: once at each treasure menu, e.g. /T/I/T/T/T/T - the selected member takes the items)
         else if (scr == 5 || scr == 16 || scr == 25) t = has('E') ? "/E" : ".";
         else if (scr == 11 && getenv("AUTOFIGHT") && has('Y') && has('N')) t = "/N";     // ("There is still treasure left ...": No)
         else if (w == ecl::Wait::Print || w == ecl::Wait::Key || w == ecl::Wait::Pause) t = ".";
