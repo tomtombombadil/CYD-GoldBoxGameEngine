@@ -6,6 +6,17 @@ to the bottom with their version, then drop off after a while. Synced to
 the Project as claude/TODO.md.
 
 ## Tom
+- [ ] **Save Slot Info's area names (2026-11-17)**: the save / load text box
+      shows "Area 3, square 12,10". Place names ("Slums", "Podol Plaza")
+      would be a table of ours in the repo, a name per game area / block,
+      typed from walkthroughs - close to the "nothing from the games" rule.
+      OK or not? (Asked in chat.)
+- [ ] **PortMaster port, Save Slot Info (v0.206.0)**: the port defines
+      `plat::file_time` (stat + localtime: "Nov 17 2026 09:41 PM") so its
+      saves show their time; Y during Save / Load Which shows the Companion,
+      whose Party view is that save's party (panel_* do it); the Settings
+      line Save Slot Info (Options::save_info). For the port's session when
+      the pin moves.
 - [ ] **Buck Rogers games? (Tom, 2026-11-16: Countdown to Doomsday, Matrix
       Cubed - same engine, XXVc rules, no GOG / Steam, only 90s backups)**:
       Claude's assessment sent. The plan, if Tom goes ahead: after the Krynn

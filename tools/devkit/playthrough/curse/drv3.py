@@ -28,7 +28,7 @@ for part in os.environ.get('FORM', '').split(';'):
     if ':' in part:
         n, ds = part.split(':'); FORM[n] = [int(c) for c in ds]
 DIRS = {(0, -1): 0, (1, -1): 1, (1, 0): 2, (1, 1): 3, (0, 1): 4, (-1, 1): 5, (-1, 0): 6, (-1, -1): 7}
-hasted = set(); wands = {}; maxhp = {}; formed = set(); prayed = set(); lastsig = None; stuck = 0; aimn = 0
+pending = {}; hasted = set(); wands = {}; maxhp = {}; formed = set(); prayed = set(); lastsig = None; stuck = 0; aimn = 0
 
 
 def run(t):
@@ -52,9 +52,13 @@ def spell_list(t):
     return [CODES.get(n.strip().lower(), n.strip()) for n in got[-1].split('|') if n.strip()]
 
 
+AREA = {'FB': (2, 3, False), 'SC': (1, 2, True), 'Sleep': (1, 2, True), 'IS': (1, 2, True)}   # radius, safe, fire ok
+
+
 def cast(who, name, target=None):
     lst = SPELLS[who]; i = lst.index(name); lst.pop(i)
     a = '/C' + 'v' * i + '/C'
+    if name in AREA: pending[who] = name; return a + ','
     if target is not None: a += f'#@{target};/T~/E~'
     return a + ','
 
@@ -77,6 +81,31 @@ for step in range(int(os.environ.get('STEPS', '260'))):
     lastsig = sig
     if 'Continue Battle' in menu or 'Abort Spell' in menu: T += '/N,'; continue
     if 'Attack Ally' in menu: T += '/N{,'; continue
+    if 'Aim:' in menu and who in pending and 'Manual' in menu and aimn == 0:
+        # the area spell's centre chosen NOW (Tom, 2026-11-17: when it goes off, on any square - empty too):
+        # the square with the most foes in the burst and none of ours within its reach
+        spn = pending.pop(who); rad, safe, fireok = AREA[spn]
+        meK = [k for k, v in F.items() if v['name'] == who and v['team'] == 0]
+        partyN = [k for k, v in F.items() if v['team'] == 0 and v['hp'] > 0]
+        foesN = [k for k, v in F.items() if v['team'] == 1 and v['hp'] > 0 and (fireok or not any(x in v['name'] for x in FIREPROOF))]
+        if meK and foesN:
+            c0 = F[meK[0]]; bx = None; bn = 0
+            for x in range(c0['x'] - 12, c0['x'] + 13):
+                for y in range(c0['y'] - 12, c0['y'] + 13):
+                    q = dict(x=x, y=y)
+                    if any(cheb(F[p], q) <= safe for p in partyN): continue
+                    n = sum(3 if any(z in F[j]['name'] for z in PRIO) else 1 for j in foesN if cheb(F[j], q) <= rad)
+                    if n > bn: bx, bn = q, n
+            if bx and bn >= 2:
+                dx, dy = bx['x'] - c0['x'], bx['y'] - c0['y']; mv = ''
+                while dx or dy:
+                    sx = (dx > 0) - (dx < 0); sy = (dy > 0) - (dy < 0)
+                    mv += '}%d' % {(0, -1): 0, (1, -1): 1, (1, 0): 2, (1, 1): 3, (0, 1): 4, (-1, 1): 5, (-1, 0): 6, (-1, -1): 7}[(sx, sy)]
+                    dx -= sx; dy -= sy
+                T += f'#@{meK[0]};/M{mv}/T,'; aimn = 1
+                if os.environ.get('VERB'): print(step, who, spn, 'area at', bx, 'foes', bn, 'me', (c0['x'], c0['y']), flush=True)
+                continue
+        T += '/E,/Y,'; continue                   # (no good square now: the spell let go - Abort Spell? Yes)
     if 'Aim:' in menu:
         aimn += 1
         if 'Target' in menu and aimn < 14: T += '/T,'

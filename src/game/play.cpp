@@ -1943,6 +1943,23 @@ struct Unlit {
     ~Unlit() { menu.selected = keep; }
 };
 
+// Save Slot Info (CYD_SAVE_INFO, Tom 2026-11-17): the save in the slot
+// Save / Load Which has highlighted - read from its files while the
+// question is up (a few hundred bytes on the heap), dropped after
+struct SavePeek {
+    char        slot = 0;
+    bool        have = false;           // a save in the slot
+    char        when[32] = {};          // its time (a platform with a clock), else ""
+    int         area = -1, x = -1, y = -1;
+    int         n = 0;
+    PanelMember m[party::kMaxParty];
+};
+SavePeek* peek = nullptr;
+bool peek_wanted();                     // Save / Load Which is up (Save Slot Info on)
+bool peek_on();                         // ... and its slot's party is what the Party view shows and the slot's party is what the Party view shows
+void peek_show(pic::Canvas& c);         // the highlighted slot's save in the text box
+void peek_drop();
+void peek_dim_slots();                   // Save Which's empty slots grey
 void show_menu_line(pic::Canvas& c);
 void clear_menu_line(pic::Canvas& c);
 void put(pic::Canvas& c, const char* s, int col, int row, uint8_t fg);
@@ -2005,6 +2022,9 @@ void show_menu_line(pic::Canvas& c)
     const Unlit unlit;
     text::draw(c, d->font, menu, mc);
     dirty_rows(menu_was_two ? text::kMenuRow - 1 : text::kMenuRow, text::kMenuRow);
+#if CYD_SAVE_INFO
+    if (peek_wanted()) peek_show(c);
+#endif
 }
 
 void clear_menu_line(pic::Canvas& c)
@@ -2454,6 +2474,7 @@ void pm_prompt(pic::Canvas& c, const char* note = nullptr)
 
 void draw_party_menu(pic::Canvas& c)
 {
+    peek_drop();                            // (Save Slot Info: the question is over)
     if (hl()) {
         q_pm_up = false;
         q_draw_frame(c, false);
@@ -4758,6 +4779,8 @@ void ask_save(pic::Canvas& c)
     save_from = screen;
     screen = Screen::SaveWhich;
     text::build(menu, d->w_save_which, d->w_slots);
+    peek_dim_slots();
+    peek_drop();
     menu.selected = 0;
     hl_inherit();
     show_menu_line(c);
@@ -4765,6 +4788,7 @@ void ask_save(pic::Canvas& c)
 
 void back_from_save(pic::Canvas& c)
 {
+    peek_drop();
     screen = save_from;
     if (screen == Screen::Camp) draw_camp(c);
     else draw_party_menu(c);
@@ -5861,6 +5885,191 @@ bool qa_member(int m);
 bool qa_npc(int m);
 void qa_load();
 bool qa_on() { return CYD_QUICK_ACTIONS && opts.quick_acts; }
+// ---- Save Slot Info (CYD_SAVE_INFO; features.h)
+void member_look(const party::Character& ch, PanelMember& m);
+bool peek_wanted()
+{
+#if CYD_SAVE_INFO
+    return opts.save_info && !hl() &&
+           (screen == Screen::SaveWhich || (screen == Screen::LoadWhich && !load_where && !load_secret));
+#else
+    return false;
+#endif
+}
+bool peek_on() { return peek && peek->slot && peek_wanted(); }
+void peek_drop()
+{
+    delete peek;
+    peek = nullptr;
+}
+bool slot_has_save(char slot)
+{
+    char name[24], path[200];
+    save_file_name(slot, name, sizeof name);
+    save_path(name, path, sizeof path);
+    return plat::exists(path);
+}
+// The slot's save read: its time, the position, the members' names (the end
+// of SAVGAMx: the count and 8 x 41 names, every DAX game's layout) and each
+// member's record for the figures
+void peek_read(SavePeek& p, char slot)
+{
+    p = SavePeek{};
+    p.slot = slot;
+    char name[24], path[200];
+    save_file_name(slot, name, sizeof name);
+    save_path(name, path, sizeof path);
+    plat::File f = plat::open(path, "r");
+    if (!f) return;
+    p.have = true;
+    plat::file_time(path, p.when, sizeof p.when);
+    char names[party::kMaxParty][41] = {};
+    int n = 0;
+    {
+        plat::FileSource src(f);
+        const uint32_t size = src.size();
+        uint8_t b[41];
+        // (where the position lies: Darkness's after its game block, Death Knights' after its
+        // memory as bytes, the others' after Curse's memory and, but for Secret / Champions, the script)
+        const uint32_t pos = dkk() ? 1 + 0x400 + 0x400 + 0x200
+                             : darkness_files() ? savegame::kDarknessBlock
+                                                : 1 + 0x800 + 0x800 + 0x400 + (short_saves() ? 0 : ecl::kCodeSize);
+        if (!darkness_files() || dkk()) {
+            if (src.read_at(0, b, 1) == 1) p.area = b[0];
+        }
+        if (src.read_at(pos, b, 2) == 2) {
+            p.x = b[0] & 15;
+            p.y = b[1] & 15;
+        }
+        const uint32_t at = size >= 1 + party::kMaxParty * 41u ? size - 1 - party::kMaxParty * 41u : 0;
+        if (at && src.read_at(at, b, 1) == 1) n = b[0] > party::kMaxParty ? 0 : b[0];
+        for (int i = 0; i < n; ++i) {
+            if (src.read_at(at + 1 + 41u * i, b, 41) != 41) {
+                n = i;
+                break;
+            }
+            const size_t len = b[0] > 40 ? 40 : b[0];
+            memcpy(names[i], b + 1, len);
+            names[i][len] = 0;
+        }
+    }
+    f.close();
+    party::Character* ch = new (std::nothrow) party::Character;
+    for (int i = 0; i < n && ch; ++i) {
+        PanelMember& m = p.m[p.n];
+        m = PanelMember{};
+        snprintf(m.name, sizeof m.name, "%s", names[i]);
+        char fn[48];
+        snprintf(fn, sizeof fn, "%s%s", names[i], ext_member());
+        plat::File r;
+        if (open_save_file(fn, r)) {
+            bool ok;
+            {
+                plat::FileSource src(r);
+                *ch = party::Character{};
+                ok = party::read_record(src, *ch, rec_format());
+            }
+            r.close();
+            if (ok) member_look(*ch, m);
+        }
+        ++p.n;
+    }
+    delete ch;
+}
+// The text box the slot's save is told in: the camp's under the view, the
+// party menu's from its list's first row (its lines wait meanwhile)
+void peek_box(int* r0, int* r1)
+{
+    *r1 = text::kMenuRow - 2;
+    *r0 = save_from == Screen::Camp && screen == Screen::SaveWhich ? text::kTextArea.y0 : pm_row0();
+    if (*r0 > *r1) *r0 = *r1;
+}
+// "F12", "F7/T12" - the classes' levels as the Party view has them
+void peek_levels(const PanelMember& m, char* out, size_t cap)
+{
+    static const char kAbbr[8] = {'C', 'D', 'F', 'P', 'R', 'M', 'T', 'K'};
+    size_t o = 0;
+    out[0] = 0;
+    for (int c = 0; c < 8 && o + 5 < cap; ++c) {
+        if (!m.lv[c]) continue;
+        const char a = c == 7 && !m.knight ? 'O' : kAbbr[c];
+        o += static_cast<size_t>(snprintf(out + o, cap - o, "%s%c%d", o ? "/" : "", a, m.lv[c]));
+    }
+}
+const char* peek_health(int h)
+{
+    switch (h) {
+    case party::Unconscious: return "Unconscious";
+    case party::Dying: return "Dying";
+    case party::Dead: return "Dead";
+    case party::Stoned: return "Stoned";
+    case party::Gone: return "Gone";
+    case party::Running: return "Fled";
+    default: return nullptr;
+    }
+}
+void peek_show(pic::Canvas& c)
+{
+    if (menu.selected < 0 || menu.selected >= menu.count) return;
+    const char slot = text::key(menu, menu.selected);
+    if (slot < savegame::kFirst || slot > savegame::kLast) return;
+    if (!peek) {
+        peek = new (std::nothrow) SavePeek;
+        if (!peek) return;
+    }
+    if (peek->slot != slot) peek_read(*peek, slot);
+    int r0, r1;
+    peek_box(&r0, &r1);
+    c.fill(8, r0 * 8, 38 * 8, (r1 - r0 + 1) * 8, 0);
+    char t[48];
+    int row = r0;
+    if (!peek->have) {
+        snprintf(t, sizeof t, "Slot %c: empty", slot);
+        put(c, t, 1, row, 8);
+    } else {
+        snprintf(t, sizeof t, peek->when[0] ? "Slot %c: %s" : "Slot %c", slot, peek->when);
+        put(c, t, 1, row++, 15);
+        if (row <= r1 && peek->x >= 0) {
+            if (peek->area >= 0) snprintf(t, sizeof t, "Area %d, square %d,%d", peek->area, peek->x, peek->y);
+            else snprintf(t, sizeof t, "Square %d,%d", peek->x, peek->y);
+            put(c, t, 1, row++, 10);
+        }
+        const bool one_each = row + peek->n - 1 <= r1;
+        for (int i = 0; i < peek->n && row <= r1; ++i) {
+            const PanelMember& m = peek->m[i];
+            const char* h = peek_health(m.health);
+            char lv[24], hp[16];
+            peek_levels(m, lv, sizeof lv);
+            if (h) snprintf(hp, sizeof hp, "%s", h);
+            else snprintf(hp, sizeof hp, "%d/%d", m.hp, m.hp_max);
+            const uint8_t fg = h ? 12 : 15;
+            if (one_each) {
+                snprintf(t, sizeof t, "%-15.15s %-11.11s", m.name, lv);
+                put(c, t, 1, row, 15);
+                put(c, hp, 39 - static_cast<int>(strlen(hp)), row, fg);
+                ++row;
+            } else {
+                // (two a row: the name and the hit points)
+                const int col = i % 2 ? 20 : 1;
+                snprintf(t, sizeof t, "%-10.10s", m.name);
+                put(c, t, col, row, 15);
+                put(c, hp, col + 18 - static_cast<int>(strlen(hp)), row, fg);
+                if (i % 2) ++row;
+            }
+        }
+    }
+    dirty_rows(r0, r1);
+}
+// Save Which Game's letters: an empty slot's grey (Tom: grey empty, white saved)
+void peek_dim_slots()
+{
+    if (!CYD_SAVE_INFO || !opts.save_info || hl()) return;
+    for (int k = 0; k < menu.count && k < 32; ++k) {
+        const char s = text::key(menu, k);
+        if (s >= savegame::kFirst && s <= savegame::kLast && !slot_has_save(s)) menu.dim |= 1u << k;
+    }
+}
+
 // Training free: once the game is won (as the originals), or the Cheats tab's Trainer
 bool train_free() { return game_won || cheat == Cheat::Trainer; }
 
@@ -17290,7 +17499,13 @@ uint32_t sig_mix(uint32_t h, uint32_t v) { return (h ^ v) * 16777619u; }
 
 } // namespace
 
-int panel_members() { return d && pt ? pt->count : 0; }
+int panel_members()
+{
+#if CYD_SAVE_INFO
+    if (d && peek_on()) return peek->n;
+#endif
+    return d && pt ? pt->count : 0;
+}
 
 // The Companion's trainable classes (Tom, 2026-11-14: a class with the
 // experience for its next level yellow): worked out when what they depend
@@ -17348,9 +17563,42 @@ uint8_t ready_bits(int i)
     return r.bits;
 }
 
+// A record's own parts of the Party view's line (no fight's, no training's)
+namespace {
+void member_look(const party::Character& ch, PanelMember& m)
+{
+    ch.name(m.name, sizeof m.name);
+    m.hp = static_cast<int16_t>(ch.hp());
+    m.hp_max = static_cast<int16_t>(ch.hp_max());
+    m.health = static_cast<uint8_t>(ch.health());
+    m.fx = member_fx(ch);
+    m.drained = create::drained(ch);
+    m.current = false;
+    m.ready = 0;
+    // (View's rule: a class with levels, and a former class once a newer one passed it)
+    int top = 0;
+    for (int c = 0; c < 8; ++c)
+        if (ch.level(c) > top) top = ch.level(c);
+    m.stopped = 0;
+    for (int c = 0; c < 8; ++c) {
+        const int lv = ch.level(c), old = ch.old_level(c);
+        m.lv[c] = static_cast<uint8_t>(lv > 0 || (old > 0 && old < top) ? lv + old : 0);
+        if (m.lv[c] && lv <= 0) m.stopped |= static_cast<uint8_t>(1u << c);
+    }
+    m.krynn = krynn_rules();
+    m.knight = m.krynn || hl();
+}
+} // namespace
+
 bool panel_member(int i, PanelMember& m)
 {
     if (i < 0 || i >= panel_members()) return false;
+#if CYD_SAVE_INFO
+    if (peek_on()) {
+        m = peek->m[i];                     // (a save slot looked at: that save's party)
+        return true;
+    }
+#endif
     const party::Character& ch = pt->m[i];
     ch.name(m.name, sizeof m.name);
     m.hp = static_cast<int16_t>(ch.hp());
@@ -17380,6 +17628,9 @@ bool panel_member(int i, PanelMember& m)
 bool panel_icon(int i, uint8_t* px, uint8_t* see, int* w, int* h)
 {
     if (i < 0 || i >= panel_members()) return false;
+#if CYD_SAVE_INFO
+    if (peek_on()) return false;            // (a save's party: names and figures, no icons)
+#endif
     const party::Character& ch = pt->m[i];
     Pic4 own;
     const Pic4* ic = nullptr;
@@ -17437,6 +17688,18 @@ uint32_t panel_party_sig(bool icons)
     uint32_t h = 2166136261u;
     const int n = panel_members();
     h = sig_mix(h, static_cast<uint32_t>(n) | (fg ? 0x100u : 0u));
+#if CYD_SAVE_INFO
+    if (peek_on()) {
+        h = sig_mix(h, 0x50454500u | static_cast<uint8_t>(peek->slot));
+        for (int i = 0; i < n; ++i) {
+            const PanelMember& m = peek->m[i];
+            h = sig_mix(h, static_cast<uint16_t>(m.hp) | static_cast<uint32_t>(m.hp_max) << 16);
+            h = sig_mix(h, m.health | static_cast<uint32_t>(m.fx) << 8);
+            for (int k = 0; m.name[k]; ++k) h = sig_mix(h, static_cast<uint8_t>(m.name[k]));
+        }
+        return h;
+    }
+#endif
     for (int i = 0; i < n; ++i) {
         const party::Character& ch = pt->m[i];
         for (int k = 0; k < 16; ++k) h = sig_mix(h, ch.rec[k]);
@@ -19924,3 +20187,11 @@ void describe(char* line1, char* line2, int cap)
 // the real ones
 __attribute__((weak)) bool audio_wide() { return false; }
 __attribute__((weak)) void audio_play16(AudioFill16, void*) {}
+// (platform/file.h: a file's time - the boards have no clock to trust)
+namespace plat {
+__attribute__((weak)) bool file_time(const char*, char* out, size_t cap)
+{
+    if (cap) out[0] = 0;
+    return false;
+}
+}

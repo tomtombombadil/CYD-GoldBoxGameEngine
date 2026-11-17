@@ -10,6 +10,7 @@
 #include <cstring>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <ctime>
 
 namespace pc {
 
@@ -167,6 +168,17 @@ bool mkdir(const char* path)
 {
     ::mkdir(pc::host_path(path).c_str(), 0755);
     return exists(path);
+}
+// (only with FILETIME=1 - the tools' runs stay the same from day to day)
+bool file_time(const char* path, char* out, size_t cap)
+{
+    if (cap) out[0] = 0;
+    struct stat st;
+    if (!getenv("FILETIME") || stat(pc::host_path(path).c_str(), &st) != 0) return false;
+    const time_t t = st.st_mtime;
+    struct tm lt;
+    localtime_r(&t, &lt);
+    return strftime(out, cap, "%b %d %Y %I:%M %p", &lt) > 0;
 }
 
 } // namespace plat

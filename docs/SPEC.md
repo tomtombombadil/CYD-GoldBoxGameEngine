@@ -2918,6 +2918,21 @@ a PC, PortMaster handhelds):
     with +1 arrows), so it needs no slot - a full list (16 items) takes
     it then; the weight still stops it (`rules::pile_onto`, take_loot).
     Off: each take a new item, as the originals.
+  - `CYD_SAVE_INFO` (Tom, 2026-11-17): **Save Slot Info** (on by default,
+    `comforts_off2` bit 64) - Save Which Game's letters: an empty slot's
+    dark grey, a used one's white (`text::Menu::dim`); while Save / Load
+    Which asks (not the Dark Queen's buttons, not Darkness's Load from
+    Secret), the highlighted slot's save in the text box above the menu
+    (camp: rows 17-22; party menu: from its list's first row, the list
+    back after): "Slot D: <time>" - the time from `plat::file_time` (a
+    platform with a clock: the handhelds; the boards' weak stand-in has
+    none), the area and square (Darkness-engine games: the square), each
+    member's levels and hit points or state (two a row when they don't fit
+    one each); the Companion's Party view (`panel_members` / `panel_member`)
+    shows that save's party meanwhile, no icons. Read from SAVGAMx (the end:
+    count + 8 x 41 member files) and each member's record into a
+    `SavePeek` (~0.5 KB, dropped with the question). Area NAMES: Tom's
+    answer pending (TODO).
   - `CYD_QUICK_ACTIONS` (Tom, 2026-11-09): **Quick Actions** - what each
     party member may do when Quick (an NPC: the computer) plays it in a
     fight. The Game menu's **Quick** tab (between Logs and Cheats; with it

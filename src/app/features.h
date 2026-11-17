@@ -298,6 +298,19 @@
 #define CYD_AUTO_JOIN 1
 #endif
 
+// CYD_SAVE_INFO (Tom, 2026-11-17: "The textbox above the menu is mostly
+// empty when either saving or loading a savegame"): Save Which Game's
+// letters grey for an empty slot, white for one with a save; while Save /
+// Load Which asks, the highlighted slot's save in the text box above the
+// menu - when it was written (where the platform has a clock: the
+// handhelds), where the party is, its members' levels, hit points and state
+// - and the Companion's Party view shows that save's party. Settings key
+// Save Slot Info (on by default; As Original turns it off). Where: play.cpp
+// SavePeek, slot_info, text::Menu::dim.
+#ifndef CYD_SAVE_INFO
+#define CYD_SAVE_INFO 1
+#endif
+
 // Each comfort compiled in can also be switched off by the player: the
 // game's Settings page (Tom, 2026-10-11, v0.72.0; one set for all games,
 // settings.h comforts_off), the one Settings screen (Home, a game's page, the
