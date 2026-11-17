@@ -14,7 +14,7 @@ the Project as claude/TODO.md.
       playsim (Dispel Magic: the false Siulajia shows herself, her guards' fight, journal 24 and 19, Siulajia
       joins); not run in DOSBox. Only Treasures has that code (Darkness: no such byte test; Death Knights not
       looked at). The playsim's LEARN=m:ids (a spell book's stand-in for training's picks).
-- [x] v0.208.2 (the PortMaster session's Treasures play-through, 2026-11-17): **Treasures - Llorkh could not be
+- [x] v0.208.4 (the PortMaster session's Treasures play-through, 2026-11-17): **Treasures - Llorkh could not be
       finished.** Its scripts go "COMBAT, IF <>, GOTO back to the last square" (the giant skeleton, Geildarr):
       the original's fight end clears the six compare flags and sets "=" - or "<>" when a member of the party
       ran (GAME.OVR 0x5884: status 3 -> byte 0x72AB; 0x6645 / 0x6684 / 0x670A; the IF handler 0x113B reads
@@ -27,6 +27,25 @@ the Project as claude/TODO.md.
       Knights, the Dark Queen (the same program family), then Gateway / Champions / Secret / Curse / PoolRad
       - find each one's IF handler's flag bytes and who writes them; scan every script for COMBAT followed
       by an IF with no compare between.
+- [ ] **Menu rework - decided, NOT coded yet** (Tom, 2026-11-17; his edited tree; waits for his final
+      word before coding). Every page up to 8 keys (2 x 4), Back in one bottom corner (Back to Game on the top
+      page), < > in the other. Top (in game, the Game key): Display (Brightness, Right Handed / Left Handed,
+      Rotate 180, Invert, Swap Red/Blue, Recalibrate Touch, Companion Strip), Audio (today's sounds page as
+      is), Game Play (Original Games; Enhancements: Game Font, Show Rolls, Companion Views, Savegame Info,
+      Auto Join Items, Keep Memorizing, Camp Fix, More Characters, Icon Portrait, Icon Gallery, Large Icon;
+      AD&D 1E Rules: Magic Missile, Multi-Class HP, Thrown Weapons, Magic Items, Coin Exchange, Age with
+      Time, Power Word Kill, Protection from Evil; Game Fixes by game: Every Game, PoolRad ... Queen),
+      Journal (the entries viewer only), Cheats (Healer, Merchant, Sanctuary, Trainer, Max HP), Quick
+      Actions (On / Off at its page's top), System (Rescan Card, Device Info - our version, the game's
+      release Steam / GOG / unknown, what we know of the board / handheld; Card Log, Restart Log, Error
+      Log, Memory Log, Send Logs), Exit Game (one tap, no question). Gone: the Cheats Tab switch, Asset
+      Viewer 1.5x, a game's page (Play / Settings / Dev Tools) - Home's tap starts the game.
+      Original Games turns the cheats OFF (not the Cheats menu); each can be turned on again with it on.
+      Coin Exchange (new behaviour): any purchase pays from any mix of coins, and Pool at a Merchant /
+      Healer / other paid service changes the coins; Share gives back the highest denominations.
+      Done already (v0.208.2): Thrown Weapons (1E: Dex to hit, Str to damage; under Game Fixes until its
+      own switch); Darkness's Resurrection Constitution cost removed (Tom: no such cost in 1E).
+      For the PortMaster session: the PDF viewer of the games' journal PDFs is the port's alone (Tom).
 - [ ] Treasures play-through leftovers (2026-11-17): a fight page read "LORDSMAN goes down LORDSMAN" /
       "COCKATRICE goes down COCKATRICE" in the playsim's PAGELOG (two pages joined, or a wrong second line?);
       "INVISIBILITY, 10' RADIU" in the spell book list (cut at the frame - the original's?).

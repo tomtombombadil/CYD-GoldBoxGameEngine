@@ -416,7 +416,9 @@ int cast(party::Party& p, int caster, int target, const CampSpell& cs, const cla
             // with Game Fixes the curse)
             // (Game Fixes: the curse as well - what the original lifts stays)
             const uint8_t curse = f.curse_dk ? f.curse_dk : cures.curse;
-            if (cure(c, curse) || (curse != cures.curse && rules::fixes() && cure(c, cures.curse))) {
+            bool lifted = cure(c, curse);
+            if (curse != cures.curse && rules::fixes() && cure(c, cures.curse)) lifted = true;   // (both, not one or the other)
+            if (lifted) {
                 o.say(who[k], Said::Cured);
                 o.say(who[k], Said::Uncursed);
                 continue;
@@ -653,19 +655,14 @@ int cast(party::Party& p, int caster, int target, const CampSpell& cs, const cla
         break;
     case Does::Resurrect:
         // Darkness (GAME.OVR 0x2EF05): the dead only, no Constitution lost,
-        // no survival roll; AD&D's Constitution point with Game Fixes (Tom,
-        // 2026-10-23 - the caster's rest isn't in the engine)
+        // no survival roll - as AD&D 1E (Tom, 2026-11-17: no Constitution
+        // cost in the PHB / DMG; the old Game Fixes point is gone)
         for (int k = 0; k < n; ++k) {
             party::Character& c = p.m[who[k]];
             if (c.health() != party::Dead || c.rec[kConNow] == 0 || c.race() == f.elf_race) continue;
             cure(c, cures.poisoned);
             c.rec[kHealth] = party::Okay;
             c.rec[kInCombat] = 1;
-            if (rules::fixes()) {
-                if (c.rec[kConFull] == c.rec[kConNow]) --c.rec[kConFull];
-                --c.rec[kConNow];
-                if (t.lay.dk) create::dk_con_recompute(c, t);
-            }
             c.rec[kHp] = c.rec[0x78];
             if (cs.word) o.say(who[k], Said::Word);
         }

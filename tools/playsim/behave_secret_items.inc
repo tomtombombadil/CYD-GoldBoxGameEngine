@@ -186,10 +186,13 @@ SVals s_expect(const party::Character& c)
         v.dmg += r[0x125] ? s_str(g, 2) : 0;
     } else {
         const SType t = s_type(weapon[0x2E]);
-        if (t.flags & 2) v.hit += s_dex(dex, 2);
+        const bool thrown_1e = (t.flags & 0x10) && !(t.flags & 4) && rules::fixes();   // (Thrown Weapons, AD&D 1E: Dex to hit, Str to damage)
+        if ((t.flags & 2) || thrown_1e) v.hit += s_dex(dex, 2);
         v.dmg = t.b;
-        if ((t.flags & 4) || ((t.flags & 0x10) && rules::fixes())) {   // (thrown: AD&D's Strength with the Game Fixes)
+        if (t.flags & 4) {
             v.hit += r[0x125] ? s_str(g, 1) : 0;
+            v.dmg += r[0x125] ? s_str(g, 2) : 0;
+        } else if (thrown_1e) {
             v.dmg += r[0x125] ? s_str(g, 2) : 0;
         }
         int plus = static_cast<int8_t>(weapon[0x32]);

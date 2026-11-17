@@ -222,10 +222,13 @@ static BVals b_expect(const party::Character& c)
         v.dmg += sdmg;
     } else {
         const items::TypeInfo& t = names->type(weapon[0x2E]);
-        if (t.flags & 0x02) v.hit += ov("dex_missile", dex);
+        const bool thrown_1e = (t.flags & 0x10) && !(t.flags & 0x04) && rules::fixes();   // (Thrown Weapons, AD&D 1E: Dex to hit, Str to damage)
+        if ((t.flags & 0x02) || thrown_1e) v.hit += ov("dex_missile", dex);
         v.dmg = t.bonus;
-        if ((t.flags & 0x04) || ((t.flags & 0x10) && rules::fixes())) {   // (thrown: AD&D's Strength with the Game Fixes)
+        if (t.flags & 0x04) {
             v.hit += shit;
+            v.dmg += sdmg;
+        } else if (thrown_1e) {
             v.dmg += sdmg;
         }
         int plus = static_cast<int8_t>(weapon[0x32]);
