@@ -2918,6 +2918,27 @@ a PC, PortMaster handhelds):
     with +1 arrows), so it needs no slot - a full list (16 items) takes
     it then; the weight still stops it (`rules::pile_onto`, take_loot).
     Off: each take a new item, as the originals.
+  - `CYD_SAVE_INFO` (Tom, 2026-11-17): **Save Slot Info** (on by default,
+    `comforts_off2` bit 64) - Save Which Game's letters: an empty slot's
+    dark grey, a used one's white (`text::Menu::dim`; highlighted, an
+    empty one black on light grey - Tom, 2026-11-17). While Save / Load
+    Which asks (not the Dark Queen's buttons, not Darkness's Load from
+    Secret) the game screen inside its border is the highlighted slot's
+    save (Tom's choice from the mockups, 2026-11-17): at the left "Slot D",
+    its time (`plat::file_time` - a platform with a clock: the handhelds;
+    the boards' weak stand-in has none), the place (`engine/places.*`: our
+    own table of each game's script blocks to their common names, from
+    the blocks' own words and the guides - Tom, 2026-11-17: fine to keep
+    in the repo), the square and facing, the game's clock, "8 party
+    members"; at the right the party as Companion cards - icon (each
+    record's, an NPC's own picture), name, hit points or state, classes,
+    a bar. A Companion panel beside the game (480x320 with Companion
+    Views on; a wide handheld - `play::set_side_panel`) shows the party
+    there instead (its Party view while `play::saves_shown()`), and the
+    save's words fill the screen. Read from SAVGAMx (the position, the
+    block and clock words at their places per format, the end's member
+    files) and each member's record into a `SavePeek` (~4 KB on the heap
+    while the question is up). The list drawn again as the question ends.
   - `CYD_QUICK_ACTIONS` (Tom, 2026-11-09): **Quick Actions** - what each
     party member may do when Quick (an NPC: the computer) plays it in a
     fight. The Game menu's **Quick** tab (between Logs and Cheats; with it

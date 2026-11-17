@@ -23,7 +23,7 @@ log = run('', 'CHEAT=1', 'GOODSLOG=1')
 plain = {}
 for m in re.finditer(r'  good +\d+: (.+?) +type +(\d+) plus 0 value (\d+)', log):
     nm = m.group(1).strip()
-    if any(nm.startswith(g) for g in GENERIC) or 'of ' in nm: continue   # (potions, wands ... never sold blind)
+    if (any(nm.startswith(g) for g in GENERIC) and not nm.endswith(' Mail')) or 'of ' in nm: continue   # (potions, wands ... never sold blind)
     plain[nm] = int(m.group(3))
 
 
@@ -38,6 +38,8 @@ def items_of(k):
 
 
 EXIT = '/E/E/E'
+import os
+SELL = [x for x in os.environ.get('SELL', '').split(',') if x]   # (names sold whatever they are: magic no one uses)
 for k in members:
     i = len(items_of(k)) - 1
     while i >= 0:
@@ -48,6 +50,8 @@ for k in members:
         known = bool(re.search(r' [+-]\d', base))            # (identified magic: kept for the hand-out)
         base = re.sub(r'^Drow ', '', re.sub(r' [+-]\d.*$', '', base))
         sel = '"1%%%d/V/I' % k + 'v' * i
+        if not ready and name in SELL:
+            run(sel + '/S/Y' + EXIT, f'SAVENOW={S}'); print(f'  {k}: {name} sold (SELL)'); i -= 1; continue
         if ready or known or any(w in name for w in KEEP):
             i -= 1; continue
         if base in plain:

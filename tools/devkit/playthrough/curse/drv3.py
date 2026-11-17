@@ -19,15 +19,16 @@ SPELLS = {
     'BRAN': ['Bless', 'Bless', 'CLW', 'CLW', 'HP', 'HP', 'Silence', 'Prayer', 'Prayer', 'Prayer', 'CSW', 'CSW'],
 }
 FIGHTERS = {'ALDRIC', 'THORIN', 'KESTREL', 'AKABAR BEL AKAS'}
-FIREPROOF = ('EFREETI', 'SALAMANDER', 'FIRE')
-PERSONS = ('ELF', 'DROW', 'KNIFE', 'THIEF', 'GUARD', 'MAGE', 'CLERIC', 'FIGHTER', 'LORD')
+FIREPROOF = ('EFREETI', 'SALAMANDER', 'FIRE', 'SHAMBLING')
+PERSONS = ('CULTIST', 'MOGION', 'PRIEST', 'HUMAN', 'ELF', 'DROW', 'KNIFE', 'THIEF', 'GUARD', 'MAGE', 'CLERIC', 'FIGHTER', 'LORD')
 LEADER = os.environ.get('LEADER', '')
+PRIO = [x for x in os.environ.get('PRIO', '').split(',') if x]   # (foes worth three in a cluster: their casters)
 FORM = {}
 for part in os.environ.get('FORM', '').split(';'):
     if ':' in part:
         n, ds = part.split(':'); FORM[n] = [int(c) for c in ds]
 DIRS = {(0, -1): 0, (1, -1): 1, (1, 0): 2, (1, 1): 3, (0, 1): 4, (-1, 1): 5, (-1, 0): 6, (-1, -1): 7}
-maxhp = {}; formed = set(); prayed = set(); lastsig = None; stuck = 0; aimn = 0
+pending = {}; hasted = set(); wands = {}; maxhp = {}; formed = set(); prayed = set(); lastsig = None; stuck = 0; aimn = 0
 
 
 def run(t):
@@ -51,9 +52,13 @@ def spell_list(t):
     return [CODES.get(n.strip().lower(), n.strip()) for n in got[-1].split('|') if n.strip()]
 
 
+AREA = {'FB': (2, 3, False), 'SC': (1, 2, True), 'Sleep': (1, 2, True), 'IS': (1, 2, True)}   # radius, safe, fire ok
+
+
 def cast(who, name, target=None):
     lst = SPELLS[who]; i = lst.index(name); lst.pop(i)
     a = '/C' + 'v' * i + '/C'
+    if name in AREA: pending[who] = name; return a + ','
     if target is not None: a += f'#@{target};/T~/E~'
     return a + ','
 
@@ -74,8 +79,35 @@ for step in range(int(os.environ.get('STEPS', '260'))):
     if sig == lastsig and 'Aim:' not in menu:
         T += '/E,/Q,' if 'Aim:' in menu else '{,/Q,'; lastsig = None; continue
     lastsig = sig
+    if 'Center' in menu and 'Target' not in menu and 'Next' not in menu:
+        T += '/E,/E,/Y,'; continue            # (a manual aim with no Target offered: the spell let go)
     if 'Continue Battle' in menu or 'Abort Spell' in menu: T += '/N,'; continue
     if 'Attack Ally' in menu: T += '/N{,'; continue
+    if 'Aim:' in menu and who in pending and 'Manual' in menu and aimn == 0:
+        # the area spell's centre chosen NOW (Tom, 2026-11-17: when it goes off, on any square - empty too):
+        # the square with the most foes in the burst and none of ours within its reach
+        spn = pending.pop(who); rad, safe, fireok = AREA[spn]
+        meK = [k for k, v in F.items() if v['name'] == who and v['team'] == 0]
+        partyN = [k for k, v in F.items() if v['team'] == 0 and v['hp'] > 0]
+        foesN = [k for k, v in F.items() if v['team'] == 1 and v['hp'] > 0 and (fireok or not any(x in v['name'] for x in FIREPROOF))]
+        if meK and foesN:
+            c0 = F[meK[0]]; bx = None; bn = 0
+            for x in range(c0['x'] - 12, c0['x'] + 13):
+                for y in range(c0['y'] - 12, c0['y'] + 13):
+                    q = dict(x=x, y=y)
+                    if any(cheb(F[p], q) <= safe for p in partyN): continue
+                    n = sum(3 if any(z in F[j]['name'] for z in PRIO) else 1 for j in foesN if cheb(F[j], q) <= rad)
+                    if n > bn: bx, bn = q, n
+            if bx and bn >= 2:
+                dx, dy = bx['x'] - c0['x'], bx['y'] - c0['y']; mv = ''
+                while dx or dy:
+                    sx = (dx > 0) - (dx < 0); sy = (dy > 0) - (dy < 0)
+                    mv += '}%d' % {(0, -1): 0, (1, -1): 1, (1, 0): 2, (1, 1): 3, (0, 1): 4, (-1, 1): 5, (-1, 0): 6, (-1, -1): 7}[(sx, sy)]
+                    dx -= sx; dy -= sy
+                T += f'#@{meK[0]};/M{mv}/T,'; aimn = 1
+                if os.environ.get('VERB'): print(step, who, spn, 'area at', bx, 'foes', bn, 'me', (c0['x'], c0['y']), flush=True)
+                continue
+        T += '/E,/Y,'; continue                   # (no good square now: the spell let go - Abort Spell? Yes)
     if 'Aim:' in menu:
         aimn += 1
         if 'Target' in menu and aimn < 14: T += '/T,'
@@ -96,6 +128,16 @@ for step in range(int(os.environ.get('STEPS', '260'))):
         formed.add(who)
         if FORM[who] and 'Move' in menu:
             T += '/M' + ''.join('}%d' % d for d in FORM[who]) + '{,'; continue
+    # WAND="NAME:index:FOE": that member Uses item <index> (readied the first time) on the nearest FOE in RANGE
+    wd = os.environ.get('WAND', '').split(':')
+    if len(wd) == 3 and who == wd[0] and 'Use' in menu and wands.get(who, 0) < int(os.environ.get('WANDN', '20')):
+        tg = [k for k in foes if wd[2] in F[k]['name'] and cheb(F[k], m) <= int(os.environ.get('RANGE', '12'))]
+        if tg:
+            k = min(tg, key=lambda k: cheb(F[k], m))
+            T += '/U' + 'v' * int(wd[1]) + ('' if who in wands else '/R') + f'/U#@{k};/T~/E~,'
+            wands[who] = wands.get(who, 0) + 1
+            if os.environ.get('VERB'): print(step, who, 'wand at', k, flush=True)
+            continue
     can_cast = 'Cast' in menu and who in ('MIRA', 'SELENE', 'BRAN', 'AKABAR BEL AKAS')
     if can_cast: SPELLS[who] = spell_list(T)
     sp = SPELLS.get(who, [])
@@ -113,12 +155,18 @@ for step in range(int(os.environ.get('STEPS', '260'))):
             for k in foes:
                 if not fireok and any(x in F[k]['name'] for x in FIREPROOF): continue
                 if cheb(F[k], m) > int(os.environ.get('RANGE','12')) or any(cheb(F[k], F[p]) <= safe for p in party): continue
-                cnt = sum(1 for j in foes if cheb(F[j], F[k]) <= radius and not (not fireok and any(x in F[j]['name'] for x in FIREPROOF)))
+                cnt = sum(3 if any(x in F[j]['name'] for x in PRIO) else 1 for j in foes if cheb(F[j], F[k]) <= radius and not (not fireok and any(x in F[j]['name'] for x in FIREPROOF)))
                 if cnt > bestn: bestk, bestn = k, cnt
             return bestk, bestn
-        if lead and 'MM' in sp: a = cast(who, 'MM', lead[0])
+        if 'Haste' in sp and os.environ.get('HASTE') and not hasted:
+            pk = max(party, key=lambda k: sum(1 for j in party if cheb(F[j], F[k]) <= 1 and F[j]['name'] in FIGHTERS | {'ALIAS', 'DRAGONBAIT'}))
+            hasted.add(who); a = cast(who, 'Haste', pk)
+        if a is None and 'Sleep' in sp and os.environ.get('SLEEP'):
+            k, c = best(1, 3, True)
+            if k is not None and c >= int(os.environ.get('SLEEP')): a = cast(who, 'Sleep', k)
+        if a is None and lead and 'MM' in sp: a = cast(who, 'MM', lead[0])
         if a is None and 'FB' in sp:
-            k, c = best(2, 3, False)
+            k, c = best(2, int(os.environ.get('FBSAFE', '5')), False)
             if k is not None and c >= 2: a = cast(who, 'FB', k)
         for big in ('CoC', 'LB'):
             if a is None and big in sp:
@@ -135,11 +183,12 @@ for step in range(int(os.environ.get('STEPS', '260'))):
             if ppl: a = cast(who, 'HP', min(ppl, key=lambda k: cheb(F[k], m)))
     if a is None and near:
         # focus: the foe next to the most party members, then the weakest
-        t = min(near, key=lambda k: (-sum(1 for p in party if cheb(F[p], F[k]) <= 1), F[k]['hp']))
+        t = min(near, key=lambda k: (not any(x in F[k]['name'] for x in PRIO), -sum(1 for p in party if cheb(F[p], F[k]) <= 1), F[k]['hp']))
         dx = max(-1, min(1, F[t]['x'] - m['x'])); dy = max(-1, min(1, F[t]['y'] - m['y']))
         a = '/M}%d,' % DIRS[(dx, dy)]
     if a is None:
         a = '/D,'          # (Done: Guard comes up next)
+    if os.environ.get('VERB'): print(step, who, a, 'party', sum(F[k]['hp'] for k in party), 'foes', len(foes), sum(F[k]['hp'] for k in foes), flush=True)
     T += a
 open(P + '/ftok.txt', 'w').write(T)
 print('party', [(F[k]['name'], F[k]['hp']) for k in F if F[k]['team'] == 0])

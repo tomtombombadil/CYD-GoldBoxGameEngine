@@ -162,12 +162,20 @@ struct Options {
     bool quick_acts = true;       // the per-character Quick Actions and the Game menu's Quick tab (CYD_QUICK_ACTIONS)
     bool read_time = true;        // timed messages at least 1 s (CYD_READ_TIME)
     bool auto_join = true;        // a taken item joins its taker's same pile (CYD_AUTO_JOIN)
+    bool save_info = true;        // Save / Load Which show the slots' saves (CYD_SAVE_INFO)
     bool max_hp = false;          // hit dice at their highest (training, creation) - a cheat the player opts into (CYD_MAX_HP)
     uint8_t font = 0;             // the game's text (CYD_CLEAR_FONT): 0 its own (the default), 1 the engine's
                                   // Clear font, 2 the player's Pools of Darkness font (set_darkness_dir),
                                   // 3 Clear Caps (the Clear capitals only)
 };
 void set_options(const Options& o);
+// A Companion panel stands beside the game screen (480x320; a wide
+// handheld): Save Slot Info's screen then leaves the party to it (false,
+// the default: the party drawn in the game screen's right half)
+void set_side_panel(bool on);
+// Save / Load Which show a slot's save (Save Slot Info): the Party view is
+// that save's party meanwhile - a side panel shows it
+bool saves_shown();
 // The title's lightning (Pool): the colour palette entry `index` shows now,
 // or -1 (as itself)
 int flash(int& index);

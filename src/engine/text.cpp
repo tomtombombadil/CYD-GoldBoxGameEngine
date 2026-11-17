@@ -354,6 +354,7 @@ void draw_buttons(pic::Canvas& c, const font::Font& f, const Menu& m, const Menu
             y = two_row_y(col, row);
         }
         if (k == sel) text_at(m.s + m.start[k], n, at, 0, col.highlight, false);     // (the engine's white box)
+        else if (k < 32 && (m.dim >> k & 1)) text_at(m.s + m.start[k], n, at, m.dim_fg, col.b_fill, false);
         else text_at(m.s + m.start[k], n, at, m.lit ? col.highlight : col.normal, col.b_fill, true);
     }
     if (m.tail[0] && m.count) {
@@ -438,7 +439,9 @@ void draw(pic::Canvas& c, const font::Font& f, const Menu& m, const MenuColors& 
     for (int i = 0; m.s[i] && x < font::kCols; ++i, ++x) {
         const int g = font::glyph_of(f, m.s[i]);
         if (sel >= 0 && i >= m.start[sel] && i <= m.end[sel]) {
-            font::draw_glyph(c, f, g, x * 8, kMenuRow * 8, col.plain_sel ? col.highlight : 0, col.plain_sel ? 0 : col.highlight);
+            // (a dim choice highlighted - Save Slot Info's empty slot: black on light grey, Tom 2026-11-17)
+            const uint8_t box = sel < 32 && (m.dim >> sel & 1) ? 7 : col.highlight;
+            font::draw_glyph(c, f, g, x * 8, kMenuRow * 8, col.plain_sel ? box : 0, col.plain_sel ? 0 : box);
         } else {
             bool lit = is_key(m.s[i]);
             if (m.marked) {
@@ -446,7 +449,11 @@ void draw(pic::Canvas& c, const font::Font& f, const Menu& m, const MenuColors& 
                 for (int k = 0; k < m.count; ++k)
                     if (m.start[k] == i) lit = true;
             }
-            font::draw_glyph(c, f, g, x * 8, kMenuRow * 8, lit ? col.highlight : col.normal, 0);
+            uint8_t fg = lit ? col.highlight : col.normal;
+            if (m.dim)
+                for (int k = 0; k < m.count && k < 32; ++k)
+                    if ((m.dim >> k & 1) && i >= m.start[k] && i <= m.end[k]) fg = m.dim_fg;
+            font::draw_glyph(c, f, g, x * 8, kMenuRow * 8, fg, 0);
         }
     }
 }

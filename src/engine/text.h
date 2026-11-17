@@ -172,6 +172,8 @@ struct Menu {
     int8_t  col0 = -1;
     char    tail[16] = {};
     bool    lit = false;           // (buttons: every letter white - Dark Queen's Return)
+    uint32_t dim = 0;              // bit k: choice k in dim_fg, its key too (Save Slot Info: an empty slot)
+    uint8_t  dim_fg = 8;
 };
 
 // The column menu lines start at (0; Dark Queen's buttons 1 - set by the

@@ -63,6 +63,11 @@ bool mkdir(const char* path);
 // first, so a failed write never leaves `to` half written. False: `from`
 // is still there (and `to` as it was, unless its removal went through).
 bool rename(const char* from, const char* to);
+// When the file was last written, as the player reads a date ("Nov 17 2026
+// 9:41 PM", local time) - for a platform with a clock it can trust (the
+// handhelds; the boards have none). A platform without it needn't define
+// it: play.cpp has a weak stand-in (false: not known).
+bool file_time(const char* path, char* out, size_t cap);
 
 // A DAX source over an open file, with a 512-byte read-ahead buffer
 class FileSource : public dax::ByteSource {

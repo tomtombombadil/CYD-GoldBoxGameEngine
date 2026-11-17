@@ -495,6 +495,15 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
 - Auto Join (Tom, 2026-11-16; `CYD_AUTO_JOIN`, Settings key, `comforts_off2`
   bit 32, on by default; SPEC 11): an item taken from a treasure joins a pile
   of the same its taker carries (Join's own test), needing no slot.
+- Save Slot Info (Tom, 2026-11-17; `CYD_SAVE_INFO`, Settings key, `comforts_off2`
+  bit 64, on by default; SPEC 11): Save Which's empty slots grey, used ones
+  white; while Save / Load Which asks, the game screen is the highlighted
+  slot's save - its words left (time where the platform has a clock -
+  `plat::file_time`, a weak stand-in on the boards; the place from
+  `engine/places.*`, our own block -> name table, Tom OK'd; square, clock,
+  "N party members"), Companion-style cards with icons right; with a
+  Companion panel beside the game (`play::set_side_panel`, 480x320 / a wide
+  handheld) the panel's Party view shows them (`play::saves_shown`).
 - Quick Actions (Tom, 2026-11-09; `CYD_QUICK_ACTIONS`, Settings key,
   `comforts_off2` bit 8, on by default; SPEC 11): the Game menu's Quick
   tab - an ENGINE page (Tom: "the game/settings menu of the engine ...
