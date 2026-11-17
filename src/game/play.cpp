@@ -5115,6 +5115,7 @@ magic::Scrolls scroll_facts();
 void open_alter(pic::Canvas& c);
 void fix_party(pic::Canvas& c);
 
+extern bool cast_event;
 void leave_camp(pic::Canvas& c)
 {
     // Spells not yet memorized are forgotten when the camp breaks (the
@@ -5145,6 +5146,12 @@ void leave_camp(pic::Canvas& c)
         camp_from_script = false;
         waiting = false;
         handle(vm->resume());
+        return;
+    }
+    if (cast_event) {                   // (Treasures: a spell cast where a script waits for one - cast_noted)
+        cast_event = false;
+        clear_menu_line(c);
+        run_entry(1, Then::Look);
         return;
     }
     idle_menu(c);
@@ -10929,10 +10936,26 @@ struct CastRun {
 void item_cast_done(pic::Canvas& c);
 
 // The list closed: back to the magic menu, or to exploring
+// Treasures: a spell chosen in the Cast list goes into game byte 0x4A (the
+// scripts' word 0x4B) - and when the script had put 0xFF there (the two
+// Siulajias' "Cast"), the square's script runs again as the list closes
+// (GAME.OVR 0x11EF2: the byte 0xFF -> flag 0x703E; 0xEC11 / 0x12B37 /
+// 0x14765: the exploring menu and the camp's leave with it set)
+bool cast_event = false;
+
+void cast_noted(int spell)
+{
+    if (!d->prof->variant.tr) return;
+    uint8_t* g = d->gs.area1;
+    if (g[0x4A] == 0xFF) cast_event = true;
+    g[0x4A] = static_cast<uint8_t>(spell);
+}
+
 void cast_done(pic::Canvas& c)
 {
     if (!cr.exploring) {
-        back_to_magic(c);
+        if (cast_event && cheat == Cheat::None) leave_camp(c);      // (the camp breaks at once, the script runs)
+        else back_to_magic(c);
         return;
     }
     cr.exploring = false;
@@ -10947,6 +10970,12 @@ void cast_done(pic::Canvas& c)
     draw_panel(c);
     text::clear(c, text::kTextArea);
     dirty_rows(17, 22);
+    if (cast_event) {
+        cast_event = false;
+        clear_menu_line(c);
+        run_entry(1, Then::Look);
+        return;
+    }
     idle_menu(c);
 }
 
@@ -11173,6 +11202,7 @@ void choose_spell(int spell, pic::Canvas& c)
     cr.spell = spell;
     cr.cs = camp_spell(spell);
     cr.on_camp = false;
+    cast_noted(spell);
     if (e.targets == spells::kCombat) {
         // A spell for fights: "can't be cast here... Lose it?"
         char t[32];

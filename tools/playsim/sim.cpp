@@ -1705,6 +1705,22 @@ int main(int argc, char** argv)
         q = strchr(q, ',');
         if (q) ++q;
     }
+    // LEARN=m:id,id;m:id...: member m's spell book gains these spells (hex ids) - a play-through's
+    // stand-in for the spells a magic-user picks at each training
+    for (const char* q = getenv("LEARN"); q && *q;) {
+        const int m = atoi(q);
+        const char* c = strchr(q, ':');
+        if (!c || m < 0 || m >= play::pt->count) break;
+        for (++c; *c && *c != ';';) {
+            char* e;
+            const long v = strtol(c, &e, 16);
+            if (e == c) break;
+            magic::learn(play::pt->m[m], static_cast<int>(v));
+            c = *e == ',' ? e + 1 : e;
+        }
+        q = strchr(q, ';');
+        if (q) ++q;
+    }
     // SETAGE=m:age,...: member m that old; AGEUP=n: the clock's years make
     // everyone n older (Darkness / Treasures - old age at the next fight's end)
     for (const char* q = getenv("SETAGE"); q && *q;) {

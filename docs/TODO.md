@@ -6,6 +6,17 @@ to the bottom with their version, then drop off after a while. Synced to
 the Project as claude/TODO.md.
 
 ## Tom
+- [x] v0.208.1 (the PortMaster session's Treasures play-through, 2026-11-17): Treasures' scripts that wait for
+      a spell (Llorkh's dungeon, the two Siulajias: "Cast") never heard of one - the original puts the spell
+      chosen in the Cast list into game byte 0x4A (script word 0x4B) and, when the script had set it to 0xFF,
+      runs the square's script again as the list closes (GAME.OVR 0x11EF2, 0xEC11; the camp breaks for it:
+      0x12B37, 0x14765). Now so (`cast_noted`, `cast_event`). Read from the original's code and played in the
+      playsim (Dispel Magic: the false Siulajia shows herself, her guards' fight, journal 24 and 19, Siulajia
+      joins); not run in DOSBox. Only Treasures has that code (Darkness: no such byte test; Death Knights not
+      looked at). The playsim's LEARN=m:ids (a spell book's stand-in for training's picks).
+- [ ] Treasures play-through leftovers (2026-11-17): a fight page read "LORDSMAN goes down LORDSMAN" /
+      "COCKATRICE goes down COCKATRICE" in the playsim's PAGELOG (two pages joined, or a wrong second line?);
+      "INVISIBILITY, 10' RADIU" in the spell book list (cut at the frame - the original's?).
 - [ ] Save Slot Info's map of the save (v0.208.0, with a side panel): the
       originals' stock saves (the party not yet begun: "Square 7,13", time
       00:00) give no map - right? Seen with a map, place and arrow (PortMaster
