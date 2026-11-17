@@ -1296,6 +1296,27 @@ void turning()
         if (i != mon) b.f[i].rec[0xE9] = 0;
     combat::Fighter& me = b.f[0];
     combat::Fighter& un = b.f[mon];
+    // (the undead in the cleric's sight: the fight's placement is the dice's,
+    // and earlier checks move the dice - 2026-11-17 a full run put it out of
+    // reach, every turning "not"; a square next to the cleric that it sees)
+    if (!combat::range(b, fg->t, 0, mon, false, nullptr)) {
+        const int ox = un.x, oy = un.y;
+        bool placed = false;
+        for (int r = 1; r <= 3 && !placed; ++r)
+            for (int dy = -r; dy <= r && !placed; ++dy)
+                for (int dx = -r; dx <= r && !placed; ++dx) {
+                    un.x = static_cast<int16_t>(me.x + dx);
+                    un.y = static_cast<int16_t>(me.y + dy);
+                    if (un.x < 0 || un.y < 0 || un.x >= combat::kW || un.y >= combat::kH) continue;
+                    combat::occupancy(b);
+                    placed = combat::range(b, fg->t, 0, mon, false, nullptr);
+                }
+        if (!placed) {
+            un.x = static_cast<int16_t>(ox);
+            un.y = static_cast<int16_t>(oy);
+            combat::occupancy(b);
+        }
+    }
     const uint8_t keep[4] = {un.rec[0xE9], un.rec[0x195], un.rec[0x196], static_cast<uint8_t>(un.size)};
     int bad = 0, done = 0;
     std::string first;

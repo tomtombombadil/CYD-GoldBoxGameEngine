@@ -338,7 +338,7 @@ void camp_checks()
         expect(D_, w, mem(1).health() == party::Unconscious && cn == 0);
     }
     rules::set_fixes(true);
-    // Remove Curse: the original looks for effect 0x2B; Game Fixes the curse 0x24
+    // Remove Curse: the original looks for effect 0x2B; Game Fixes the curse 0x24 as well
     for (bool fix : {false, true}) {
         rules::set_fixes(fix);
         member(1, classes::Fighter, 8);
@@ -347,8 +347,8 @@ void camp_checks()
         ccast(0, 1, 0x2B);
         const bool gone2b = caff(1, fx(0)) < 0, gone24 = caff(1, fx(1)) < 0;
         snprintf(w, sizeof w, "camp: Remove Curse (Game Fixes %s) takes away %s, \"is Cured\", \"is un-cursed\"", fix ? "on" : "off",
-                 fix ? "the curse (0x24)" : "0x2B, not the curse");
-        expect(D_, w, gone2b == !fix && gone24 == fix && csaid(1, spells::Said::Cured) == 1 && csaid(1, spells::Said::Uncursed) == 1);
+                 fix ? "0x2B and the curse (0x24)" : "0x2B, not the curse");
+        expect(D_, w, gone2b && gone24 == fix && csaid(1, spells::Said::Cured) == 1 && csaid(1, spells::Said::Uncursed) == 1);
     }
     rules::set_fixes(true);
     // Cure Disease: "is Cured" for each disease it takes, then "is cured"
