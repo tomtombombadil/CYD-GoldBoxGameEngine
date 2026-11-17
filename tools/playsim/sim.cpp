@@ -1366,6 +1366,11 @@ int main(int argc, char** argv)
                 play::pt->m[i].rec[0xFC + coin * 2] = static_cast<uint8_t>(v >> 8);
             }
         }
+        if (getenv("SETHP")) {
+            // SETHP=n: every member's hit points and their highest n (to 255; a play-through's cheat, as Modify Character)
+            const int v = atoi(getenv("SETHP"));
+            for (int i = 0; i < play::pt->count; ++i) play::pt->m[i].rec[0x78] = play::pt->m[i].rec[0x1A4] = static_cast<uint8_t>(v);
+        }
         if (getenv("KNIGHT")) {
             // KNIGHT=n: a training hall's party menu (0x7EA8 set), character n,
             // the Krynn games' Knight Change; KNIGHTYES=1 then takes Change
@@ -1821,11 +1826,74 @@ int main(int argc, char** argv)
         const int scr = (int)play::screen;
         const char* t = nullptr;
         if (scr == 24 || scr == 0) auto_take = 0;
+        if (scr != 24 && getenv("AUTOHEAL") && play::pt)       // (AUTOHEAL=1: between fights everyone is up at full hit points - a play-through's cheat for places with no camp)
+            for (int i = 0; i < play::pt->count; ++i) {
+                auto& r = play::pt->m[i].rec;
+                r[0x1A4] = r[0x78]; r[0x195] = 0; r[0x196] = 1;
+            }
+        if (getenv("AUTOSTOPSCRIPT") && play::d->gs.script == atoi(getenv("AUTOSTOPSCRIPT")) && scr != 24) { auto_left = 0; return false; }   // (AUTOSTOPSCRIPT=n: the run ends as script n is reached - SAVENOW then saves there)
         if (scr == 1) { auto_left = 0; return false; }     // (the party menu: all dead)
         if (scr == 24 && has('Q') && getenv("FIGHTSTOP")) { auto_left = 0; return false; }   // (FIGHTSTOP=1: a fight is the player's)
-        if (scr == 24) t = has('Q') ? "/Q" : has('Y') && has('N') && getenv("AUTOFIGHT") ? "/N" : ".";   // ("Continue Battle": No)
+        bool maze_walk = false;         // (AUTOMAZE=d: a fight with no enemy left on the field - Gateway's maze fights - the member whose turn it is walks off it that way, 0 north ... 6 west)
+        static char maze_tok[3] = "}0";
+        if (scr == 24 && getenv("AUTOMAZE")) {
+            play::PanelField pf;
+            int foes = 0;
+            if (play::panel_field(pf))
+                for (int i = 0; i < pf.n; ++i) {
+                    play::PanelDot dot;
+                    if (play::panel_dot(i, dot) && dot.enemy && !dot.dead) ++foes;
+                }
+            maze_tok[1] = getenv("AUTOMAZE")[0];
+            maze_walk = foes == 0 && play::fg && play::fg->st != play::FSt::MazeMore && (play::fight_pad() || has('Q'));
+        }
+        if (scr == 24 && getenv("AUTOMAZE") && play::fg && play::fg->st == play::FSt::MazeMore) play::quick_off(C, false);   // ("All enemies destroyed. (more)": the party off Quick, to walk)
+        // (the way off the field for the one whose turn it is: the shortest walk, straight steps, to a free square of the wanted edge, then off it)
+        auto maze_step = [&](int want) -> int {
+            const combat::Battle& b = play::fg->b;
+            if (play::fg->cur < 0) return want;
+            const combat::Fighter& f = b.f[play::fg->cur];
+            static int16_t from[combat::kH][combat::kW];
+            for (auto& r : from) for (auto& v : r) v = -1;
+            auto open_sq = [&](int x, int y) {
+                if (x < 0 || y < 0 || x >= combat::kW || y >= combat::kH || !b.ground[y][x]) return false;
+                const uint8_t* g = combat::tile(b, *b.tables, x, y);
+                return g && g[0] != 0xFF && (b.who[y][x] == 0 || (x == f.x && y == f.y));
+            };
+            auto is_edge = [&](int x, int y) { return want == 0 ? y == 0 : want == 2 ? x == combat::kW - 1 : want == 4 ? y == combat::kH - 1 : x == 0; };
+            if (is_edge(f.x, f.y)) return want;
+            static int16_t qx[combat::kW * combat::kH], qy[combat::kW * combat::kH];
+            int qh = 0, qt = 0;
+            qx[qt] = f.x; qy[qt++] = f.y; from[f.y][f.x] = 8;
+            while (qh < qt) {
+                const int x = qx[qh], y = qy[qh++];
+                if (is_edge(x, y)) {
+                    int cx = x, cy = y, dir = want;
+                    while (from[cy][cx] != 8) { dir = from[cy][cx]; cx -= combat::dx(dir); cy -= combat::dy(dir); }
+                    return dir;
+                }
+                for (int dir = 0; dir < 8; dir += 2) {
+                    const int nx = x + combat::dx(dir), ny = y + combat::dy(dir);
+                    if (!open_sq(nx, ny) || from[ny][nx] >= 0) continue;
+                    from[ny][nx] = static_cast<int16_t>(dir);
+                    qx[qt] = static_cast<int16_t>(nx); qy[qt++] = static_cast<int16_t>(ny);
+                }
+            }
+            return -1;                  // (no way now: someone stands in it)
+        };
+        static bool maze_shown = false;
+        static bool maze_blocked = false;
+        if (scr != 24) maze_shown = false;
+        if (maze_walk && !play::fight_pad() && !maze_shown && has('M')) { maze_shown = true; t = "[/M"; }   // (the field once, as the walk starts)
+        else if (maze_walk && play::fight_pad()) {
+            const int dir = maze_step(maze_tok[1] - '0');
+            if (dir < 0) { t = "{"; maze_blocked = true; }      // (blocked: the move ended, then Guard)
+            else { maze_tok[1] = static_cast<char>('0' + dir); t = maze_tok; }
+        } else if (maze_walk) { t = has('M') && !maze_blocked ? "/M" : "/G"; maze_blocked = false; }    // (no moves left: Guard - not Quick, the walk goes on next round)
+        else if (scr == 24) t = has('Q') ? "/Q" : has('Y') && has('N') && getenv("AUTOFIGHT") ? "/N" : ".";   // ("Continue Battle": No)
         else if (scr == 5 && has('T') && has('V') && getenv("AUTOTAKE") && !auto_take) { t = getenv("AUTOTAKE"); auto_take = 1; }   // (AUTOTAKE=tokens: once at each treasure menu, e.g. /T/I/T/T/T/T - the selected member takes the items)
         else if (scr == 5 || scr == 16 || scr == 25) t = has('E') ? "/E" : ".";
+        else if (play::screen == play::Screen::Won) t = ".";      // (an ending's pages: a key each)
         else if (scr == 11 && getenv("AUTOFIGHT") && has('Y') && has('N')) t = "/N";     // ("There is still treasure left ...": No)
         else if (w == ecl::Wait::Print || w == ecl::Wait::Key || w == ecl::Wait::Pause) t = ".";
         else if (w == ecl::Wait::Menu && play::menu.count <= 1) t = ".";
@@ -1979,7 +2047,7 @@ int main(int argc, char** argv)
                 (play::screen == play::Screen::Fight || play::screen == play::Screen::SpellList ||
                  play::screen == play::Screen::Items)) {     // (a fight: whose turn; its records freed after it)
                 play::PanelDot pd{};
-                if (play::panel_dot(play::fg->cur, pd)) printf("  ? turn %s\n", pd.name);
+                if (play::panel_dot(play::fg->cur, pd)) printf("  ? turn %s (fight state %d, moves %d)\n", pd.name, (int)play::fg->st, play::fg->b.f[play::fg->cur].moves);
             }
             continue;
         }

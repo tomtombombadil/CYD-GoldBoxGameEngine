@@ -783,7 +783,7 @@ void blit4(pic::Canvas& c, const uint8_t* p, int w, int h, int x, int y, bool mi
 
 // ---- The fight's state (on the heap while fighting)
 enum class FSt : uint8_t {
-    Begin, Turn, Menu, Move, Aim, DoneMenu, Speed, Ai, Pages, RoundEnd, Results, Destroyed, AllyAsk, FleeAsk,
+    Begin, Turn, Menu, Move, Aim, DoneMenu, Speed, Ai, Pages, RoundEnd, Results, Destroyed, AllyAsk, FleeAsk, MazeMore,
     ContinueAsk, Next, UseAim, AbortAsk, RoundRest, Clouds, Resume, FlameAsk, FlameAbort, OldAge,
     NpcShare,                           // Pool: the NPCs' share page, the results page next
     More                                // the Dark Queen: a page's box full - a key, then the rest (res 0xCEEA)
@@ -928,7 +928,14 @@ struct Fight {
     int      mx = 0, my = 0;            // Manual's square
     int      pending = -1;              // an ally to attack (asked)
     int      flee_dir = 8;
-    int      left_dir = -1;         // (Gateway: the way the party's last runner left the field - 0 N, 2 E, 4 S, 6 W)
+    // Gateway's maze fights (Ascore's arena; its script word 0x4D01 = 1 -
+    // GAME.OVR 0xBB6C / 0xC71A / 0xCA1E / 0x16F1A / 0x86C0): no end when the
+    // enemies are gone, no
+    // "Flee" question at the edge, over as the first member leaves; the party
+    // then faces the way it left (the script word 0x4CF9)
+    bool     maze = false, maze_out = false, maze_told = false;
+    uint8_t  view_x0 = 0, view_x1 = 0, view_y0 = 0, view_y1 = 0;   // (Gateway: the squares with ground - the view's limits)
+    uint8_t  maze_line = 0, maze_ran = 0;
     // Casting: the spell, the targets picked, how many more, an area's radius (-1: none)
     int      spell = 0;
     int      sp_t[combat::kMaxFighters] = {};
@@ -1547,7 +1554,7 @@ void compose_icon(int slot, const party::Character& ch)
     // sample party fought without icons.)
     // (Pool: an NPC is drawn as a character - its CHEAD / CBODY icon, ovr18
     // +0x482; 0x126 is a random number there)
-    if (!pool_files() && ch.rec[0xF7] >= 0x80 && ch.rec[0x126] && !ch.rec[0x141] && !ch.rec[0x142]) {
+    if (npc_own_icon(ch)) {
         load_monster_icon(slot, ch.rec[0x126]);
         if (fg->icon[slot].px[0]) return;
     }
@@ -1894,10 +1901,17 @@ void focus_at(int x, int y, int r)
     int cx = b.vx + 3, cy = b.vy + 3;
     if (x - cx > r || cx - x > r || r == 0xFF) cx = x;
     if (y - cy > r || cy - y > r || r == 0xFF) cy = y;
-    if (cx < 3) cx = 3;
-    if (cx > combat::kW - 4) cx = combat::kW - 4;
-    if (cy < 3) cy = 3;
-    if (cy > combat::kH - 4) cy = combat::kH - 4;
+    // (Gateway: a field that ends where the map does - the view stays on
+    // it. DOSBox, 2026-11-17: Ascore's arena at 3,15, the party on the
+    // field's last row but one - that last row the view's bottom row)
+    int x0 = 0, x1 = combat::kW - 1, y0 = 0, y1 = combat::kH - 1;
+    if (fg->t.field_ends_at_map && fg->view_y1 >= fg->view_y0 + 6 && fg->view_x1 >= fg->view_x0 + 6) {
+        x0 = fg->view_x0; x1 = fg->view_x1; y0 = fg->view_y0; y1 = fg->view_y1;
+    }
+    if (cx < x0 + 3) cx = x0 + 3;
+    if (cx > x1 - 3) cx = x1 - 3;
+    if (cy < y0 + 3) cy = y0 + 3;
+    if (cy > y1 - 3) cy = y1 - 3;
     b.vx = cx - 3;
     b.vy = cy - 3;
 }
@@ -2583,6 +2597,9 @@ void say(pic::Canvas& c, FSt next)
 // ---- Turns
 void begin_round(pic::Canvas& c);
 void next_turn(pic::Canvas& c);
+bool maze_tell(pic::Canvas& c);
+bool maze_more(pic::Canvas& c);
+void party_left(int i, int dir, int x, int y);
 void fight_menu(pic::Canvas& c);
 void end_fight(pic::Canvas& c);
 
@@ -4139,12 +4156,13 @@ void next_turn(pic::Canvas& c)
     // those still to act have their turns, the Quick ones guard, then the
     // round's end asks "Continue Battle" - coab's MainCombatLoop; DOSBox,
     // the slums' orcs: Brother Sean's panel at the question)
-    if (combat::standing(b, 0) == 0) {
+    if (combat::standing(b, 0) == 0 || fg->maze_out) {      // (a maze fight: over as a member leaves)
         fg->cur = -1;
         fg->st = FSt::RoundEnd;
         fg->until = 1;
         return;
     }
+    if (maze_tell(c)) return;           // ("All enemies destroyed. (more)" ... - then on, here)
     fg->cur = combat::next(b, rng);
     if (fg->cur < 0) {
         fg->st = FSt::RoundEnd;
@@ -4248,8 +4266,11 @@ void round_clouds(pic::Canvas& c)
 
 void round_rest(pic::Canvas& c)
 {
-    const bool over = combat::end_round(fg->b);
-    if (over && !in_demo && combat::standing(fg->b, 1) == 0 && combat::standing(fg->b, 0) > 1) {
+    bool over = combat::end_round(fg->b);
+    // (a maze fight: not over with its enemies gone - the party walks off
+    // an edge, falls, or 15 rounds pass with no attack; no "Continue Battle")
+    if (fg->maze) over = fg->maze_out || combat::standing(fg->b, 0) == 0 || fg->b.round >= fg->b.no_action;
+    if (over && !fg->maze && !in_demo && combat::standing(fg->b, 1) == 0 && combat::standing(fg->b, 0) > 1) {
         // No enemies left, more than one standing: "Continue Battle: Yes No"
         // (time to bandage and heal before the fight ends - the original's)
         fg->st = FSt::ContinueAsk;
@@ -4474,23 +4495,73 @@ bool enemy_next_to(int i)
     return false;
 }
 
-// Gateway: a party member who got away tells the fight which way - the
-// party comes out of it FACING that way, and Ascore's arena script reads
-// it (block 27: C04D set to north before each fight, tested after it;
-// north the next fight, the rest "had enough" / the goblin rooms; the
-// last fight's north is the ending). The original in DOSBox, 2026-11-16:
-// one fighter stepped off the first arena fight's south edge - "3,15 S"
-// and Vaalgamon's "run away, little ones". A slanted step counts as the
-// edge it crosses.
+// Gateway: a member of the party's side who got away leaves the way in the
+// script word 0x4CF9 (GAME.OVR 0x16EF6, every fight; its 0x16D9E: a straight
+// step its own way, a slanted one by where the runner stood - north-east
+// east unless on the top row, south-east south unless past column 47,
+// south-west south unless in column 0, north-west west unless on the top
+// row). In a maze fight (Ascore's arena, script word 0x4D01 = 1) that ends
+// the fight at once (its flag DS 0xA247) and the party comes out FACING that
+// way (0x86C0: the facing = 0x4CF9, in a maze fight only - one that ends
+// with nobody gone keeps the word's old value) - the arena's script reads
+// the facing after each fight: north the next room, east another, the rest
+// "had enough"; the last fight's north is the ending. The original in
+// DOSBox, 2026-11-16 / 17: one fighter stepped off the first arena fight's
+// south edge - no question, the fight over, "3,15 S" and Vaalgamon's "run
+// away, little ones"; all its enemies killed: "All enemies destroyed.
+// (more)" ... and the fight goes on.
 void party_left(int i, int dir, int x, int y)
 {
     if (d->prof->game != games::Game::GatewayToTheSavageFrontier || i >= fg->b.party_size) return;
-    int way = dir & 7;
-    if (dir < 0 || dir > 7 || (way & 1)) {
-        const int nx = x + (dir >= 0 && dir <= 7 ? combat::dx(dir) : 0);
-        way = nx < 0 || x <= 0 ? 6 : nx >= combat::kW || x >= combat::kW - 1 ? 2 : (dir >= 0 && dir <= 7 && (dir == 7 || dir <= 1)) || y <= 0 ? 0 : 4;
+    int way = dir & 6;
+    if (dir < 0 || dir > 7)             // (no step: by the edge it stood at)
+        way = x <= 0 ? 6 : x >= combat::kW - 1 ? 2 : y <= 0 ? 0 : 4;
+    else if (dir == 1) way = y != 0 ? 2 : 0;
+    else if (dir == 3) way = x < combat::kW - 2 ? 4 : 2;
+    else if (dir == 5) way = x == 0 ? 6 : 4;
+    else if (dir == 7) way = y == 0 ? 0 : 6;
+    if (vm) vm->set(0x4CF9, static_cast<uint16_t>(way));
+    plat::log("[fight] member %d left the field: step %d from %d,%d - the way %d\n", i, dir, x, y, way);
+    if (fg->maze) fg->maze_out = true;
+}
+
+// A maze fight's enemies all gone: the original's lines at the screen's
+// foot, a key each (the last enemy down: its three; run off: "No enemies
+// remain here."); false: nothing to tell
+bool maze_tell(pic::Canvas& c)
+{
+    combat::Battle& b = fg->b;
+    if (!fg->maze || fg->maze_out || combat::standing(b, 0) == 0) return false;
+    int ran = 0;
+    for (int k = b.party_size; k < b.n; ++k)
+        if (b.f[k].team() && b.f[k].status() == party::Running) ++ran;
+    if (combat::standing(b, 1) != 0) {
+        fg->maze_told = false;
+        fg->maze_ran = static_cast<uint8_t>(ran);
+        return false;
     }
-    fg->left_dir = way;
+    if (fg->maze_told) return false;
+    fg->maze_told = true;
+    fg->maze_line = ran > fg->maze_ran ? 4 : 0;
+    fg->maze_ran = static_cast<uint8_t>(ran);
+    return maze_more(c);
+}
+
+// The next of those lines; false: no more (or none in this program)
+bool maze_more(pic::Canvas& c)
+{
+    const int k = fg->maze_line;        // (0-2 the three lines, 4 "No enemies remain here."; 3 / 5: told)
+    if (k == 3 || k > 4) return false;
+    char line[text::kMaxString] = "";
+    OvrWords src;
+    const uint32_t at = d->prof->fight.maze_words[k == 4 ? 3 : k];
+    if (!at || !src.open() || !text::read_pascal(src, at, line, sizeof line) || !line[0]) return false;
+    fg->maze_line = static_cast<uint8_t>(k + 1);
+    draw_fight(c);
+    status_line(c, line);
+    fg->st = FSt::MazeMore;
+    fg->until = 0;
+    return true;
 }
 
 // One step (or an attack that way) by the fighter whose turn it is
@@ -4526,6 +4597,15 @@ void try_step(pic::Canvas& c, int dir)
         f.target = blocker;
         melee(c, i, blocker);
         say(c, FSt::Turn);              // (after_attack)
+        return;
+    }
+    if (edge && fg->maze) {             // (a maze fight: no question - GAME.OVR 0xCA1E)
+        const int fx = f.x, fy = f.y;
+        const bool away = combat::flee(b, fg->t, i, rng);
+        if (away) party_left(i, dir, fx, fy);
+        add_page(i, fw(away ? profile::kGotAway : profile::kEscapeBlocked));
+        draw_fight(c);
+        say(c, FSt::Next);
         return;
     }
     if (edge) {
@@ -5558,8 +5638,24 @@ void fight_start(pic::Canvas& c)
     // GAME.OVR 0xF852 skips 0xEF50)
     const bool gw_under = d->prof->game == games::Game::GatewayToTheSavageFrontier && vm && vm->get(0x4CF7) != 0;
     fg->t.field_ends_at_map = d->prof->game == games::Game::GatewayToTheSavageFrontier;
+    fg->maze = fg->t.field_ends_at_map && vm && vm->get(0x4D01) == 1 && !in_demo;
     if (b.indoors)
         combat::build_indoors(b, fg->t, d->map, d->gs.x, d->gs.y, rng, !pool_files() && !d->prof->variant.vga && !gw_under);
+    if (fg->t.field_ends_at_map) {
+        int x0 = combat::kW, x1 = -1, y0 = combat::kH, y1 = -1;
+        for (int y = 0; y < combat::kH; ++y)
+            for (int x = 0; x < combat::kW; ++x)
+                if (b.ground[y][x]) {
+                    if (x < x0) x0 = x;
+                    if (x > x1) x1 = x;
+                    if (y < y0) y0 = y;
+                    if (y > y1) y1 = y;
+                }
+        if (x1 >= 0) {
+            fg->view_x0 = static_cast<uint8_t>(x0); fg->view_x1 = static_cast<uint8_t>(x1);
+            fg->view_y0 = static_cast<uint8_t>(y0); fg->view_y1 = static_cast<uint8_t>(y1);
+        }
+    }
     else if (d->prof->variant.overland_map) combat::build_outdoors_pool(b, pool_place_flags(), rng);
     else if (darkness_files() || hl()) {
         combat::build_outdoors_dk(b, fg->t, vm->get(0x33) != 0, rng);   // (its own: facts L9)
@@ -6043,9 +6139,10 @@ void end_fight(pic::Canvas& c)
     // (Pool's arena leaves the result word 0 - its 0x80 / 0x81 are set on
     // the other paths only)
     vm->set(0x7EC7, static_cast<uint16_t>(arena && pool_files() ? 0 : r));
-    if (r == combat::Fled && fg->left_dir >= 0) {
-        d->gs.dir = static_cast<uint8_t>(fg->left_dir);
-        plat::log("[fight] the party left the field facing %d\n", fg->left_dir);
+    if (fg->maze) {
+        d->gs.dir = static_cast<uint8_t>(vm->get(0x4CF9) & 6);
+        plat::log("[fight] the maze fight is over (%s), the party facing %d\n",
+                  fg->maze_out ? "a member left" : combat::standing(b, 0) == 0 ? "nobody standing" : "15 rounds without an attack", d->gs.dir);
     }
     if (in_demo) {
         // The demo (demo_facts.md 5): no clean-up, experience, treasure or
@@ -7361,6 +7458,10 @@ void fight_tap(int x, int y, pic::Canvas& c)
     switch (fg->st) {
     case FSt::More:
         page_more(c);
+        return;
+    case FSt::MazeMore:
+        status_line(c, "");
+        if (!maze_more(c)) next_turn(c);
         return;
     case FSt::Pages:
         // (Tom, 2026-11-10: a tap on the fight never skips its events or

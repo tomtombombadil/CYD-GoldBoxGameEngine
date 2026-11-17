@@ -1921,6 +1921,40 @@ segment at image 0x4C70; run as `GAME UseStart`) + GAME.OVR (51 overlays),
   release has a saved game). The start's "introduction to your journal"
   opens the journal's Introduction (the table's kind 'I').
 
+**Maze fights** (v0.203.12; Ascore's arena, its block 27): the script
+sets its word 0x4D01 = 1 (game block +0x402) and the program then
+(GAME.OVR, each a `cmp word [es:di+0x402]`): doesn't end the fight when
+no enemy is left (0xBB6C / 0xC71A - over when no party fighter stands, a
+member has left, or 15 rounds pass without an attack; no "Continue
+Battle"); tells so as the last enemy falls - "All enemies destroyed.
+(more)", "Continue through the (more)", "maze off any map edge. (more)",
+a key each (0x4A87F; the last one run off: "No enemies remain here.",
+0x3C0FF) - `profile.fight.maze_words`; asks no "Flee" at the edge
+(0xCA1E); ends it as the first member of the party's side gets away
+(0x16F1A: DS 0xA247), and leaves the party FACING the way kept in word
+0x4CF9 (0x86C0; set by every runner in every fight, 0x16EF6 - a slanted
+step by where the runner stood, 0x16D9E). The script reads the facing:
+north the next room, east another, the rest Vaalgamon's "run away" and
+out; the last fight's north is the ending. Trolls get up again, so there
+the way on IS the edge. (The original also keeps the fallen in the party
+when such a fight is fled, 0x74AB - what the engine does with them after a
+flight is unchecked: TODO.) `Fight::maze`, `party_left`, `maze_tell` in
+play_fight.inc. A field that ends where the map does keeps the view on
+its ground (`focus_at`).
+
+**The ending** (v0.203.12): PROGRAM 8 (handler 0x3FA0) calls the show at
+overlay 0x2CF74 +0x3AB and comes BACK - `program_ends` false: the frame
+with its bar on row 19; BIGPIC1 0x7E, then 0x7F, then 0x80 / 0x81 / 0x82
+/ 0x83 set into it at cells (1,1) (1,9) (26,1) (20,9), colour 13
+see-through; under each four lines of the overlay's own words (green,
+rows 20-23) and a key; the screen cleared. The script then shows "Victory
+is sweet", takes Krevish out of the party and goes to Yartar - the game
+goes on. `profile.won` (text, bigpic), `gate_show_page`.
+
+**NPCs' pictures**: an NPC from the monsters' file keeps the picture's
+number in its record's body byte as well as at 0x126 (Krevish 60) - drawn
+with CPIC's block (`npc_own_icon`), as a body of 0 always was.
+
 ## 6f. Treasures of the Savage Frontier (2026-10-23: started after Darkness)
 
 Facts: the Project's claude/treasures_facts.md (the survey) and
