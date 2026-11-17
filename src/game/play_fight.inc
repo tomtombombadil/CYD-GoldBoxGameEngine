@@ -7885,14 +7885,25 @@ void take_loot(int i, pic::Canvas& c)
     party::Character* ch = pt->sel();
     if (!ch || i < 0 || i >= ground->n) return;
     const int at = ground->n - 1 - i;
-    if (rules::too_heavy(*ch, ground->item[at], *names, d->facts)) {
+    // (Auto Join - CYD_AUTO_JOIN: onto a pile of the same; then a full item
+    // list doesn't stop it, the weight still does)
+    const bool full = ch->n_items >= party::kMaxItems;
+    const bool heavy = rules::too_heavy(*ch, ground->item[at], *names, d->facts, false);
+    const bool piled = !heavy && CYD_AUTO_JOIN && opts.auto_join && rules::pile_onto(*ch, ground->item[at], secret_files());
+    if (heavy || (!piled && full)) {
+#ifdef CYD_TEST_HOOKS
+        plat::log("[play] take refused, left %d\n", ground->n);
+#endif
         note(c, d->w_over);
         return;
     }
-    rules::add_item(*ch, ground->item[at]);
+    if (!piled) rules::add_item(*ch, ground->item[at]);
     rules::recalc(*ch, *names, d->facts);
     for (int k = at; k + 1 < ground->n; ++k) memcpy(ground->item[k], ground->item[k + 1], items::kRecordSize);
     --ground->n;
+#ifdef CYD_TEST_HOOKS
+    plat::log("[play] take ok, left %d\n", ground->n);
+#endif
     if (!ground->n) {
         screen = Screen::Shop;
         draw_shop(c);

@@ -286,6 +286,18 @@
 #define CYD_READ_TIME 1
 #endif
 
+// CYD_AUTO_JOIN (Tom, 2026-11-16: "when picking up things, auto-join them
+// with items already in inventory that are exactly the same"): an item
+// taken from a treasure joins a pile its taker already carries that the
+// game's own Join would make one of (arrows with arrows, +1 arrows with +1
+// arrows - rules::same_pile), so it needs no slot of its own (the originals
+// stop at 16 items; Join by hand after). Settings key Auto Join (on by
+// default; As Original turns it off). Where: play_fight.inc take_loot,
+// rules::pile_onto.
+#ifndef CYD_AUTO_JOIN
+#define CYD_AUTO_JOIN 1
+#endif
+
 // Each comfort compiled in can also be switched off by the player: the
 // game's Settings page (Tom, 2026-10-11, v0.72.0; one set for all games,
 // settings.h comforts_off), the one Settings screen (Home, a game's page, the

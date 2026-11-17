@@ -1921,7 +1921,7 @@ segment at image 0x4C70; run as `GAME UseStart`) + GAME.OVR (51 overlays),
   release has a saved game). The start's "introduction to your journal"
   opens the journal's Introduction (the table's kind 'I').
 
-**Maze fights** (v0.203.12; Ascore's arena, its block 27): the script
+**Maze fights** (v0.205.1; Ascore's arena, its block 27): the script
 sets its word 0x4D01 = 1 (game block +0x402) and the program then
 (GAME.OVR, each a `cmp word [es:di+0x402]`): doesn't end the fight when
 no enemy is left (0xBB6C / 0xC71A - over when no party fighter stands, a
@@ -1942,7 +1942,7 @@ flight is unchecked: TODO.) `Fight::maze`, `party_left`, `maze_tell` in
 play_fight.inc. A field that ends where the map does keeps the view on
 its ground (`focus_at`).
 
-**The ending** (v0.203.12): PROGRAM 8 (handler 0x3FA0) calls the show at
+**The ending** (v0.205.1): PROGRAM 8 (handler 0x3FA0) calls the show at
 overlay 0x2CF74 +0x3AB and comes BACK - `program_ends` false: the frame
 with its bar on row 19; BIGPIC1 0x7E, then 0x7F, then 0x80 / 0x81 / 0x82
 / 0x83 set into it at cells (1,1) (1,9) (26,1) (20,9), colour 13
@@ -2911,6 +2911,13 @@ a PC, PortMaster handhelds):
     sweep's `flashcheck` (tools/playsim/flash_check.inc, devkit
     flashcheck.sh: text rows wiped under 1 s with no input; READTIME=0 the
     originals' timing).
+  - `CYD_AUTO_JOIN` (Tom, 2026-11-16): **Auto Join** (on by default,
+    `comforts_off2` bit 32) - an item taken from a treasure joins a pile
+    of the same its taker carries (the game's own Join test,
+    `rules::same_pile`; Secret's for Secret: arrows with arrows, +1 arrows
+    with +1 arrows), so it needs no slot - a full list (16 items) takes
+    it then; the weight still stops it (`rules::pile_onto`, take_loot).
+    Off: each take a new item, as the originals.
   - `CYD_QUICK_ACTIONS` (Tom, 2026-11-09): **Quick Actions** - what each
     party member may do when Quick (an NPC: the computer) plays it in a
     fight. The Game menu's **Quick** tab (between Logs and Cheats; with it

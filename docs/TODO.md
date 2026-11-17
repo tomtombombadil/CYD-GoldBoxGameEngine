@@ -186,7 +186,7 @@ the Project as claude/TODO.md.
       characters one by one).
 
 ## Claude
-- [x] v0.203.12 - Gateway played to its end (the PortMaster session, 2026-11-17;
+- [x] v0.205.1 - Gateway played to its end (the PortMaster session, 2026-11-17;
       the original in DOSBox beside the engine, its code read). Ascore's arena
       is a MAZE fight (script word 0x4D01 = 1): the fight doesn't end with the
       enemies dead ("All enemies destroyed. (more)" / "Continue through the" /
@@ -219,9 +219,9 @@ the Project as claude/TODO.md.
       original drops the fallen from the party when a fight is fled, except
       in a maze fight (GAME.OVR 0x7468-0x74E2) - what does the engine do?
 - [ ] Gateway, from the PortMaster session's play-through (2026-11-16, DOSBox
-      beside the engine at Ascore's arena, v0.203.11): (1) done, v0.203.12:
+      beside the engine at Ascore's arena, v0.203.11): (1) done, v0.205.1:
       no "Flee" question in a maze fight only (GAME.OVR 0xCA1E). (2) done,
-      v0.203.12. (3) `Tables::field_ends_at_map` and
+      v0.205.1. (3) `Tables::field_ends_at_map` and
       `party_left` are Gateway's only - Treasures (the same family) and the
       others: unchecked. (4) the Trainer cheat's level-ups gave the
       magic-users no new spells (level 6, only first-level ones) - the
@@ -238,8 +238,10 @@ the Project as claude/TODO.md.
         v0.204.0
   - [ ] Curse's sphere duel in the Wizard's Tower: a fighter (Aldric) won it though its text
         says only a mage controls the sphere - what decides the outcome in the original?
-  - [ ] Tom: the scripted fight driver loses the big Curse fights (the stair guard, two owl-bear
-        rooms, Dracandros's courtyard); guard rooms passed by their flags so far - how to go on?
+  - [x] Tom: the big Curse fights - answered (2026-11-16): take every item, sell plain ones and
+        identify the high-priced (the Merchant cheat), give magic items to who uses them best,
+        Modify the party (the Trainer cheat), go in at full strength; a smarter driver (drv3.py).
+        Dracandros's courtyard won so. Auto Join on take - v0.205.0.
   - [ ] DOSBox: after the Thieves' Guild master's PROGRAM 9 camp the engine runs his speech
         and the fight at the party's next step (4C17 = 1); the original sets byte_1D8AA = 1
         there - does it run the square's script at once after the camp?

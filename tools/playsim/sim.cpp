@@ -1564,6 +1564,21 @@ int main(int argc, char** argv)
                 char nm[20];
                 ch.name(nm, sizeof nm);
                 if (play::screen != play::Screen::Modify) { printf("  modify %s: not opened [%s]\n", nm, play::menu.prompt); continue; }
+                if (getenv("MODMAX")) {
+                    // MODMAX=1: every stat, then the hit points, to Modify's top (the game's bounds), kept -
+                    // a play-through's party made strong by the Trainer's Modify
+                    for (int s2 = 0; s2 < 7; ++s2) {
+                        play::mod_item = s2;
+                        for (int k = 0; k < 140; ++k) play::modify_step(1, C);
+                    }
+                    play::mod_item = 6;
+                    for (int k = 0; k < 300; ++k) play::modify_step(1, C);
+                    play::end_modify(C, true);
+                    printf("  modmax %-15s hp %d stats", nm, ch.hp_max());
+                    for (int s2 = 0; s2 < 6; ++s2) printf(" %d", ch.rec[0x10 + 2 * s2]);
+                    printf(" (18/%d)\n", ch.rec[0x1D]);
+                    continue;
+                }
                 play::mod_item = 6;
                 for (int k = 0; k < 300; ++k) play::modify_step(1, C);
                 const int hi = ch.hp_max();

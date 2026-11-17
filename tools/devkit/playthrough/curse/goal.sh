@@ -10,7 +10,7 @@ for k in 1 2 3 4 5; do
   if echo "$r" | grep -q "screen 24"; then
     won=""
     for s in "" 2 3 4; do $P/bin/bk.sh load $S ${B}_start > /dev/null
-      o=$(MMON=1 STEPS=220 timeout 2400 python3 $P/bin/drv2.py $S "$T" $s 2>/dev/null | grep -E "^(WON|OUT)" | head -1)
+      o=$(timeout 3000 python3 $P/bin/drv3.py $S "$T" $s 2>/dev/null | grep -E "^(WON|OUT)" | head -1)
       echo "  fight (seed '$s'): ${o:0:70}"
       if echo "$o" | grep -q WON; then cp $P/ftok.txt $P/ft_${B}_$k.txt; $P/bin/fin.sh $S $P/ft_${B}_$k.txt ${B}_start "$s" > /dev/null; won=1; break; fi
     done
