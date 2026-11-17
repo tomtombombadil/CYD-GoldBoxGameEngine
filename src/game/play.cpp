@@ -8697,6 +8697,7 @@ bool shop_yes_no(Ask what, char k, pic::Canvas& c)
     party::Character& ch = *pt->sel();
     const int cost = d->prof->cures.cost[cure_at];
     const bool paid = cheat == Cheat::Healer || shop_pay(ch, cost);      // (the Cheats tab's Healer: free)
+    plat::log("[play] temple: cure %d, cost %d, %s\n", cure_at, cost, paid ? "paid" : "not enough");
     draw_heal(c);
     if (!paid) {
         char t[24];
@@ -16539,6 +16540,7 @@ bool start_title(pic::Canvas& c, uint32_t timeout_ms)
 // too).
 uint16_t cheat_factor_was = 0;
 bool cheat_screen_saved = false;
+bool cheat_from_menu = false;           // (opened at a script's menu place: cheat_end shows it again)
 // The picture found in the scripts (-1: none; file: its script's file
 // number - the picture's PIC / HEAD / BODY file; 0 the area's own)
 struct CheatPic { int16_t pic = -1; uint8_t head = 0xFF; int8_t file = 0; };
@@ -16669,6 +16671,13 @@ void cheat_end(pic::Canvas& c)
     // (the party's hit points as they are now)
     if (pt->count && bigpic < 0 && (vm->get(0x4BE6) || pool_overland())) draw_party(c, 17);
     plat::log("[play] cheat %d over\n", static_cast<int>(was));
+    if (cheat_from_menu && vm->wait() == ecl::Wait::Menu) {
+        // (back to the script's menu it was opened at: still waiting there)
+        cheat_from_menu = false;
+        begin_wait(c);
+        return;
+    }
+    cheat_from_menu = false;
     idle_menu(c);
 }
 
@@ -16856,10 +16865,22 @@ __attribute__((noinline)) int cheat_scan_scripts(bool goods, int* factor, bool s
 
 // (at the exploring menu: walking, or an overland's marker map - Darkness's,
 // the Krynn games')
+// A place that is a script's menu alone (Tom, 2026-11-16): Curse's
+// overland ("Enter City / Journey On / Camp") and its menu-only towns
+// (Ashabenford, Essembra ...) - no 3D map (0x4BE6 = 0), no marker map, the
+// script waiting on its menu line; the cheat's screens come back to that
+// menu as it was
+bool cheat_menu_place()
+{
+    return screen == Screen::Game && waiting && vm && vm->wait() == ecl::Wait::Menu &&
+           input_mode == Input::None && !moving && vm->get(0x4BE6) == 0 && !pool_overland() &&
+           !marker_overland() && !gw_wild() && !q_overland();
+}
 bool cheats_ready_in()
 {
     const bool at_menu = walking() || (screen == Screen::Game && !waiting && then == Then::Idle &&
-                                       input_mode == Input::None && marker_overland());
+                                       input_mode == Input::None && marker_overland()) ||
+                         cheat_menu_place();
     return at_menu && pt && pt->count > 0 && !camping && !fg;
 }
 
@@ -17060,6 +17081,7 @@ bool cheats_ready() { return CYD_CHEATS && opts.cheats && d && cheats_ready_in()
 bool cheat_open(int which, pic::Canvas& c)
 {
     if (!cheats_ready()) return false;
+    cheat_from_menu = cheat_menu_place();
     cursor_hide();
     anim_stop();
     switch (which) {

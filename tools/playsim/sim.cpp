@@ -1946,6 +1946,7 @@ int main(int argc, char** argv)
             continue;
         }
         if (*m == '[') {                // "[": the fight's field and fighters now (party 0-5, monsters a-z)
+            // (only while the fight runs: its results free the monsters' records)
             if (play::fg) {
                 const auto& b = play::fg->b;
                 printf("  FIELDNOW (view %d,%d)\n", b.vx, b.vy);
@@ -1961,10 +1962,11 @@ int main(int argc, char** argv)
                     printf("\n");
                 }
                 for (int i = 0; i < b.n; ++i) {
-                    std::string nm;
-                    for (int q = 0; q < (b.f[i].rec[0] < 15 ? b.f[i].rec[0] : 15); ++q) nm += static_cast<char>(b.f[i].rec[1 + q]);
+                    // (through the Companion's panel_dot: the monsters' records are freed at the fight's results)
+                    play::PanelDot pd{};
+                    if (!play::panel_dot(i, pd)) continue;
                     printf("  FIG %d %c %s at %d,%d team %d hp %d\n", i, i < b.party_size ? '0' + i : 'a' + (i - b.party_size) % 26,
-                           nm.c_str(), b.f[i].x, b.f[i].y, (int)b.f[i].team(), b.f[i].hp());
+                           pd.name, pd.x, pd.y, (int)b.f[i].team(), (int)pd.hp);
                 }
             }
             continue;
@@ -1973,11 +1975,11 @@ int main(int argc, char** argv)
             printf("  ? screen %d menu [%s|%s] wait %d text [%s] selected %d\n", (int)play::screen, play::menu.prompt,
                    play::menu.s, (int)play::vm->wait(), play::vm->wait() == ecl::Wait::Print ? play::vm->text() : "",
                    play::pt ? play::pt->selected : -1);
-            if (play::fg && play::fg->cur >= 0 && play::fg->cur < play::fg->b.n) {     // (a fight: whose turn)
-                const combat::Fighter& f = play::fg->b.f[play::fg->cur];
-                std::string nm;
-                for (int q = 0; q < (f.rec[0] < 15 ? f.rec[0] : 15); ++q) nm += static_cast<char>(f.rec[1 + q]);
-                printf("  ? turn %s\n", nm.c_str());
+            if (play::fg && play::fg->cur >= 0 && play::fg->cur < play::fg->b.n &&
+                (play::screen == play::Screen::Fight || play::screen == play::Screen::SpellList ||
+                 play::screen == play::Screen::Items)) {     // (a fight: whose turn; its records freed after it)
+                play::PanelDot pd{};
+                if (play::panel_dot(play::fg->cur, pd)) printf("  ? turn %s\n", pd.name);
             }
             continue;
         }
@@ -2257,6 +2259,8 @@ int main(int argc, char** argv)
             for (int c = 0; c < 7; ++c) printf(" %d", ch.money(c));
             printf(" stats");
             for (int k = 0; k < 6; ++k) printf(" %d/%d", ch.stat(k), ch.stat_now(k));
+            printf(" fx");
+            for (int k = 0; k < ch.n_affects; ++k) printf(" %02X", ch.affects[k][0]);
             printf("\n");
             for (int k = 0; k < ch.n_items; ++k) {
                 char in[48];

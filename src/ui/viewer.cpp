@@ -3735,7 +3735,7 @@ void draw_cheats()
     const int x = ui::gap() * 3, w = ui::width() - ui::gap() * 6;
     wrap_text(x, a.y + ui::gap(), w,
               ready ? "The game's own screens, without their costs or dangers."
-                    : "Only at the exploring menu - not in a fight, camp, shop or question.",
+                    : "Only at the exploring or travel menu - not in a fight, camp or shop.",
               ui::Font::Small, ready ? style::kText : style::kTextMuted, true);
     for (int i = 0; i < kCheatOpen; ++i)
         ui::key2(cheat_key(i), kCheatKeys[i].name, kCheatKeys[i].sub, ready ? ui::KeyStyle::Normal : ui::KeyStyle::Dim);

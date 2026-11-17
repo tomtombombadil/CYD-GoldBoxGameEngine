@@ -188,7 +188,12 @@ the Project as claude/TODO.md.
 ## Claude
 - [ ] Curse play-through (Tom, 2026-11-16; the Project's claude/playthrough_curse.md; Tom's
       tactics: a line, the best-armoured on the corners, casters behind, missiles for all,
-      Sleep / Hold Person / Stinking Cloud, focus fire). Open questions found on the way:
+      Sleep / Hold Person / Stinking Cloud, focus fire). 2026-11-17: Tilverton, sewers,
+      hideout, wilderness, Hap (patrols / barn counts checked), the Dracolich Cave (Silk's mark,
+      Crimdrac) and the Wizard's Tower's roof done; next: the tower's floors, Yulash.
+      Open questions found on the way:
+  - [x] The Cheats tab at Curse's travel menu and menu-only towns too (Tom, 2026-11-16) -
+        v0.204.0
   - [ ] DOSBox: after the Thieves' Guild master's PROGRAM 9 camp the engine runs his speech
         and the fight at the party's next step (4C17 = 1); the original sets byte_1D8AA = 1
         there - does it run the square's script at once after the camp?

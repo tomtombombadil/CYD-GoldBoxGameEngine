@@ -479,7 +479,8 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   the Game menu's Cheats tab: Healer (the game's temple, free), Merchant
   (all its shops' goods - `ecl::find_shops` / the SHOP n lists - at the
   lowest price factor its shops set), Sanctuary (its camp, rests never
-  interrupted); only at the exploring menu (`play::cheats_ready`), the
+  interrupted); only at the exploring menu or a script's menu-only place (Curse's
+  travel menu and menu towns - Tom, 2026-11-16; `play::cheats_ready`), the
   screen parked in `_CYD/CHEAT.TMP`. Settings keys Camp Fix / Cheats Tab
   (`comforts_off2`). A "Game Enhancements" list: Tom's open question
   (TODO). Tom, 2026-11-06: Cheats' **Trainer** - the game's own training
