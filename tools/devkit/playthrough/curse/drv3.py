@@ -19,15 +19,16 @@ SPELLS = {
     'BRAN': ['Bless', 'Bless', 'CLW', 'CLW', 'HP', 'HP', 'Silence', 'Prayer', 'Prayer', 'Prayer', 'CSW', 'CSW'],
 }
 FIGHTERS = {'ALDRIC', 'THORIN', 'KESTREL', 'AKABAR BEL AKAS'}
-FIREPROOF = ('EFREETI', 'SALAMANDER', 'FIRE')
-PERSONS = ('ELF', 'DROW', 'KNIFE', 'THIEF', 'GUARD', 'MAGE', 'CLERIC', 'FIGHTER', 'LORD')
+FIREPROOF = ('EFREETI', 'SALAMANDER', 'FIRE', 'SHAMBLING')
+PERSONS = ('CULTIST', 'MOGION', 'PRIEST', 'HUMAN', 'ELF', 'DROW', 'KNIFE', 'THIEF', 'GUARD', 'MAGE', 'CLERIC', 'FIGHTER', 'LORD')
 LEADER = os.environ.get('LEADER', '')
+PRIO = [x for x in os.environ.get('PRIO', '').split(',') if x]   # (foes worth three in a cluster: their casters)
 FORM = {}
 for part in os.environ.get('FORM', '').split(';'):
     if ':' in part:
         n, ds = part.split(':'); FORM[n] = [int(c) for c in ds]
 DIRS = {(0, -1): 0, (1, -1): 1, (1, 0): 2, (1, 1): 3, (0, 1): 4, (-1, 1): 5, (-1, 0): 6, (-1, -1): 7}
-maxhp = {}; formed = set(); prayed = set(); lastsig = None; stuck = 0; aimn = 0
+hasted = set(); wands = {}; maxhp = {}; formed = set(); prayed = set(); lastsig = None; stuck = 0; aimn = 0
 
 
 def run(t):
@@ -96,6 +97,16 @@ for step in range(int(os.environ.get('STEPS', '260'))):
         formed.add(who)
         if FORM[who] and 'Move' in menu:
             T += '/M' + ''.join('}%d' % d for d in FORM[who]) + '{,'; continue
+    # WAND="NAME:index:FOE": that member Uses item <index> (readied the first time) on the nearest FOE in RANGE
+    wd = os.environ.get('WAND', '').split(':')
+    if len(wd) == 3 and who == wd[0] and 'Use' in menu and wands.get(who, 0) < int(os.environ.get('WANDN', '20')):
+        tg = [k for k in foes if wd[2] in F[k]['name'] and cheb(F[k], m) <= int(os.environ.get('RANGE', '12'))]
+        if tg:
+            k = min(tg, key=lambda k: cheb(F[k], m))
+            T += '/U' + 'v' * int(wd[1]) + ('' if who in wands else '/R') + f'/U#@{k};/T~/E~,'
+            wands[who] = wands.get(who, 0) + 1
+            if os.environ.get('VERB'): print(step, who, 'wand at', k, flush=True)
+            continue
     can_cast = 'Cast' in menu and who in ('MIRA', 'SELENE', 'BRAN', 'AKABAR BEL AKAS')
     if can_cast: SPELLS[who] = spell_list(T)
     sp = SPELLS.get(who, [])
@@ -113,12 +124,18 @@ for step in range(int(os.environ.get('STEPS', '260'))):
             for k in foes:
                 if not fireok and any(x in F[k]['name'] for x in FIREPROOF): continue
                 if cheb(F[k], m) > int(os.environ.get('RANGE','12')) or any(cheb(F[k], F[p]) <= safe for p in party): continue
-                cnt = sum(1 for j in foes if cheb(F[j], F[k]) <= radius and not (not fireok and any(x in F[j]['name'] for x in FIREPROOF)))
+                cnt = sum(3 if any(x in F[j]['name'] for x in PRIO) else 1 for j in foes if cheb(F[j], F[k]) <= radius and not (not fireok and any(x in F[j]['name'] for x in FIREPROOF)))
                 if cnt > bestn: bestk, bestn = k, cnt
             return bestk, bestn
-        if lead and 'MM' in sp: a = cast(who, 'MM', lead[0])
+        if 'Haste' in sp and os.environ.get('HASTE') and not hasted:
+            pk = max(party, key=lambda k: sum(1 for j in party if cheb(F[j], F[k]) <= 1 and F[j]['name'] in FIGHTERS | {'ALIAS', 'DRAGONBAIT'}))
+            hasted.add(who); a = cast(who, 'Haste', pk)
+        if a is None and 'Sleep' in sp and os.environ.get('SLEEP'):
+            k, c = best(1, 3, True)
+            if k is not None and c >= int(os.environ.get('SLEEP')): a = cast(who, 'Sleep', k)
+        if a is None and lead and 'MM' in sp: a = cast(who, 'MM', lead[0])
         if a is None and 'FB' in sp:
-            k, c = best(2, 3, False)
+            k, c = best(2, int(os.environ.get('FBSAFE', '5')), False)
             if k is not None and c >= 2: a = cast(who, 'FB', k)
         for big in ('CoC', 'LB'):
             if a is None and big in sp:
@@ -135,11 +152,12 @@ for step in range(int(os.environ.get('STEPS', '260'))):
             if ppl: a = cast(who, 'HP', min(ppl, key=lambda k: cheb(F[k], m)))
     if a is None and near:
         # focus: the foe next to the most party members, then the weakest
-        t = min(near, key=lambda k: (-sum(1 for p in party if cheb(F[p], F[k]) <= 1), F[k]['hp']))
+        t = min(near, key=lambda k: (not any(x in F[k]['name'] for x in PRIO), -sum(1 for p in party if cheb(F[p], F[k]) <= 1), F[k]['hp']))
         dx = max(-1, min(1, F[t]['x'] - m['x'])); dy = max(-1, min(1, F[t]['y'] - m['y']))
         a = '/M}%d,' % DIRS[(dx, dy)]
     if a is None:
         a = '/D,'          # (Done: Guard comes up next)
+    if os.environ.get('VERB'): print(step, who, a, 'party', sum(F[k]['hp'] for k in party), 'foes', len(foes), sum(F[k]['hp'] for k in foes), flush=True)
     T += a
 open(P + '/ftok.txt', 'w').write(T)
 print('party', [(F[k]['name'], F[k]['hp']) for k in F if F[k]['team'] == 0])

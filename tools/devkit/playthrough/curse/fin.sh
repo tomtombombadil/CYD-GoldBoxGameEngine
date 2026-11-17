@@ -20,8 +20,8 @@ TAILN=0 $P/bin/p.sh "$T" SAVE=$S SAVENOW=$S > /dev/null; unset SEED
 echo "$st" | cut -c1-90
 $P/bin/fix.sh $S 1 > /dev/null
 # (the weapons readied again BEFORE the selling: Quick readies bows, and an unreadied drow sword sells for 0)
-$P/bin/rdy.sh $S "0:Plate Mail,Shield,Drow Long Sword;1:Plate Mail,Shield,Drow Long Sword;2:Plate Mail,Shield,Drow Long Sword,Ioun Stone Deep Red;4:Plate Mail,Shield,Flail" > /dev/null
-python3 $P/bin/loot.py $S 0,1,2,3,4,5,6
-$P/bin/rdy.sh $S "0:Plate Mail,Shield,Drow Long Sword;1:Plate Mail,Shield,Drow Long Sword;2:Plate Mail,Shield,Drow Long Sword,Ioun Stone Deep Red;4:Plate Mail,Shield,Flail" > /dev/null
+$P/bin/rdy.sh $S "$(cat $P/gear.txt)" > /dev/null
+python3 $P/bin/loot.py $S 0,1,2,3,4,5,6,7
+$P/bin/rdy.sh $S "$(cat $P/gear.txt)" > /dev/null
 $P/bin/bk.sh save $S $3 > /dev/null
 TAILN=0 $P/bin/p.sh '' SAVE=$S PARTYDUMP=1 > /dev/null; grep -E "^  [0-6]: " $P/run.log | sed -E 's/^  [0-6]: (\S+) +AC (-?[0-9]+) HP ([0-9]+\/[0-9]+).*/\1 \2 \3/' | tr '\n' ';'; echo; grep loaded $P/run.log | head -1
