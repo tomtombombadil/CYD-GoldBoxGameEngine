@@ -64,7 +64,7 @@ for step in range(int(os.environ.get('STEPS', '260'))):
     st = re.findall(r'  \? screen (\d+) menu \[([^\]]*)\]', log)
     if not st: print('no state'); break
     scr, menu = st[-1]
-    if scr != '24' and not ('Move' in menu and 'Done' in menu): print('OUT', scr, menu[:60]); break
+    if scr != '24': print('OUT', scr, menu[:60]); break      # (1 = the party menu: the party lost)
     figs = re.findall(r'  FIG (\d+) (\S) (.+?) at (\d+),(\d+) team (\d) hp (\d+)', log)
     n = len(set(f[0] for f in figs)); figs = figs[-n:]
     F = {int(f[0]): dict(name=f[2], x=int(f[3]), y=int(f[4]), team=int(f[5]), hp=int(f[6])) for f in figs}
