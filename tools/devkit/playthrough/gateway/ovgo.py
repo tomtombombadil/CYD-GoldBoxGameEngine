@@ -12,7 +12,7 @@ for i,l in enumerate(log):
     if 'MAPFLAGS map' in l:
         g=[[int(v,16) for v in r.split(':')[1].split()] for r in log[i+1:i+17]]
 nw=[l for l in log if re.search(r'^\s+now \d+,',l)]
-now=nw[-1] if nw else 'now '+sys.argv[4]
+now="now "+sys.argv[4] if len(sys.argv)>4 else nw[-1]
 m=re.search(r'now (\d+),(\d+) (\w)',now); sx,sy,d=int(m[1]),int(m[2]),'NESW'.index(m[3])
 D=[(0,-1),(1,0),(0,1),(-1,0)]
 prev={(sx,sy):None}; q=deque([(sx,sy)])
