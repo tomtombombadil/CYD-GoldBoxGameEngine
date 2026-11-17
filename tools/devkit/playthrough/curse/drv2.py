@@ -3,10 +3,11 @@
 # Missile the hurt-most foe in reach (else Fireball a foe 4+ squares from every member, else wait), Bran
 # Prayer then cures, fighters attack the weakest adjacent foe else guard; prints the result
 import re,subprocess,sys,os
+MUND=set(os.environ.get('MUND','').split(',')); IMM=os.environ.get('IMM','SALAMANDER').split(',')
 P='/tmp/claude-0/cplay'; slot=sys.argv[1]; T=sys.argv[2]; seed=sys.argv[3] if len(sys.argv)>3 else ''
 env=dict(os.environ); 
 if seed: env['SEED']=seed
-mm={'MIRA':2,'SELENE':2}; mmidx={'MIRA':0,'SELENE':4}; fb={'MIRA':2,'SELENE':1}; prayed=False; lastwho=''
+mm={'MIRA':2,'SELENE':2}; mmidx={'MIRA':0,'SELENE':4}; fb={'MIRA':2,'SELENE':1}; prayed=False; lastwho=''; lastsig=None
 def run(t):
     r=subprocess.run([P+'/bin/p.sh',t+'?[',f'SAVE={slot}','PAGELOG=1'],env=dict(env,TAILN='0'),stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
     if b'egmentation' in r.stderr or 'ERROR: AddressSanitizer' in open(P+'/run.log',errors='replace').read(): open(P+'/crash_tok.txt','w').write(t); print('CRASH at step',len(t))
@@ -31,11 +32,16 @@ for step in range(int(os.environ.get("STEPS","120"))):
         if 'Target' in menu or tgt is None: T+=f'#@{tgt};/T~/E/Y,~,' if tgt is not None else '/E/Y,'
         else: T+='/E/Y,'
         continue
+    if ('Delay' in menu or 'Guard' in menu) and who in MUND: T+='/G,'; continue
     if 'Delay' in menu or 'Guard' in menu: T+='/E/Q,'; continue
     if not me: T+='/Q,'; continue
     prev=lastwho; lastwho=who
+    sig=(who,menu,tuple(sorted((k,v['hp'],v['x'],v['y']) for k,v in F.items())))
+    if sig==lastsig: T+='/Q,'; continue
+    lastsig=sig
     m=F[me[0]]; d=lambda k: max(abs(F[k]['x']-m['x']),abs(F[k]['y']-m['y']))
-    near=[k for k in foes if d(k)<=1]
+    near=[k for k in foes if d(k)<=1 and not (who in MUND and any(x in F[k]['name'] for x in IMM))]
+    if who in MUND and not near and any(d(k)<=1 for k in foes): T+='/D,'; continue
     a='/Q,'
     if who in ('MIRA',) and 'Cast' in menu and os.environ.get('MMON'):
         reach=[k for k in foes if d(k)<=7]
