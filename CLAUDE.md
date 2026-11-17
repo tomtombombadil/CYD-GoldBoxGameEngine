@@ -503,7 +503,12 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   `engine/places.*`, our own block -> name table, Tom OK'd; square, clock,
   "N party members"), Companion-style cards with icons right; with a
   Companion panel beside the game (`play::set_side_panel`, 480x320 / a wide
-  handheld) the panel's Party view shows them (`play::saves_shown`).
+  handheld) the panel's Party view shows them (`play::saves_shown`). v0.208.0
+  (Tom, 2026-11-17, from the port's 16:9 / 1:1 panels): with a side panel
+  `play::map()` / `pos_x` / `pos_y` / `dir` are the highlighted save's
+  meanwhile (its GEO block read from the save's map word, or the saved
+  script's map load) - nullptr out of doors, in the Dark Queen, or when
+  the save names no map (Curse's stock save: open).
 - Quick Actions (Tom, 2026-11-09; `CYD_QUICK_ACTIONS`, Settings key,
   `comforts_off2` bit 8, on by default; SPEC 11): the Game menu's Quick
   tab - an ENGINE page (Tom: "the game/settings menu of the engine ...

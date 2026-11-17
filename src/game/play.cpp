@@ -1964,6 +1964,15 @@ struct SavePeek {
     const char* place = nullptr;        // the block's name (places.h), or none
     PanelMember m[party::kMaxParty];
     uint8_t     rec[party::kMaxParty][party::kRecordSize];   // (their icons: the records' parts - Tom: "display the character icons as well")
+    // The map the save's party stands on (Tom, 2026-11-17: "we know what map
+    // and location and heading the party is in from the save file ... fill
+    // in the map display too") - for a front end whose map stays in sight
+    // beside the save's screen: map() / pos_x() / pos_y() / dir() are the
+    // save's meanwhile. None when the save is out of doors (no 3D map), in
+    // the Dark Queen (its maps are bigger) or the map's file isn't found.
+    bool        map_ok = false;
+    int         map_block = -1;
+    geo::Map    map;
 };
 SavePeek* peek = nullptr;
 bool peek_wanted();                     // Save / Load Which is up (Save Slot Info on)
@@ -6031,6 +6040,8 @@ bool slot_has_save(char slot)
 // The slot's save read: its time, the position, the members' names (the end
 // of SAVGAMx: the count and 8 x 41 names, every DAX game's layout) and each
 // member's record for the figures
+bool side_panel_on = false;   // (set_side_panel, below)
+
 void peek_read(SavePeek& p, char slot)
 {
     p = SavePeek{};
@@ -6066,6 +6077,27 @@ void peek_read(SavePeek& p, char slot)
         p.mins = (peek_word(src, 0x4BC8) % 10) * 10 + peek_word(src, 0x4BC7) % 10;
         if (darkness_files() && !dkk()) p.mins = peek_word(src, 0x4BC8) * 10 + peek_word(src, 0x4BC7);
         p.place = places::name(d->prof->game, blocks_across() || p.area < 0 ? 0 : p.area, p.block);
+        // (its map: the save's "map loaded" word, in a 3D area only - as a
+        // load takes it up; Pool's only where its save names its wall sets)
+        if (!hl() && peek_word(src, 0x4BE6) != 0 &&
+            (!pool_files() || (static_cast<int16_t>(peek_word(src, 0x4CFA)) >= 0 && peek_word(src, 0x4CFD) >= 1 && peek_word(src, 0x4CFD) <= 3)))
+            p.map_block = peek_word(src, 0x4BC5) & 0xFF;
+        // (a save of the original's own may keep 0 there - its script loads
+        // the map as it starts: then what the saved script's first LOAD FILES
+        // names, as the walk test finds it)
+        if (p.map_block == 0 && !darkness_files() && !short_saves()) {
+            const uint32_t code_at = 1 + 0x800 + 0x800 + 0x400;
+            uint8_t* blk = static_cast<uint8_t*>(malloc(ecl::kCodeSize + 2));
+            if (blk) {
+                blk[0] = blk[1] = 0;
+                if (src.read_at(code_at, blk + 2, ecl::kCodeSize) == ecl::kCodeSize) {
+                    const ecl::MapLoad ml = ecl::find_map_load(blk, ecl::kCodeSize + 2, *d->prof->ecl_ops);
+                    if (ml.has_geo()) p.map_block = ml.geo;
+                }
+                free(blk);
+            }
+        }
+        if (p.map_block == 0) p.map_block = -1;
         const uint32_t at = size >= 1 + party::kMaxParty * 41u ? size - 1 - party::kMaxParty * 41u : 0;
         if (at && src.read_at(at, b, 1) == 1) n = b[0] > party::kMaxParty ? 0 : b[0];
         for (int i = 0; i < n; ++i) {
@@ -6079,6 +6111,22 @@ void peek_read(SavePeek& p, char slot)
         }
     }
     f.close();
+    // (only where a map stands beside the save's screen - set_side_panel)
+    if (p.map_block >= 0 && side_panel_on) {
+        // (the file of the save's area, not of the one the party is in now)
+        const uint8_t keep_area = d->gs.game_area;
+        if (darkness_files() && !dkk()) d->gs.game_area = 1;
+        else if (p.area > 0) d->gs.game_area = static_cast<uint8_t>(p.area);
+        char gname[24];
+        plat::File g;
+        if (open_area_dax("GEO", p.map_block, g, gname, sizeof gname)) {
+            plat::FileSource gsrc(g);
+            geo::load(gsrc, d->idx, static_cast<uint8_t>(p.map_block), p.map);
+            g.close();
+            p.map_ok = p.map.loaded;
+        }
+        d->gs.game_area = keep_area;
+    }
     party::Character* ch = new (std::nothrow) party::Character;
     for (int i = 0; i < n && ch; ++i) {
         PanelMember& m = p.m[p.n];
@@ -6115,7 +6163,8 @@ uint16_t peek_word(dax::ByteSource& src, uint16_t a)
         return b[0];
     }
     if (darkness_files()) {
-        const uint16_t at = a == 0x4BF2 ? 0x16 : a >= 0x4BC6 && a <= 0x4BCC ? static_cast<uint16_t>(0x05 + (a - 0x4BC6)) : 0;
+        const uint16_t at = a == 0x4BF2 ? 0x16 : a == 0x4BC5 ? 0x13 : a == 0x4BE6 ? 0x22
+                            : a >= 0x4BC6 && a <= 0x4BCC ? static_cast<uint16_t>(0x05 + (a - 0x4BC6)) : 0;
         if (at) src.read_at(at - 1u, b, 1);
         return b[0];
     }
@@ -6126,7 +6175,6 @@ uint16_t peek_word(dax::ByteSource& src, uint16_t a)
 // from the mockups): its words at the left; the party at the right as the
 // Companion's Party view has it - unless a Companion panel stands beside the
 // game (480x320, a wide handheld: set_side_panel), which shows the party
-bool side_panel_on = false;
 } // namespace
 void set_side_panel(bool on) { side_panel_on = on; }
 bool saves_shown() { return peek_on(); }
@@ -20368,10 +20416,15 @@ void text_line(pic::Canvas& c, const char* s, int n, int x, int y, int scale)
 }
 
 // (none on the Dark Queen's overland: its GEO map 2 is a 10 x 10 stand-in)
-const geo::Map* map() { return d && d->map.loaded && !q_overland() ? &d->map : nullptr; }
-int pos_x() { return d ? d->gs.x : 0; }
-int pos_y() { return d ? d->gs.y : 0; }
-int dir() { return d ? d->gs.dir : 0; }
+// (while Save Slot Info shows a slot's save: that save's map and place - or no map)
+const geo::Map* map()
+{
+    if (peek_on()) return peek->map_ok ? &peek->map : nullptr;
+    return d && d->map.loaded && !q_overland() ? &d->map : nullptr;
+}
+int pos_x() { return peek_on() && peek->x >= 0 ? peek->x : d ? d->gs.x : 0; }
+int pos_y() { return peek_on() && peek->y >= 0 ? peek->y : d ? d->gs.y : 0; }
+int dir() { return peek_on() ? peek->dir : d ? d->gs.dir : 0; }
 
 void describe(char* line1, char* line2, int cap)
 {

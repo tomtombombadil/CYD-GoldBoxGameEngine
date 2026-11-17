@@ -209,7 +209,7 @@ const Place kPlaces[] = {
     {G::GatewayToTheSavageFrontier, 6, 27, "Ascore"},
     {G::GatewayToTheSavageFrontier, 6, 28, "Ascore"},
     {G::TreasuresOfTheSavageFrontier, 0, 4, "Yartar"},
-    {G::TreasuresOfTheSavageFrontier, 0, 16, "Yartar"},
+    {G::TreasuresOfTheSavageFrontier, 0, 16, "Llorkh"},
     {G::TreasuresOfTheSavageFrontier, 0, 17, "Geildarr's Keep"},
     {G::TreasuresOfTheSavageFrontier, 0, 18, "Loudwater"},
     {G::TreasuresOfTheSavageFrontier, 0, 19, "Secomber"},

@@ -176,6 +176,9 @@ void set_side_panel(bool on);
 // Save / Load Which show a slot's save (Save Slot Info): the Party view is
 // that save's party meanwhile - a side panel shows it
 bool saves_shown();
+// (meanwhile map(), pos_x(), pos_y() and dir() are the highlighted slot's too -
+// its map and the party's place on it, for a front end whose map stays in
+// sight beside the save's screen; map() is null for a save with no 3D map)
 // The title's lightning (Pool): the colour palette entry `index` shows now,
 // or -1 (as itself)
 int flash(int& index);

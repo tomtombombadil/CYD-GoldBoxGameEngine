@@ -6,6 +6,11 @@ to the bottom with their version, then drop off after a while. Synced to
 the Project as claude/TODO.md.
 
 ## Tom
+- [ ] Save Slot Info's map of the save (v0.208.0, with a side panel): Curse's
+      stock save gives no map (its map word 0 and no map load found in the
+      saved script) - find where a Curse save keeps it. Seen working: Treasures
+      saves made by the engine (PortMaster port, 1280 x 720). Other games: not
+      looked at yet.
 - [ ] **PortMaster port, Save Slot Info (v0.207.0)**: the port defines
       `plat::file_time` (stat + localtime: "Nov 17 2026 09:41 PM") so its
       saves show their time; `play::set_side_panel(true)` when the Companion
