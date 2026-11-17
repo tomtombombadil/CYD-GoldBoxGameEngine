@@ -282,6 +282,13 @@ public:
     uint8_t view_byte(int i) const { return view_bytes_[i & 1]; }
     void set(uint16_t addr, uint16_t v);
     bool flag(int i) const { return flags_[i]; }
+    // A fight's end leaves the compare flags in Treasures: all cleared, then
+    // "=" or "<>" (GAME.OVR 0x6645 - its scripts go "COMBAT, IF <>, GOTO")
+    void fight_flags(bool equal)
+    {
+        for (bool& f : flags_) f = false;
+        flags_[equal ? 0 : 1] = true;
+    }
     uint16_t pc() const { return pc_; }
     // Game time: adds `amount` to clock slot `slot` (0x4BC6 + slot) with
     // carries (slot 1 = minutes, 2 = ten minutes, 3 = hours ...)

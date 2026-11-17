@@ -1928,6 +1928,23 @@ int main(int argc, char** argv)
         } else if (maze_walk) { t = has('M') && !maze_blocked ? "/M" : "/G"; maze_blocked = false; }    // (no moves left: Guard - not Quick, the walk goes on next round)
         else if (scr == 24) t = has('Q') ? "/Q" : has('Y') && has('N') && getenv("AUTOFIGHT") ? "/N" : ".";   // ("Continue Battle": No)
         else if (scr == 5 && has('T') && has('V') && getenv("AUTOTAKE") && !auto_take) { t = getenv("AUTOTAKE"); auto_take = 1; }   // (AUTOTAKE=tokens: once at each treasure menu, e.g. /T/I/T/T/T/T - the selected member takes the items)
+        else if (scr == 25 && play::screen == play::Screen::Loot && getenv("AUTOLOOT") && play::ground && play::ground->n > 0 && has('T')) {
+            // AUTOLOOT=1: down the treasure's list, the magic items taken (a plus or a spell in the
+            // record - what a player learns from Detect Magic or the shop's price), the rest left
+            static int last_n = -1, tries = 0;
+            const int n = play::ground->n, i = play::plist.index;
+            const items::Item it{play::ground->item[n - 1 - i]};
+            const bool magic = it.plus() != 0 || it.r[0x3C] || it.r[0x3D] || it.r[0x3E];
+            if (n != last_n) { last_n = n; tries = 0; }
+            if (magic && tries < 1) {
+                char nm[48];
+                play::names->name(it, nm, sizeof nm);
+                printf("  LOOT take: %s (plus %d, %02X %02X %02X)\n", nm, it.plus(), it.r[0x3C], it.r[0x3D], it.r[0x3E]);
+                ++tries;
+                t = "/T";
+            } else if (i < n - 1) { tries = 0; t = "v"; }
+            else { last_n = -1; t = "/E"; }
+        }
         else if (scr == 5 || scr == 16 || scr == 25) t = has('E') ? "/E" : ".";
         else if (play::screen == play::Screen::Won) t = ".";      // (an ending's pages: a key each)
         else if (scr == 11 && getenv("AUTOFIGHT") && has('Y') && has('N')) t = "/N";     // ("There is still treasure left ...": No)

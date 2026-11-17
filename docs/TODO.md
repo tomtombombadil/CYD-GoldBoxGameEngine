@@ -14,6 +14,19 @@ the Project as claude/TODO.md.
       playsim (Dispel Magic: the false Siulajia shows herself, her guards' fight, journal 24 and 19, Siulajia
       joins); not run in DOSBox. Only Treasures has that code (Darkness: no such byte test; Death Knights not
       looked at). The playsim's LEARN=m:ids (a spell book's stand-in for training's picks).
+- [x] v0.208.4 (the PortMaster session's Treasures play-through, 2026-11-17): **Treasures - Llorkh could not be
+      finished.** Its scripts go "COMBAT, IF <>, GOTO back to the last square" (the giant skeleton, Geildarr):
+      the original's fight end clears the six compare flags and sets "=" - or "<>" when a member of the party
+      ran (GAME.OVR 0x5884: status 3 -> byte 0x72AB; 0x6645 / 0x6684 / 0x670A; the IF handler 0x113B reads
+      DS 0xA712 + op - 0x16). The engine left the flags of the compare before the fight, so every win was
+      taken for a flight: the skeleton's fight came again at each visit and Geildarr was never met. Now
+      `Vm::fight_flags` at end_fight (variant.tr). Read from the code, played in the playsim: the skeleton,
+      "Thanks ...", Geildarr's guards, Milzorr's congratulations, journal 11 and 10. Not run in DOSBox.
+- [ ] **The same in the other games?** (2026-11-17) Does each original's fight end set the compare flags, and
+      do its scripts test them straight after COMBAT? Looked at: Treasures only. To do: Darkness, Death
+      Knights, the Dark Queen (the same program family), then Gateway / Champions / Secret / Curse / PoolRad
+      - find each one's IF handler's flag bytes and who writes them; scan every script for COMBAT followed
+      by an IF with no compare between.
 - [ ] **Menu rework - decided, NOT coded yet** (Tom, 2026-11-17; his edited tree; waits for his final
       word before coding). Every page up to 8 keys (2 x 4), Back in one bottom corner (Back to Game on the top
       page), < > in the other. Top (in game, the Game key): Display (Brightness, Right Handed / Left Handed,
