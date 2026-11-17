@@ -6132,6 +6132,17 @@ void end_fight(pic::Canvas& c)
         r = won ? combat::Won : ran ? combat::Fled : combat::Lost;
         plat::log("[fight] the arena: %s\n", won ? "won" : ran ? "fled" : "lost");
     }
+    if (d->prof->variant.tr) {
+        // Treasures: the fight's end sets the script's compare flags - "=" unless
+        // a member of the party ran from it, then "<>" (GAME.OVR 0x5884: any
+        // member's status 3 -> byte 0x72AB; 0x6645 / 0x6684 / 0x670A). Its
+        // scripts test them straight after COMBAT: Llorkh's dungeon, the giant
+        // skeleton and Geildarr - "IF <>, GOTO back to the last square"
+        bool ran = false;
+        for (int i = 0; i < b.party_size; ++i)
+            if (b.f[i].status() == party::Running) ran = true;
+        vm->fight_flags(!ran);
+    }
     int out = 0;
     for (int i = b.party_size; i < b.n; ++i)
         if (!b.f[i].gone && !b.f[i].up()) ++out;
