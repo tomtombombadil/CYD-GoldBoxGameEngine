@@ -192,9 +192,8 @@ the Project as claude/TODO.md.
       hideout, wilderness, Hap (patrols / barn counts checked), the Dracolich Cave (Silk's mark,
       Crimdrac) and the Wizard's Tower's roof done; next: the tower's floors, Yulash.
       Open questions found on the way:
-  - [ ] Tom: the Cheats tab is offered only at an exploring screen, so not on Curse's overland
-        menu or in its menu-only towns (Ashabenford, Essembra ...) - a hurt party crosses the
-        wilderness as it is. Leave it, or offer the tab at those menus too?
+  - [x] The Cheats tab at Curse's travel menu and menu-only towns too (Tom, 2026-11-16) -
+        v0.204.0
   - [ ] DOSBox: after the Thieves' Guild master's PROGRAM 9 camp the engine runs his speech
         and the fight at the party's next step (4C17 = 1); the original sets byte_1D8AA = 1
         there - does it run the square's script at once after the camp?

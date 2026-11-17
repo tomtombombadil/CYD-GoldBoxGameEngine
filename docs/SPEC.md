@@ -2781,7 +2781,11 @@ a PC, PortMaster handhelds):
     (last), keys **Healer**, **Merchant**, **Sanctuary** - usable only
     while the party stands at the exploring menu (3D, wilderness or an
     overland map; dimmed with a note otherwise: not in a fight, a camp, a
-    shop or while the game asks). Each opens the game's own screen with
+    shop or while the game asks). Also (Tom, 2026-11-16) at a place that
+    is a script's menu alone - Curse's travel menu and its menu-only
+    towns (no 3D map, the script waiting on its menu line;
+    `cheat_menu_place`): leaving the cheat shows that menu again, the
+    script still waiting there. Each opens the game's own screen with
     the exploring screen waiting on the card (`_CYD/CHEAT.TMP`); leaving
     it puts that screen back and the exploring menu, no script involved.
     Healer: the game's temple (its own list and words; Darkness's Repair
