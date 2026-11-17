@@ -2877,6 +2877,13 @@ a PC, PortMaster handhelds):
     sweep's `flashcheck` (tools/playsim/flash_check.inc, devkit
     flashcheck.sh: text rows wiped under 1 s with no input; READTIME=0 the
     originals' timing).
+  - `CYD_AUTO_JOIN` (Tom, 2026-11-16): **Auto Join** (on by default,
+    `comforts_off2` bit 32) - an item taken from a treasure joins a pile
+    of the same its taker carries (the game's own Join test,
+    `rules::same_pile`; Secret's for Secret: arrows with arrows, +1 arrows
+    with +1 arrows), so it needs no slot - a full list (16 items) takes
+    it then; the weight still stops it (`rules::pile_onto`, take_loot).
+    Off: each take a new item, as the originals.
   - `CYD_QUICK_ACTIONS` (Tom, 2026-11-09): **Quick Actions** - what each
     party member may do when Quick (an NPC: the computer) plays it in a
     fight. The Game menu's **Quick** tab (between Logs and Cheats; with it

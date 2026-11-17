@@ -492,6 +492,9 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   a Settings key and the same switch on the Cheats tab; training's hit
   dice at their highest (`create::Dice::max`), the rest of the game's sum
   unchanged; level-ups only, not creation.
+- Auto Join (Tom, 2026-11-16; `CYD_AUTO_JOIN`, Settings key, `comforts_off2`
+  bit 32, on by default; SPEC 11): an item taken from a treasure joins a pile
+  of the same its taker carries (Join's own test), needing no slot.
 - Quick Actions (Tom, 2026-11-09; `CYD_QUICK_ACTIONS`, Settings key,
   `comforts_off2` bit 8, on by default; SPEC 11): the Game menu's Quick
   tab - an ENGINE page (Tom: "the game/settings menu of the engine ...

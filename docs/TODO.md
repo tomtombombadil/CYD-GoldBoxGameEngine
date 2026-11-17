@@ -210,8 +210,10 @@ the Project as claude/TODO.md.
         v0.204.0
   - [ ] Curse's sphere duel in the Wizard's Tower: a fighter (Aldric) won it though its text
         says only a mage controls the sphere - what decides the outcome in the original?
-  - [ ] Tom: the scripted fight driver loses the big Curse fights (the stair guard, two owl-bear
-        rooms, Dracandros's courtyard); guard rooms passed by their flags so far - how to go on?
+  - [x] Tom: the big Curse fights - answered (2026-11-16): take every item, sell plain ones and
+        identify the high-priced (the Merchant cheat), give magic items to who uses them best,
+        Modify the party (the Trainer cheat), go in at full strength; a smarter driver (drv3.py).
+        Dracandros's courtyard won so. Auto Join on take - v0.205.0.
   - [ ] DOSBox: after the Thieves' Guild master's PROGRAM 9 camp the engine runs his speech
         and the fight at the party's next step (4C17 = 1); the original sets byte_1D8AA = 1
         there - does it run the square's script at once after the camp?

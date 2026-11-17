@@ -3318,7 +3318,7 @@ void tap_sounds(const ui::Tap& t)
 // One set for all games (settings.h comforts_off), on the one Settings
 // screen (below); a comfort compiled out (app/features.h) isn't listed.
 enum Comfort { kCFont, kCGallery, kCBigIcon, kCJournal, kCDemoTap, kCMoreGuys, kCPortrait, kCItemFixes, kCRolls,
-               kCCampFix, kCCheats, kCCompanion, kCMaxHp, kCQuick, kCRead, kComforts };
+               kCCampFix, kCCheats, kCCompanion, kCMaxHp, kCQuick, kCRead, kCJoin, kComforts };
 
 bool comfort_built(int c)
 {
@@ -3338,6 +3338,7 @@ bool comfort_built(int c)
     case kCMaxHp: return CYD_MAX_HP;
     case kCQuick: return CYD_QUICK_ACTIONS;
     case kCRead: return CYD_READ_TIME;
+    case kCJoin: return CYD_AUTO_JOIN;
     default: return true;
     }
 }
@@ -3347,7 +3348,7 @@ uint16_t comfort_bit(int c)
     static const uint16_t kBits[kComforts] = {0, kOffGallery, kOffBigIcon, kOffJournal, kOffDemoTap, kOffMoreGuys,
                                               kOffPortrait, kOffItemFixes, kOffRolls, kOff2CampFix << 8,
                                               kOff2Cheats << 8, kOff2Companion << 8, 0, kOff2Quick << 8,
-                                              kOff2ReadTime << 8};
+                                              kOff2ReadTime << 8, kOff2AutoJoin << 8};
     return kBits[c];
 }
 uint16_t comforts_off() { return static_cast<uint16_t>(cfg->comforts_off | cfg->comforts_off2 << 8); }
@@ -3382,6 +3383,7 @@ void apply_options()
     o.max_hp = comfort_on(kCMaxHp);
     o.quick_acts = comfort_on(kCQuick);
     o.read_time = comfort_on(kCRead);
+    o.auto_join = comfort_on(kCJoin);
     o.font = comfort_on(kCFont) ? cfg->game_font : kFontGame;
     play::set_options(o);
 }
@@ -3414,7 +3416,8 @@ ui::Rect comfort_qmark(const ui::Rect& cell)
 const char* const kComfortNames[kComforts] = {"Game Font",        "Icon Gallery",    "Large Icon",    "Journal Pop-Up",
                                               "Tap to Stop Demo", "More Characters", "Icon Portrait", "Game Fixes",
                                               "Show Rolls",       "Camp Fix",        "Cheats Tab",      "Companion Views",
-                                              "Max Hit Points",   "Quick Actions",   "Readable Messages"};
+                                              "Max Hit Points",   "Quick Actions",   "Readable Messages",
+                                              "Auto Join"};
 
 // What each option does (sentence case; Tom, v0.84.0)
 const char* comfort_help_text(int c)
@@ -3526,6 +3529,11 @@ const char* comfort_help_text(int c)
                "stay at least a second, or until you tap. The originals show them for the game's Speed "
                "setting's delay, which at the fastest is none at all. Fights keep the Speed setting's "
                "timing. Off: as the original.";
+    case kCJoin:
+        return "An item you take from a treasure joins a pile of the same thing its taker already "
+               "carries - arrows with arrows, +1 arrows with +1 arrows, the same potions - as the game's "
+               "own Join would, so it needs no slot of its own. Off: as the original - each take is a "
+               "new item (16 at most); Join them by hand.";
     case kCMaxHp:
         return "A cheat: a new character's hit points and each level gained by training (a training hall "
                "or the Cheats tab's Trainer) get the most their hit dice can give - 10 a fighter, 8 a "

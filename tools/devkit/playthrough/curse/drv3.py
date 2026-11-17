@@ -14,7 +14,7 @@ P = '/tmp/claude-0/cplay'; slot = sys.argv[1]; T = sys.argv[2]; seed = sys.argv[
 env = dict(os.environ)
 if seed: env['SEED'] = seed
 SPELLS = {
-    'MIRA': ['MM', 'MM', 'Sleep', 'Sleep', 'Knock', 'SC', 'SC', 'FB', 'FB', 'HP'],
+    'MIRA': ['MM', 'MM', 'Sleep', 'Sleep', 'Knock', 'SC', 'SC', 'SC', 'FB', 'FB', 'FB', 'HP'],
     'SELENE': ['Bless', 'Bless', 'CLW', 'CLW', 'MM', 'MM', 'Sleep', 'Sleep', 'HP', 'HP', 'Silence', 'SC', 'SC', 'Prayer', 'FB', 'X'],
     'BRAN': ['Bless', 'Bless', 'CLW', 'CLW', 'HP', 'HP', 'Silence', 'Prayer', 'Prayer', 'Prayer', 'CSW', 'CSW'],
 }

@@ -152,7 +152,7 @@ void pool(party::Party& p, int money[7]);
 void share(party::Party& p, int money[7]);
 
 // True if the character can't take the item (16 items, or too heavy).
-bool too_heavy(party::Character& c, const uint8_t* item, const items::Names& names, const ItemFacts& f);
+bool too_heavy(party::Character& c, const uint8_t* item, const items::Names& names, const ItemFacts& f, bool slots = true);
 // Adds an item to a character (false: no room); an item the original got
 // wrong comes in fixed when that's wanted (items::fix_item)
 bool add_item(party::Character& c, const uint8_t* item);
@@ -203,6 +203,9 @@ bool halve(party::Character& c, int i);
 // Join: the same items in other piles go onto pile i (255 a pile at most);
 // how many piles were joined in
 int join(party::Character& c, int i, bool secret = false);
+// Auto Join (CYD_AUTO_JOIN): the item added onto a pile of c's that Join would make one of it with -
+// true when it went there whole (nothing new in the item list)
+bool pile_onto(party::Character& c, const uint8_t* item, bool secret = false);
 // Sell (a shop): what the shop gives, in gold - half the value; piles of
 // arrows / quarrels count each one, other piles count / 20 of each
 int sell_value(const uint8_t* item, const ItemFacts& f);

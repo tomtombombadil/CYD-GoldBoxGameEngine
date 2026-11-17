@@ -747,10 +747,10 @@ void share(party::Party& p, int money[7])
     for (int m = 0; m < 7; ++m) money[m] = rest[m];
 }
 
-bool too_heavy(party::Character& c, const uint8_t* item, const items::Names& names, const ItemFacts& f)
+bool too_heavy(party::Character& c, const uint8_t* item, const items::Names& names, const ItemFacts& f, bool slots)
 {
     recalc(c, names, f);
-    if (c.n_items >= party::kMaxItems) return true;
+    if (slots && c.n_items >= party::kMaxItems) return true;
     const items::Item it{item};
     int w = it.weight();
     if (it.count() > 0) w *= it.count();
@@ -1070,6 +1070,18 @@ int join(party::Character& c, int i, bool secret)
         }
     }
     return joined;
+}
+
+bool pile_onto(party::Character& c, const uint8_t* item, bool secret)
+{
+    for (int k = 0; k < c.n_items; ++k) {
+        uint8_t* p = c.items[k];
+        if (!(secret ? secret_pile(p, item) && secret_pile(item, p) : same_pile(p, item))) continue;
+        if (p[0x39] + item[0x39] > 255) continue;
+        p[0x39] = static_cast<uint8_t>(p[0x39] + item[0x39]);
+        return true;
+    }
+    return false;
 }
 
 int sell_value(const uint8_t* item, const ItemFacts& f)
