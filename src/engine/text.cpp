@@ -439,7 +439,9 @@ void draw(pic::Canvas& c, const font::Font& f, const Menu& m, const MenuColors& 
     for (int i = 0; m.s[i] && x < font::kCols; ++i, ++x) {
         const int g = font::glyph_of(f, m.s[i]);
         if (sel >= 0 && i >= m.start[sel] && i <= m.end[sel]) {
-            font::draw_glyph(c, f, g, x * 8, kMenuRow * 8, col.plain_sel ? col.highlight : 0, col.plain_sel ? 0 : col.highlight);
+            // (a dim choice highlighted - Save Slot Info's empty slot: black on light grey, Tom 2026-11-17)
+            const uint8_t box = sel < 32 && (m.dim >> sel & 1) ? 7 : col.highlight;
+            font::draw_glyph(c, f, g, x * 8, kMenuRow * 8, col.plain_sel ? box : 0, col.plain_sel ? 0 : box);
         } else {
             bool lit = is_key(m.s[i]);
             if (m.marked) {

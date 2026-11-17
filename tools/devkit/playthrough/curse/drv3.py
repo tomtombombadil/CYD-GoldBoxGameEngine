@@ -79,6 +79,8 @@ for step in range(int(os.environ.get('STEPS', '260'))):
     if sig == lastsig and 'Aim:' not in menu:
         T += '/E,/Q,' if 'Aim:' in menu else '{,/Q,'; lastsig = None; continue
     lastsig = sig
+    if 'Center' in menu and 'Target' not in menu and 'Next' not in menu:
+        T += '/E,/E,/Y,'; continue            # (a manual aim with no Target offered: the spell let go)
     if 'Continue Battle' in menu or 'Abort Spell' in menu: T += '/N,'; continue
     if 'Attack Ally' in menu: T += '/N{,'; continue
     if 'Aim:' in menu and who in pending and 'Manual' in menu and aimn == 0:

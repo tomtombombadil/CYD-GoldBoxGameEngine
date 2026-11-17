@@ -2920,7 +2920,8 @@ a PC, PortMaster handhelds):
     Off: each take a new item, as the originals.
   - `CYD_SAVE_INFO` (Tom, 2026-11-17): **Save Slot Info** (on by default,
     `comforts_off2` bit 64) - Save Which Game's letters: an empty slot's
-    dark grey, a used one's white (`text::Menu::dim`). While Save / Load
+    dark grey, a used one's white (`text::Menu::dim`; highlighted, an
+    empty one black on light grey - Tom, 2026-11-17). While Save / Load
     Which asks (not the Dark Queen's buttons, not Darkness's Load from
     Secret) the game screen inside its border is the highlighted slot's
     save (Tom's choice from the mockups, 2026-11-17): at the left "Slot D",
