@@ -198,6 +198,27 @@ the Project as claude/TODO.md.
       characters one by one).
 
 ## Claude
+- [x] v0.207.2 - from the Treasures play-through's first hour (the PortMaster
+      session, 2026-11-17; the original in DOSBox beside the engine):
+      (1) Gateway characters added in Treasures kept Gateway's item numbers -
+      Banded Mail read "Dragon Breath Armor", readied things stayed readied.
+      Now the original's routine (GAME.OVR 0x16CC8 / 0x16DEF): each name word
+      matched by its spelling against Gateway's words (BORD.DAX block 10),
+      the type through the program's table, nothing readied, the effects
+      renumbered. Checked: Bron's eleven items and Zoltan's three, names and
+      order, the same in both; the one item left behind the same.
+      (2) **A character loaded from a save or a character file lost the
+      Strength bonus to hit and damage at the first recalculation - Darkness
+      and Treasures** (their records have no "uses Strength" byte; it came
+      back 0). DOSBox: Durk's THAC0 stays 12 as he readies a shield, the
+      engine made it 14. Now the stock saves' own figures come back after a
+      ready / unready (Darkness: Guy 4, was 7; Treasures: Maxwell 15, was 17).
+      Not checked: monsters and NPCs from the monsters' files (their records
+      carry Strength too - giants 18/00); the damage figure in DOSBox.
+- [ ] Treasures, small ones: "Cannot use <item>" is not shown for an item
+      left behind at the transfer; Add Character's list doesn't mark the
+      added with "*" as the original (check), and lists by the folder's order,
+      not the alphabet.
 - [x] v0.205.1 - Gateway played to its end (the PortMaster session, 2026-11-17;
       the original in DOSBox beside the engine, its code read). Ascore's arena
       is a MAZE fight (script word 0x4D01 = 1): the fight doesn't end with the
