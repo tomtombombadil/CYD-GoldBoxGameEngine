@@ -6,11 +6,12 @@ to the bottom with their version, then drop off after a while. Synced to
 the Project as claude/TODO.md.
 
 ## Tom
-- [ ] Save Slot Info's map of the save (v0.208.0, with a side panel): Curse's
-      stock save gives no map (its map word 0 and no map load found in the
-      saved script) - find where a Curse save keeps it. Seen working: Treasures
-      saves made by the engine (PortMaster port, 1280 x 720). Other games: not
-      looked at yet.
+- [ ] Save Slot Info's map of the save (v0.208.0, with a side panel): the
+      originals' stock saves (the party not yet begun: "Square 7,13", time
+      00:00) give no map - right? Seen with a map, place and arrow (PortMaster
+      port, saves made by the engine, 1280 x 720): PoolRad, Curse, Secret,
+      Darkness, Knights, Treasures; Champions overland: none (right). Not
+      looked at: Gateway; the 480x320 boards.
 - [ ] **PortMaster port, Save Slot Info (v0.207.0)**: the port defines
       `plat::file_time` (stat + localtime: "Nov 17 2026 09:41 PM") so its
       saves show their time; `play::set_side_panel(true)` when the Companion

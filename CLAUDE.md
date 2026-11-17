@@ -508,7 +508,7 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   `play::map()` / `pos_x` / `pos_y` / `dir` are the highlighted save's
   meanwhile (its GEO block read from the save's map word, or the saved
   script's map load) - nullptr out of doors, in the Dark Queen, or when
-  the save names no map (Curse's stock save: open).
+  the save names no map (the originals' stock saves).
 - Quick Actions (Tom, 2026-11-09; `CYD_QUICK_ACTIONS`, Settings key,
   `comforts_off2` bit 8, on by default; SPEC 11): the Game menu's Quick
   tab - an ENGINE page (Tom: "the game/settings menu of the engine ...
