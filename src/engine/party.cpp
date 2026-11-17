@@ -735,6 +735,15 @@ bool read_record(dax::ByteSource& src, Character& out, Format f)
         out = Character{};
         if (src.read_at(0, dk, kDarknessRecordSize) != kDarknessRecordSize) return false;
         from_darkness(dk, out);
+        // (a character's Strength counts, to hit and for damage: Curse's
+        // records say so in byte 0x125, Darkness's and Treasures' have no
+        // such byte - it came back 0 from every saved game and character
+        // file, and the first recalculation after a load took the bonus
+        // away. The Treasures play-through, 2026-11-17: the original in
+        // DOSBox keeps Durk's THAC0 12 as he readies a shield, the engine
+        // made it 14; the stock saves the same - Darkness's Guy 4 -> 7.
+        // Monsters' records come another way and keep 0: unchecked)
+        out.rec[0x125] = 1;
         return true;
     }
     if (f == Format::Secret) {

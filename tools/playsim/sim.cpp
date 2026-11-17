@@ -1075,6 +1075,10 @@ int main(int argc, char** argv)
         for (unsigned a = 0x4B00; a < 0x10000; ++a) fresh_words[a - 0x4B00] = play::vm->get((uint16_t)a);
     }
     if (getenv("POOLDIR")) play::set_import_dir(getenv("POOLDIR"));   // (the earlier game's folder for Add Character, as the board's library gives)
+#ifdef CYD_TEST_HOOKS
+    // (HEARD=1: every text as the script prints it - the games whose texts are printed without the pump seeing a Print wait: Treasures)
+    if (getenv("HEARD")) play::g_text_hook = [](const char* t, bool clear) { if (t[0] && strcmp(t, "\n") != 0) printf("  TEXT%s: %s\n", clear ? " (clear)" : "", t); };
+#endif
     if (!getenv("PARTYMENU")) {      // (PARTYMENU=1: no load - the moves start at the party menu)
         if (getenv("LOADFROM") && getenv("POOLDIR")) play::set_import_dir(getenv("POOLDIR"));
         pm_tap_line('L');

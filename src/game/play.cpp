@@ -804,8 +804,14 @@ void note_seen(char k, int num)
     if (n_seen < kMaxSeen) seen[n_seen++] = Seen{k, static_cast<uint8_t>(num)};
 }
 
+#ifdef CYD_TEST_HOOKS
+void (*g_text_hook)(const char* t, bool clear) = nullptr;   // (the playsim: every text a script prints, as it is printed)
+#endif
 void heard(const char* t)
 {
+#ifdef CYD_TEST_HOOKS
+    if (g_text_hook && vm) g_text_hook(t, vm->clear());
+#endif
     size_t n = strlen(jtext), add = strlen(t);
     if (add >= sizeof jtext) {
         t += add - (sizeof jtext - 1);
@@ -2966,7 +2972,51 @@ const Earlier& earlier()
 // A Gateway character as Treasures takes one in (its ovl 0x7C +0x16E6): its
 // copper, silver, electrum and gold gone, the race in Darkness's numbers
 // (half-elf 0, dwarf 1, elf 2, gnome 3, halfling 4, human 5, others 6 - a
-// half-orc too), flags = 2, the class values worked out again
+// half-orc too), flags = 2, the class values worked out again.
+// Its items (GAME.OVR 0x16CC8, an item a call; found by the Treasures
+// play-through, 2026-11-17 - the engine kept Gateway's numbers, so Banded
+// Mail read "Dragon Breath Armor" and what had been readied stayed so; the
+// original in DOSBox: the same names as in Gateway, nothing readied):
+// - each of the three name words: 0 stays; words 210-212 become 0; else
+//   Treasures' word (1-181) spelt the same, capitals aside, as Gateway's -
+//   Gateway's words are BORD.DAX's block 10, 255 slots of 21 bytes; none
+//   spelt so: the item isn't taken ("Cannot use <name>" there)
+// - the type through the program's table DS 0xA67 (types 1-127); 0 there:
+//   not taken
+// - byte 0x3D = 0x62: not taken; byte 0x34 = 0 - nothing comes readied
+// Its effects (0x16DEF): 0x61, 0x1A, 0x2F, 0x30 and 8 stay, 0x12 -> 7,
+// 0x6B -> 0x5F, 0x7C -> 0x12, 0x86 -> 0x69; every other is left behind.
+bool gate_item_to_treasures(uint8_t* it, const uint8_t* gate_words, const uint8_t* types)
+{
+    for (int k = 1; k <= 3; ++k) {
+        const int c = it[0x2E + k];
+        if (!c) continue;
+        if (c >= 210 && c <= 212) {
+            it[0x2E + k] = 0;
+            continue;
+        }
+        const uint8_t* gw = gate_words + (c - 1) * 21;
+        const int n = gw[0] <= 20 ? gw[0] : 20;
+        int found = 0;
+        for (int w = 1; w <= 0xB5 && !found; ++w) {
+            const char* tw = names->word(w);
+            if (static_cast<int>(strlen(tw)) != n) continue;
+            bool same = true;
+            for (int q = 0; q < n && same; ++q)
+                same = toupper(static_cast<unsigned char>(tw[q])) == toupper(gw[1 + q]);
+            if (same) found = w;
+        }
+        if (!found) return false;
+        it[0x2E + k] = static_cast<uint8_t>(found);
+    }
+    const int type = it[0x2E];
+    if (type < 1 || type > 127 || !types[type]) return false;
+    it[0x2E] = types[type];
+    if (it[0x3D] == 0x62) return false;
+    it[0x34] = 0;
+    return true;
+}
+
 void gateway_to_treasures(party::Character& ch)
 {
     for (int k = 0; k < 4; ++k) ch.rec[0xFB + 2 * k] = ch.rec[0xFC + 2 * k] = 0;
@@ -2974,6 +3024,68 @@ void gateway_to_treasures(party::Character& ch)
     ch.ext[party::kExtRace] = ch.rec[0x74] < 8 ? kRace[ch.rec[0x74]] : 6;
     ch.rec[0x14B] = 2;
     ch.ext[party::kExtFlags2] = 2;
+    // The items: Gateway's words and the program's type table, read for this
+    // one character (5.4 KB while it lasts); without them nothing is taken -
+    // an item kept with Gateway's numbers would be another thing here
+    {
+        constexpr size_t kGateWords = 255 * 21;
+        uint8_t* gw = static_cast<uint8_t*>(malloc(kGateWords));
+        uint8_t types[128] = {};
+        bool ok = gw != nullptr && names && names->has_words();
+        plat::File f;
+        if (ok && open_dax("BORD.DAX", f)) {
+            plat::FileSource src(f);
+            const dax::Entry* e = d->idx.find(10);
+            ok = e && e->raw_size == kGateWords;
+            if (ok) {
+                dax::RleReader r(src, d->idx, *e);
+                ok = r.read(gw, kGateWords) == kGateWords;
+            }
+            f.close();
+        } else {
+            ok = false;
+        }
+        if (ok && open_file(d->prof->program, f)) {
+            plat::FileSource src(f);
+            exepack::Info info;
+            ok = exepack::parse(src, info) == exepack::Status::Ok &&
+                 exepack::read(src, info, d->prof->data_base + 0xA67, types, sizeof types) == exepack::Status::Ok;
+            f.close();
+        } else {
+            ok = false;
+        }
+        int k = 0;
+        for (int j = 0; j < ch.n_items; ++j) {
+            if (!ok || !gate_item_to_treasures(ch.items[j], gw, types)) {
+                plat::log("[play] a Gateway item isn't taken to Treasures (type %d, words %d %d %d)\n", ch.items[j][0x2E],
+                          ch.items[j][0x2F], ch.items[j][0x30], ch.items[j][0x31]);
+                continue;
+            }
+            if (k != j) memcpy(ch.items[k], ch.items[j], party::kItemSize);
+            ++k;
+        }
+        ch.n_items = k;
+        free(gw);
+    }
+    {
+        int k = 0;
+        for (int j = 0; j < ch.n_affects; ++j) {
+            uint8_t t = ch.affects[j][0];
+            switch (t) {
+            case 0x61: case 0x1A: case 0x2F: case 0x30: case 0x08: break;
+            case 0x12: t = 0x07; break;
+            case 0x6B: t = 0x5F; break;
+            case 0x7C: t = 0x12; break;
+            case 0x86: t = 0x69; break;
+            default: t = 0; break;
+            }
+            if (!t) continue;
+            if (k != j) memcpy(ch.affects[k], ch.affects[j], party::kAffectSize);
+            ch.affects[k][0] = t;
+            ++k;
+        }
+        ch.n_affects = k;
+    }
     dk_import_values(ch);
     rules::recalc(ch, *names, d->facts);
 }
