@@ -606,6 +606,17 @@ bool open_file(const char* name, plat::File& f);
 // Gateway: each effect's rate (the program's table, read with the sound; 0: Clips::hz)
 uint16_t clip_rates[16] = {};
 
+// The clip a sound number plays (Gateway's player: 3 and 6 as 9, the miss -
+// GAME.OVR 0x54C9A; with the Game Fixes a fitting one of its own: Tom,
+// 2026-10-24 - "You don't want the Miss sound played for a hit or a shot")
+int clip_for(int v)
+{
+    const sound::Clips& cl = d->prof->clips;
+    if ((cl.as_nine >> v & 1) && rules::fix(rules::kFixGSounds) && cl.fixed_as[v]) return cl.fixed_as[v];
+    if (cl.as_nine >> v & 1) return 9;
+    return v;
+}
+
 // A digitised effect (the game's own number): its block read from the card
 // now (the reader and its file buffer on the heap - a sound starts deep in
 // a fight), handed to the player - it sounds once the one playing ends
@@ -613,11 +624,7 @@ __attribute__((noinline)) void play_clip(int v)
 {
     const sound::Clips& cl = d->prof->clips;
     if (v < cl.first || v > cl.last) return;            // (13 / 14: the game plays nothing)
-    // (Gateway's player: 3 and 6 as 9, the miss - GAME.OVR 0x54C9A; with the
-    // Game Fixes a fitting one of its own: Tom, 2026-10-24 - "You don't want
-    // the Miss sound played for a hit or a shot")
-    if ((cl.as_nine >> v & 1) && rules::fix(rules::kFixGSounds) && cl.fixed_as[v]) v = cl.fixed_as[v];
-    else if (cl.as_nine >> v & 1) v = 9;
+    v = clip_for(v);
     plat::File f;
     if (!open_file(cl.file, f)) return;
     plat::FileSource* src = new (std::nothrow) plat::FileSource(f);

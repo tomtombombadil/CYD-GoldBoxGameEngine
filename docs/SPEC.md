@@ -3323,6 +3323,14 @@ the game's Settings (As Original: all of them).
   type at least four times as often solid as open on that map - to be a
   secret door (the 3D view shows a plain wall there). Most maps have a
   handful; it's a guess from the data, not the games' own notion.
+- **Secret's outdoor fights** (v0.210.0): Secret has no terrain table
+  (our facts); the engine read its flags from leftover memory, so its
+  outdoor fields varied with what was there before (found by the toggle
+  checks: a run's results changed with its folder's path length). Now no
+  flags - plain ground and the default scatter. Its own builder: TODO.
+- **Treasures' flask of oil** (v0.210.0): its shops' "flask of oil" is
+  type 87 (Curse's 86); Flasks of Oil now burns there too
+  (`profile items.oil`).
 - **Flasks of oil burn** (Tom, 2026-10-12: "the flasks of oil should do
   fire damage"): the originals make a thrown flask a plain 2d6 blow
   (ITEMS row 86); here its blow counts as fire, so a troll it brings down

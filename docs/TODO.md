@@ -59,11 +59,22 @@ the Project as claude/TODO.md.
       bits) and `keep_mem`; the old fields still work (all switches on by default). rules::fix_info /
       adnd_info give each switch's name, games and help for the port's own Settings.
 - [ ] **Toggle checks before a release** (Tom, 2026-11-17: "check each toggle and verify its effect in each
-      game ... I have announced this repo and the PortMaster repo on reddit"). v0.209.1: every Game Fix /
+      game ... I have announced this repo and the PortMaster repo on reddit"). v0.210.0: every Game Fix /
       AD&D 1E Rule / engine Enhancement held off by itself in every game's suites (tools/devkit/toggles.sh,
       toggles_each.sh, toggles.py - the engine reports the switches each check asked: TOGGLEMAP), the
-      Enhancements both ways (`behave toggles`, E1-E8), Flasks of Oil (matrix). Results and what is left:
-      the summary to Tom; switches no check reaches get checks of their own before the release.
+      Enhancements both ways (`behave toggles`, E1-E8), probes for the switches no check reached (`behave
+      toggles` X1-X17, matrix's Flasks of Oil / Held Mid-Step / Harm / Cleric's XP / Stirge / Heal), the host
+      tests with each switch off (toggles_host.sh), Original Games on / off in QEMU (help text, every page off,
+      the set back). Found and fixed: games masks short of the code (Secret's Own List, Cleric's XP, Remove
+      Curse, Power Word Blind / Kill, Dragon Fear, Bulette - Treasures / Queen / Secret too), masks too wide
+      (Hit Points a Level, Harm, Paladins' Casting), Treasures' flask of oil never burned (its type 87).
+      Left without an automated check: Monster Summoning (Darkness, code read only), Companion Views / Large
+      Icon (board screens). Tom: try a few on a board.
+- [ ] Raising the Dead at Curse's / PoolRad's / Gateway's temple (found by the toggle checks, v0.210.0): the
+      engine's Curse-type temple Raise (rules::apply_cure kRaiseDead) takes no Constitution with the 1E rule
+      off either, while the switch's help says the originals take a point at a temple too. Secret's and
+      Darkness's temples do (their facts); read Curse's / PoolRad's temple routine in GAME.OVR and follow it.
+      PoolRad has no camp Raise Dead (its clerics' spells stop below it).
 - [ ] Secret's outdoor fight field (v0.209.1): Secret has no terrain table in our facts, and the engine read
       its flags from leftover memory (behave secret failed when the run's folder path was longer - found by
       the toggle checks). Now no flags (plain grass, the default scatter). Check Secret's own outdoor

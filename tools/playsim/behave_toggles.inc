@@ -304,10 +304,11 @@ void thief_fix()
                 rules::set_fixes_off(keep | 1ull << rules::kFixThief);
                 classes::thief_skills(b, blv::m->tables);
                 rules::set_fixes_off(keep);
+                // (below 0: the original's byte wrapped round past 200 - with no bonus a skill never is)
                 for (int k = 0; k < 8; ++k)
-                    if (a.rec[0xEA + k] != b.rec[0xEA + k]) {
+                    if (b.rec[0xEA + k] >= 200) {
                         ++below;
-                        if (a.rec[0xEA + k] != 0 || b.rec[0xEA + k] < 200) ++bad;
+                        if (a.rec[0xEA + k] != 0) ++bad;
                     }
             }
     if (!below) {
@@ -316,6 +317,400 @@ void thief_fix()
     }
     expect(P, "X1 Thief Skills: a skill below 0% is 0% (fix on), wraps round past 200% (off - the original)", bad == 0,
            "%d skills below 0, %d wrong", below, bad);
+}
+
+// X3 NPCs' Coin Share (a Game Fix, PoolRad): an NPC's share of a treasure's
+// coins - the original keeps it in a byte (over 255: the low byte), the fix
+// all of it. 6000 gold, six in the party, one an NPC with one share: 1000
+// taken with the fix, 1000 & 0xFF = 232 without
+void npc_share()
+{
+    if (!pool_files()) return;
+    if (!boot() || pt->count < 2) return;
+    if (!start_fight()) return (void)expect(P, "X3 NPCs' Coin Share: a fight (its words)", false);
+    int left[2];
+    static party::Character keep;
+    keep = pt->m[0];
+    const uint64_t k = rules::fixes_off();
+    for (int on = 0; on < 2; ++on) {
+        pt->m[0].rec[0xF7] = 0x80 | 50;
+        pt->m[0].rec[0xF8] = 1;
+        for (int i = 0; i < pt->count; ++i) pt->m[i].rec[0x195] = party::Okay;
+        ground->clear();
+        ground->money[3] = 1000 * pt->count;
+        rules::set_fixes_off(on ? k & ~(1ull << rules::kFixPShare) : k | 1ull << rules::kFixPShare);
+        npc_share_page(C);
+        left[on] = ground->money[3];
+    }
+    rules::set_fixes_off(k);
+    pt->m[0] = keep;
+    ground->clear();
+    const int all = 1000 * pt->count;
+    expect(P, "X3 NPCs' Coin Share: an NPC takes its whole share (fix on), the share's low byte (off - the original)",
+           left[1] == all - 1000 && left[0] == all - (1000 & 0xFF), "on left %d, off left %d of %d", left[1], left[0], all);
+}
+
+// X4 Loaded Game's Area (a Game Fix, PoolRad): a game saved in a block keeps
+// that block's own words (0x4C00-0x4C1F) when loaded - the fix; the original
+// clears them unless the program was in that block before the load
+void loaded_area()
+{
+    if (!pool_files()) return;
+    int got[2];
+    for (int on = 0; on < 2; ++on) {
+        if (!boot()) return;
+        const uint64_t k = rules::fixes_off();
+        rules::set_fixes_off(on ? k & ~(1ull << rules::kFixPLoad) : k | 1ull << rules::kFixPLoad);
+        vm->set(0x4C1E, 77);
+        if (!save_game_now('J')) {
+            expect(P, "X4 Loaded Game's Area: a save", false);
+            rules::set_fixes_off(k);
+            return;
+        }
+        vm->set(0x4C1E, 0);
+        d->last_block = static_cast<uint8_t>(d->gs.script + 1);    // (the program in another block before the load)
+        load_game('J');
+        begin_adventuring();
+        pump(2000);
+        got[on] = vm ? vm->get(0x4C1E) : -1;
+        rules::set_fixes_off(k);
+    }
+    expect(P, "X4 Loaded Game's Area: a load keeps the saved block's own words (fix on), clears them (off - the original)",
+           got[1] == 77 && got[0] == 0, "on %d, off %d", got[1], got[0]);
+}
+
+// ---- Rule-table probes: the routine the switch sits in run with it on and
+// off over a sweep of cases. Each asks (a) that it changes something in this
+// game - its games mask in rules.cpp says it should - and (b) the direction
+// the switch's help gives. Where the engine's other suites already test the
+// exact figures (behave levels / pool / secret, the host tests), these are
+// the remaining games' "it takes effect here" check.
+template <typename F> void fix_both(uint64_t bit, F&& f)
+{
+    const uint64_t k = rules::fixes_off();
+    rules::set_fixes_off(k | bit); f(false);
+    rules::set_fixes_off(k & ~bit); f(true);
+    rules::set_fixes_off(k);
+}
+template <typename F> void adnd_both(uint16_t bit, F&& f)
+{
+    const uint16_t k = rules::adnd_bits();
+    rules::set_adnd(k & ~bit); f(false);
+    rules::set_adnd(k | bit); f(true);
+    rules::set_adnd(k);
+}
+bool rules_ready()
+{
+    if (blv::m) return true;
+    if (!boot()) return false;
+    if (!play::load_rules(blv::m) || !blv::m) return printf("  (toggles: no rule tables)\n"), false;
+    return true;
+}
+bool lists(uint64_t fixbit, uint16_t adndbit = 0)
+{
+    const int g = static_cast<int>(d->prof->game);
+    for (int k = 0; k < rules::kFixCount; ++k)
+        if ((1ull << k) == fixbit) return rules::fix_info(k).games >> g & 1;
+    for (int k = 0; k < rules::kAdndCount; ++k)
+        if (rules::adnd_info(k).bit == adndbit) return rules::adnd_info(k).games >> g & 1;
+    return false;
+}
+int die_low(int) { return 0; }
+// A level of class k (the game's own class mask bit), experience enough
+void train1(party::Character& a, int k)
+{
+    Making* m = blv::m;
+    blv::put32(a.rec, 0x127, 0x3FFFFFFF);
+    create::train_classes(a, m->tables, m->facts, m->dice, m->tables.u8(static_cast<uint16_t>(m->tables.lay.class_masks + k)), true);
+}
+// A half-elf of class id `id` (multi-classes 8-16), each of its classes 1st
+void multi_char(party::Character& a, int id, int bits, int con)
+{
+    blv::fresh(a, 0);
+    a.rec[0x74] = 4;
+    if (blv::m->tables.lay.krynn) a.ext[party::kExtRace] = 6;
+    a.rec[0x75] = static_cast<uint8_t>(id);
+    for (int k = 0; k < 8; ++k) a.rec[0x109 + k] = static_cast<uint8_t>(bits >> k & 1);
+    blv::set_stat(a, 4, con);
+    classes::class_bonuses(a, blv::m->tables);
+    a.rec[0x78] = a.rec[0x1A4] = 10;
+}
+
+// X5 Hit Points a Level: a Constitution 3 fighter / thief trained a level at a
+// time, the dice at their lowest - with the fix every level gives 1 or more
+// (and the penalty is a minus); off, as the original
+void hp_level()
+{
+    const uint64_t bit = 1ull << rules::kFixHpLevel;
+    if (!rules_ready() || !lists(bit)) return;
+    Making* m = blv::m;
+    int gain[2][6] = {}, below = 0;
+    const uint16_t ad = rules::adnd_bits();
+    rules::set_adnd(ad & ~rules::kAdndMultiHp);         // (the game's own multi-class sum - the fix is in it)
+    for (int on = 0; on < 2; ++on) {
+        fix_both(bit, [&](bool o) {
+            if (o != (on == 1)) return;
+            party::Character a;
+            multi_char(a, create::FighterThief, 1 << classes::Fighter | 1 << classes::Thief, 3);
+            create::g_die_hook = die_low;
+            for (int L = 0; L < 6; ++L) {
+                const int was = a.hp_max();
+                train1(a, L % 2 ? classes::Thief : classes::Fighter);
+                gain[on][L] = a.hp_max() - was;
+            }
+            create::g_die_hook = nullptr;
+        });
+    }
+    rules::set_adnd(ad);
+    bool differ = false, ok = true;
+    for (int L = 0; L < 6; ++L) {
+        if (gain[0][L] != gain[1][L]) differ = true;
+        if (gain[1][L] < 1) ok = false;
+        if (gain[0][L] < 1 || gain[0][L] > 100) ++below;
+    }
+    expect(P, "X5 Hit Points a Level: Con 3 fighter / thief, lowest dice - every level 1+ (fix on), the original's otherwise",
+           differ && ok, "on %d %d %d %d %d %d, off %d %d %d %d %d %d", gain[1][0], gain[1][1], gain[1][2], gain[1][3], gain[1][4],
+           gain[1][5], gain[0][0], gain[0][1], gain[0][2], gain[0][3], gain[0][4], gain[0][5]);
+}
+
+// X6 Multi-Class Hit Points (1E rule): a fighter / magic-user / thief trained
+// in all three, every die at its top - on, each class's dice added and
+// divided by the classes; off, the game's own sum. Changes something
+void multi_hp()
+{
+    if (!rules_ready() || !lists(0, rules::kAdndMultiHp)) return;
+    Making* m = blv::m;
+    int tot[2] = {};
+    adnd_both(rules::kAdndMultiHp, [&](bool on) {
+        party::Character a;
+        multi_char(a, create::FighterMUThief, 1 << classes::Fighter | 1 << classes::MagicUser | 1 << classes::Thief, 16);
+        create::g_die_hook = [](int n) { return n - 1; };
+        for (int L = 0; L < 6; ++L) train1(a, L % 3 == 0 ? classes::Fighter : L % 3 == 1 ? classes::MagicUser : classes::Thief);
+        create::g_die_hook = nullptr;
+        tot[on] = a.hp_max();
+    });
+    expect(P, "X6 Multi-Class Hit Points: a F/MU/T trained 6 times, top dice - the 1E sum differs from the game's own",
+           tot[0] != tot[1], "on %d, off %d", tot[1], tot[0]);
+}
+
+// X8 Race Adjustments: a new character of each race, the dice fixed - with
+// the fix the races' adjustments (dwarves Con +1 ...), off as the original
+void race_adj()
+{
+    const uint64_t bit = 1ull << rules::kFixRaceAdj;
+    if (!rules_ready() || !lists(bit)) return;
+    Making* m = blv::m;
+    int races[12];
+    const int nr = create::races(races, 12, secret_files());
+    int changed = 0;
+    for (int r = 0; r < nr; ++r) {
+        int st[2][6] = {};
+        fix_both(bit, [&](bool on) {
+            party::Character a{};
+            create::g_die_hook = [](int n) { return n / 2; };
+            create::begin(a, m->tables, m->facts, m->dice, races[r], 0, classes::Fighter, 0);
+            create::roll(a, m->tables, m->facts, m->dice);
+            create::g_die_hook = nullptr;
+            for (int i = 0; i < 6; ++i) st[on][i] = a.rec[0x10 + 2 * i];
+        });
+        for (int i = 0; i < 6; ++i)
+            if (st[0][i] != st[1][i]) { ++changed; break; }
+    }
+    expect(P, "X8 Race Adjustments: the races' stat adjustments at creation (fix on), none (off - the original)", changed > 0,
+           "%d of %d races changed", changed, nr);
+}
+
+// X11 Thief Skills by Race: a thief of each race - its own race's row with the
+// fix, the row one on (the original) without
+void thief_race()
+{
+    const uint64_t bit = 1ull << rules::kFixThiefRace;
+    if (!rules_ready() || !lists(bit)) return;
+    Making* m = blv::m;
+    int races[12];
+    const int nr = create::races(races, 12, secret_files());
+    int changed = 0;
+    for (int r = 0; r < nr; ++r) {
+        uint8_t sk[2][8] = {};
+        party::Character a{};
+        create::g_die_hook = [](int n) { return n / 2; };
+        create::begin(a, m->tables, m->facts, m->dice, races[r], 0, classes::Thief, 0);
+        create::g_die_hook = nullptr;
+        fix_both(bit, [&](bool on) {
+            classes::thief_skills(a, m->tables);
+            memcpy(sk[on], a.rec + 0xEA, 8);
+        });
+        if (memcmp(sk[0], sk[1], 8)) ++changed;
+    }
+    expect(P, "X11 Thief Skills by Race: the race's own row (fix on) differs from the row one on (off - the original)",
+           changed > 0, "%d races changed", changed);
+}
+
+// X12 Paladins' Hit Points (Krynn): a paladin of Constitution 18 trained -
+// the fighters' bonus with the fix, none without
+void pal_hp()
+{
+    const uint64_t bit = 1ull << rules::kFixPalHp;
+    if (!rules_ready() || !lists(bit)) return;
+    Making* m = blv::m;
+    int hp[2] = {};
+    fix_both(bit, [&](bool on) {
+        party::Character a;
+        blv::fresh(a, classes::Paladin);
+        blv::set_stat(a, 4, 18);
+        a.rec[0x78] = a.rec[0x1A4] = 10;
+        create::g_die_hook = die_low;
+        blv::variant(a, 0);
+        for (int L = 0; L < 4; ++L) train1(a, classes::Paladin);
+        create::g_die_hook = nullptr;
+        hp[on] = a.hp_max();
+    });
+    expect(P, "X12 Paladins' Hit Points: a Con 18 paladin gains more (fix on - the fighters' bonus) than off (the original)",
+           hp[1] > hp[0], "on %d, off %d", hp[1], hp[0]);
+}
+
+// X13 Saves Past 18th (the Dark Queen): a 21st-level fighter's saves - the
+// last row filled with the fix; off, the original's empty rows (0: every
+// save made)
+void saves18()
+{
+    const uint64_t bit = 1ull << rules::kFixQSaves18;
+    if (!rules_ready() || !lists(bit)) return;
+    Making* m = blv::m;
+    int sv[2] = {};
+    fix_both(bit, [&](bool on) {
+        party::Character a;
+        blv::fresh(a, classes::Fighter);
+        a.rec[0x109 + classes::Fighter] = 21;
+        classes::class_bonuses(a, m->tables);
+        sv[on] = a.rec[0xDF];
+    });
+    expect(P, "X13 Saves Past 18th: a 21st-level fighter's save is a real row's (fix on), 0 - always made (off - the original)",
+           sv[1] > 0 && sv[0] == 0, "on %d, off %d", sv[1], sv[0]);
+}
+
+// X14 Wisdom 13 (the Dark Queen): multi-class clerics made with the lowest
+// dice - Wisdom 13 at least with the fix (the rule fires), off the original
+void wis13()
+{
+    const uint64_t bit = 1ull << rules::kFixQWis13;
+    if (!rules_ready() || !lists(bit)) return;
+    Making* m = blv::m;
+    int races[12];
+    const int nr = create::races(races, 12, secret_files());
+    int w[2] = {99, 99};
+    fix_both(bit, [&](bool on) {
+        for (int r = 0; r < nr; ++r) {
+            party::Character a{};
+            create::g_die_hook = die_low;
+            create::begin(a, m->tables, m->facts, m->dice, races[r], 0, create::ClericFighter, 0);
+            create::roll(a, m->tables, m->facts, m->dice);
+            create::g_die_hook = nullptr;
+            if (a.rec[0x14] && a.rec[0x14] < w[on]) w[on] = a.rec[0x14];
+        }
+    });
+    expect(P, "X14 Wisdom 13: a multi-class cleric's Wisdom 13 or more (fix on), lower (off - the original)",
+           w[1] >= 13 && w[0] < 13, "least on %d, off %d", w[1], w[0]);
+}
+
+// X2 Raising the Dead (1E rule): Raise Dead in camp on a dead member - no
+// Constitution lost with the rule, a point without
+void raise_dead()
+{
+    if (!boot() || !load_magic() || pt->count < 2) return;
+    const auto& mg = d->prof->magic;
+    const spells::CampSpell* cs = nullptr;
+    for (int k = 0; k < mg.n_camp && !cs; ++k)
+        if (mg.camp[k].does == spells::Does::Raise) cs = &mg.camp[k];
+    if (!cs) return (void)printf("  (toggles: X2 - no camp Raise Dead)\n");
+    int con[2] = {};
+    static spells::Line lines[24];
+    static party::Character keep;
+    keep = pt->m[1];
+    adnd_both(rules::kAdndRaise, [&](bool on) {
+        pt->m[1] = keep;
+        party::Character& c = pt->m[1];
+        c.rec[0x74] = 7;
+        c.ext[party::kExtRace] = 0;
+        c.rec[0x18] = c.rec[0x19] = 15;
+        c.rec[0x195] = party::Dead;
+        c.rec[0x78] = 0;
+        pt->m[0].rec[0x109 + classes::Cleric] = 15;
+        spells::cast(*pt, 0, 1, *cs, mrules->tables, d->prof->cures, d->prof->magic.facts, rng, lines, 24, 15, 0);
+        con[on] = c.health() == party::Dead ? -1 : c.rec[0x19];
+    });
+    pt->m[1] = keep;
+    expect(P, "X2 Raising the Dead: raised with Constitution kept (1E on), one point less (off - the original)",
+           con[1] == 15 && con[0] == 14, "on Con %d, off Con %d (-1: not raised)", con[1], con[0]);
+}
+
+// X15 Missing Sounds (Gateway): the sounds its player plays as the miss -
+// their own fitting ones with the fix, the miss (9) without
+void gw_sounds()
+{
+    const uint64_t bit = 1ull << rules::kFixGSounds;
+    if (!boot() || !lists(bit)) return;
+    const sound::Clips& cl = d->prof->clips;
+    int n = 0, bad = 0;
+    for (int v = 0; v < 16; ++v) {
+        if (!(cl.as_nine >> v & 1)) continue;
+        int got[2];
+        fix_both(bit, [&](bool on) { got[on] = clip_for(v); });
+        ++n;
+        if (got[0] != 9 || got[1] == 9 || got[1] != cl.fixed_as[v]) ++bad;
+    }
+    expect(P, "X15 Missing Sounds: the sounds played as the miss get their own (fix on), the miss (off - the original)",
+           n > 0 && bad == 0, "%d sounds, %d wrong", n, bad);
+}
+
+// X16 Bozak Stun (Champions): the bozak's stun on a member as a fight ends -
+// gone with the fix, kept (the original's list lacks it) without
+void bozak()
+{
+    const uint64_t bit = 1ull << rules::kFixBozak;
+    if (!boot() || !lists(bit) || !pt->count) return;
+    bool kept[2];
+    fix_both(bit, [&](bool on) {
+        party::Character& c = pt->m[0];
+        rules::remove_affects(c, 0x6A);
+        if (c.n_affects < party::kMaxAffects) {
+            memset(c.affects[c.n_affects], 0, party::kAffectSize);
+            c.affects[c.n_affects][0] = 0x6A;
+            c.affects[c.n_affects][1] = 10;
+            ++c.n_affects;
+        }
+        fight_cleanup_party(combat::Won);
+        kept[on] = rules::remove_affects(c, 0x6A) > 0;
+    });
+    expect(P, "X16 Bozak Stun: ends with the fight (fix on), stays (off - the original)", !kept[1] && kept[0], "on kept %d, off kept %d",
+           (int)kept[1], (int)kept[0]);
+}
+
+// X17 New Game's Vault (Darkness, Treasures, Gateway): a new game's vault -
+// emptied with the fix, the last game's left in it without
+void new_vault()
+{
+    const uint64_t bit = 1ull << rules::kFixVault;
+    if (!boot() || !lists(bit)) return;
+    const auto& v = d->prof->vault;
+    if (!v.slot_file) return (void)printf("  (toggles: X17 - no vault file)\n");
+    char path[200];
+    save_path(v.file, path, sizeof path);
+    long sz[2];
+    fix_both(bit, [&](bool on) {
+        plat::File f = plat::open(path, "w");
+        uint8_t junk[64];
+        memset(junk, 0x11, sizeof junk);
+        if (f) { f.write(junk, sizeof junk); f.close(); }
+        vault_new_game();
+        plat::File g = plat::open(path, "r");
+        sz[on] = g ? static_cast<long>(g.size()) : -1;
+        uint8_t first = 0;
+        if (g && g.read(&first, 1) == 1 && first == 0 && sz[on] < 64) sz[on] = 0;
+        if (g) g.close();
+    });
+    expect(P, "X17 New Game's Vault: emptied (fix on), the last game's left (off - the original)", sz[1] == 0 && sz[0] == 64,
+           "on %ld, off %ld bytes", sz[1], sz[0]);
 }
 
 void run()
@@ -332,6 +727,19 @@ void run()
     if (want("rolls")) show_rolls();
     if (want("oil")) oil_survey();
     if (want("thief")) thief_fix();
+    if (want("share")) npc_share();
+    if (want("loadarea")) loaded_area();
+    if (want("hplevel")) hp_level();
+    if (want("multihp")) multi_hp();
+    if (want("raceadj")) race_adj();
+    if (want("thiefrace")) thief_race();
+    if (want("palhp")) pal_hp();
+    if (want("saves18")) saves18();
+    if (want("wis13")) wis13();
+    if (want("raise")) raise_dead();
+    if (want("gwsounds")) gw_sounds();
+    if (want("bozak")) bozak();
+    if (want("vault")) new_vault();
 }
 
 } // namespace btg

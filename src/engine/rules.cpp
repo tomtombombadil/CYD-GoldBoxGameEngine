@@ -1543,10 +1543,10 @@ const FixInfo kFixes[kFixCount] = {
     {kFixBolt, "Bounced Bolt Length", kAll,
      "A lightning bolt (and the breath and item bolts) goes exactly its length from the square aimed at, "
      "bounces included. The originals' count after a bounce made it shorter, longer, or bounce for ever."},
-    {kFixHpLevel, "Hit Points a Level", kAll,
+    {kFixHpLevel, "Hit Points a Level", kSecret | kDark | kTreas | kChamp | kKnights | kQueen,
      "Every level gained gives at least 1 hit point, and a low Constitution's minus is counted as a minus. "
      "The originals could give none, or read the minus as a large gain for a multi-class character."},
-    {kFixHarm, "Harm", kAll,
+    {kFixHarm, "Harm", kSecret | kDark | kTreas | kKnights | kQueen,
      "Harm takes its victim down to 1d4 hit points and no lower. The originals' sum wraps round when the "
      "victim has fewer, killing it outright."},
     {kFixPRace, "Race Checks", kPool,
@@ -1591,7 +1591,7 @@ const FixInfo kFixes[kFixCount] = {
      "against giants, the Constitution bonus to their saves, Blink and Invisibility at the attack roll, "
      "Displacement working, the Periapt of Health against disease, Strength 18/xx for paladins. Darkness and "
      "Treasures share two of them: Invisibility at the attack roll and Displacement."},
-    {kFixPalCast, "Paladins' Casting", kSecret | kDark | kTreas | kKnights,
+    {kFixPalCast, "Paladins' Casting", kSecret | kDark | kTreas,
      "A paladin casts at its paladin level less 8, as AD&D says. These originals leave the paladin out and "
      "cast its spells at a fixed level."},
     {kFixRaceAdj, "Race Adjustments", kDark | kChamp | kKnights,
@@ -1672,7 +1672,7 @@ const AdndInfo kAdnd[kAdndCount] = {
     {kAdndAge, "Age with Time", kDark | kTreas,
      "Everyone grows a year older for each year of game time. The originals' clock ages nobody until a "
      "hundred years have passed."},
-    {kAdndPwk, "Power Word Kill", kDark,
+    {kAdndPwk, "Power Word Kill", kDark | kTreas,
      "Power Word Kill as AD&D 1st edition: by hit points - one creature of 11-60, or those of 10 or less up "
      "to 120 in all. The original goes by maximum hit points."},
     {kAdndProtEvil, "Protection from Evil", kAll,

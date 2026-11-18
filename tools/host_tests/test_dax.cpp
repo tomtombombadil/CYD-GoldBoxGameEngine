@@ -2768,6 +2768,55 @@ static void test_queen_target_hooks()
     CHECK(ecl::queen_target_hooks(t, s, false, &miss, 1, 0) == -1 && t.affects[1][3] == 0x10);
 }
 
+// PoolRad's SPELL (who has it memorized - Game Fix Who Has It Memorized): the
+// original's search never runs and answers place 1 of the first member;
+// with the fix the members' memorized spells are looked through
+static void test_pool_spell_fix()
+{
+    const profile::Profile* pp = profile::find(games::Game::PoolOfRadiance, 65231, 68592);
+    CHECK(pp && pp->ecl_ops && pp->ecl_ops->pool_map);
+    if (!pp || !pp->ecl_ops) return;
+    static party::Party pa;
+    pa = party::Party{};
+    pa.count = 3;
+    for (int i = 0; i < 3; ++i) {
+        pa.m[i].rec[0] = 1;
+        pa.m[i].rec[1] = static_cast<uint8_t>('A' + i);
+        pa.m[i].rec[0x196] = 1;
+    }
+    pa.m[2].rec[magic::kListAt + 4] = 7;                   // member 2 has spell 7 in place 4
+    Bytes c;
+    for (int i = 0; i < 5; ++i) { c.push_back(0); op_addr(c, 0); }
+    const size_t first = c.size();
+    c.push_back(0x3B); op_imm(c, 7); op_addr(c, 0x4D04); op_addr(c, 0x4D05);
+    c.push_back(0x00);
+    for (int i = 0; i < 5; ++i) {
+        c[1 + i * 4] = 1;
+        c[2 + i * 4] = static_cast<uint8_t>((0x9900 + first) & 0xFF);
+        c[3 + i * 4] = static_cast<uint8_t>((0x9900 + first) >> 8);
+    }
+    for (int on = 0; on < 2; ++on) {
+        const uint64_t keep = rules::fixes_off();
+        rules::set_fixes_off(on ? keep & ~(1ull << rules::kFixPSpell) : keep | 1ull << rules::kFixPSpell);
+        static ecl::GameState gs;
+        gs = ecl::GameState{};
+        PartyHost host;
+        host.p = &pa;
+        memcpy(gs.code, c.data(), c.size());
+        gs.code_len = static_cast<uint32_t>(c.size());
+        static const char* const kWords[ecl::kScriptWords] = {"", "", "", "", "", ""};
+        ecl::Vm* vm = new ecl::Vm(gs, host, *pp->ecl_ops);
+        vm->set_party(&pa);
+        vm->set_words(kWords);
+        CHECK(vm->init_script());
+        vm->run(vm->entry(4));
+        if (on) CHECK(vm->get(0x4D04) == 4 && vm->get(0x4D05) == 2);         // the fix: member 2, place 4
+        else CHECK(vm->get(0x4D04) == 1 && vm->get(0x4D05) == 0);            // the original: place 1, the first
+        delete vm;
+        rules::set_fixes_off(keep);
+    }
+}
+
 static void test_ecl_party()
 {
     const profile::Profile* pr = profile::find(games::Game::CurseOfTheAzureBonds, 57789, 62432);
@@ -9283,6 +9332,7 @@ int main()
     if (!rules::test::off_fix && !rules::test::off_adnd && !rules::test::off_enh)   // (it checks the switches themselves)
 #endif
     test_fix_switches();
+    test_pool_spell_fix();
     test_drained();
     test_rle_known_bytes();
     test_quickacts();

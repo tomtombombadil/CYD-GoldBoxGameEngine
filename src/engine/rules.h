@@ -313,8 +313,8 @@ enum Fix : uint8_t {
     kFixThief,          // Thief Skills: no wrap below 0%
     kFixHeld,           // Held Mid-Step: held / stunned by a free attack, no step
     kFixBolt,           // Bounced Bolt Length: exactly its range
-    kFixHpLevel,        // Hit Points a Level: at least 1, a Constitution penalty counted signed
-    kFixHarm,           // Harm: never wraps the hit points round
+    kFixHpLevel,        // Hit Points a Level: at least 1, a Constitution penalty counted signed (Secret-, Krynn-type, Queen)
+    kFixHarm,           // Harm: never wraps the hit points round (the games with Harm: Secret, Darkness, Treasures, Knights, Queen)
     // PoolRad (Curse too where said)
     kFixPRace,          // Race Checks: the scripts see the race (Podol Plaza, the Temple of Bane)
     kFixPSpell,         // Who Has It Memorized: the script's spell search
@@ -331,7 +331,7 @@ enum Fix : uint8_t {
     kFixPoison,         // Poison: a point every 10 minutes (Secret, Darkness, Treasures)
     kFixDiff,           // Difficulty To-Hit (Secret, Knights)
     kFixSOwn,           // Secret's Own List: elves' +1, dwarves' / gnomes' -4, Con saves, blink, displacement, periapt, 18/xx
-    kFixPalCast,        // Paladins' Casting: by the paladin's level (Secret, Darkness, Treasures, Knights)
+    kFixPalCast,        // Paladins' Casting: by the paladin's level (Secret, Darkness, Treasures)
     // Darkness (Treasures / Krynn where said)
     kFixRaceAdj,        // Race Adjustments at creation (Darkness, Champions, Knights)
     kFixClericXp,       // Cleric's Experience Bonus from Wisdom 16 (Secret, Darkness, Treasures)

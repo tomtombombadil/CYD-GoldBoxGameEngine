@@ -472,6 +472,130 @@ void held_step()
            x_after[1] == 10 && x_after[0] == 9, "on x %d, off x %d (from 10)", x_after[1], x_after[0]);
 }
 
+// ---- Harm (a Game Fix, every game with the spell): its victim down to 1d4
+// hit points - with fewer than the roll the fix leaves it be; off, the
+// originals' sum wraps round and kills. The dice at their top (4), the
+// victim at 2 hit points
+void harm_fix()
+{
+    const combat::FightSpell* fs = nullptr;
+    for (int i = 0; i < play::d->prof->fight.n_spells && !fs; ++i)
+        if (play::d->prof->fight.spells[i].does == combat::SpellDoes::HarmTouch) fs = &play::d->prof->fight.spells[i];
+    if (!fs) {
+        printf("  (matrix: Harm - no such spell)\n");
+        return;
+    }
+    int hp[2];
+    const uint64_t keep = rules::fixes_off();
+    for (int on = 0; on < 2; ++on) {
+        put(A, 0, 10, 10);
+        put(B, 1, 11, 10, 2);
+        rules::set_fixes_off(on ? keep & ~(1ull << rules::kFixHarm) : keep | 1ull << rules::kFixHarm);
+        create::g_die_hook = [](int n) { return n == 20 ? 0 : n - 1; };      // (saves failed, the 1d4 at 4)
+        combat::SpellLine lines[8];
+        const int tg[1] = {B};
+        play::fg->b.f[A].rec[0x199] = 60;                                    // (the touch hits)
+        combat::cast(play::fg->b, play::mrules->tables, A, fs->spell, *fs, tg, 1, play::rng, lines, 8, 9);
+        dice_off();
+        hp[on] = F(B).up() ? F(B).hp() : -99;
+    }
+    rules::set_fixes_off(keep);
+    expect(P, "Harm: a victim with fewer hit points than the roll is left (fix on), killed - the sum wraps (off - the originals)",
+           hp[1] == 2 && hp[0] != 2, "on %d, off %d (-99: down)", hp[1], hp[0]);
+}
+
+// ---- Cleric's Experience Bonus (a Game Fix): a cleric of Wisdom 15 - no
+// bonus with the fix (AD&D: 16 and up), the game's +10% without where its
+// own figure is lower
+void cleric_xp()
+{
+    combat::Battle& b = play::fg->b;
+    if (!b.fx || !b.fx->cleric_xp_wis || b.fx->cleric_xp_wis >= 16) {
+        printf("  (matrix: Cleric's Experience Bonus - the game's own figure is AD&D's)\n");
+        return;
+    }
+    uint32_t got[2];
+    int share = 0;
+    const uint64_t keep = rules::fixes_off();
+    for (int on = 0; on < 2; ++on) {
+        put(A, 0, 10, 10);
+        F(A).rec[0x75] = 0;
+        F(A).rec[0x15] = static_cast<uint8_t>(b.fx->cleric_xp_wis);
+        for (int k = 0; k < 4; ++k) F(A).rec[0x127 + k] = 0;
+        rules::set_fixes_off(on ? keep & ~(1ull << rules::kFixClericXp) : keep | 1ull << rules::kFixClericXp);
+        share = combat::award(b, 1000, true);
+        got[on] = F(A).rec[0x127] | F(A).rec[0x128] << 8;
+    }
+    rules::set_fixes_off(keep);
+    expect(P, "Cleric's Experience Bonus: a cleric of the game's Wisdom figure gets none (fix on: 16 needed), +10% (off - the original)",
+           got[1] == static_cast<uint32_t>(share) && got[0] == static_cast<uint32_t>(share + share / 10), "on %u, off %u (share %d)",
+           got[1], got[0], share);
+}
+
+bool has_aff_min(int i, int type, int* minutes)
+{
+    const combat::Fighter& f = F(i);
+    for (int k = 0; f.n_aff && k < *f.n_aff; ++k)
+        if (f.aff[k][0] == type) {
+            *minutes = f.aff[k][1] | f.aff[k][2] << 8;
+            return true;
+        }
+    return false;
+}
+// ---- Stirge and Squid (Gateway): a stirge's hit that latches - its hold
+// keeps 0xCF of blood to drink with the fix; the original's none (it lets go)
+void stirge()
+{
+    const combat::Facts::GateFx& gw = play::fg->b.fx->gw;
+    if (!gw.ways || !gw.stirge || !gw.sucking) return (void)printf("  (matrix: Stirge - none in this game)\n");
+    int mins[2] = {-1, -1};
+    bool held[2];
+    const uint64_t keep = rules::fixes_off();
+    for (int on = 0; on < 2; ++on) {
+        put(B, 1, 11, 10);
+        put(A, 0, 10, 10);
+        add_aff(B, gw.stirge);
+        rules::set_fixes_off(on ? keep & ~(1ull << rules::kFixGHolds) : keep | 1ull << rules::kFixGHolds);
+        create::g_die_hook = [](int n) { return n == 20 ? 19 : 0; };
+        play::fg->cur = B;
+        combat::attack(play::fg->b, B, A, play::names, play::rng);
+        dice_off();
+        held[on] = has_aff_min(B, gw.sucking, &mins[on]);
+    }
+    rules::set_fixes_off(keep);
+    expect(P, "Stirge and Squid: a latched stirge holds blood to drink (fix on: 0xCF), none (off - the original)",
+           held[1] && held[0] && mins[1] == 0xCF && mins[0] == 0, "on %d/%d, off %d/%d", (int)held[1], mins[1], (int)held[0], mins[0]);
+}
+// ---- Heal Cures Feeblemind (Death Knights): Heal on one feebleminded by its
+// Feeblemind - cured with the fix, kept (the original looks for another
+// effect) without
+void heal_feeble()
+{
+    const combat::Facts& fx = *play::fg->b.fx;
+    if (!fx.heal_feeble2) return (void)printf("  (matrix: Heal Cures Feeblemind - not this game)\n");
+    const combat::FightSpell* fs = nullptr;
+    for (int i = 0; i < play::d->prof->fight.n_spells && !fs; ++i)
+        if (play::d->prof->fight.spells[i].does == combat::SpellDoes::FullHeal) fs = &play::d->prof->fight.spells[i];
+    if (!fs) return (void)printf("  (matrix: Heal Cures Feeblemind - no Heal)\n");
+    bool kept[2];
+    const uint64_t keep = rules::fixes_off();
+    for (int on = 0; on < 2; ++on) {
+        put(A, 0, 10, 10);
+        put(B, 0, 11, 10);
+        add_aff(B, fx.heal_feeble2);
+        rules::set_fixes_off(on ? keep & ~(1ull << rules::kFixKHeal) : keep | 1ull << rules::kFixKHeal);
+        dice(20);
+        combat::SpellLine lines[8];
+        const int tg[1] = {B};
+        combat::cast(play::fg->b, play::mrules->tables, A, fs->spell, *fs, tg, 1, play::rng, lines, 8, 12);
+        dice_off();
+        kept[on] = has_aff(B, fx.heal_feeble2);
+    }
+    rules::set_fixes_off(keep);
+    expect(P, "Heal Cures Feeblemind: Heal takes it off (fix on), leaves it (off - the original)", !kept[1] && kept[0],
+           "on kept %d, off kept %d", (int)kept[1], (int)kept[0]);
+}
+
 void darts()
 {
     const int dart = play::d->prof->items.dart;
@@ -952,6 +1076,10 @@ void run()
     darts();
     oil();
     held_step();
+    harm_fix();
+    cleric_xp();
+    stirge();
+    heal_feeble();
     images();
     morale_tests();
     prot_evil();
