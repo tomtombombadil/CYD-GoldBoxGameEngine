@@ -6,6 +6,17 @@ to the bottom with their version, then drop off after a while. Synced to
 the Project as claude/TODO.md.
 
 ## Tom
+- [ ] v0.210.2 (Tom, 2026-11-18: Death Knights' / the Dark Queen's AdLib intro music "harsh static"
+      on the 5.0", fine on the 3.5"): the GT911's reset no longer drives GPIO 18 (the touch's INT is
+      the NS4168's LRCLK; the old reset's INT sync likely left the touch chip driving the line against
+      the clock - the maker's FNK0115Q sketches never drive it), the I2S pins at full drive. Tom, on
+      the 5.0": (a) the intro music of Death Knights / the Dark Queen; (b) taps still land (the chip
+      may now answer at 0x14 - the serial line's "[touch] GT911 at 0x.."); (c) did Hit / Miss / the
+      step sound right before this build? If the music is still static: does it change while
+      touching the screen? Also the 4.0" S3 (same 16-bit music path): music right there?
+- [ ] Dark Queen's intro music on the 3.5" (Tom, 2026-11-18): "a couple of off pauses" - the DAC
+      boards' music ring is 16 KB (0.74 s); a title step that keeps the loop longer than that gaps it.
+      Claude: find which steps (memory log / a pump-gap note), then a bigger ring or pumping inside them.
 - [x] v0.210.1 (Tom, 2026-11-18, four reports): (1) **Modify Character** - a Krynn knight's 18(xx) went to
       plain 18 (the knight wasn't a fighter type: every original's code - Curse 0x22F40, Champions 0x2332B,
       Death Knights 0x17F24, the Dark Queen 0x3E30B - gives 18/xx to its fighter types, the Krynn knight

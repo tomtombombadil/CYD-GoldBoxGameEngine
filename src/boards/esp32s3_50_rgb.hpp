@@ -20,8 +20,9 @@
 //          set by resistors) - BCLK 0, LRCLK 18, DATA 17; speaker socket
 //   BOOT button 0 (also the I2S BCLK - read only at power-up)
 //   INT 18 is ALSO the amplifier's LRCLK (both 0R links fitted): the touch
-//   is polled without INT (as the 4.0" S3's FT6336), and its reset -
-//   where INT picks the chip's I2C address - is done here before any sound.
+//   is polled without INT (as the 4.0" S3's FT6336), and INT is never
+//   driven - not even for the reset's address pick (v0.210.2, as the
+//   maker's own FNK0115Q sketches: TAMC with INT -1).
 //
 // The screen: the engine's 320x240 layout drawn at 2x, centred on the
 // 800x480 panel as 640x480 with black bars left and right (Tom, 2026-10-30)
@@ -366,25 +367,25 @@ private:
 class Touch_GT911_Bars : public lgfx::Touch_GT911
 {
 public:
-    static constexpr int kPinRst = 38, kPinInt = 18;
+    static constexpr int kPinRst = 38;     // (INT 18: never driven - the LRCLK)
 
     bool init() override
     {
         if (_inited) return true;
-        // The GT911's reset: INT's level as RST rises picks its I2C address
-        // (low = 0x5D). INT is the amplifier's LRCLK too - the sound isn't
-        // running yet at this point (gfx.init in setup). INT is let go
-        // (input) afterwards; it is never read.
-        lgfx::pinMode(kPinInt, lgfx::pin_mode_t::output);
-        lgfx::gpio_lo(kPinInt);
+        // The GT911's reset, RST only (v0.210.2, Tom: the AdLib music came
+        // through as harsh static on the 5.0"). INT is the amplifier's LRCLK
+        // too; until v0.210.1 it was held low through the reset to pick the
+        // address (0x5D) and for the chip's start-up sync - after which the
+        // GT911 takes INT as its output, likely against the LRCLK, and the
+        // NS4168 (its high = 0.7 x 5 V, already above the S3's 3.3 V) would
+        // lose its frames. The maker's FNK0115Q sketches never drive INT
+        // (TAMC with INT -1) - their music plays with the touch on; the
+        // address is whichever the chip picks (init tries 0x5D and 0x14).
         lgfx::pinMode(kPinRst, lgfx::pin_mode_t::output);
         lgfx::gpio_lo(kPinRst);
         lgfx::delay(11);
         lgfx::gpio_hi(kPinRst);
-        lgfx::delay(6);                       // INT held >= 5 ms after RST
-        lgfx::delay(50);                      // (INT low 50 ms: the chip's own start-up sync)
-        lgfx::pinMode(kPinInt, lgfx::pin_mode_t::input);
-        lgfx::delay(50);
+        lgfx::delay(106);                     // (the maker's 5 + 50 + 50 ms)
         if (!Touch_GT911::init()) return false;   // (it tries 0x5D and 0x14 in turn)
         // The chip's own output size (its config, 0x8048..0x804B) - the maker
         // sets 800 x 480; scaled to that if it says otherwise
@@ -518,7 +519,7 @@ public:
             cfg.bus_shared      = false;
             cfg.offset_rotation = 0;
             cfg.i2c_port        = BOARD_I2C_PORT;
-            cfg.i2c_addr        = 0x5D;  // (INT low at reset)
+            cfg.i2c_addr        = 0x5D;  // (or 0x14: init tries both)
             cfg.pin_sda         = BOARD_PIN_I2C_SDA;
             cfg.pin_scl         = BOARD_PIN_I2C_SCL;
             cfg.freq            = 400000;

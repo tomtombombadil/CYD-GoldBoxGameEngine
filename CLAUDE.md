@@ -363,7 +363,8 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   each draw's changed rectangle 2x2 into the panel's 800x480 buffer,
   centred with black bars (Tom's layout), at endWrite; never draw to the
   panel any other way. GT911 polled without INT (INT 18 = the NS4168's
-  LRCLK), reset with INT low before any sound; touches in the bars
+  LRCLK), reset by RST only - INT never driven (v0.210.2: the music
+  was static; the maker's sketches leave it alone); touches in the bars
   dropped. Serial on UART0 (CH340C: `ARDUINO_USB_CDC_ON_BOOT=0`). Sound
   `BOARD_AUDIO_I2S` (no codec, clocks kept on as the S3 codec's). The SD
   card on SPI (FSPI, `BOARD_SD_SPI_PORT` - no VSPI on the S3). QEMU:
