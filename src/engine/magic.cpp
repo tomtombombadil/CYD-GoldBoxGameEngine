@@ -87,17 +87,22 @@ static bool armoured_in_fight(const party::Character& c, const classes::Tables& 
 
 bool special(const classes::Tables& t, int s)
 {
-    return t.lay.krynn && !t.lay.queen && s >= 1 && s < t.lay.spell_count && t.spell_code(s) == 2;
+    // (a god's special spell: Champions' / Death Knights' code 2 - spells
+    // 101-107; the Dark Queen's class 3, packed as code 5 - 57, 59-64)
+    return t.lay.krynn && s >= 1 && s < t.lay.spell_count && t.spell_code(s) == (t.lay.queen ? 5 : 2);
 }
 
 int special_room(const party::Character& c, const classes::Tables& t)
 {
-    if (!t.lay.krynn || t.lay.queen || c.level(classes::Cleric) <= 0) return 0;
+    // (Champions GAME.OVR 0x1AD6E, Death Knights 0xEBFC, the Dark Queen
+    // DQK.EXE 0x44AD8 kind 3: a cleric's god 4 three, god 6 none, any other
+    // one, less the specials memorized)
+    if (!t.lay.krynn || c.level(classes::Cleric) <= 0) return 0;
     const int god = c.ext[party::kExtGod];
     int r = god == 4 ? 3 : god == 6 ? 0 : 1;
     for (int i = 0; i < kListSize; ++i) {
         const int v = c.rec[kListAt + i] & 0x7F;
-        if (v > 100 && v < 108) --r;
+        if (v && special(t, v)) --r;
     }
     return r > 0 ? r : 0;
 }
@@ -106,7 +111,7 @@ bool can_use(const party::Character& c, const classes::Tables& t, int s)
 {
     // (a special: the cleric's - the rooms' test; no armour rule, not a
     // magic-user's spell)
-    if (special(t, s)) return c.level(classes::Cleric) > 0;
+    if (special(t, s) && !t.lay.queen) return c.level(classes::Cleric) > 0;     // (the Dark Queen's: its own test below)
     if (s >= 1 && s < t.lay.spell_count && armoured_in_fight(c, t) &&
         (t.lay.queen ? t.spell_code(s) == 3 : t.spell_class(s) == MagicUser))
         return false;
@@ -570,13 +575,25 @@ static bool next_scribe(const party::Character& c, const Scrolls& sc, int* item,
     return false;
 }
 
+// A memorized spell's level for the rest's time (a level-0 spell - the
+// gods' specials: Champions / Death Knights count it 1 (GAME.OVR 0x1A6EF /
+// 0xE62C), the Dark Queen by its own table - 57 four, 59 two, 61 three, any
+// other one (DQK.EXE 0x6CC9; DOSBox: Maigureigne's special Remove Curse
+// 6:45, Bless 4:15); a scroll's as it is)
+static int rest_level(const classes::Tables& t, int s)
+{
+    const int lv = t.spell_level(s);
+    if (lv || !t.lay.krynn) return lv;
+    return t.lay.queen ? (s == 57 ? 4 : s == 61 ? 3 : s == 59 ? 2 : 1) : 1;
+}
+
 int rest_minutes(party::Character& c, const classes::Tables& t, const Scrolls& sc)
 {
     int max_level = 0, total = 0;
     for (int i = 0; i < kListSize; ++i) {
         const uint8_t v = c.rec[kListAt + i];
         if (!(v & 0x80)) continue;
-        const int lv = t.spell_level(v & 0x7F);
+        const int lv = rest_level(t, v & 0x7F);
         if (lv > max_level) max_level = lv;
         total += lv;
     }
@@ -632,7 +649,7 @@ static int next_level(const party::Character& c, const classes::Tables& t, const
     int i, k;
     if (next_scribe(c, sc, &i, &k)) return t.spell_level(c.items[i][kScrollAt + k] & 0x7F);
     const int next = first_learning(c);
-    return next >= 0 ? t.spell_level(c.rec[kListAt + next] & 0x7F) : 0;
+    return next >= 0 ? rest_level(t, c.rec[kListAt + next] & 0x7F) : 0;
 }
 
 Step step(Rest& r, party::Party& p, const classes::Tables& t, const Scrolls& sc, bool tick)

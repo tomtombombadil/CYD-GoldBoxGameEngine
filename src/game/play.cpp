@@ -5002,10 +5002,19 @@ void draw_own_pic(int id);
 
 // The camp's picture (Treasures: game byte 0x4F's when its scripts set one -
 // 132 indoors; ov105+0x3149)
+// (Curse's profile is the plain one: its camp PIC block 29 and treasure
+// PIC block 1 - coab's LoadPic, as PoolRad's / Gateway's; DOSBox)
+bool curse_game() { return d->prof->game == games::Game::CurseOfTheAzureBonds; }
+// The "to Memorize" list shown first with Exit alone, then "Memorize these
+// spells?" in yellow - every game without the "spells OK? Keep Exit"
+// question (Pool, Curse, Secret, Gateway, Champions - DOSBox)
+bool mem_preview() { return d->prof->magic.words[profile::kSpellsKeep] == 0; }
+int prof_camp_pic() { return d->prof->variant.camp_pic ? d->prof->variant.camp_pic : curse_game() ? 29 : 0; }
+int prof_treasure_pic() { return d->prof->variant.treasure_pic ? d->prof->variant.treasure_pic : curse_game() ? 1 : 0; }
 int camp_pic()
 {
     const auto& v = d->prof->variant;
-    return v.camp_pic_byte && d->gs.area1[0x4F] ? d->gs.area1[0x4F] : v.camp_pic;
+    return v.camp_pic_byte && d->gs.area1[0x4F] ? d->gs.area1[0x4F] : prof_camp_pic();
 }
 
 bool no_rest_here() { return darkness_files() && vm->get(0x2B) == 1 && vm->get(0x2C) >= 100; }
@@ -5074,7 +5083,7 @@ void draw_camp_screen(pic::Canvas& c)
         bigpic = -1;
         draw_frame(c);
         c.fill(8, 8, 120, 120, 0);
-        if (d->prof->variant.camp_pic) draw_own_pic(camp_pic());      // (Death Knights: PIC 59 - DOSBox)
+        if (prof_camp_pic()) draw_own_pic(camp_pic());      // (Death Knights: PIC 59 - DOSBox)
         draw_panel(c);
         return;
     }
@@ -5082,9 +5091,9 @@ void draw_camp_screen(pic::Canvas& c)
         draw_frame(c);
         // (Pool's camp in the wilderness: the left box cleared round the
         // camp's picture, no map - DOSBox)
-        if (pool_overland() && d->prof->variant.camp_pic) c.fill(8, 8, 120, 120, 0);
+        if (pool_overland() && prof_camp_pic()) c.fill(8, 8, 120, 120, 0);
         else draw_view(c);
-        if (d->prof->variant.camp_pic) draw_own_pic(camp_pic());
+        if (prof_camp_pic()) draw_own_pic(camp_pic());
         draw_panel(c);
     }
 }
@@ -5191,7 +5200,7 @@ void leave_camp(pic::Canvas& c)
         cheat_end(c);                   // (the Cheats tab's Sanctuary: back where the party was)
         return;
     }
-    if (d->prof->variant.camp_pic && pic_shown) {
+    if (prof_camp_pic() && pic_shown) {
         anim_stop();
         pic_shown = false;
         draw_view(c);
@@ -5933,7 +5942,8 @@ void ask_yes_no(pic::Canvas& c, Ask what, const char* prompt)
 // 0x22BBE, 0x361BB; DOSBox)
 void ask_yellow(pic::Canvas& c)
 {
-    if (!gateway()) return;
+    // (Gateway; Curse's "Memorize these spells?" too - DOSBox)
+    if (!gateway() && !(mem_preview() && ask == Ask::MemorizeThese)) return;
     menu.prompt_fg = 14;
     show_menu_line(c);
 }
@@ -7886,7 +7896,7 @@ void draw_own_pic(int id)
     last_pic_id = keep;
     last_pic_head = keep_head;
 }
-void draw_treasure_pic() { draw_own_pic(d->prof->variant.treasure_pic); }
+void draw_treasure_pic() { draw_own_pic(prof_treasure_pic()); }
 
 void draw_shop(pic::Canvas& c)
 {
@@ -7897,7 +7907,7 @@ void draw_shop(pic::Canvas& c)
     pic_shown = false;
     head_shown = body_shown = -1;
     draw_frame(c);
-    if (treasure_on() && !vault_on() && d->prof->variant.treasure_pic) draw_treasure_pic();
+    if (treasure_on() && !vault_on() && prof_treasure_pic()) draw_treasure_pic();
     else if (last_pic_id >= 0 && (!treasure_on() || vault_on())) host_picture(last_pic_id, last_pic_head);
     else draw_view(c);
     draw_panel(c);
@@ -7984,7 +7994,7 @@ void leave_shop(pic::Canvas& c, bool asked)
         treasure_off();
         ground->clear();            // what's left behind is lost
         // (Secret: its treasure picture gives way to the script's, or the 3D view)
-        if (d->prof->variant.treasure_pic) {
+        if (prof_treasure_pic()) {
             if (last_pic_id >= 0) host_picture(last_pic_id, last_pic_head);
             else host_picture(0xFF, 0);
         }
@@ -9934,7 +9944,9 @@ void build_lines(const uint8_t* ids, int n)
     const classes::Tables& t = mrules->tables;
     // (Darkness's Cast and View list a spell held more than once on one
     // line with its count - "Cure Light Wounds (6)", DOSBox)
-    const bool counted = ((darkness_files() || hl()) && (sl.casting || sl.viewing)) || (sl.confirming && sl.learning);
+    // (Curse's "to Memorize" list: "*SLEEP (3)" - DOSBox, Ledera)
+    const bool counted = ((darkness_files() || hl()) && (sl.casting || sl.viewing)) || (sl.confirming && sl.learning) ||
+                         (mem_preview() && !pool_files() && sl.learning);
     for (int i = 0; i < n && sl.n < 143; ++i) {
         int lv = t.spell_level(ids[i]);
         // (Gateway: a heading for each level and kind - lvl's high bits the kind)
@@ -9988,20 +10000,32 @@ int list_rows()
     return sl.learning || sl.casting || sl.scrolls || sl.choosing || sl.reading >= 0 ? 22 - 5 + 1 : 15 - 5 + 1;
 }
 
-// A spell list's page turned (Next: dir 1, Prev: -1). Pool: the list
-// routine's own paging (ovr26 +0xC33, as the item lists') - Next goes no
-// further than the last full page (DOSBox: a cleric's 17 lines, page two
-// from line 6) and the highlight keeps its line of the page
+// A spell list's page turned (Next: dir 1, Prev: -1): a page on, no
+// further than the last full page - every game's list routine (Pool's
+// ovr26 +0xC33, Curse's ovr027 sub_6CD38 - coab's menu_scroll_page; DOSBox:
+// Curse's Philippe, Darkness's Clarissa, Treasures' Sparkle, Champions'
+// Kal: the last page ends on the list's last line)
 void sl_page(int dir)
 {
     const int rows = list_rows(), old = sl.top;
     if (dir > 0) sl.top += rows;
     else sl.top = sl.top > rows ? sl.top - rows : 0;
-    if (!pool_files()) return;
     if (sl.top > sl.n - rows) sl.top = sl.n > rows ? sl.n - rows : 0;
     // (the original's highlight keeps its line of the page; the engine's
     // rule: the turned page's first spell - Tom, 2026-10-31, SPEC 12)
     if (sl.sel >= old && sl.sel < old + rows) dk_page_sel();
+}
+
+// Prev is offered past the list's leading headings (Curse's sl_select_item
+// ovr027 +0x1065: the top line past the headings before the first entry -
+// DOSBox: Philippe's last page from line 1, Sparkle's: no Prev); Pool's any
+// top past 0
+bool sl_prev_shown()
+{
+    if (pool_files()) return sl.top > 0;
+    int lead = 0;
+    while (lead < sl.n && !sl.id[lead]) ++lead;
+    return sl.top > lead;
 }
 
 // "NAME can memorize:" and the counts a kind (cleric, druid, magic-user)
@@ -10014,8 +10038,8 @@ void draw_counts(pic::Canvas& c)
     mw(profile::kCanMemorize, w1, sizeof w1);
     // (Secret: no "NAME can memorize:" - the kinds from row 18)
     int row = 18;
-    if (w1[0] && (d->prof->magic.heading_word || pool_files())) {
-        // (Gateway, Pool: the name on row 18, "can memorize:" under it - DOSBox)
+    if (w1[0] && (d->prof->magic.heading_word || pool_files() || curse_game())) {
+        // (Gateway, Pool, Curse: the name on row 18, "can memorize:" under it - DOSBox)
         char nm[20];
         ch.name(nm, sizeof nm);
         put(c, nm, 1, 18, ch.npc() ? 10 : 11);
@@ -10032,8 +10056,12 @@ void draw_counts(pic::Canvas& c)
     // Magic-User - the god's specials left, shown for a cleric whose god
     // gives any, or while some are left; GAME.OVR 0xEFA4 / 0xF000)
     const bool specials = d->prof->magic.words[profile::kSpecialSpells] != 0;
-    for (int kk = 0; kk < 4; ++kk) {
-        if (kk == 2) {
+    // (the Dark Queen's line after Magic-User's - DQK.EXE 0x4510B's kinds
+    // 0-3: cleric, druid, magic-user, special; DOSBox)
+    static const int kOrder[4] = {0, 1, 4, 2}, kQueenOrder[4] = {0, 1, 2, 4};
+    for (int ko = 0; ko < 4; ++ko) {
+        const int kk = (hl() ? kQueenOrder : kOrder)[ko];
+        if (kk == 4) {
             const int sr = specials ? magic::special_room(ch, t) : 0;
             if (specials && row <= 22 &&
                 ((ch.level(classes::Cleric) > 0 && ch.ext[party::kExtGod] != 6) || sr > 0)) {
@@ -10046,7 +10074,7 @@ void draw_counts(pic::Canvas& c)
             }
             continue;
         }
-        const int k = kk < 2 ? kk : 2;
+        const int k = kk;
         bool any = false;
         for (int lv = 1; lv <= t.slot_levels(); ++lv)
             if (classes::slots(ch, k, lv)) any = true;
@@ -10084,7 +10112,8 @@ void draw_spells(pic::Canvas& c)
 {
     c.clear(0);
     layout::outer(c, d->tables, d->frame_tiles);
-    if (gateway() && sl.learning) layout::bar(c, d->tables, d->frame_tiles, 2);    // (its frame GAME.OVR 0x4C43D)
+    // (its frame GAME.OVR 0x4C43D; Curse's "to Memorize" window too - DOSBox)
+    if ((gateway() || curse_game()) && sl.learning) layout::bar(c, d->tables, d->frame_tiles, 2);
     // (Pool: its spell lists open a window rows 3 - 15 / 22 under the
     // heading - ovr23 +0x151 with ovr3f1 +0x2E8: a bar at row 2; DOSBox,
     // training's "Spells to Choose From")
@@ -10149,10 +10178,12 @@ void draw_spells(pic::Canvas& c)
             else put(c, line, 1, row, ink);
             continue;
         }
-        if ((gateway() || pool_files()) && sl.learning) {
-            // (Gateway, Pool: "*" before a spell to memorize; lit while it's
-            // shown first)
-            snprintf(line, sizeof line, " *%s", spell_name(sl.id[i]));
+        if (mem_preview() && sl.learning) {
+            // (Pool, Curse, Secret, Gateway, Champions: "*" before a spell to
+            // memorize; lit while it's shown first; with its count but Pool's -
+            // "*SLEEP (3)", "*RESIST COLD (2)"; DOSBox)
+            if (sl.count[i] > 1) snprintf(line, sizeof line, " *%s (%d)", spell_name(sl.id[i]), sl.count[i]);
+            else snprintf(line, sizeof line, " *%s", spell_name(sl.id[i]));
             if (i == sl.sel && gw_preview >= 0) {
                 c.fill(2 * 8, row * 8, static_cast<int>(strlen(line) - 1) * 8, 8, 15);
                 font::draw_text(c, d->font, line + 1, 2, row, 0, -1);
@@ -10170,7 +10201,9 @@ void draw_spells(pic::Canvas& c)
     if (!sl.learning && !sl.casting && !sl.scrolls && !sl.choosing && !sl.viewing && sl.reading < 0) {
         // (Pool: its memorize window ends at row 15, the counts under a bar
         // - ovr23 +0x12A; DOSBox)
-        if (pool_files()) layout::bar(c, d->tables, d->frame_tiles, 16);
+        // (Curse's and Secret's too - DOSBox, Ledera's / Dominic's grimoire)
+        if (pool_files() || curse_game() || d->prof->game == games::Game::SecretOfTheSilverBlades)
+            layout::bar(c, d->tables, d->frame_tiles, 16);
         if (gateway()) {
             // (Gateway: the counts boxed off, joints at rows 14, 15, 17, 18 -
             // its frame routine GAME.OVR 0x4C12C; DOSBox)
@@ -10198,7 +10231,7 @@ void draw_spells(pic::Canvas& c)
         else if (sl.choosing) cw(profile::kLearnKey, k1, sizeof k1);
         else mw(profile::kMemorizeKey, k1, sizeof k1);
         // (the Dark Queen's choosing has Exit too: "Learn Exit")
-        snprintf(keys, sizeof keys, "%s%s%s%s", k1, sl.top + rows < sl.n ? d->w_next : "", sl.top > 0 ? d->w_prev : "",
+        snprintf(keys, sizeof keys, "%s%s%s%s", k1, sl.top + rows < sl.n ? d->w_next : "", sl_prev_shown() ? d->w_prev : "",
                  sl.choosing && !hl() ? "" : d->w_exit);
         text::build(menu, prompt, keys);
         menu.selected = 0;
@@ -10226,8 +10259,8 @@ void confirm_memorize(pic::Canvas& c, int word)
     sl.viewing = false;
     build_lines(ids, n);
     screen = Screen::SpellList;
-    if ((gateway() || pool_files()) && gw_preview < 0) {
-        // Gateway (Pool too - DOSBox): the list first with its last spell lit and only Exit,
+    if (mem_preview() && gw_preview < 0) {
+        // Gateway (Pool, Curse too - DOSBox): the list first with its last spell lit and only Exit,
         // then the question (its memorize overlay, GAME.OVR 0x1EC90 +0x9C2:
         // the list routine seg 0xC0 entry 0x5C in its mode 5; DOSBox)
         gw_preview = word;
@@ -10402,7 +10435,7 @@ void learn_tap(char k, pic::Canvas& c)
         return;
     }
     if (k == 'N' && sl.top + list_rows() < sl.n) sl_page(1);
-    else if (k == 'P' && sl.top > 0) sl_page(-1);
+    else if (k == 'P' && sl_prev_shown()) sl_page(-1);
     else if (k != 'E' || !hl()) return;     // (the Dark Queen's Exit: the list again - a spell must be picked)
     draw_spells(c);
 }
@@ -10426,7 +10459,7 @@ void scribe_tap(char k, pic::Canvas& c)
         return;
     }
     if (k == 'N' && sl.top + list_rows() < sl.n) sl_page(1);
-    else if (k == 'P' && sl.top > 0) sl_page(-1);
+    else if (k == 'P' && sl_prev_shown()) sl_page(-1);
     else return;
     draw_spells(c);
 }
@@ -10512,7 +10545,7 @@ void spells_tap(int x, int y, pic::Canvas& c)
     if (sl.viewing) {
         // View Character's Spells: only paged through
         if (k == 'N' && sl.top + list_rows() < sl.n) sl_page(1);
-        else if (k == 'P' && sl.top > 0) sl_page(-1);
+        else if (k == 'P' && sl_prev_shown()) sl_page(-1);
         else if (k == 'E') {
             sl.viewing = false;
             end_magic();
@@ -10529,7 +10562,7 @@ void spells_tap(int x, int y, pic::Canvas& c)
         if (k == 'C' && sl.sel >= 0) fight_spell_chosen(sl.id[sl.sel], c);
         else if (k == 'E') fight_spell_chosen(0, c);
         else if (k == 'N' && sl.top + list_rows() < sl.n) sl_page(1);
-        else if (k == 'P' && sl.top > 0) sl_page(-1);
+        else if (k == 'P' && sl_prev_shown()) sl_page(-1);
         else return;
         if (screen == Screen::SpellList) draw_spells(c);
         return;
@@ -10546,7 +10579,7 @@ void spells_tap(int x, int y, pic::Canvas& c)
         if (k == 'C' && sl.sel >= 0) choose_spell(sl.id[sl.sel], c);
         else if (k == 'E') cast_done(c);
         else if (k == 'N' && sl.top + list_rows() < sl.n) sl_page(1);
-        else if (k == 'P' && sl.top > 0) sl_page(-1);
+        else if (k == 'P' && sl_prev_shown()) sl_page(-1);
         else return;
         if (screen == Screen::SpellList && k != 'C') draw_spells(c);
         return;
@@ -11260,7 +11293,7 @@ void draw_whom(pic::Canvas& c)
         draw_frame(c);
         draw_view(c);
         // (Darkness, the Dark Queen, Pool: the camp's picture in the view again - DOSBox)
-        if (camping && (darkness_files() || hl() || pool_files()) && d->prof->variant.camp_pic) draw_own_pic(camp_pic());
+        if (camping && (darkness_files() || hl() || pool_files()) && prof_camp_pic()) draw_own_pic(camp_pic());
         draw_panel(c);
         text::clear(c, text::kTextArea);
         dirty_rows(17, 22);
@@ -11759,7 +11792,7 @@ void reading_tap(char k, pic::Canvas& c)
         return;
     }
     if (k == 'N' && sl.top + list_rows() < sl.n) sl_page(1);
-    else if (k == 'P' && sl.top > 0) sl_page(-1);
+    else if (k == 'P' && sl_prev_shown()) sl_page(-1);
     else return;
     draw_spells(c);
 }
@@ -17525,7 +17558,7 @@ int cheat_pic_rank(int pic, int head, bool normal)
 {
     const auto& v = d->prof->variant;
     // (never the game's own camp / treasure pictures - code shared by many places)
-    if (head == 0xFF && v.camp_pic && (pic == v.camp_pic || pic == v.treasure_pic)) return -1;
+    if (head == 0xFF && prof_camp_pic() && (pic == prof_camp_pic() || pic == prof_treasure_pic())) return -1;
     const int big = v.bigpic_from ? v.bigpic_from : 0x78;
     return (head != 0xFF || pic < big ? 2 : 0) + (normal ? 1 : 0);
 }
@@ -19294,7 +19327,7 @@ bool nav_list(int step, pic::Canvas& c)
         sl.sel = i;
         while (sl.sel < sl.top) sl.top = sl.top >= rows ? sl.top - rows : 0;
         while (sl.sel >= sl.top + rows) sl.top += rows;
-        if (pool_files() && sl.top > sl.n - rows) sl.top = sl.n > rows ? sl.n - rows : 0;
+        if (sl.top > sl.n - rows) sl.top = sl.n > rows ? sl.n - rows : 0;
         draw_spells(c);
         keep_menu_choice(keep, c);
         return true;

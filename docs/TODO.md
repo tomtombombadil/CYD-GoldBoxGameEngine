@@ -19,6 +19,32 @@ the Project as claude/TODO.md.
       Found, NOT fixed yet: the original lists Celeste's god-given spell under "SPECIAL" (Charm Person,
       "Special : 1" in the counts) - the engine shows neither, so a Death Knights character can't memorize
       its special spells (Claude: next). Darkness / Treasures (the same family) not looked at.
+- [ ] v0.210.8 (Tom, 2026-11-18: "Check the other games spells and memorizations. Don't leave anything
+      out."). Every game's memorize screens run side by side in DOSBox and the engine (save A with the
+      memorized spells cleared, every caster: lists, counts, Next / Prev, the list before memorizing, the
+      question, Rest). Fixed: (1) the Dark Queen's god-given spells couldn't be memorized at all - now a
+      cleric's (god 4 three, god 6 none, else one, DQK.EXE 0x44AD8), on a "Special :" line after Magic-User;
+      its question "spells OK? Keep Exit" (was Yes No); (2) a special's rest time: Champions / Death Knights
+      count it as 1st level, the Dark Queen by its own table (57 4th, 59 2nd, 61 3rd, else 1st - DQK 0x6CC9;
+      DOSBox 6:45 / 4:15) - it was 0, so Rest did nothing for a special alone; (3) Next goes no further than the
+      last full page and Prev shows only past the list's first heading, every game (DOSBox: Curse, Darkness,
+      Treasures, Champions - the last page was a lone line before); (4) Curse, Secret, Gateway, Champions: the
+      list to memorize first with Exit alone, joined "*SLEEP (3)", then "Memorize these spells?" in yellow
+      (PoolRad's unjoined, as its original); Darkness / Treasures: "spells OK? Keep Exit" as Death Knights';
+      (5) Curse's memorize window: the bar at row 16, the name on row 18, "can memorize:" under it; Secret's
+      bar at row 16; (6) Curse's camp: its picture (PIC 29) and "The party makes camp..." (the word's address
+      was 4 bytes off), its treasure picture PIC 1 (coab's LoadPic, as PoolRad's); Gateway's camp words too.
+      Same as the originals already: every caster's spell list and counts in all nine games (PoolRad 4,
+      Curse 3, Secret 2, Darkness 5, Gateway 2, Treasures 4, Champions 2, Death Knights 3, Queen 5 casters),
+      Rest memorizes in all nine. Differences left on purpose: the highlight starts on a list's first spell
+      (the originals' last - SPEC 12). Claude, open: the Dark Queen's spell lists scroll a line at a time with
+      a scroll bar and 10 rows, no Next / Prev (the engine pages with Next / Prev - its other lists too; a
+      question for Tom below); the item / shop lists' Next likely clamps the same way (coab's shared list
+      routine) - not changed, not checked; navcheck's "Save Which Game" N3 (Curse, Secret) fails before and
+      after this change - to look at.
+- [ ] Tom (question, 2026-11-18): the Dark Queen's original lists (spells, and probably items / shops)
+      scroll a line at a time with a scroll bar on the right and no Next / Prev words. Keep the engine's
+      Next / Prev pages there (easier with a stylus), or copy the scroll bar (its arrows tappable)?
 - [ ] v0.210.7 (Tom, 2026-11-18 13:43: "Fix the special spell slots, and test the other games ... magic items,
       classes, Gods, whatever ... verify ... compared to DOSbox"). Fixed, from each original's code: (1) the
       specials (spells 101-107, "Special") of Champions and Death Knights - a cleric's, god 4 three, god 6 none,

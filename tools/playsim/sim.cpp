@@ -286,7 +286,7 @@ static void item_ops(const char* ops)
 // 'v' / '^' the cursor keys Down / Up, '[' gives the selected one a magic-user's scroll of 3 spells, ']' lists their items and spell book,
 // '{' a readied potion of healing, '}' a readied wand of magic missiles, '(' a readied bow and 20 arrows,
 // '|' the Quick Actions page opened, '<' / '>' the cursor keys Left / Right, ',' Select (each a snapshot qa<n>),
-// '*' Esc (play::back), 'Z' everyone's memorized spells forgotten, @X a tap on the menu word X (a digit too: "1st-color"); CAMPTICK=ms the time after
+// '<' '>' Left / Right, ';' Select (play::nav), '*' Esc (play::back), 'Z' everyone's memorized spells forgotten, @X a tap on the menu word X (a digit too: "1st-color"); CAMPTICK=ms the time after
 // each op (5000)
 static void run_ops(const char* q)
 {
@@ -335,6 +335,8 @@ static void run_ops(const char* q)
             printf("  %c: spell list sel %d top %d of %d\n", *q, play::sl.sel, play::sl.top, play::sl.n);
         }
         else if (*q >= '0' && *q <= '9') play::plist.index = *q - '0';
+        else if (*q == '<' || *q == '>') play::nav(*q == '<' ? play::Nav::Left : play::Nav::Right, C);
+        else if (*q == ';') { int x, y; if (play::nav_point(&x, &y)) play::tap(x, y, C); }    // (';' Select: a tap on the highlighted word / line)
         else if (*q == '*') play::back(C);
         else if (*q == '@' && q[1]) tap_word(*++q);     // (@X: the word X, digits too)
         else tap_word(*q);
@@ -1508,7 +1510,13 @@ int main(int argc, char** argv)
     if (getenv("CHEATHURT"))        // CHEATHURT=1: everyone at 1 hit point first (the Healer's / Sanctuary's checks)
         for (int i = 0; i < play::pt->count; ++i) play::pt->m[i].rec[0x1A4] = 1;
     if (getenv("CHEAT")) {          // CHEAT=n: the Cheats tab's 0 Healer, 1 Merchant, 2 Sanctuary (then CAMPRUN's ops)
-        const bool ok = play::cheat_open(atoi(getenv("CHEAT")), C);
+        bool ok = play::cheat_open(atoi(getenv("CHEAT")), C);
+        if (!ok && getenv("CHEATFORCE")) {      // (CHEATFORCE=1: opened wherever the start stopped - a script's wait, the Dark Queen's town)
+            printf("  (cheat not ready: screen %d waiting %d wait %d 4BE6 %d walking %d)\n", (int)play::screen, (int)play::waiting,
+                   (int)play::vm->wait(), play::vm->get(0x4BE6), (int)play::walking());
+            play::vm->set(0x4BE6, 0);         // (a town's word that keeps the cheats off - test only)
+            ok = play::cheat_open(atoi(getenv("CHEAT")), C);
+        }
         settle(0, 3000);
         printf("  cheat %s: %s, screen %d menu [%s%s], %d goods\n", getenv("CHEAT"), ok ? "open" : "not ready",
                (int)play::screen, play::menu.prompt, play::menu.s, play::ground ? play::goods_count() : -1);
