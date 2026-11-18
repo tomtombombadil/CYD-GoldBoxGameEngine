@@ -1475,6 +1475,32 @@ void apply_cure(party::Character& c, Cure cure, const CureFacts& f, create::Dice
         c.rec[kHp] = 1;
         c.rec[kHealth] = party::Okay;
         c.rec[kInCombat] = 1;
+        // The original's price: a point of Constitution and a cut of the
+        // maximum hit points (AD&D 1E Rules: none - Tom, 2026-11-17)
+        if (f.temple_raise && !adnd(kAdndRaise)) {
+            uint8_t* r = c.rec;
+            if (f.temple_raise == 2 && r[0x18] > 0) --r[0x18];       // (PoolRad's one Constitution)
+            if (r[0x19] > 0) --r[0x19];
+            const int con = r[0x19];
+            int loss = r[kHpMax] > r[0x12C] ? (r[kHpMax] - r[0x12C]) & 0xFF : 0;
+            if (con < 14) break;
+            int w = 0;
+            for (int k = 0; k < 8; ++k) {
+                const int lv = static_cast<int8_t>(r[0x109 + k]);
+                if (lv <= 0) continue;
+                if (k == 2) w += lv * (con - 14);
+                else if (con > 15) w += lv * 2;
+                else w += lv;
+                w &= 0xFF;
+            }
+            if (w > 0) loss = (loss / w) & 0xFF;
+            bool cut = con < 17 || static_cast<int8_t>(r[0x10B]) > 0;
+            if (!cut) {
+                if (f.temple_raise == 1) cut = static_cast<int8_t>(r[0x10B]) > static_cast<int8_t>(r[0xE6]);
+                else if (f.temple_raise == 3) cut = r[0x74] == 7 && static_cast<int8_t>(r[0x113]) > 0;
+            }
+            if (cut) r[kHpMax] = static_cast<uint8_t>(r[kHpMax] - loss);
+        }
         break;
     case kRemoveCurse:
         if (remove_affects(c, f.curse)) break;
@@ -1680,7 +1706,8 @@ const AdndInfo kAdnd[kAdndCount] = {
      "version wards those next to its holder. The originals keep only the +2 to the holder's saves."},
     {kAdndRaise, "Raising the Dead", kAll,
      "Raise Dead and Resurrection take no Constitution from the one raised - AD&D 1st edition has no such "
-     "cost. The originals take a point for Raise Dead, by spell or at a temple."},
+     "cost. The originals take a point for Raise Dead, by spell or at a temple (where some take maximum hit "
+     "points too)."},
 };
 } // namespace
 

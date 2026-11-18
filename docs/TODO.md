@@ -6,6 +6,24 @@ to the bottom with their version, then drop off after a while. Synced to
 the Project as claude/TODO.md.
 
 ## Tom
+- [x] v0.210.1 (Tom, 2026-11-18, four reports): (1) **Modify Character** - a Krynn knight's 18(xx) went to
+      plain 18 (the knight wasn't a fighter type: every original's code - Curse 0x22F40, Champions 0x2332B,
+      Death Knights 0x17F24, the Dark Queen 0x3E30B - gives 18/xx to its fighter types, the Krynn knight
+      too; and 17 -> 18 comes first, then 18(01) - the engine went 17 -> 18(01)); Constitution and hit points
+      take ONE bound at a time as the originals (Con up: raised to the least only; Con down / HP up: no more
+      than the most; HP down: no less than the least) - Con 17 -> 18 no longer pulls a premade's 134 to the
+      most; the Dark Queen's own bounds (0x3DF5E least, ovl 0xB +0x354B most; Champions' were used - 96 for
+      a knight past his dice) - Roland-type knight 11 at Con 18: most 144; its Modify hit points drawn where
+      its View draws them (a column left, a grey digit after). Checks: toggles M6-M9 in all nine games.
+      Found: the Dark Queen's most gives a FIGHTER d8 a level below the dice (its code shares the neutral
+      cleric's line) - kept as the original; a Game Fix candidate. (2) **Death Knights' start camp** (PROGRAM
+      9 over its region map): the camp's own screen - PIC 59 and the party list (DOSBox), the map back when
+      it breaks; Magic / View screens no longer stay up. Champions' overland camp the same (Krynn only;
+      Curse's wilderness camp over its map not changed - to check in DOSBox). (3) **Death Knights' fight
+      icons**: colour 8 drawn black (the nightmares' bodies, every icon's outlines - DOSBox, the first
+      fight); the field's grey kept. (4) The moving fighters' "corrupted" squares: not reproduced in the
+      playsim (canvas and LCD frames identical, every step a full redraw) - most likely the nightmares'
+      bodies, grey on the grey ground, looked like broken tiles; Tom: look again.
 - [x] v0.208.1 (the PortMaster session's Treasures play-through, 2026-11-17): Treasures' scripts that wait for
       a spell (Llorkh's dungeon, the two Siulajias: "Cast") never heard of one - the original puts the spell
       chosen in the Cast list into game byte 0x4A (script word 0x4B) and, when the script had set it to 0xFF,
@@ -68,9 +86,13 @@ the Project as claude/TODO.md.
       the set back). Found and fixed: games masks short of the code (Secret's Own List, Cleric's XP, Remove
       Curse, Power Word Blind / Kill, Dragon Fear, Bulette - Treasures / Queen / Secret too), masks too wide
       (Hit Points a Level, Harm, Paladins' Casting), Treasures' flask of oil never burned (its type 87).
-      Left without an automated check: Monster Summoning (Darkness, code read only), Companion Views / Large
-      Icon (board screens). Tom: try a few on a board.
-- [ ] Raising the Dead at Curse's / PoolRad's / Gateway's temple (found by the toggle checks, v0.210.0): the
+      v0.210.1: Monster Summoning (matrix, Darkness), Bounced Bolt (matrix, all nine), Magic Items (X19,
+      PoolRad), the temple's Raise Dead (X18, all nine) - each failing with its switch held off; Companion
+      Views (4.0" QEMU: the panel's tap cycles Map / Party on, nothing off) and Large Icon (5.0" QEMU: the
+      editor's big preview on, none off) by screenshots. Host tests only still: Race Checks, Who Has It
+      Memorized, Charm After a Fight, Script Clock, Healing the Dead, DAMAGE Saves, Age with Time (script /
+      fight code the host tests run with each game's variant).
+- [x] (v0.210.1: as their GAME.OVR routines, check X18 in every game) Raising the Dead at Curse's / PoolRad's / Gateway's temple (found by the toggle checks, v0.210.0): the
       engine's Curse-type temple Raise (rules::apply_cure kRaiseDead) takes no Constitution with the 1E rule
       off either, while the switch's help says the originals take a point at a temple too. Secret's and
       Darkness's temples do (their facts); read Curse's / PoolRad's temple routine in GAME.OVR and follow it.

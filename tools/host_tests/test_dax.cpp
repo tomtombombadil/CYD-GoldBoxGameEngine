@@ -6451,7 +6451,7 @@ static void test_create()
     CHECK(create::con_hp_adj(a, t) == -2);
 
     // Modify Character: only as made (25000 xp); stats within limits, the
-    // fighter's 18 going on into 18/01 .. 18/00, hit points within bounds
+    // fighter's 18 going on into 18/01 .. 18/00 (17 -> 18 first), hit points within bounds
     {
         party::Character& m = b;
         auto set = [&](int i, int v) { m.rec[0x10 + i * 2] = m.rec[0x11 + i * 2] = static_cast<uint8_t>(v); };
@@ -6461,10 +6461,10 @@ static void test_create()
         m.rec[0x127] = 0xA8;
         CHECK(create::can_modify(m) && m.exp() == 25000);
         set(0, 17); set(6, 0);
+        create::modify_stat(m, t, f, 0, 1);                        // (17 -> 18 first: GAME.OVR 0x22F40)
+        CHECK(m.stat(0) == 18 && m.str00() == 0);
         create::modify_stat(m, t, f, 0, 1);
         CHECK(m.stat(0) == 18 && m.str00() == 1);
-        create::modify_stat(m, t, f, 0, 1);
-        CHECK(m.stat(0) == 18 && m.str00() == 2);
         set(6, 100);
         create::modify_stat(m, t, f, 0, 1);
         CHECK(m.str00() == 100);

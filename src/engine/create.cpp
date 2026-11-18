@@ -1882,8 +1882,93 @@ static int dk_hp_most(const party::Character& c, const classes::Tables& t, const
     return total & 0xFF;
 }
 
+// The Dark Queen's Modify bounds (DQK.EXE: the least 0x3DF5E, the most ovl
+// 0xB +0x354B = file 0x600FB), its classes in its order (cleric, knight,
+// fighter, paladin, ranger, magic-user, thief) with its Constitution figure
+// (queen_con; the most its own - below). Least: a point a level (rangers and knights one more) and the
+// figure times the levels below the last hit die; past it its fixed figures
+// (cleric 2 a level + 9, fighter / paladin 3 + 9, ranger 2 + 11, magic-user
+// 1 + 11, thief 2 + 10, the knight none) and the figure times the dice; the
+// figures' sum added when above 0, over the classes. Most: each die at its
+// highest with the figure (cleric d8 - a good god's a level more -, knight
+// d10 a level more, FIGHTER d8 (its code's - the fighter shares the
+// neutral cleric's line), paladin d10, ranger d8 + 1, magic-user d4, thief
+// d6); past the dice the figure times the dice less one and its fixed
+// figures (cleric 2 a level + 72, knight 2 + 100, fighter / paladin 3 + 90,
+// ranger 2 + 88, magic-user 1 + 44, thief 2 + 60); a former class's levels
+// in its place; over the classes held
+static int queen_hp_least(const party::Character& c, const classes::Tables& t)
+{
+    static const int kOrder[7] = {classes::Cleric, classes::Monk, classes::Fighter, classes::Paladin,
+                                  classes::Ranger, classes::MagicUser, classes::Thief};
+    int sum = 0, fig = 0, n = 0;
+    for (int qi = 0; qi < 7; ++qi) {
+        const int k = kOrder[qi], lv = c.level(k), hd = t.max_hit_dice(k);
+        if (lv <= 0) continue;
+        ++n;
+        const int cf = static_cast<int8_t>(queen_con(c, t, k));
+        if (lv < hd) {
+            sum += lv + (qi == 4 || qi == 1);
+            fig += cf * lv;
+            continue;
+        }
+        const int x = (lv - hd + 1) & 0xFF;
+        static const int kPer[7] = {2, 0, 3, 3, 2, 1, 2}, kAdd[7] = {9, 0, 9, 9, 11, 11, 10};
+        if (qi != 1) sum += x * kPer[qi] + kAdd[qi];
+        fig += cf * (hd - 1);
+    }
+    if (!n) return 1;
+    const int v = fig > 0 ? (sum + fig) / n : sum / n;
+    return v & 0xFF;
+}
+static int queen_hp_most(const party::Character& c, const classes::Tables& t)
+{
+    static const int kOrder[7] = {classes::Cleric, classes::Monk, classes::Fighter, classes::Paladin,
+                                  classes::Ranger, classes::MagicUser, classes::Thief};
+    const uint8_t* r = c.rec;
+    int sum = 0, n = 0;
+    for (int qi = 0; qi < 7; ++qi) {
+        const int k = kOrder[qi], lv = c.level(k), former = r[0x111 + k], hd = t.max_hit_dice(k);
+        if (!((lv > 0 && lv > r[0xE6]) || former > 0)) continue;
+        // (its own figure here - 0x77E:0x20CE: 3 -2, 4-6 -1, 7-14 0, 15 +1,
+        // 16 +2, 17-19 +2 or for knights / fighters / paladins / rangers
+        // Con - 14; past 19 the code leaves it unset - taken as 17-19's)
+        const int con = stat_full(c, 4);
+        int cf = con <= 3 ? -2 : con <= 6 ? -1 : con <= 14 ? 0 : con == 15 ? 1 : con == 16 ? 2 : 2;
+        if (con >= 17 && qi >= 1 && qi <= 4) cf = con - 14;
+        int L;
+        if (former > 0) {
+            L = former;
+        } else {
+            ++n;
+            L = lv;
+        }
+        if (L < hd) {
+            switch (qi) {
+            case 0: sum += (c.ext[party::kExtGod] <= 4 ? L + 1 : L) * (cf + 8); break;
+            case 1: sum += (L + 1) * (cf + 10); break;
+            case 2: sum += L * (cf + 8); break;
+            case 3: sum += L * (cf + 10); break;
+            case 4: sum += L * (cf + 8) + 1; break;
+            case 5: sum += L * (cf + 4); break;
+            default: sum += L * (cf + 6); break;
+            }
+        } else {
+            const int x = (L - hd + 1) & 0xFF;
+            static const int kFig[7] = {9, 10, 9, 9, 11, 11, 10}, kPer[7] = {2, 2, 3, 3, 2, 1, 2},
+                             kAdd[7] = {0x48, 0x64, 0x5A, 0x5A, 0x58, 0x2C, 0x3C};
+            sum += cf * kFig[qi] + x * kPer[qi] + kAdd[qi];
+        }
+        sum &= 0xFFFF;
+    }
+    if (n > 0) sum = sum / n;
+    else if (r[0xE6] == 0) sum = 0;
+    return sum & 0xFF;
+}
+
 int hp_least(const party::Character& c, const classes::Tables& t, const Facts& f)
 {
+    if (t.lay.queen) return queen_hp_least(c, t);
     if (t.lay.dk) return dk_hp_least(c, t);
     if (t.lay.secret) return secret_hp_least(c);
     if (t.lay.krynn) return krynn_hp_least(c);
@@ -1904,6 +1989,7 @@ int hp_least(const party::Character& c, const classes::Tables& t, const Facts& f
 
 int hp_most(const party::Character& c, const classes::Tables& t, const Facts& f)
 {
+    if (t.lay.queen) return queen_hp_most(c, t);
     if (t.lay.dk) return dk_hp_most(c, t, f);
     if (t.lay.secret) return secret_hp_most(c, t);
     if (t.lay.krynn) return krynn_hp_most(c, t);
@@ -1936,16 +2022,45 @@ int hp_most(const party::Character& c, const classes::Tables& t, const Facts& f)
 }
 
 int g_modify_keep_hp = 0;
+constexpr int kConUp = 0x100, kConDown = -0x100;   // (modify_hp: Constitution went up / down)
 
 void modify_hp(party::Character& c, const classes::Tables& t, const Facts& f, int dir)
 {
+    // The originals' (Curse GAME.OVR 0x231FC, Pool create_facts 5, the Dark
+    // Queen 0x3F0E0 / 0x3E8EE): one bound at a time - up: a point more, then
+    // no more than the most; down: a point less, then no less than the
+    // least. dir 0 (Constitution changed): up - raised to the least only,
+    // down (dir 0x100 | -1 below: modify_stat) - lowered to the most only.
+    // A figure past the other bound stays (a premade or trained character's)
     uint8_t* r = c.rec;
-    int hp = r[kHpMax] + (dir > 0 ? 1 : dir < 0 ? -1 : 0);
-    const int lo = hp_least(c, t, f);
-    int hi = hp_most(c, t, f);
-    if (hi < g_modify_keep_hp) hi = g_modify_keep_hp;
-    if (hp > hi) hp = hi;
-    if (hp < lo) hp = lo;
+    int hp = r[kHpMax];
+    if (dir > 0 && dir != kConUp) ++hp;
+    else if (dir < 0 && dir != kConDown) --hp;
+    if (dir > 0) {
+        int hi = hp_most(c, t, f);
+        if (hi < g_modify_keep_hp) hi = g_modify_keep_hp;
+        if (dir == kConUp) {
+            const int lo = hp_least(c, t, f);
+            if (hp < lo) hp = lo;
+        } else if (hp > hi) {
+            hp = hi;
+        }
+    } else if (dir < 0) {
+        if (dir == kConDown) {
+            int hi = hp_most(c, t, f);
+            if (hi < g_modify_keep_hp) hi = g_modify_keep_hp;
+            if (hp > hi) hp = hi;
+        } else {
+            const int lo = hp_least(c, t, f);
+            if (hp < lo) hp = lo;
+        }
+    } else {
+        const int lo = hp_least(c, t, f);
+        int hi = hp_most(c, t, f);
+        if (hi < g_modify_keep_hp) hi = g_modify_keep_hp;
+        if (hp > hi) hp = hi;
+        if (hp < lo) hp = lo;
+    }
     r[kHpMax] = static_cast<uint8_t>(hp);
     r[kHp] = r[kHpMax];
 }
@@ -1963,7 +2078,11 @@ void modify_stat(party::Character& c, const classes::Tables& t, const Facts& f, 
         lo = t.u8(static_cast<uint16_t>(lim + 4 + i * 2));
         hi = t.u8(static_cast<uint16_t>(lim + 5 + i * 2));
     }
-    const bool strong = c.level(classes::Fighter) || c.level(classes::Ranger) || c.level(classes::Paladin);
+    // (the fighter types: fighters, paladins, rangers - and the Krynn games'
+    // knights: Champions' fighter / knight / ranger, Death Knights' and the
+    // Dark Queen's all four; Tom, 2026-11-18: a knight's 18(8x) lost)
+    const bool strong = c.level(classes::Fighter) || c.level(classes::Ranger) || c.level(classes::Paladin) ||
+                        (t.lay.krynn && c.level(classes::Monk));
     int v = stat_full(c, i);
     const int was = v;
     if (dir > 0) {
@@ -1971,21 +2090,15 @@ void modify_stat(party::Character& c, const classes::Tables& t, const Facts& f, 
         if (v > hi) v = hi;
         if (v < lo) v = lo;
         set_stat(c, i, v);
-        if (i == 0 && t.lay.pool) {
-            // Pool's program (ovr17 +2581): past the maximum, a fighter's
-            // 18/xx goes up instead (so 17 -> 18 first, then 18/01)
+        if (i == 0) {
+            // Every original (Pool ovr17 +2581, Curse GAME.OVR 0x22F40,
+            // Champions 0x2332B, Death Knights 0x17F24, the Dark Queen
+            // 0x3E30B): past the race's maximum, at 18, a fighter type's
+            // 18/xx goes up instead - so 17 -> 18 first, then 18/01 ... the
+            // race's and sex's top
             if (was + 1 > hi && was + 1 > 18 && strong) {
                 const int emax = t.u8(static_cast<uint16_t>(lim + 4 + sex));
                 if (stat_full(c, 6) < emax) set_stat(c, 6, stat_full(c, 6) + 1);
-            }
-        } else if (i == 0) {
-            if (v == 18 && strong) {
-                int e = stat_full(c, 6) + 1;
-                const int emax = t.u8(static_cast<uint16_t>(lim + 4 + sex));
-                if (e > emax) e = emax;
-                set_stat(c, 6, e);
-            } else {
-                set_stat(c, 6, 0);
             }
         }
     } else if (i == 0 && stat_full(c, 6) > 0) {
@@ -2003,7 +2116,7 @@ void modify_stat(party::Character& c, const classes::Tables& t, const Facts& f, 
         if (v > hi) v = hi;
         set_stat(c, i, v);
     }
-    if (i == 4) modify_hp(c, t, f, 0);              // the hit points' bounds follow Constitution
+    if (i == 4) modify_hp(c, t, f, dir > 0 ? kConUp : kConDown);     // the hit points' bound follows Constitution
 }
 
 void modify_done(party::Character& c, const classes::Tables& t, const Facts& f)

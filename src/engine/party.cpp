@@ -179,13 +179,14 @@ constexpr uint16_t kDkkWizExt[][3] = {
 // out): stats (own / in use; Str00 0x84 in use, 0x85 own - its Strength
 // group reads 0x84, queen_facts_4.md 6), THAC0 base, age, HP max, icon size and
 // saves, movement and the highest level, level vs undead, thief skills, NPC,
-// steel gems jewelry (Darkness's places), former levels, sex, alignment,
+// steel gems jewelry (Darkness's places), former levels (0x92: the level a
+// changed class must pass - Curse's 0xE6; DQK.EXE 0x8DA8, its Modify bounds), sex, alignment,
 // experience, xp award (a monster's), class flags and HP rolled, the icon
 // (CBODY's: in the body's place - queen_facts_3.md 6), flags, hands, save bonus, the item count,
 // status, hostile, quick fight, the fight's figures to movement
 constexpr uint16_t kQueenRuns[][3] = {
     {0x78, 0x10, 12},    {0x84, 0x1C, 1},     {0x85, 0x1D, 1},     {0x87, 0x73, 1},     {0x52, 0x76, 2},
-    {0x89, 0x78, 1},     {0x8A, 0xDE, 6},     {0x90, 0xE4, 2},     {0x5C, 0xE9, 1},     {0x93, 0xEA, 8},
+    {0x89, 0x78, 1},     {0x8A, 0xDE, 6},     {0x90, 0xE4, 3},     {0x5C, 0xE9, 1},     {0x93, 0xEA, 8},
     {0x9B, 0xF7, 1},     {0x4C, 0x103, 2},    {0x4E, 0x105, 4},    {0x60, 0x119, 1},    {0x62, 0x11B, 1},
     {0x44, 0x127, 4},    {0x54, 0x13C, 2},    {0xBF, 0x12B, 2},    {0xC4, 0x142, 1},    {0xCA, 0x185, 2},
     {0x56, 0x187, 2},    {0xC9, 0x14C, 1},    {0x64, 0x195, 1},    {0x66, 0x197, 1},    {0x18B, 0x196, 1},

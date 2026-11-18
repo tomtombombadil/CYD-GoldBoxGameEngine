@@ -596,6 +596,106 @@ void heal_feeble()
            "on kept %d, off kept %d", (int)kept[1], (int)kept[0]);
 }
 
+// ---- Monster Summoning (a Game Fix, Darkness): the reserve's monster comes
+// in next to the caster. A big one (two squares, the second the caster's
+// own) beside it: with the fix it needs both squares free - not answered;
+// off, the original tests the one square - placed there
+void summon_room()
+{
+    if (!play::ml || play::ml->reserve_from < 0) return (void)printf("  (matrix: Monster Summoning - no reserve)\n");
+    const combat::FightSpell* fs = nullptr;
+    for (int i = 0; i < play::d->prof->fight.n_spells && !fs; ++i)
+        if (play::d->prof->fight.spells[i].does == combat::SpellDoes::Summon) fs = &play::d->prof->fight.spells[i];
+    if (!fs) return (void)printf("  (matrix: Monster Summoning - no such spell)\n");
+    combat::Battle& b = play::fg->b;
+    combat::Monster& m = play::ml->m[play::ml->reserve_from];
+    const uint8_t keep_size = m.get(0xDE);
+    const uint8_t plain = (play::vm->get(0x22) & 0xFF) ? 0x17 : 0x45;
+    static uint8_t keep_ground[5][7];
+    for (int y = 0; y < 5; ++y)
+        for (int x = 0; x < 7; ++x) keep_ground[y][x] = b.ground[8 + y][7 + x];
+    int got[2][2];
+    const uint64_t keep = rules::fixes_off();
+    for (int on = 0; on < 2; ++on) {
+        const int n0 = b.n;
+        for (int i = 0; i < b.n; ++i)
+            if (i != A) b.f[i].size = 0;
+        put(A, 0, 10, 10);
+        for (int y = 8; y <= 12; ++y)
+            for (int x = 7; x <= 13; ++x) b.ground[y][x] = 0;
+        b.ground[9][10] = b.ground[10][10] = plain;           // (north: one plain square, then the caster's)
+        for (int k = play::ml->reserve_from; k < play::ml->n; ++k) play::ml->m[k].set(0x195, 9);
+        m.set(0xDE, 2);
+        combat::occupancy(b);
+        rules::set_fixes_off(on ? keep & ~(1ull << rules::kFixSummon) : keep | 1ull << rules::kFixSummon);
+        play::summon(A, *fs);
+        got[on][0] = b.n > n0 ? b.f[b.n - 1].x : -1;
+        got[on][1] = b.n > n0 ? b.f[b.n - 1].y : -1;
+        while (b.n > n0) b.f[--b.n].size = 0;
+        play::fg->pages = 0;
+    }
+    rules::set_fixes_off(keep);
+    m.set(0xDE, keep_size);
+    for (int y = 0; y < 5; ++y)
+        for (int x = 0; x < 7; ++x) b.ground[8 + y][7 + x] = keep_ground[y][x];
+    combat::occupancy(b);
+    expect(P, "Monster Summoning: a two-square monster not put half on the caster (fix on); on its one free square (off - the original)",
+           got[1][0] < 0 && got[0][0] == 10 && got[0][1] == 9, "on at %d,%d; off at %d,%d (-1: not answered)", got[1][0], got[1][1],
+           got[0][0], got[0][1]);
+}
+
+// Bounced Bolt Length (Game Fixes, every game): on the game's own field
+// tables, a bolt from (10,10) aimed at (13,10), range 7, a wall 6 squares out
+// (a ground value of the game's whose move cost is 0xFF), nobody else there.
+// The original (curse_finish_facts.md 2.5): it bounces with 8 more near the
+// caster and hits the caster coming back; with the fix exactly its range -
+// 14, 15, the turn at the wall, 15 .. 11 - nobody hit
+void bolt_len()
+{
+    combat::Battle& b = play::fg->b;
+    if (!b.tables) return (void)printf("  (matrix: Bounced Bolt - no tables)\n");
+    const combat::Tables& t = *b.tables;
+    static uint8_t keep_ground[combat::kH][combat::kW];
+    memcpy(keep_ground, b.ground, sizeof keep_ground);
+    const bool keep_in = b.indoors;
+    int floor_v = -1, wall_v = -1;
+    for (int v = 1; v < 256 && (floor_v < 0 || wall_v < 0); ++v) {
+        b.ground[10][16] = static_cast<uint8_t>(v);
+        const int c = combat::tile(b, t, 16, 10)[0];
+        if (c == 1 && floor_v < 0) floor_v = v;
+        if (c == 0xFF && wall_v < 0) wall_v = v;
+    }
+    if (floor_v < 0 || wall_v < 0) {
+        memcpy(b.ground, keep_ground, sizeof keep_ground);
+        return (void)printf("  (matrix: Bounced Bolt - no floor / wall values)\n");
+    }
+    for (int i = 0; i < b.n; ++i)
+        if (i != A) b.f[i].size = 0;
+    put(A, 0, 10, 10);
+    for (int y = 0; y < combat::kH; ++y)
+        for (int x = 0; x < combat::kW; ++x) b.ground[y][x] = static_cast<uint8_t>(floor_v);
+    b.ground[10][16] = static_cast<uint8_t>(wall_v);
+    b.indoors = true;
+    combat::occupancy(b);
+    int nh[2], end[2], ns[2];
+    const uint64_t keep = rules::fixes_off();
+    for (int on = 0; on < 2; ++on) {
+        rules::set_fixes_off(on ? keep & ~(1ull << rules::kFixBolt) : keep | 1ull << rules::kFixBolt);
+        int hits[16], n = 0;
+        combat::BoltSeg sg[16];
+        nh[on] = combat::bolt_path(b, t, A, 13, 10, 7, true, hits, 16, sg, &n, 16);
+        ns[on] = n;
+        end[on] = n ? sg[n - 1].x1 : -1;
+    }
+    rules::set_fixes_off(keep);
+    memcpy(b.ground, keep_ground, sizeof keep_ground);
+    b.indoors = keep_in;
+    combat::occupancy(b);
+    expect(P, "Bounced Bolt Length: range 7 off a wall 6 out - ends at 11, nobody hit (fix on); the caster hit (off - the original)",
+           nh[1] == 0 && ns[1] == 2 && end[1] == 11 && nh[0] == 1, "on %d hit, %d legs, ends %d; off %d hit, %d legs, ends %d",
+           nh[1], ns[1], end[1], nh[0], ns[0], end[0]);
+}
+
 void darts()
 {
     const int dart = play::d->prof->items.dart;
@@ -1080,6 +1180,8 @@ void run()
     cleric_xp();
     stirge();
     heal_feeble();
+    summon_room();
+    bolt_len();
     images();
     morale_tests();
     prot_evil();

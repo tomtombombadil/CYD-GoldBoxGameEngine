@@ -3093,6 +3093,12 @@ a PC, PortMaster handhelds):
 
 ## 12. Where the engine differs from the original games (Tom, 2026-10-10: keep this list up to date)
 
+- **Modify (every game; v0.210.1)**: no difference now in its steps - the
+  stats, 18/xx (the fighter types, the Krynn knight too; 17 -> 18 first)
+  and the hit points' one-bound-at-a-time rule are the originals'
+  (`create::modify_stat` / `modify_hp`). Kept: the Dark Queen's most bound
+  gives its fighters d8 a level below the dice (DQK.EXE ovl 0xB +0x354B).
+
 Everything here is on purpose; anything else that plays differently from
 the originals is a bug. Engine comforts with a `features.h` switch are
 marked (switch); since v0.72.0 the player can also turn each one off in
@@ -3220,7 +3226,15 @@ the game's Settings (As Original: all of them).
   - **Raising the Dead**: Raise Dead and Resurrection take no Constitution
     (the 1E books have no such cost - Tom). The originals take a point for
     Raise Dead (spell and temple: Secret's, the Darkness-type temples) -
-    kept with the rule off. Curse's / PoolRad's temple never took one.
+    kept with the rule off. The generic temples since v0.210.1 as their
+    GAME.OVR routines (Curse 0x51AA, Champions 0x5880, PoolRad 0x4B22,
+    Gateway 0x607E; `CureFacts::temple_raise`): a point of Constitution -
+    PoolRad its one Constitution, the others only the one IN USE (back at
+    the next working out, as the original's) - and, at Constitution 14+
+    after it, the maximum hit points cut by (max - rolled) / the levels
+    weighted (fighters Con - 14 a level, others 2 at 16+, else 1); at 17+
+    only fighters (Curse / Champions also a fighter level past the hit dice
+    count, Gateway a former fighter). Nothing worked out after it.
     Darkness's Resurrection costs nothing in the original either way.
 - **Quick Actions** (Tom, 2026-11-09; switch `CYD_QUICK_ACTIONS` -
   section 11): the player may stop a Quick character's melee, missiles,

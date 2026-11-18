@@ -1099,6 +1099,7 @@ uint8_t sky_colour()
 
 void draw_frame(pic::Canvas& c);
 void draw_panel(pic::Canvas& c);
+bool camp_over_big();
 bool bigpic_shown() { return bigpic >= 0; }
 
 // ---- Pool's wilderness (overland.h; poolrad_overland_facts.md) ---------------
@@ -1654,7 +1655,7 @@ void draw_position(pic::Canvas& c)
 {
     if (pos_kept) return;
     krynn_moons(&c);            // (Champions: a day passed - the moons' tiles; its clock routine)
-    if (marker_overland() && !(q_overland() && pic_shown)) return;   // (the Dark Queen's: under an event picture the exploring screen)
+    if (marker_overland() && !(q_overland() && pic_shown) && !camp_over_big()) return;   // (the Dark Queen's: under an event picture the exploring screen)
     if (d->prof->variant.tr && !tr_position) return;
     const ecl::GameState& g = d->gs;
     if (hl()) {
@@ -1754,7 +1755,7 @@ void draw_panel(pic::Canvas& c)
 {
     // (Darkness's / Champions' overland: its map in the panel's place; the
     // Dark Queen's under an event picture: the exploring screen's panel)
-    if (marker_overland() && !(q_overland() && pic_shown)) return;
+    if (marker_overland() && !(q_overland() && pic_shown) && !camp_over_big()) return;   // (a camp over the overland: the party)
     if (hl()) {
         // (Dark Queen: the party box only - the compass is below it)
         const qview::Box& b = qview::kPartyBox;
@@ -1826,7 +1827,7 @@ void draw_frame(pic::Canvas& c)
     c.clear(0);
     krynn_moons();
     kr_marker_lost();
-    if (marker_overland()) {
+    if (marker_overland() && !camp_over_big()) {
         layout::outer(c, d->tables, d->frame_tiles);
         layout::bar(c, d->tables, d->frame_tiles, 16);
     } else {
@@ -5023,6 +5024,11 @@ void camp_words(char* out, size_t cap)
     snprintf(out, cap, "%s", tmp);
 }
 
+int camp_bigpic = -1;               // a big picture the camp took down (shown again as it breaks)
+// (the camp's own screen meanwhile - the party list - even on a Krynn overland)
+bool camp_over_big() { return camping && camp_bigpic >= 0; }
+void host_picture(int id, int head);
+
 void draw_camp_screen(pic::Canvas& c)
 {
     // The exploring screen (Secret: its camp picture in the view)
@@ -5030,6 +5036,21 @@ void draw_camp_screen(pic::Canvas& c)
     pic_shown = false;
     head_shown = body_shown = -1;
     camping = true;
+    if ((bigpic >= 0 && krynn_rules()) || camp_bigpic >= 0) {
+        // A camp over a big picture (Death Knights' start: its region map,
+        // then "Do you wish to rest?" - PROGRAM 9; Tom, 2026-11-18: no party
+        // list, and the screens of Magic / View stayed up): the camp's own
+        // screen, the picture back when the camp breaks - Champions' and
+        // Death Knights' maps (the Dark Queen's camp, DOSBox: the exploring
+        // screen; queen_facts_5 13))
+        if (bigpic >= 0) camp_bigpic = bigpic;
+        bigpic = -1;
+        draw_frame(c);
+        c.fill(8, 8, 120, 120, 0);
+        if (d->prof->variant.camp_pic) draw_own_pic(camp_pic());      // (Death Knights: PIC 59 - DOSBox)
+        draw_panel(c);
+        return;
+    }
     if (bigpic < 0) {
         draw_frame(c);
         // (Pool's camp in the wilderness: the left box cleared round the
@@ -5139,6 +5160,7 @@ void leave_camp(pic::Canvas& c)
     camping = false;
     if (cheat == Cheat::Sanctuary) {
         pic_shown = false;
+        camp_bigpic = -1;               // (the cheat puts back the screen it found)
         cheat_end(c);                   // (the Cheats tab's Sanctuary: back where the party was)
         return;
     }
@@ -5149,6 +5171,11 @@ void leave_camp(pic::Canvas& c)
     }
     text::clear(c, text::kTextArea);
     dirty_rows(17, 22);
+    if (camp_bigpic >= 0) {
+        const int id = camp_bigpic;
+        camp_bigpic = -1;
+        host_picture(id, 0xFF);
+    }
     draw_position(c);
     if (camp_from_script) {
         camp_from_script = false;
@@ -5179,6 +5206,7 @@ void camp_load_go(pic::Canvas& c)
     end_magic();
     camping = false;
     camp_from_script = false;
+    camp_bigpic = -1;
     waiting = false;
     then = Then::Idle;
     while (pt->count) leave_party(pt->count - 1);
@@ -9203,7 +9231,9 @@ bool shop_yes_no(Ask what, char k, pic::Canvas& c)
         return true;
     }
     rules::apply_cure(ch, static_cast<rules::Cure>(cure_at), d->prof->cures, rng);
-    rules::recalc(ch, *names, d->facts);
+    // (the originals' Raise Dead works nothing out after its Constitution
+    // and hit points - GAME.OVR 0x51AA's end; the next working out does)
+    if (cure_at != rules::kRaiseDead || !d->prof->cures.temple_raise) rules::recalc(ch, *names, d->facts);
     if (pt->count) {}
     char t[48], nm[20], cured[16];
     ch.name(nm, sizeof nm);
@@ -12550,7 +12580,7 @@ void draw_modify(pic::Canvas& c)
             put(c, t, 1 + static_cast<int>(strlen(d->v_stat[mark])), 9 + mark, 15);
         } else if (mark == 6) {
             snprintf(t, sizeof t, "%d/%d", ch->hp(), ch->hp_max());
-            put(c, t, 37 - static_cast<int>(strlen(t)), 3, 15);
+            q_right(c, t, 37, 3, 15);         // (as the View puts it - Tom, 2026-11-18: a column left, a grey digit after it)
         } else if (mark == 7) {
             ch->name(t, sizeof t);
             put(c, t, 1, 1, 15);

@@ -644,6 +644,186 @@ void raise_dead()
            con[1] == 15 && con[0] == 14, "on Con %d, off Con %d (-1: not raised)", con[1], con[0]);
 }
 
+// X18 Raising the Dead at the temple (1E rule; the Cheats' Healer = the
+// game's own temple, free): a dead human magic-user 4, Constitution 16, max
+// 28 of 20 rolled. On: Constitution 16, max 28. Off, each original's temple:
+// Constitution in use 15; the generic temples (Curse / Champions / PoolRad /
+// Gateway - GAME.OVR 0x51AA / 0x5880 / 0x4B22 / 0x607E) also cut the maximum
+// by (max - rolled) / (levels) = 8 / 4 -> 26; the others' hit points follow
+// their own working out (Darkness-type: Constitution 15's)
+void temple_raise()
+{
+    if (!boot() || !pt->count) return;
+    int con[2] = {}, mx[2] = {}, dead[2] = {};
+    static party::Character keep;
+    keep = pt->m[0];
+    adnd_both(rules::kAdndRaise, [&](bool on) {
+        for (int k = 0; k < 20 && d && !cheats_ready(); ++k) {
+            play::back(C);
+            g_now += 50;
+            play::tick(g_now, C);
+        }
+        if (!cheat_open(0, C) || cheat != Cheat::Healer) return (void)(dead[on] = 2);
+        pt->m[0] = keep;
+        party::Character& c = pt->m[0];
+        c.rec[0x74] = 7;
+        c.ext[party::kExtRace] = 0;
+        for (int k = 0; k < 8; ++k) c.rec[0x109 + k] = c.rec[0x111 + k] = 0;
+        c.rec[0x109 + classes::MagicUser] = 4;
+        c.rec[0x18] = c.rec[0x19] = 16;
+        c.rec[0x12C] = 20;
+        c.rec[0x78] = 28;
+        c.rec[0x1A4] = 0;
+        c.rec[0x195] = party::Dead;
+        pt->selected = 0;
+        open_heal(C);
+        if (hw) {
+            heal_pick(pool_temple() ? 6 : 7, C);
+            if (ask == Ask::PayCure) shop_yes_no(Ask::PayCure, 'Y', C);
+            note_until = 0;
+            if (hw) leave_heal(C);
+        }
+        cheat_end(C);
+        con[on] = c.rec[0x19];
+        mx[on] = c.rec[0x78];
+        dead[on] = c.health() == party::Dead;
+    });
+    pt->m[0] = keep;
+    const bool generic = d->prof->cures.temple_raise != 0;
+    expect(P, "X18 Raising the Dead at the temple: Constitution kept, max kept (1E on); one point less, the original's hit "
+              "point cut (off)",
+           !dead[0] && !dead[1] && con[1] == 16 && mx[1] == 28 && con[0] == 15 && (!generic || mx[0] == 26),
+           "on Con %d max %d, off Con %d max %d (%s temple; dead %d %d)", con[1], mx[1], con[0], mx[0],
+           generic ? "generic" : "own", dead[1], dead[0]);
+}
+
+// X19 Magic Items (1E rule; PoolRad): a member's Flame Tongue (the game's own
+// facts: its type and name word, +2 and 0x3D as the original's) - switched
+// on mid-game it becomes AD&D's +1 sword with the flame tongue effect, the
+// name's +1 word; off, the original's bytes again
+void flame_tongue()
+{
+    if (!boot() || !pt->count || !lists(0, rules::kAdndItems)) return;
+    const items::FlameFix& ff = d->prof->items.flame;
+    if (!ff.type) return (void)printf("  (toggles: X19 - no Flame Tongue facts)\n");
+    party::Character& c = pt->m[0];
+    const int keep_n = c.n_items;
+    uint8_t sw[items::kRecordSize] = {};
+    sw[0x2E] = ff.type; sw[0x2F] = ff.word; sw[0x30] = ff.plus_word; sw[0x31] = ff.type; sw[0x32] = ff.plus;
+    sw[0x3D] = ff.spell;
+    const uint64_t keep_fix = rules::fixes_off();
+    const uint16_t keep_adnd = rules::adnd_bits();
+    const uint8_t keep_enh = static_cast<uint8_t>((rules::enh(rules::kEnhCoins) ? rules::kEnhCoins : 0) | (rules::enh(rules::kEnhOil) ? rules::kEnhOil : 0));
+    const Options keep_o = opts;
+    Options o = opts;
+    int plus[2], fx[2], word[2];
+    for (int on = 0; on < 2; ++on) {
+        o.adnd = static_cast<uint16_t>(on ? o.adnd | rules::kAdndItems : o.adnd & ~rules::kAdndItems);
+        set_options(o);
+        if (on == 0 && !rules::add_item(c, sw)) return (void)printf("  (toggles: X19 - no room)\n");
+        if (on == 0) set_options(o);
+        const uint8_t* it = c.items[c.n_items - 1];
+        plus[on] = it[0x32];
+        fx[on] = it[0x3D];
+        word[on] = it[0x30];
+    }
+    c.n_items = keep_n;
+    set_options(keep_o);
+    rules::set_fixes_off(keep_fix);
+    rules::set_adnd(keep_adnd);
+    rules::set_enh(keep_enh);
+    expect(P, "X19 Magic Items: a Flame Tongue is AD&D's +1 with its flame effect (1E on), the original's +2 (off)",
+           plus[1] == 1 && fx[1] == ff.effect && word[1] == ff.plus1_word && plus[0] == ff.plus && fx[0] == ff.spell,
+           "on +%d 0x3D %02X word %02X; off +%d 0x3D %02X word %02X", plus[1], fx[1], word[1], plus[0], fx[0], word[0]);
+}
+
+// M6-M9 Modify Character's steps (Tom, 2026-11-18: the Dark Queen's knight
+// lost his 18(8x), Constitution 17 -> 18 took 134 hit points to 96 and they
+// went no higher), every game, a human fighter type (the Krynn games' knight
+// too) of the 10th level, through create::modify_stat / modify_hp as the
+// Modify screen calls them - the originals' rules (Pool create_facts 5,
+// Curse GAME.OVR 0x22F40 / 0x23160 / 0x231FC, Champions 0x2332B, Death
+// Knights 0x17F24, the Dark Queen 0x3E30B / 0x3E8EE / 0x3F0E0):
+//   M6 Strength 18(80) up: 18(81) (the race's top allowing), never plain 18
+//   M7 Strength 17 up: 18 - no (xx) - then 18(01)
+//   M8 Constitution up with the hit points above both bounds: they stay
+//      (only raised to the least); Constitution down: lowered to the most
+//   M9 the hit points up: a point more, at most the most; down: no less than
+//      the least
+void modify_steps()
+{
+    if (!rules_ready()) return;
+    Making* m = blv::m;
+    const auto& t = m->tables;
+    const bool kr = t.lay.krynn;
+    int types[4] = {classes::Fighter, classes::Paladin, classes::Ranger, classes::Monk};
+    int nt = kr ? 4 : 3;
+    int done = 0, bad6 = 0, bad7 = 0, bad8 = 0, bad9 = 0;
+    char why[160] = "";
+    for (int ti = 0; ti < nt; ++ti) {
+        const int k = types[ti];
+        if (k >= t.classes()) continue;
+        party::Character a;
+        blv::fresh(a, k == classes::Monk ? classes::Monk : k);
+        a.rec[0x109 + k] = 10;
+        if (kr && k == classes::Monk) a.rec[0x75] = 7;
+        // Strength: 18(80) up
+        blv::set_stat(a, 0, 18);
+        a.rec[0x1C] = a.rec[0x1D] = 80;
+        create::modify_stat(a, t, m->facts, 0, 1);
+        const int s1 = a.stat(0), e1 = a.str00();
+        if (!(s1 == 18 && (e1 == 81 || e1 == 80))) {
+            ++bad6;
+            snprintf(why, sizeof why, "class %d: 18(80) up -> %d(%d)", k, s1, e1);
+        }
+        // 17 up: 18, then 18(01)
+        blv::set_stat(a, 0, 17);
+        a.rec[0x1C] = a.rec[0x1D] = 0;
+        create::modify_stat(a, t, m->facts, 0, 1);
+        const int s2 = a.stat(0), e2 = a.str00();
+        create::modify_stat(a, t, m->facts, 0, 1);
+        const int s3 = a.stat(0), e3 = a.str00();
+        if (s2 == 18 && !(e2 == 0 && s3 == 18 && e3 == 1)) {
+            ++bad7;
+            snprintf(why, sizeof why, "class %d: 17 up -> %d(%d), then %d(%d)", k, s2, e2, s3, e3);
+        }
+        // Constitution 17, the hit points far above both bounds
+        blv::set_stat(a, 4, 17);
+        a.rec[0x78] = a.rec[0x1A4] = 250;
+        const int lo = create::hp_least(a, t, m->facts);
+        create::modify_stat(a, t, m->facts, 4, 1);
+        const int after_up = a.rec[0x78];
+        create::modify_stat(a, t, m->facts, 4, -1);
+        const int hi = create::hp_most(a, t, m->facts), after_down = a.rec[0x78];
+        if (after_up != 250 || after_down != (hi < 250 ? hi : 250) || lo > hi) {
+            ++bad8;
+            snprintf(why, sizeof why, "class %d: Con up %d (250), down %d (most %d), least %d", k, after_up, after_down, hi, lo);
+        }
+        // the hit points' own steps
+        a.rec[0x78] = static_cast<uint8_t>(hi);
+        create::modify_hp(a, t, m->facts, 1);
+        const int up = a.rec[0x78];
+        a.rec[0x78] = static_cast<uint8_t>(lo);
+        create::modify_hp(a, t, m->facts, -1);
+        const int dn = a.rec[0x78];
+        a.rec[0x78] = static_cast<uint8_t>(lo);
+        create::modify_hp(a, t, m->facts, 1);
+        const int up1 = a.rec[0x78];
+        if (up != hi || dn != lo || (lo < hi && up1 != lo + 1) || a.rec[0x1A4] != a.rec[0x78]) {
+            ++bad9;
+            snprintf(why, sizeof why, "class %d: at most %d up -> %d, at least %d down -> %d, up -> %d", k, hi, up, lo, dn, up1);
+        }
+        printf("  (toggles: Modify class %d lv 10 Con 17: least %d most %d)\n", k, lo, hi);
+        ++done;
+    }
+    expect(P, "M6 Modify: a fighter type's 18(80) goes up to 18(81), not plain 18", done && !bad6, "%d types; %s", done, why);
+    expect(P, "M7 Modify: Strength 17 up gives 18, then 18(01)", done && !bad7, "%d types; %s", done, why);
+    expect(P, "M8 Modify: Constitution up keeps hit points above the bounds; down lowers them to the most", done && !bad8,
+           "%d types; %s", done, why);
+    expect(P, "M9 Modify: the hit points up to the most, down to the least, a point a step", done && !bad9, "%d types; %s",
+           done, why);
+}
+
 // X15 Missing Sounds (Gateway): the sounds its player plays as the miss -
 // their own fitting ones with the fix, the miss (9) without
 void gw_sounds()
@@ -737,6 +917,9 @@ void run()
     if (want("saves18")) saves18();
     if (want("wis13")) wis13();
     if (want("raise")) raise_dead();
+    if (want("temple")) temple_raise();
+    if (want("flame")) flame_tongue();
+    if (want("modify")) modify_steps();
     if (want("gwsounds")) gw_sounds();
     if (want("bozak")) bozak();
     if (want("vault")) new_vault();

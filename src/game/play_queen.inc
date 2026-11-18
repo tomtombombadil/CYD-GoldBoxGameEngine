@@ -643,6 +643,7 @@ __attribute__((noinline)) void q_overland_top(pic::Canvas& c)
 
 // (play_queen_late.inc)
 void q_draw_character(pic::Canvas& c, const party::Character& ch);
+void q_right(pic::Canvas& c, const char* s, int end_col, int row, uint8_t fg);
 void q_name_tables(dax::ByteSource& exe, const exepack::Info& info);
 bool q_save(char slot, const savegame::Header& h, const char* path);
 

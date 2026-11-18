@@ -225,6 +225,13 @@ struct CureFacts {
     // originals' mistake: one point of damage, then none; GAME.OVR 0x112AE /
     // 0x1AE7B / 0x2096F); 0 = itself. rules::fixes(): itself (SPEC 12)
     uint8_t  poison_renew;
+    // The temple's Raise Dead (rules::apply_cure, the generic temple): which
+    // original's routine - 0 none, 1 Curse / Champions (GAME.OVR 0x51AA /
+    // 0x5880: a point of Constitution IN USE only, a cut of the maximum hit
+    // points at Con 14-16, at 17+ a fighter's or one past its hit dice),
+    // 2 PoolRad (0x4B22: its Constitution itself; at 17+ fighters only),
+    // 3 Gateway (0x607E: as Curse, at 17+ a fighter or a former fighter)
+    uint8_t  temple_raise;
 };
 // Removes a character's effects of a type; how many
 int remove_affects(party::Character& c, uint8_t type);

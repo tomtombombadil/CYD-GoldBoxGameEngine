@@ -1452,6 +1452,35 @@ void icon_compose(uint8_t* b, const uint8_t* h, int hh, const uint8_t* colours)
         for (int x = 0; x < kSq; ++x) set_nib(b, kSq, x, y, map[nib(b, kSq, x, y)]);
 }
 
+// Death Knights' fighters (variant.icon_eight_black): colour 8 drawn black
+void eight_to_black(uint8_t* p, int w, int h)
+{
+    for (int y = 0; y < h; ++y)
+        for (int x = 0; x < w; ++x)
+            if (nib(p, w, x, y) == 8) set_nib(p, w, x, y, 0);
+}
+// ... with the see-through plane of its colour 0 made first (Pic4::own_mask);
+// p grows by the plane - nullptr (p freed) when there's no memory
+uint8_t* own_mask_eight(uint8_t* p, int w, int h)
+{
+    const size_t pb = static_cast<size_t>(rowb(w)) * h, mb = mask_bytes(w, h);
+    uint8_t* q = static_cast<uint8_t*>(realloc(p, pb + mb));
+    if (!q) {
+        free(p);
+        return nullptr;
+    }
+    uint8_t* m = q + pb;
+    memset(m, 0, mb);
+    for (int y = 0; y < h; ++y)
+        for (int x = 0; x < w; ++x)
+            if (!nib(q, w, x, y)) {
+                const int k = y * w + x;
+                m[k >> 3] = static_cast<uint8_t>(m[k >> 3] | 1 << (k & 7));
+            }
+    eight_to_black(q, w, h);
+    return q;
+}
+
 // ready_only: the ready pose alone (the Companion panel's Party view)
 void build_icon(const uint8_t* rec, Pic4& ic, bool ready_only = false)
 {
@@ -1500,9 +1529,11 @@ void build_icon(const uint8_t* rec, Pic4& ic, bool ready_only = false)
     // part made colour 0 is drawn, not see-through. Pool's Dirten (all his
     // colours 0): his outline drawn in colour 0 over the wall behind him.
     bool own = false;
+    const bool eight_black = d->prof->variant.icon_eight_black && !fight_masks() && !px8();
     if (!fight_masks() && !px8())
         for (int k = 0; k < 6; ++k)
             if (!(rec[0x145 + k] & 15) || !(rec[0x145 + k] >> 4)) own = true;
+    if (eight_black) own = true;        // (its 8 made black below: drawn, not see-through)
     const size_t pb = static_cast<size_t>(rowb(kSq)) * kSq, mb = mask_bytes(kSq, kSq);
     for (int fr = 0; fr < (ready_only ? 1 : 2); ++fr) {
         int bw = 0, bh = 0, hw = 0, hh = 0;
@@ -1536,6 +1567,7 @@ void build_icon(const uint8_t* rec, Pic4& ic, bool ready_only = false)
                     }
         }
         icon_compose(b, h, hh, rec + 0x145);
+        if (eight_black) eight_to_black(b, kSq, kSq);
         free(h);
         ic.px[fr] = b;
         ic.w = ic.h = kSq;
@@ -1590,9 +1622,19 @@ void load_monster_icon(int slot, int block)
             return;
         }
     }
-    for (int fr = 0; fr < 2; ++fr) ic.px[fr] = p[fr] ? arena_adopt(p[fr], pic_bytes(cw, ch)) : nullptr;
+    const bool eight = d->prof->variant.icon_eight_black && !fight_masks() && !px8();
+    if (eight)
+        for (int fr = 0; fr < 2; ++fr)
+            if (p[fr]) p[fr] = own_mask_eight(p[fr], cw, ch);
+    if (eight && !p[0]) {
+        free(p[1]);
+        return;
+    }
+    const size_t extra = eight ? mask_bytes(cw, ch) : 0;
+    for (int fr = 0; fr < 2; ++fr) ic.px[fr] = p[fr] ? arena_adopt(p[fr], pic_bytes(cw, ch) + extra) : nullptr;
     ic.w = static_cast<uint8_t>(cw);
     ic.h = static_cast<uint8_t>(ch);
+    ic.own_mask = eight;
 }
 
 void end_fight_art()

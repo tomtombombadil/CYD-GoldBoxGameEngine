@@ -751,6 +751,10 @@ struct Profile {
         // Gateway: in a fight its pictures (the field, the fighters) are
         // drawn with 0 and 8 swapped, the rest of the screen as it is
         bool     field_swap = false;
+        // Death Knights: in a fight the fighters' pictures (CPIC, CBODY /
+        // CHEAD) show their colour 8 black - drawn, not see-through (the
+        // field's dark grey stays: DOSBox, the first fight - Tom, 2026-11-18)
+        bool     icon_eight_black = false;
         // Pools of Darkness: its pictures are VGA blocks (picture.h; the EGA
         // colours of each on a 4-bit canvas - the original's EGA mode)
         bool     vga = false;
