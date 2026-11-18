@@ -200,6 +200,31 @@ void clear_strips(const uint16_t* ink, int stride, int n, int bands, int band_h,
         clear[x] = static_cast<uint8_t>(near[x] < 2 ? bands : (own[x] * bands + near[x] / 2) / near[x]);
 }
 
+int join_margins(int* x0, int* x1, int n)
+{
+    for (bool joined = true; joined && n > 1;) {
+        joined = false;
+        int widest = 0;
+        for (int i = 0; i < n; ++i) widest = x1[i] - x0[i] > widest ? x1[i] - x0[i] : widest;
+        for (int i = 0; i < n; ++i) {
+            if ((x1[i] - x0[i]) * 3 >= widest) continue;
+            const int j = i == 0       ? 0
+                        : i == n - 1   ? n - 2
+                        : (x0[i] - x1[i - 1] <= x0[i + 1] - x1[i] ? i - 1 : i);       // (the nearer)
+            x0[j] = x0[j] < x0[j + 1] ? x0[j] : x0[j + 1];
+            x1[j] = x1[j + 1] > x1[j] ? x1[j + 1] : x1[j];
+            for (int k = j + 1; k + 1 < n; ++k) {
+                x0[k] = x0[k + 1];
+                x1[k] = x1[k + 1];
+            }
+            --n;
+            joined = true;
+            break;
+        }
+    }
+    return n;
+}
+
 int find_columns(const uint8_t* clear, int n, int bands, int* x0, int* x1, int max)
 {
     if (n <= 0 || max <= 0) return 0;

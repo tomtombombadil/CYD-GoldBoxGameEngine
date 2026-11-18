@@ -177,7 +177,8 @@ Result find_columns(int page, const pdf::Image& img, uint8_t* pool, const jpeg::
         uint8_t* clear = p->clear;
         journal::clear_strips(&p->ink[0][0], 424, n, journal::kColumnBands, p->band_h, clear);
         int x0[kMaxCols], x1[kMaxCols];
-        const int nc = journal::find_columns(clear, n, journal::kColumnBands, x0, x1, kMaxCols);
+        int nc = journal::find_columns(clear, n, journal::kColumnBands, x0, x1, kMaxCols);
+        nc = journal::join_margins(x0, x1, nc);
         const int n_ = nc;
         st->ncols = n_ > 0 ? n_ : 1;
         for (int i = 0; i < st->ncols; ++i) {
@@ -290,16 +291,34 @@ bool column_block(int x, int y, int w, int h, const uint8_t* rgb, void* ctx)
     return c.ok;
 }
 
-Result draw_column(int page, const pdf::Image& img, uint8_t* pool, const jpeg::Info& info, const ui::Rect& r, View& v)
+// Column: the page's columns; Width: its book pages - a scan wider than
+// tall holds two facing pages, split at its middle
+Result draw_column(int page, const pdf::Image& img, uint8_t* pool, const jpeg::Info& info, const ui::Rect& r, View& v,
+                   bool width)
 {
-    Result res = find_columns(page, img, pool, info);
-    if (res != Result::Ok) return res;
-    v.cols = st->ncols;
+    int ncols, cx0[kMaxCols], cx1[kMaxCols];
+    Result res = Result::Ok;
+    if (width) {
+        ncols = info.width > info.height ? 2 : 1;
+        cx0[0] = 0;
+        cx1[0] = ncols == 2 ? info.width / 2 : info.width;
+        cx0[1] = info.width / 2;
+        cx1[1] = info.width;
+    } else {
+        res = find_columns(page, img, pool, info);
+        if (res != Result::Ok) return res;
+        ncols = st->ncols;
+        for (int i = 0; i < ncols; ++i) {
+            cx0[i] = st->cx0[i];
+            cx1[i] = st->cx1[i];
+        }
+    }
+    v.cols = ncols;
     if (v.at_x >= 0) {
         // The column at that spot (or the nearest)
         int best = 0, dist = 1 << 30;
-        for (int i = 0; i < st->ncols; ++i) {
-            const int d = v.at_x < st->cx0[i] ? st->cx0[i] - v.at_x : v.at_x >= st->cx1[i] ? v.at_x - st->cx1[i] + 1 : 0;
+        for (int i = 0; i < ncols; ++i) {
+            const int d = v.at_x < cx0[i] ? cx0[i] - v.at_x : v.at_x >= cx1[i] ? v.at_x - cx1[i] + 1 : 0;
             if (d < dist) {
                 dist = d;
                 best = i;
@@ -307,10 +326,10 @@ Result draw_column(int page, const pdf::Image& img, uint8_t* pool, const jpeg::I
         }
         v.col = best;
     }
-    if (v.col < 0 || v.col >= st->ncols) v.col = st->ncols - 1;      // (kLastColumn, or past the last)
+    if (v.col < 0 || v.col >= ncols) v.col = ncols - 1;      // (kLastColumn, or past the last)
     Column* c = new (std::nothrow) Column;
     if (!c) return Result::NoMemory;
-    const int x0 = st->cx0[v.col], x1 = st->cx1[v.col];
+    const int x0 = cx0[v.col], x1 = cx1[v.col];
     c->s = 0;
     while (c->s < 3 && ((x1 - x0) >> (c->s + 1)) >= r.w) ++c->s;
     c->dx0 = x0 >> c->s;
@@ -330,6 +349,8 @@ Result draw_column(int page, const pdf::Image& img, uint8_t* pool, const jpeg::I
     if (v.vy < 0) v.vy = 0;
     c->vy = v.vy;
     c->oh = sh < r.h ? sh : r.h;
+    v.mid_x = (x0 + x1) / 2;
+    v.mid_y = c->k > 0 ? static_cast<int>(static_cast<int64_t>(v.vy + c->oh / 2) * 65536 / c->k) << c->s : 0;
     c->ox = r.x + (r.w - c->ow) / 2;
     c->oy = r.y;
     v.fit = ui::Rect{c->ox, c->oy, c->ow, c->oh};
@@ -446,8 +467,8 @@ Result draw(int page, const ui::Rect& r, Fit fit, View& v)
     if (res == Result::Ok) {
         v.page_w = info.width;
         v.page_h = info.height;
-        if (fit == Fit::Column) {
-            res = draw_column(page, img, pool, info, r, v);
+        if (fit != Fit::Whole) {
+            res = draw_column(page, img, pool, info, r, v, fit == Fit::Width);
         } else {
             Whole* d = new (std::nothrow) Whole;
             if (!d) res = Result::NoMemory;

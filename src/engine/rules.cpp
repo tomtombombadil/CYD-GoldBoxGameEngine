@@ -1518,6 +1518,7 @@ int jewel_value(int r, create::Dice& d, int div, int span41)
 namespace {
 uint64_t g_fixes_off = 0;       // (bit k: Fix k switched off)
 uint16_t g_adnd = kAdndAll;
+uint8_t g_enh = kEnhAll;
 
 constexpr uint16_t G(games::Game g) { return static_cast<uint16_t>(1u << static_cast<int>(g)); }
 constexpr uint16_t kPool = G(games::Game::PoolOfRadiance), kCurse = G(games::Game::CurseOfTheAzureBonds),
@@ -1663,14 +1664,10 @@ const AdndInfo kAdnd[kAdndCount] = {
      "A thrown weapon gets Dexterity's missile bonus to hit and Strength's bonus to damage. The originals "
      "give darts and javelins no Strength (PoolRad's darts no Dexterity either). A dagger, hand axe or spear "
      "uses Strength in melee, and Dexterity to hit with Strength's damage when thrown."},
-    {kAdndItems, "Magic Items", kAll,
-     "Magic items as AD&D 1st edition has them: PoolRad's Flame Tongue is the AD&D sword, and a flask of oil "
-     "burns (fire damage - a troll it brings down stays down). The originals' oil is a plain blow."},
-    {kAdndCoins, "Coin Exchange", kPool | kCurse | kSecret | kGate,
-     "Any mix of coins pays a price, with exact change, and the shopkeeper changes coins up: after a "
-     "purchase, after pooling the party's money at a shop, temple or other paid service, and when it's "
-     "shared out again, money is kept in the highest coins - so copper doesn't weigh anyone down. Some "
-     "originals take certain prices in platinum alone."},
+    {kAdndItems, "Magic Items", kPool,
+     "Magic items as AD&D 1st edition has them: PoolRad's Flame Tongue is the AD&D sword - +1, +2 against "
+     "regenerating creatures, +3 against cold-using and +4 against undead. The original's is a plain +1 "
+     "sword."},
     {kAdndAge, "Age with Time", kDark | kTreas,
      "Everyone grows a year older for each year of game time. The originals' clock ages nobody until a "
      "hundred years have passed."},
@@ -1696,10 +1693,13 @@ uint16_t adnd_bits() { return g_adnd; }
 bool adnd(uint16_t rule) { return (g_adnd & rule) != 0; }
 const AdndInfo& adnd_info(int k) { return kAdnd[k >= 0 && k < kAdndCount ? k : 0]; }
 bool all_fixes() { return g_fixes_off == 0; }
+void set_enh(uint8_t bits) { g_enh = bits; }
+bool enh(uint8_t e) { return (g_enh & e) != 0; }
 void set_all(bool on)
 {
     set_fixes(on);
     set_adnd(on ? kAdndAll : 0);
+    set_enh(on ? kEnhAll : 0);
 }
 
 int lost_levels(uint8_t lost) { return fix(kFixPCharm) && lost >= 0x80 ? 0 : lost; }

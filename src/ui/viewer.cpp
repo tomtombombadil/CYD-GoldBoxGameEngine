@@ -3292,7 +3292,7 @@ void tap_sounds(const ui::Tap& t)
 // One set for all games (settings.h comforts_off), on the one Settings
 // screen (below); a comfort compiled out (app/features.h) isn't listed.
 enum Comfort { kCFont, kCGallery, kCBigIcon, kCMoreGuys, kCPortrait, kCRolls, kCCampFix, kCCompanion, kCMaxHp, kCQuick,
-               kCJoin, kCSaveInfo, kCKeepMem, kComforts };
+               kCJoin, kCSaveInfo, kCKeepMem, kCCoins, kCOil, kComforts };
 
 bool comfort_built(int c)
 {
@@ -3310,6 +3310,8 @@ bool comfort_built(int c)
     case kCJoin: return CYD_AUTO_JOIN;
     case kCSaveInfo: return CYD_SAVE_INFO;
     case kCKeepMem: return CYD_KEEP_MEMORIZING;
+    case kCCoins: return CYD_COIN_EXCHANGE;
+    case kCOil: return CYD_OIL_BURNS;
     default: return true;
     }
 }
@@ -3318,7 +3320,8 @@ uint16_t comfort_bit(int c)
 {
     static const uint16_t kBits[kComforts] = {0, kOffGallery, kOffBigIcon, kOffMoreGuys, kOffPortrait, kOffRolls,
                                               kOff2CampFix << 8, kOff2Companion << 8, 0, kOff2Quick << 8,
-                                              kOff2AutoJoin << 8, kOff2SaveInfo << 8, kOff2KeepMem << 8};
+                                              kOff2AutoJoin << 8, kOff2SaveInfo << 8, kOff2KeepMem << 8, kOffCoins,
+                                              kOffOil};
     return kBits[c];
 }
 uint16_t comforts_off() { return static_cast<uint16_t>(cfg->comforts_off | cfg->comforts_off2 << 8); }
@@ -3359,6 +3362,8 @@ void apply_options()
     o.auto_join = comfort_on(kCJoin);
     o.save_info = comfort_on(kCSaveInfo);
     o.keep_mem = comfort_on(kCKeepMem);
+    o.coin_exchange = comfort_on(kCCoins);
+    o.oil_burns = comfort_on(kCOil);
     o.adnd = adnd_on();
     play::set_side_panel(ui::large() && comfort_on(kCCompanion));     // (Save Slot Info: the party in the panel)
     o.font = comfort_on(kCFont) ? cfg->game_font : kFontGame;
@@ -3369,7 +3374,7 @@ void apply_options()
 int comfort_list(int* out)
 {
     static const uint8_t kOrder[] = {kCFont, kCRolls, kCCompanion, kCSaveInfo, kCJoin, kCKeepMem,
-                                     kCCampFix, kCMoreGuys, kCPortrait, kCGallery, kCBigIcon};
+                                     kCCampFix, kCCoins, kCOil, kCMoreGuys, kCPortrait, kCGallery, kCBigIcon};
     int n = 0;
     for (uint8_t c : kOrder)
         if (comfort_built(c)) out[n++] = c;
@@ -3395,7 +3400,7 @@ ui::Rect comfort_qmark(const ui::Rect& cell)
 const char* const kComfortNames[kComforts] = {"Game Font",       "Icon Gallery",    "Large Icon",     "More Characters",
                                               "Icon Portrait",   "Show Rolls",      "Camp Fix",       "Companion Views",
                                               "Max Hit Points",  "Quick Actions",   "Auto Join Items", "Savegame Info",
-                                              "Keep Memorizing"};
+                                              "Keep Memorizing", "Coin Exchange",   "Flasks of Oil"};
 
 // What each option does (sentence case; Tom, v0.84.0)
 const char* comfort_help_text(int c)
@@ -3461,6 +3466,15 @@ const char* comfort_help_text(int c)
                "cleric, 6 a thief, 4 a magic-user - instead of a roll; the rest of the game's sum stays "
                "(Constitution, multi-classes' share). Off (the default): rolled, "
                "as the original.";
+    case kCCoins:
+        return "Any mix of coins pays a price, with exact change, and the shopkeeper changes coins up: after a "
+               "purchase, after pooling the party's money at a shop, temple or other paid service, and when it's "
+               "shared out again, the money is kept in the highest coins - so copper doesn't weigh anyone down. "
+               "Off: as the originals (some take certain prices in platinum alone). PoolRad, Curse, Secret and "
+               "Gateway - the games with five kinds of coins.";
+    case kCOil:
+        return "A thrown flask of oil bursts into flames: fire damage, as an ordinary firebomb would - a troll it "
+               "brings down stays down. Off: as the originals, a plain blow.";
     case kCKeepMem:
         return "Rest memorizes again the spells cast, as the originals do, and a rest that is interrupted - "
                "the watch, a wandering monster - keeps your list of spells to be memorized: the next camp's "
@@ -4203,10 +4217,11 @@ bool item_on(const Item& it)
 }
 const char* original_help()
 {
-    return "On: the games as the originals play them - every Enhancement, AD&D 1E Rule and Game Fix off, the "
-           "game's own font, and the Cheats page's Max Hit Points off. Any of them can still be turned on by "
-           "itself while this is on. Off again: your own choices come back as they were. The display, the "
-           "sound and the Cheats page's cheats themselves aren't changed.";
+    // (Tom's words, 2026-11-17)
+    return "On: the games play exactly as they were published. No corrections or alterations, except those to "
+           "make the games work on this device. This disables all the toggles under Enhancements, AD&D 1E "
+           "Rules, Game Fixes, and Cheats. They can be enabled individually should you like. Disabling this "
+           "option will return your toggles/choices to where they were before enabling it.";
 }
 
 // The "?" of a key that isn't a board key or a comfort (those: set_help)
@@ -5497,17 +5512,23 @@ ui::Rect pdf_area() { return view_area(); }
 // Keys (Tom, 2026-10-09 / 10): Back | Zoom | Prev | the page | Next, slim,
 // no title bar - drawn before the page (it takes a while) and again after
 // it (the column count and the ends known then)
+// (the zoom levels: Column - the start -, Page Width - one book page; a scan
+// of two facing pages is two -, Whole - Tom, 2026-11-17)
+bool pdf_scrolls() { return pdf_fit_level != pdfview::Fit::Whole; }
 void pdf_keys(const ui::Rect& a, bool known)
 {
-    const bool column = pdf_fit_level == pdfview::Fit::Column;
+    const bool column = pdf_scrolls();
+    const bool width = pdf_fit_level == pdfview::Fit::Width;
     char page[24], col[32];
     snprintf(page, sizeof page, "%d of %d", pdf_page, pdfview::pages());     // just "3 of 48" (Tom, v0.66.1)
-    snprintf(col, sizeof col, "Col %d of %d", pdf_v.col + 1, pdf_v.cols);
+    if (width) snprintf(col, sizeof col, "%s", pdf_v.col == 0 ? "Left" : "Right");
+    else snprintf(col, sizeof col, "Col %d of %d", pdf_v.col + 1, pdf_v.cols);
     const bool first = pdf_page == 1 && (!column || (pdf_v.col == 0 && pdf_v.vy == 0));
     const bool last = known && pdf_page == pdfview::pages() &&
                       (!column || (pdf_v.col + 1 >= pdf_v.cols && pdf_v.vy + a.h >= pdf_v.shown_h));
     ui::key(slim_key(0, 5), "Back");
-    ui::key(slim_key(1, 5), column ? "Column" : "Whole", column ? ui::KeyStyle::Normal : ui::KeyStyle::Lit);
+    ui::key(slim_key(1, 5), width ? "Page Width" : column ? "Column" : "Whole",
+            pdf_fit_level == pdfview::Fit::Column ? ui::KeyStyle::Normal : ui::KeyStyle::Lit);
     ui::key(slim_key(2, 5), "Prev", first ? ui::KeyStyle::Dim : ui::KeyStyle::Normal);
     const ui::Rect lr = slim_key(3, 5);
     ui::gfx().fillRect(lr.x, lr.y, lr.w, lr.h, style::kBackground);
@@ -5536,7 +5557,7 @@ void draw_pdf()
         },
         &job);
     LGFX& g = ui::gfx();
-    const bool column = pdf_fit_level == pdfview::Fit::Column;
+    const bool column = pdf_scrolls();
     pdf_keys(a, job.r == pdfview::Result::Ok);
     if (job.r != pdfview::Result::Ok) {
         g.fillRect(0, a.y, a.w, a.h, style::kBackground);
@@ -5562,7 +5583,7 @@ void tick_pdf()
 {
     int dx, dy;
     if (!pan_done(&dx, &dy)) return;
-    if (pdf_fit_level != pdfview::Fit::Column) return;
+    if (!pdf_scrolls()) return;
     pdf_v.vy -= dy;
     dirty = true;                    // pdfview::draw keeps the view on the column
 }
@@ -5571,7 +5592,7 @@ void tick_pdf()
 // next page (Tom, 2026-10-24: "step through the columns, then pages")
 void pdf_next(const ui::Rect& a)
 {
-    if (pdf_fit_level == pdfview::Fit::Column) {
+    if (pdf_scrolls()) {
         if (pdf_v.vy + a.h < pdf_v.shown_h) {
             pdf_v.vy += a.h - 24;
             return;
@@ -5590,7 +5611,7 @@ void pdf_next(const ui::Rect& a)
 }
 void pdf_prev(const ui::Rect& a)
 {
-    if (pdf_fit_level == pdfview::Fit::Column) {
+    if (pdf_scrolls()) {
         if (pdf_v.vy > 0) {
             pdf_v.vy = pdf_v.vy > a.h - 24 ? pdf_v.vy - (a.h - 24) : 0;
             return;
@@ -5604,7 +5625,7 @@ void pdf_prev(const ui::Rect& a)
     if (pdf_page > 1) {
         --pdf_page;
         pdf_v.col = pdfview::kLastColumn;
-        pdf_v.vy = pdf_fit_level == pdfview::Fit::Column ? pdfview::kBottom : 0;
+        pdf_v.vy = pdf_scrolls() ? pdfview::kBottom : 0;
     }
 }
 
@@ -5629,10 +5650,19 @@ void tap_pdf(const ui::Tap& t)
     } else if (k == 4) {
         pdf_next(a);
     } else if (k == 1) {
-        // Column <-> Whole (the column stays the one shown)
-        pdf_fit_level = pdf_fit_level == pdfview::Fit::Column ? pdfview::Fit::Whole : pdfview::Fit::Column;
-        if (pdf_v.col < 0) pdf_v.col = 0;
-        pdf_v.vy = 0;
+        // Column -> Page Width -> Whole -> Column; the place shown kept (the
+        // column / page side under the middle of the view)
+        const bool was_scroll = pdf_scrolls();
+        pdf_fit_level = pdf_fit_level == pdfview::Fit::Column ? pdfview::Fit::Width
+                      : pdf_fit_level == pdfview::Fit::Width  ? pdfview::Fit::Whole
+                                                              : pdfview::Fit::Column;
+        if (was_scroll && pdf_scrolls() && pdf_v.mid_x >= 0) {
+            pdf_v.at_x = pdf_v.mid_x;
+            pdf_v.at_y = pdf_v.mid_y;
+        } else {
+            if (pdf_v.col < 0) pdf_v.col = 0;
+            pdf_v.vy = 0;
+        }
     } else if (k < 0 && a.contains(t.x, t.y)) {
         if (pdf_fit_level == pdfview::Fit::Whole) {
             // Tap a spot on the whole page: its column, that spot in the middle
@@ -5641,7 +5671,7 @@ void tap_pdf(const ui::Tap& t)
             pdf_v.at_y = static_cast<int>(static_cast<int64_t>(t.y - pdf_v.fit.y) * pdf_v.page_h / pdf_v.fit.h);
             pdf_fit_level = pdfview::Fit::Column;
         } else {
-            // The left / right quarter: the column before / after; above /
+            // The left / right quarter: the column (page side) before / after; above /
             // below the middle: up / down a screenful
             if (t.x < a.x + a.w / 4) {
                 if (pdf_v.col > 0) {

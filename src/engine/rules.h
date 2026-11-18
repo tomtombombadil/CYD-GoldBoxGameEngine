@@ -391,14 +391,14 @@ enum Adnd : uint16_t {
     kAdndRaise    = 2,      // Raising the Dead: Raise Dead / Resurrection cost no Constitution
     kAdndMissile  = 4,      // Magic Missile: (level + 1) / 2 missiles (PoolRad's own: level / 2)
     kAdndMultiHp  = 8,      // Multi-Class Hit Points: each class's, added up and divided by the classes
-    kAdndItems    = 0x10,   // Magic Items: the Flame Tongue as AD&D's; flasks of oil burn
-    kAdndCoins    = 0x20,   // Coin Exchange: any coins pay, the change and the purse in the highest coins
+    kAdndItems    = 0x10,   // Magic Items: PoolRad's Flame Tongue as AD&D's
+                            // (0x20: Coin Exchange until v0.209.1 - an Enhancement since, rules::kEnhCoins)
     kAdndAge      = 0x40,   // Age with Time: a year older for each year of game time
     kAdndPwk      = 0x80,   // Power Word Kill: by hit points, 120 in all
     kAdndProtEvil = 0x100,  // Protection from Evil: -2 to hit for evil attackers; the 10' radius wards those near
-    kAdndAll      = 0x1FF,
+    kAdndAll      = 0x1DF,
 };
-constexpr int kAdndCount = 9;
+constexpr int kAdndCount = 8;
 void set_adnd(uint16_t bits);
 uint16_t adnd_bits();
 bool adnd(uint16_t rule);
@@ -409,7 +409,19 @@ struct AdndInfo {
     const char* help;
 };
 const AdndInfo& adnd_info(int k);       // k < kAdndCount
-// Every Game Fix and every AD&D 1E Rule on, or all off (as the originals - the tests' way)
+// The Enhancements the engine itself applies (Tom, 2026-11-17: additions to
+// the games' play, not rules - each a switch of the Enhancements page; the
+// front end's own enhancements are play::Options)
+enum Enh : uint8_t {
+    kEnhCoins = 1,          // Coin Exchange: any coins pay, the change, the pooled and the shared money in the
+                            // highest coins (the five-coin games)
+    kEnhOil   = 2,          // Flasks of Oil: a thrown flask burns (fire damage - ordinary, not magic)
+    kEnhAll   = 3,
+};
+void set_enh(uint8_t bits);
+bool enh(uint8_t e);
+// Every Game Fix, every AD&D 1E Rule and the engine's Enhancements on, or
+// all off (as the originals - the tests' way)
 void set_all(bool on);
 // No fix switched off (the tests' look at set_all's state)
 bool all_fixes();

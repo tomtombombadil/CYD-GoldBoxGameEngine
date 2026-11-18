@@ -852,7 +852,7 @@ uint16_t Vm::krynn_coin_code(uint16_t off) const
 
 void Vm::coins_touch(uint16_t a, bool write) const
 {
-    if (!set_.five_coins || a < 0x7CBB || a > 0x7CC3 || ((a - 0x7CBB) & 1) || !rules::adnd(rules::kAdndCoins)) return;
+    if (!set_.five_coins || a < 0x7CBB || a > 0x7CC3 || ((a - 0x7CBB) & 1) || !rules::enh(rules::kEnhCoins)) return;
     if (sel_mon_ >= 0 || !party_ || !party_->sel() || party_->selected >= 16) return;
     const uint16_t bit = static_cast<uint16_t>(1u << party_->selected);
     if (coins_seen_ & bit) return;

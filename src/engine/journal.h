@@ -128,6 +128,11 @@ constexpr int kColumnBands = 16;
 // of `bands` (n at most 512).
 void clear_strips(const uint16_t* ink, int stride, int n, int bands, int band_h, uint8_t* clear);
 int find_columns(const uint8_t* clear, int n, int bands, int* x0, int* x1, int max);
+// The book view's columns (Tom, 2026-11-17: PoolRad's first page - one
+// column between two borders - zoomed into its margin): a run under a third
+// of the widest is a margin's ornament or border, not a column - it joins
+// its nearer neighbour, so a page of one column shows its width. The count left.
+int join_margins(int* x0, int* x1, int n);
 
 // ---- reading it -------------------------------------------------------------
 

@@ -4482,7 +4482,7 @@ int id_cost() { return secret_files() || (krynn() && !dk_ui()) ? 100 : 200; }
 // five coins any coins worth a price pay it - the payer's, what they lack
 // from the counter's - with exact change (Pool's own drops what's under a
 // gold piece), and money is kept in the highest coins after each deal
-bool coin_fix() { return rules::adnd(rules::kAdndCoins) && d->prof->ecl_ops && d->prof->ecl_ops->five_coins; }
+bool coin_fix() { return rules::enh(rules::kEnhCoins) && d->prof->ecl_ops && d->prof->ecl_ops->five_coins; }
 void coins_up(party::Character& ch)
 {
     if (coin_fix()) rules::coins_up(ch);
@@ -4598,7 +4598,7 @@ bool items_yes_no(Ask what, char k, pic::Canvas& c)
             rules::recalc(ch, *names, d->facts);
             int room = rules::max_load(ch) - ch.encumbrance();
             if (room < 0) room = 0;
-            over = (rules::adnd(rules::kAdndCoins) ? plat + gold % 5 : gold) > room;
+            over = (rules::enh(rules::kEnhCoins) ? plat + gold % 5 : gold) > room;
             const int p = over && plat > room ? room : plat;
             room -= p;
             const int g = over && gold % 5 > room ? room : gold % 5;
@@ -13303,6 +13303,7 @@ __attribute__((noinline)) void load_party_text(dax::ByteSource& exe, const exepa
         rules::set_no_heal(d->prof->fight.facts.q.no_heal);
         items::set_passive(pi.passive);
         rules::set_fixes_off(CYD_ITEM_FIXES && opts.item_fixes ? opts.fixes_off : ~0ull);
+        rules::set_enh(static_cast<uint8_t>((opts.coin_exchange ? rules::kEnhCoins : 0) | (opts.oil_burns ? rules::kEnhOil : 0)));
         items::set_flame_fix(&pi.flame, CYD_ADND_RULES && (opts.adnd & rules::kAdndItems));
         rules::set_adnd(CYD_ADND_RULES ? opts.adnd : 0);
         rules::set_worn_facts(pi.effect_data, pi.stat_fx[1]);
@@ -18155,6 +18156,7 @@ void set_options(const Options& o)
     // The items the originals got wrong: as now wanted, the party's too (mid-game)
     items::set_flame_fix(&d->prof->items.flame, CYD_ADND_RULES && (opts.adnd & rules::kAdndItems));
     rules::set_fixes_off(CYD_ITEM_FIXES && opts.item_fixes ? opts.fixes_off : ~0ull);
+    rules::set_enh(static_cast<uint8_t>((opts.coin_exchange ? rules::kEnhCoins : 0) | (opts.oil_burns ? rules::kEnhOil : 0)));
     static uint16_t adnd_was = 0xFFFF;
     const uint16_t adnd_now = CYD_ADND_RULES ? opts.adnd : 0;
     rules::set_adnd(adnd_now);

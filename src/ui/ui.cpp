@@ -454,7 +454,12 @@ void key(const Rect& r, const char* label, KeyStyle s)
     const uint16_t col = s == KeyStyle::Dim ? style::kTextMuted : style::kText;
     const char* nl = strchr(label, '\n');
     if (!nl) {
-        text_center(r, label, col);
+        // (too wide for the key in the normal letters: the small ones - "Page
+        // Width" on a slim key)
+        if (text_width(label, Font::Normal) > r.w - 4 && text_width(label, Font::Small) <= r.w - 2)
+            text_center(r, label, col, Font::Small);
+        else
+            text_center(r, label, col);
         return;
     }
     // Two lines, close together

@@ -42,7 +42,9 @@ Settings settings_load()
         memcpy(&s, d + 4, kSize1);
         // (SET1's one Game Fixes switch off: every fix off now - each its own since v0.209.0)
         if (s.comforts_off & kOffItemFixes) settings_set_fixes_off(s.fixes_off, ~0ull);
-        s.comforts_off &= static_cast<uint8_t>(~kOffItemFixes);
+        // (the bits of switches gone since: Tap to Stop Demo, Journal Pop-Up -
+        // their places are Coin Exchange's and Flasks of Oil's now, both on)
+        s.comforts_off &= static_cast<uint8_t>(~(kOffItemFixes | kOffDemoTap | kOffJournal));
     }
     else if (magic == kMagic2 && n >= static_cast<int>(4 + sizeof s)) memcpy(&s, d + 4, sizeof s);
     if (s.brightness < kMinBrightness) s.brightness = kMinBrightness;
@@ -59,7 +61,6 @@ Settings settings_load()
     if (s.original > 1) s.original = 1;
     // (the switches gone with the menus of v0.209.0 - Tom: always on now -
     // never off, whatever an older file says)
-    s.comforts_off &= static_cast<uint8_t>(~(kOffDemoTap | kOffJournal));
     s.comforts_off2 &= static_cast<uint8_t>(~(kOff2Cheats | kOff2ReadTime));
     s.scale_15x = 0;
     return s;

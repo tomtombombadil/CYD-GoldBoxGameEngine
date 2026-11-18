@@ -328,3 +328,17 @@
 // game's Settings page (Tom, 2026-10-11, v0.72.0; one set for all games,
 // settings.h comforts_off), the one Settings screen (Home, a game's page, the
 // in-game Game menu's Settings tab - v0.91.0).
+
+// Coin Exchange (Tom, 2026-11-17 - an Enhancement): any mix of coins pays,
+// the purse, a paid service's pooled money and the shared-out money kept in
+// the highest coins (the five-coin games). Settings key, on by default.
+#ifndef CYD_COIN_EXCHANGE
+#define CYD_COIN_EXCHANGE 1
+#endif
+
+// Flasks of Oil (Tom, 2026-11-17 - an Enhancement: "non-magical and as
+// ordinary as a Molotov Cocktail"): a thrown flask burns - fire damage.
+// Settings key, on by default.
+#ifndef CYD_OIL_BURNS
+#define CYD_OIL_BURNS 1
+#endif

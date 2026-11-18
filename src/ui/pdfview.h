@@ -20,9 +20,10 @@ bool is_open();
 
 int pages();
 
-// Column: one column across the screen (scrolling down it); Whole: the
-// whole page
-enum class Fit : unsigned char { Column, Whole };
+// Column: one column across the screen (scrolling down it); Width: one
+// book page across the screen (a scan of two facing pages is two of them -
+// Tom, 2026-11-17); Whole: the whole scan
+enum class Fit : unsigned char { Column, Width, Whole };
 
 enum class Result : unsigned char { Ok, NoPicture, NoMemory, BadData };
 
@@ -40,6 +41,9 @@ struct View {
     int cols = 0, shown_h = 0;
     ui::Rect fit{0, 0, 0, 0};
     int page_w = 0, page_h = 0;
+    // out (Column / Width): the middle of what is shown, in scan pixels -
+    // at_x / at_y for a change of zoom that keeps the place
+    int mid_x = -1, mid_y = -1;
 };
 
 // Draws page `page` (from 1) into r. Column: finds the page's columns

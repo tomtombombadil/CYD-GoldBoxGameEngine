@@ -4286,6 +4286,21 @@ static void test_journal_view()
         CHECK(journal::find_columns(cs, 80, B, x0, x1, 8) == 2 && x0[0] <= 5 && x1[0] >= 35 && x0[1] <= 42 &&
               x1[1] >= 75 && x1[0] <= x0[1]);
     }
+    // The book's margins (Tom, 2026-11-17): PoolRad's first page - borders 76 and
+    // 56 wide round one 532 wide column - is one column; a spread's four columns
+    // stay four; a sliver beside a column joins its nearer neighbour
+    {
+        int a0[3] = {0, 78, 610}, a1[3] = {76, 610, 666};
+        CHECK(journal::join_margins(a0, a1, 3) == 1 && a0[0] == 0 && a1[0] == 666);
+        int b0[4] = {0, 340, 696, 1000}, b1[4] = {332, 692, 996, 1328};
+        CHECK(journal::join_margins(b0, b1, 4) == 4 && b1[1] == 692 && b0[2] == 696);
+        int c0[4] = {17, 61, 260, 299}, c1[4] = {57, 260, 295, 332};
+        CHECK(journal::join_margins(c0, c1, 4) == 1 && c0[0] == 17 && c1[0] == 332);
+        int d0[3] = {0, 305, 322}, d1[3] = {290, 320, 620};      // (the sliver nearer the right)
+        CHECK(journal::join_margins(d0, d1, 3) == 2 && d1[0] == 290 && d0[1] == 305 && d1[1] == 620);
+        int e0[1] = {5}, e1[1] = {50};
+        CHECK(journal::join_margins(e0, e1, 1) == 1 && e0[0] == 5 && e1[0] == 50);
+    }
 
     // Levels: grey print (the 72 dpi scans) is drawn black, paper stays white
     {

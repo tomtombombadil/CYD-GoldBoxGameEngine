@@ -522,7 +522,7 @@ void exchange()
     for (int k = 0; k < 400; ++k) {
         const bool on = k & 1;
         rules::set_all(true);
-        rules::set_adnd(on ? rules::kAdndAll : static_cast<uint16_t>(rules::kAdndAll & ~rules::kAdndCoins));
+        rules::set_enh(on ? rules::kEnhAll : static_cast<uint8_t>(rules::kEnhAll & ~rules::kEnhCoins));
         back();
         ground->clear();
         const int n = pt->count;

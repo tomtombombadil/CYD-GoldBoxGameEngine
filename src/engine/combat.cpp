@@ -3314,7 +3314,7 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
             // A flask of oil burns (Tom, 2026-10-12: "the flasks of oil should
             // do fire damage" - the originals made it a plain 2d6 blow): its
             // blow is fire, so a troll it brings down stays down
-            const bool oil = item && names && names->flask() && item[0x2E] == names->flask() && rules::adnd(rules::kAdndItems);   // (Magic Items, AD&D 1E Rules)
+            const bool oil = item && names && names->flask() && item[0x2E] == names->flask() && rules::enh(rules::kEnhOil);   // (Flasks of Oil, an Enhancement)
             const int blow_kind = oil ? 1 : flame ? 9 : 0;
             if (blow_kind) g_kind = blow_kind;
             if (bane) {

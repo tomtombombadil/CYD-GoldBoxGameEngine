@@ -75,6 +75,9 @@ inline uint8_t settings_sound_volume(const Settings& s) { return s.volume_muted 
 constexpr uint8_t kFontGame = 0, kFontClear = 1, kFontDarkness = 2, kFontClearCaps = 3;   // (the stored values)
 constexpr uint8_t kOffGallery = 1, kOffBigIcon = 2, kOffDemoTap = 4, kOffJournal = 8, kOffMoreGuys = 16, kOffPortrait = 32,
                   kOffItemFixes = 64, kOffRolls = 128;
+// (SET2 since v0.209.1: Tap to Stop Demo's and Journal Pop-Up's bits - their
+// switches gone in v0.209.0 - are Coin Exchange's and Flasks of Oil's)
+constexpr uint8_t kOffCoins = kOffDemoTap, kOffOil = kOffJournal;
 // comforts_off2 bits (Tom, 2026-11-01): the camp's Fix in Pool (CYD_CAMP_FIX), the Cheats tab (CYD_CHEATS),
 // the Companion panel's views (CYD_COMPANION_VIEWS), Quick Actions (CYD_QUICK_ACTIONS, Tom 2026-11-09)
 constexpr uint8_t kOff2CampFix = 1, kOff2Cheats = 2, kOff2Companion = 4, kOff2Quick = 8,
