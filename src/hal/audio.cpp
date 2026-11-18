@@ -415,6 +415,9 @@ bool start_task()
 
 } // namespace
 
+extern bool music_mode;
+void lrck_switch(bool music);
+
 void audio_play(AudioFill fill, void* ctx)
 {
 #if defined(CYD_QEMU)
@@ -437,6 +440,7 @@ void audio_play(AudioFill fill, void* ctx)
     if (task && ending)
         for (int i = 0; i < 100 && task; ++i) delay(2);     // (ending: start again after it)
     if (task) return;
+    if (music_mode) lrck_switch(false);
     fill16_fn = nullptr;
     fill_fn = fill;
     fill_ctx = ctx;
@@ -454,12 +458,37 @@ bool audio_wide()
 
 static bool no_fill(uint8_t*, int, void*) { return false; }
 
+#if defined(CYD_BOARD_50_CAP_S3) && !defined(CYD_QEMU)
+// The 5.0": its touch's INT is the amplifier's LRCLK. The touch chip is
+// reset one way for music, the other after it (ui.cpp touch_for_music; the
+// board file says why) - each time with the I2S channel closed, so GPIO 18
+// is free, and opened again after (its clocks run on, kKeep)
+namespace ui { void touch_for_music(bool music); }
+bool music_mode = false;
+void lrck_switch(bool music)
+{
+    if (music_mode == music || task) return;
+    music_mode = music;
+    const bool was_open = h != nullptr;
+    if (was_open) {
+        if (enabled) out_disable();
+        out_close();
+    }
+    ui::touch_for_music(music);
+    if (was_open && out_open()) out_enable();
+}
+#else
+void lrck_switch(bool) {}
+bool music_mode = false;
+#endif
+
 void audio_play16(AudioFill16 fill, void* ctx)
 {
     if (!fill || !audio_wide()) return;
     if (task && ending)
         for (int i = 0; i < 100 && task; ++i) delay(2);
     if (task) return;                   // (the caller stops what plays first)
+    lrck_switch(true);
     fill_fn = no_fill;
     fill16_fn = fill;
     fill_ctx = ctx;
@@ -503,10 +532,12 @@ void audio_prepare()
 void audio_stop()
 {
     held = false;
-    if (!task) return;
-    stop_wanted = true;
-    xTaskNotifyGive(task);
-    for (int i = 0; i < 200 && task; ++i) delay(5);
+    if (task) {
+        stop_wanted = true;
+        xTaskNotifyGive(task);
+        for (int i = 0; i < 200 && task; ++i) delay(5);
+    }
+    if (music_mode) lrck_switch(false);     // (the 5.0": the touch's own reset back)
 }
 
 bool audio_running() { return task != nullptr; }

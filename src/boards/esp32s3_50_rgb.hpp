@@ -42,6 +42,7 @@
 #pragma once
 
 #define LGFX_USE_V1
+#include <driver/gpio.h>
 #include <LovyanGFX.hpp>
 #include <lgfx/v1/platforms/esp32s3/Panel_RGB.hpp>
 #include <lgfx/v1/platforms/esp32s3/Bus_RGB.hpp>
@@ -367,25 +368,41 @@ private:
 class Touch_GT911_Bars : public lgfx::Touch_GT911
 {
 public:
-    static constexpr int kPinRst = 38;     // (INT 18: never driven - the LRCLK)
+    static constexpr int kPinRst = 38, kPinInt = 18;
+    // How the next reset goes (v0.210.6, Tom: the taps felt less sensitive
+    // since v0.210.2's reset): with the start-up sync (INT held low through
+    // and after the reset - the maker's TAMC way, the chip's own timing),
+    // except while music plays: then RST only, INT never driven (the synced
+    // chip drives INT, which is the amplifier's LRCLK - the music came
+    // through as static). hal/audio.cpp switches it as a song starts / ends
+    // (touch_for_music in ui.cpp), with the I2S channel closed meanwhile.
+    bool sync_next = true;
+
+    // A reset in the chosen way (the touch task's I2C lock held by the caller)
+    bool restart(bool sync)
+    {
+        sync_next = sync;
+        _inited = false;
+        return init();
+    }
 
     bool init() override
     {
         if (_inited) return true;
-        // The GT911's reset, RST only (v0.210.2, Tom: the AdLib music came
-        // through as harsh static on the 5.0"). INT is the amplifier's LRCLK
-        // too; until v0.210.1 it was held low through the reset to pick the
-        // address (0x5D) and for the chip's start-up sync - after which the
-        // GT911 takes INT as its output, likely against the LRCLK, and the
-        // NS4168 (its high = 0.7 x 5 V, already above the S3's 3.3 V) would
-        // lose its frames. The maker's FNK0115Q sketches never drive INT
-        // (TAMC with INT -1) - their music plays with the touch on; the
-        // address is whichever the chip picks (init tries 0x5D and 0x14).
+        if (sync_next) {
+            // INT low as RST rises (address 0x5D), held 5 ms past it, then
+            // 50 ms more (the start-up sync), then let go (input)
+            gpio_reset_pin(static_cast<gpio_num_t>(kPinInt));
+            gpio_set_direction(static_cast<gpio_num_t>(kPinInt), GPIO_MODE_OUTPUT);
+            gpio_set_level(static_cast<gpio_num_t>(kPinInt), 0);
+        }
         lgfx::pinMode(kPinRst, lgfx::pin_mode_t::output);
         lgfx::gpio_lo(kPinRst);
         lgfx::delay(11);
         lgfx::gpio_hi(kPinRst);
-        lgfx::delay(106);                     // (the maker's 5 + 50 + 50 ms)
+        lgfx::delay(56);
+        if (sync_next) gpio_set_direction(static_cast<gpio_num_t>(kPinInt), GPIO_MODE_INPUT);
+        lgfx::delay(50);
         if (!Touch_GT911::init()) return false;   // (it tries 0x5D and 0x14 in turn)
         // The chip's own output size (its config, 0x8048..0x804B) - the maker
         // sets 800 x 480; scaled to that if it says otherwise

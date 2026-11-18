@@ -19,9 +19,13 @@ the Project as claude/TODO.md.
       Found, NOT fixed yet: the original lists Celeste's god-given spell under "SPECIAL" (Charm Person,
       "Special : 1" in the counts) - the engine shows neither, so a Death Knights character can't memorize
       its special spells (Claude: next). Darkness / Treasures (the same family) not looked at.
-- [ ] Tom (2026-11-18 12:58): the 5.0"'s taps feel less sensitive since the music fix - asked: switch
-      the touch chip's reset back between songs? (Claude: each switch is ~0.1 s with no touch, and the
-      amplifier's clock runs from Play's start for the sound effects too.) Waiting for his answer.
+- [ ] v0.210.6 (Tom, 2026-11-18 13:43: "let's try it"): the 5.0"'s touch chip reset with its start-up
+      sync (v0.210.1's - INT held low, the better taps) except while music plays: as a song starts the
+      I2S channel closes, the chip is reset RST only (INT never driven), the channel opens again; as it
+      ends (audio_stop, or a sound effect after it) the other way (hal/audio.cpp lrck_switch, ui.cpp
+      touch_for_music, Touch_GT911_Bars::restart). Each switch ~0.12 s without touch. Tom: taps between
+      songs as good as v0.210.1's? the music clean? sound effects (no music) clean - they play with the
+      synced chip, as before v0.210.2?
 - [ ] v0.210.4 (Tom, 2026-11-18 11:10: with v0.210.3 the 5.0"'s music is right, but taps "do not
       seem to land at all. Then they land all at once"): v0.210.2's full drive on the I2S pins taken
       out again (GPIO 17 / 18 beside the touch's I2C 19 / 20 - the likely cause); the touch reset stays

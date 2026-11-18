@@ -81,6 +81,20 @@ void use_font(Font f)
 } // namespace
 
 void begin(LGFX& gfx) { g = &gfx; }
+
+#if defined(CYD_BOARD_50_CAP_S3)
+// The 5.0"'s touch reset for music or not (hal/audio.cpp, the I2S closed
+// meanwhile): the touch task's I2C held while the chip restarts
+void touch_for_music(bool music)
+{
+    if (!g) return;
+    auto* t = static_cast<board5::Touch_GT911_Bars*>(g->touch());
+    if (!t || t->sync_next == !music) return;
+    i2c_lock();
+    t->restart(!music);
+    i2c_unlock();
+}
+#endif
 LGFX& gfx() { return *g; }
 
 int width() { return g->width(); }
