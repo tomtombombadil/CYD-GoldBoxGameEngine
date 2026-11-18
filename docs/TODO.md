@@ -19,6 +19,23 @@ the Project as claude/TODO.md.
       Found, NOT fixed yet: the original lists Celeste's god-given spell under "SPECIAL" (Charm Person,
       "Special : 1" in the counts) - the engine shows neither, so a Death Knights character can't memorize
       its special spells (Claude: next). Darkness / Treasures (the same family) not looked at.
+- [ ] v0.210.7 (Tom, 2026-11-18 13:43: "Fix the special spell slots, and test the other games ... magic items,
+      classes, Gods, whatever ... verify ... compared to DOSbox"). Fixed, from each original's code: (1) the
+      specials (spells 101-107, "Special") of Champions and Death Knights - a cleric's, god 4 three, god 6 none,
+      any other one, less those memorized (Champions GAME.OVR 0x1AD6E, Death Knights 0xEBFC): listed, counted
+      on their own "Special" line, memorized (they couldn't be before); (2) Death Knights' moon extras take a
+      magic-user spell of any level, counted over levels 1-8 (0xF600 / 0xF180; Champions' stay levels 1-5);
+      (3) a load learns the spells the classes give, as the originals' load does (Champions' KAL: Resist Cold
+      in the original's list, not in the engine's); (4) the Ring of Wizardry by each game's code - none in
+      Death Knights (its slots routine 0x365E8 doubles nothing), the Dark Queen only the first ring (DQK.EXE
+      0x624A9); Curse / Champions / Gateway levels 1-3, Secret / Darkness / Treasures / Queen the 5th (as
+      before). Checked: DOSBox against the engine on the memorize screens of Death Knights' Celeste and
+      Champions' KAL (memorized spells cleared - CLEARSAVE): lists and counts identical; the stored slots of
+      every character in every game's saves against the engine's own reckoning (RULECHECK: 0 slot differences,
+      nine games); behave levels (slots by class, level, Wisdom / Intelligence, against the programs' tables);
+      saveload 0 problems (nine games); host tests. Not checked in DOSBox: the Dark Queen's memorize screen
+      (its new Bonus line), Darkness's / Treasures' "spells OK?" list (Death Knights' family), whether a new
+      Krynn cleric gets the god's specials in its book at creation.
 - [ ] v0.210.6 (Tom, 2026-11-18 13:43: "let's try it"): the 5.0"'s touch chip reset with its start-up
       sync (v0.210.1's - INT held low, the better taps) except while music plays: as a song starts the
       I2S channel closes, the chip is reset RST only (INT never driven), the channel opens again; as it

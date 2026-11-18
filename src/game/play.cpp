@@ -2887,6 +2887,7 @@ void vault_commit(char slot, bool commit)
     else plat::remove(tmp);
 }
 
+void learn_class_spells();
 bool load_game(char slot)
 {
     load_problem = nullptr;
@@ -2978,6 +2979,7 @@ bool load_game(char slot)
     // fight by PoolRad's rules, or an older engine's, goes; Tom, 2026-11-11)
     if (rules::fix(rules::kFixPCharm) && d->prof->fight.facts.charm)
         for (int i = 0; i < pt->count; ++i) rules::remove_affects(pt->m[i], d->prof->fight.facts.charm);
+    learn_class_spells();
     d->main_start = true;
     vm->pool_main_start();
     plat::log("[play] loaded %s: area %d, %d,%d, script %d, %d characters\n", name, d->gs.game_area, d->gs.x,
@@ -7234,6 +7236,26 @@ bool load_curse_guy(int i, party::Character& ch)
     if (load_rules(mr)) classes::class_bonuses(ch, mr->tables);
     delete mr;
     return true;
+}
+
+// A load works each member's class values out again in the originals, and
+// with them the spells their classes know (Curse's facts: loading,
+// training; DOSBox, Champions' KAL - a 2nd-level cleric whose saved book
+// lacked Resist Cold lists it after a load): the spells class_bonuses would
+// put in the book are added (never taken away)
+void learn_class_spells()
+{
+    MagicRules* mr = nullptr;
+    if (!load_rules(mr)) return;
+    party::Character* cc = new (std::nothrow) party::Character;
+    for (int i = 0; cc && i < pt->count; ++i) {
+        *cc = pt->m[i];
+        classes::class_bonuses(*cc, mr->tables);
+        for (int sp = 1; sp < mr->tables.lay.spell_count; ++sp)
+            if (classes::in_book(*cc, sp) && !classes::in_book(pt->m[i], sp)) classes::to_book(pt->m[i], sp);
+    }
+    delete cc;
+    delete mr;
 }
 
 // A Pool character into ch (false: unreadable, or no rule tables)

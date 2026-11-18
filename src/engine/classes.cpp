@@ -321,14 +321,18 @@ void spell_slots(party::Character& c, const Tables& t)
 {
     if (t.lay.queen) {
         queen_slots(c, t);
+        // (DQK.EXE 0x624A9: the first readied ring alone - the loop ends there)
         for (int i = 0; i < c.n_items; ++i)
-            if (c.items[i][0x34] && items::passive(c.items[i]) == items::Passive::Wizardry) wizardry(c, t, true);
+            if (c.items[i][0x34] && items::passive(c.items[i]) == items::Passive::Wizardry) {
+                wizardry(c, t, true);
+                break;
+            }
         return;
     }
     if (t.lay.dkk) {
+        // (Death Knights' slots routine, GAME.OVR 0x365E8: no ring - its item
+        // walk is only begun, nothing doubles)
         dkk_slots(c, t);
-        for (int i = 0; i < c.n_items; ++i)
-            if (c.items[i][0x34] && items::passive(c.items[i]) == items::Passive::Wizardry) wizardry(c, t, true);
         return;
     }
     if (t.lay.pool) {
@@ -430,8 +434,13 @@ void spell_slots(party::Character& c, const Tables& t)
 void wizardry(party::Character& c, const Tables& t, bool on)
 {
     if (on) {
-        // (Secret's ready routine, GAME.OVR 0x28BDD: the 5th level's alone - record 0x14B)
-        const int from = t.lay.secret || t.lay.queen ? 4 : 0, to = t.lay.secret || t.lay.queen ? 5 : 3;
+        // (Secret's ready routine, GAME.OVR 0x28BDD: the 5th level's alone -
+        // record 0x14B; Darkness / Treasures the same, 0x193 - GAME.OVR
+        // 0x38333 / 0x42911; the Dark Queen 0x17D - DQK.EXE 0x624BA; Curse,
+        // Champions, Gateway levels 1-3 - 0x3AFD1, 0x3A2EE, 0x42BF2)
+        const bool fifth = t.lay.secret || t.lay.queen || t.lay.dk;
+        if (t.lay.dkk) return;
+        const int from = fifth ? 4 : 0, to = fifth ? 5 : 3;
         for (int k = from; k < to; ++k) cast(c, 2, k) = static_cast<uint8_t>(cast(c, 2, k) * 2);
         return;
     }

@@ -1466,6 +1466,24 @@ int main(int argc, char** argv)
         tap_word('E');
         if (getenv("PARTYMENU") && play::pt->count) pm_tap_line('B');
     }
+    // CLEARSAVE=X: the loaded party's memorized spells forgotten, then Save
+    // Current Game to slot X from the party menu, and out (a memorize
+    // check's start, for the original and the engine alike)
+    if (getenv("CLEARSAVE") && play::screen == play::Screen::PartyMenu) {
+        for (int i = 0; i < play::pt->count; ++i) { memset(play::pt->m[i].rec + 0x1E, 0, 84); play::pt->m[i].rec[0x72] = 0; }
+        pm_tap_line('S');
+        settle(0, 3000);
+        for (int i = 0; i < play::menu.count; ++i)
+            if (text::key(play::menu, i) == getenv("CLEARSAVE")[0]) {
+                int cx, cy;
+                text::item_cell(play::menu, i, &cx, &cy);
+                play::tap(cx * 8 + 2, cy * 8 + 2, C);
+                break;
+            }
+        settle(0, 3000);
+        printf("  memorized cleared, saved to %c: screen %d\n", getenv("CLEARSAVE")[0], (int)play::screen);
+        return 0;
+    }
     if (play::screen == play::Screen::PartyMenu && !getenv("PARTYMENU") && !getenv("NOBEGIN")) pm_tap_line('B');
     if (getenv("AREA")) {
         // Start somewhere else: as a script would (SAVE area; NEWECL block)
