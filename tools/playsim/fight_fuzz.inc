@@ -327,7 +327,7 @@ bool fight(int k)
     if (!fg) fc::fight_end();
     // R16 (Tom, 2026-11-11): with Game Fixes no charm outlasts its fight
     // (R16NEG=1: the check without the fixes - it must fire in PoolRad)
-    if (!fg && (rules::fixes() || getenv("R16NEG")) && play::pt && play::d->prof->fight.facts.charm)
+    if (!fg && (rules::all_fixes() || getenv("R16NEG")) && play::pt && play::d->prof->fight.facts.charm)
         for (int i = 0; i < play::pt->count; ++i)
             if (play::pt->m[i].has_affect(play::d->prof->fight.facts.charm)) {
                 char nm[20];
@@ -345,7 +345,7 @@ static void sweep_fightfuzz(unsigned seed, int fights)
     using namespace play;
     if (getenv("R16NEG")) {
         play::opts.item_fixes = false;     // (the game sets the switch from it at each start)
-        rules::set_fixes(false);
+        rules::set_all(false);
     }
     fc::install();
     if (getenv("FXCHECK")) {

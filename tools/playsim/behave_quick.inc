@@ -244,7 +244,7 @@ void qa_spells()
     // the game's missile spell: its fight table's (level + 1) / 2 missiles
     int mm = 0;
     for (int k = 0; k < d->prof->fight.n_spells && !mm; ++k)
-        if (d->prof->fight.spells[k].does == combat::SpellDoes::Damage && d->prof->fight.spells[k].per == 2)
+        if (d->prof->fight.spells[k].does == combat::SpellDoes::Damage && (d->prof->fight.spells[k].per == 2 || d->prof->fight.spells[k].per == 7))
             mm = d->prof->fight.spells[k].spell;
     if (!mm) {
         expect(P, "Quick Actions, Spells: the game's Magic Missile in its fight table", false);

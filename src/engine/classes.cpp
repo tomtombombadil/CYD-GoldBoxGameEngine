@@ -469,7 +469,7 @@ void saving_throws(party::Character& c, const Tables& t)
             // (the Dark Queen, DQK 0x62A0A: the level kept to 21st, but its
             // rows past 18th are empty - 0, every save made. Game Fixes:
             // the last row it fills; SPEC 12)
-            if (t.lay.queen && rules::fixes())
+            if (t.lay.queen && rules::fix(rules::kFixQSaves18))
                 while (lv > 1 && !t.save(cls, lv, 0) && !t.save(cls, lv, 1) && !t.save(cls, lv, 2) && !t.save(cls, lv, 3) &&
                        !t.save(cls, lv, 4))
                     --lv;
@@ -479,7 +479,7 @@ void saving_throws(party::Character& c, const Tables& t)
             // 8th, poison 9 after 8; Darkness's / Treasures' thief at 19th,
             // the 13th-16th row again. Game Fixes: AD&D's - a save never
             // worse for a level gained; SPEC 12)
-            for (int l = 1; rules::fixes() && l < lv; ++l)
+            for (int l = 1; rules::fix(rules::kFixSaves) && l < lv; ++l)
                 if (t.save(cls, l, kind) < v) v = t.save(cls, l, kind);
             if (v < best) best = v;
         }
@@ -488,7 +488,7 @@ void saving_throws(party::Character& c, const Tables& t)
         // its former level, so a knight above it (every knight: no former
         // level) takes row 7's entry for that level (level 0: 11 10 10 14
         // 11) when lower. Game Fixes: not (SPEC 12)
-        if (t.lay.krynn && !t.lay.dkk && !t.lay.queen && !rules::fixes() && c.level(Monk) > c.old_level(Monk)) {
+        if (t.lay.krynn && !t.lay.dkk && !t.lay.queen && !rules::fix(rules::kFixKSaves) && c.level(Monk) > c.old_level(Monk)) {
             const int v = t.save(Monk, c.old_level(Monk), kind);
             if (v < best) best = v;
         }
@@ -528,7 +528,7 @@ int thief_race_row(const party::Character& c, const Tables& t)
 {
     if (!t.lay.krynn) return t.race_row(c.race());
     if (t.lay.queen) return c.ext[party::kExtRace];                 // (the Dark Queen's own table, by its race)
-    if (rules::fixes()) return c.race() > 0 ? c.race() - 1 : 0;     // (thief_race is one row on)
+    if (rules::fix(rules::kFixThiefRace)) return c.race() > 0 ? c.race() - 1 : 0;     // (thief_race is one row on)
     return c.ext[party::kExtRace];
 }
 
@@ -580,7 +580,7 @@ void thief_skills(party::Character& c, const Tables& t)
             // (the originals keep a byte: a low Dexterity's minus past the
             // base wraps round - Dexterity 9 at 1st level, move silently
             // -5 = 251%, never failing. Game Fixes: 0 - SPEC 12)
-            if (v < 0 && rules::fixes()) v = 0;
+            if (v < 0 && rules::fix(rules::kFixThief)) v = 0;
         }
         if (plus10) v += 10;
         c.rec[kThief + skill - 1] = static_cast<uint8_t>(v);

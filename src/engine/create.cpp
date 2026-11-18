@@ -234,7 +234,7 @@ void secret_hp(party::Character& c, const classes::Tables& t, const Facts& f, Di
     // (the Krynn games' paladins take neither - the knight took Curse's
     // paladin's place in the test; Game Fixes: AD&D's, a fighter's
     // Constitution and 3 a level past the hit dice - SPEC 12)
-    const bool kpal = kr && rules::fixes();
+    const bool kpal = kr && rules::fix(rules::kFixPalHp);
     for (int k = 0; k < (kr ? 8 : 7); ++k) {
         const int lv = c.level(k);
         if (lv <= 0 || !(t.u8(static_cast<uint16_t>(t.lay.class_masks + k)) & mask)) continue;
@@ -258,10 +258,10 @@ void secret_hp(party::Character& c, const classes::Tables& t, const Facts& f, Di
     int inc = (rolled & 0xFF) / held;
     if (inc < 1) inc = 1;
     r[kHpRolled] = static_cast<uint8_t>(r[kHpRolled] + inc);
-    int cp = rules::fixes() ? static_cast<int8_t>(con & 0xFF) / held : (con & 0xFF) / held;
+    int cp = rules::fix(rules::kFixHpLevel) ? static_cast<int8_t>(con & 0xFF) / held : (con & 0xFF) / held;
     // (the original's gain can be below 1 - Constitution 3: none or less;
     // AD&D's at least 1 a level with the rules fixes)
-    if (rules::fixes() && inc + cp < 1) cp = 1 - inc;
+    if (rules::fix(rules::kFixHpLevel) && inc + cp < 1) cp = 1 - inc;
     const int lost = (r[kHpMax] - r[kHp]) & 0xFF;
     r[kHpMax] = static_cast<uint8_t>(r[kHpMax] + inc + cp);
     r[kHp] = static_cast<uint8_t>(r[kHpMax] - lost);
@@ -370,7 +370,7 @@ int con_hp_adj(const party::Character& c, const classes::Tables& t)
     const int con = stat_full(c, 4);
     int held = 0;
     for (int k = 0; k <= classes::Monk; ++k) held += c.level(k) > 0;
-    if (held > 1 && rules::fixes()) {
+    if (held > 1 && rules::adnd(rules::kAdndMultiHp)) {
         // (a multi-class with the Game Fixes: each class's figure as a single
         // class of it gets it - multi_hp; Modify Character's bounds)
         for (int k = 0; k <= classes::Monk; ++k) {
@@ -579,9 +579,9 @@ void queen_hp(party::Character& c, const classes::Tables& t, Dice& d, int mask, 
         // (the byte divided unsigned: a multi-class's penalty a large gain;
         // Game Fixes signed, and at least 1 a level - Secret's / Krynn's the
         // same, secret_hp; SPEC 12)
-        cp = rules::fixes() ? static_cast<int8_t>(con) / held : con / held;
+        cp = rules::fix(rules::kFixHpLevel) ? static_cast<int8_t>(con) / held : con / held;
     }
-    if (rules::fixes() && rolled + cp < 1) cp = 1 - rolled;
+    if (rules::fix(rules::kFixHpLevel) && rolled + cp < 1) cp = 1 - rolled;
     const uint8_t lost = static_cast<uint8_t>(r[kHpMax] - r[kHp]);
     r[kHpRolled] = static_cast<uint8_t>(r[kHpRolled] + rolled);
     r[kHpMax] = static_cast<uint8_t>(r[kHpMax] + rolled + cp);
@@ -732,7 +732,7 @@ void queen_stats(party::Character& c, const classes::Tables& t, Dice& d)
         if (v < lo) v = lo;
         const int mn = t.u8(static_cast<uint16_t>(t.lay.class_min + cls * 6 + i));
         if (v < mn) v = mn;
-        if (rules::fixes() && i == 2 && v < 13 && cls >= ClericFighter && cls <= ClericThief) v = 13;
+        if (rules::fix(rules::kFixQWis13) && i == 2 && v < 13 && cls >= ClericFighter && cls <= ClericThief) v = 13;
         set_stat(c, i, v);
         if (i == 0 && v == 18 &&
             (c.level(classes::Fighter) || c.level(classes::Ranger) || c.level(classes::Paladin) || c.level(classes::Monk))) {
@@ -760,7 +760,7 @@ int single_con_fig(const classes::Tables& t, int k, int con)
 {
     int v = con >= 0 && con < 26 ? kConHp[con] : 0;
     const bool fighter = k == Fighter || k == Ranger || k == Paladin || (t.lay.krynn && k == Monk);
-    if (fighter && (k != Paladin || !t.lay.krynn || rules::fixes())) {
+    if (fighter && (k != Paladin || !t.lay.krynn || rules::fix(rules::kFixPalHp))) {
         if (con == 17) v += 1;
         else if (con == 18) v += 2;
         else if (con == 19 || con == 20) v += 3;
@@ -913,7 +913,7 @@ void queen_roll(party::Character& c, const classes::Tables& t, const Facts& f, D
     }
     put16(r, kMoney + 4 * 2, f.platinum);
     r[kHpMax] = r[kHp] = r[kHpRolled] = 0;
-    if (queen_held(c) > 1 && rules::fixes()) {
+    if (queen_held(c) > 1 && rules::adnd(rules::kAdndMultiHp)) {
         int dice = 0;                   // (a multi-class with the Game Fixes: multi_hp)
         r[kHpMax] = r[kHp] = static_cast<uint8_t>(multi_hp(c, t, f, d, 0xFF, queen_held(c), &dice));
         r[kHpRolled] = static_cast<uint8_t>(dice);
@@ -1087,7 +1087,7 @@ void roll(party::Character& c, const classes::Tables& t, const Facts& f, Dice& d
             // line (human), not the race picked, so the originals never add
             // them (checked in DOSBox: Champions' kender keep their Dex);
             // with Game Fixes on, the races' own (SPEC 12)
-            if (!rules::fixes()) return 0;
+            if (!rules::fix(rules::kFixRaceAdj)) return 0;
             switch (c.ext[party::kExtRace]) {
             case 3: case 4: return i == 4 ? 1 : i == 5 ? -1 : 0;
             case 0: case 1: return i == 3 ? 1 : i == 4 ? -1 : 0;
@@ -1100,7 +1100,7 @@ void roll(party::Character& c, const classes::Tables& t, const Facts& f, Dice& d
         // (Darkness's program tests the race list's last line - human - not
         // the race picked (GAME.OVR 0x15449: [bp-0x17]), so it never adds
         // them; AD&D's with the rules fixes - SPEC 12)
-        if (t.lay.dk && !rules::fixes()) return 0;
+        if (t.lay.dk && !rules::fix(rules::kFixRaceAdj)) return 0;
         switch (race) {
         case 1: return i == 4 ? 1 : i == 5 ? -1 : 0;
         case 2: return i == 3 ? 1 : i == 4 ? -1 : 0;
@@ -1236,7 +1236,7 @@ void roll(party::Character& c, const classes::Tables& t, const Facts& f, Dice& d
         put16(r, kMoney + 4 * 2, f.platinum ? f.platinum : 300);   // 300 platinum (Secret's start with none; Gateway 35)
     }
 
-    if (held > 1 && rules::fixes()) {
+    if (held > 1 && rules::adnd(rules::kAdndMultiHp)) {
         // (a multi-class with the Game Fixes: each class's 1st level as a
         // single class's, shared - Tom, 2026-11-06; multi_hp)
         int dice = 0;
@@ -1404,7 +1404,7 @@ void train_classes(party::Character& c, const classes::Tables& t, const Facts& f
             if (c.level(k) > 0 && (t.u8(static_cast<uint16_t>(t.lay.class_masks + k)) & mask)) ++r[kLevels + k];
         classes::class_bonuses(c, t);
         if (silent) queen_mu_spells(c);
-        if (queen_held(c) > 1 && rules::fixes()) multi_gain(c, t, f, d, mask, queen_held(c));
+        if (queen_held(c) > 1 && rules::adnd(rules::kAdndMultiHp)) multi_gain(c, t, f, d, mask, queen_held(c));
         else queen_hp(c, t, d, mask, queen_held(c));
         return;
     }
@@ -1442,7 +1442,7 @@ void train_classes(party::Character& c, const classes::Tables& t, const Facts& f
                 if (s) learn(c, s);
     }
     if (r[kHitDice] <= r[kMultiLevel]) return;
-    if (held > 1 && rules::fixes()) {
+    if (held > 1 && rules::adnd(rules::kAdndMultiHp)) {
         multi_gain(c, t, f, d, mask, held);
         return;
     }

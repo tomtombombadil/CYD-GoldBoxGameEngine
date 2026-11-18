@@ -98,14 +98,14 @@ int ocon_adj(int con, int cls)
     if (cls == 2) a += (con > 16) + (con > 17);
     // (Game Fixes, Tom 2026-11-06: a multi-class's classes each their single
     // class's figure - the fighter's extra too)
-    if (rules::fixes() && held(cls) > 1 && (class_bits(cls) & 4)) a += (con > 16) + (con > 17);
+    if (rules::all_fixes() && held(cls) > 1 && (class_bits(cls) & 4)) a += (con > 16) + (con > 17);
     return a;
 }
 // A class's single-class Constitution figure (2.5) and a multi-class's hit
 // points with the Game Fixes (Tom, 2026-11-06): each class's roll + figure
 // (at least 1) summed over the classes, divided by the classes held
 int ocf(int k, int con) { return ocol("con_hp", con) + (k == 2 ? (con > 16) + (con > 17) : 0); }
-bool ofix_multi(int cls) { return rules::fixes() && held(cls) > 1; }
+bool ofix_multi(int cls) { return rules::all_fixes() && held(cls) > 1; }
 int ohp(int R, int A, int n)                  // 1.12 / 2.6: the averaging with A
 {
     if (A < 0) return R > -A + n ? (R + A) / n : 1;
@@ -205,7 +205,7 @@ void class_values()
                     const int base = (*tb)[i], r = (*tr)[i];
                     int want = r < 0 && -r > base ? 0 : base + r;
                     if (i <= 5 && !(r < 0 && -r > base)) want += (*td)[i];
-                    if (want < 0 && rules::fixes()) want = 0;   // (the original's byte wraps; Game Fixes: 0 - SPEC 12)
+                    if (want < 0 && rules::all_fixes()) want = 0;   // (the original's byte wraps; Game Fixes: 0 - SPEC 12)
                     ++done;
                     if (c.rec[0xEA + i - 1] != static_cast<uint8_t>(want) && !bad++) {
                         char t[96];

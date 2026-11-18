@@ -330,6 +330,46 @@ stay in the session's scratch space, never in the repo.
 
 ## 5c. Settings and logs (Tom, 2026-10-09)
 
+- **The menus since v0.209.0** (Tom, 2026-11-17 - his tree; it replaces the
+  one Settings screen below, the Game menu's tabs and the game's page): the
+  Game key in a game and Home's Settings open the same pages, up to 8 keys
+  (2 x 4), Back bottom-left (Back to Game on the game's top page), page
+  arrows bottom-right; each switch has its "?".
+  - Top, in a game: Display, Audio, Game Play, Journal, Cheats, Quick
+    Actions, System, Exit Game (one tap, no question). At Home: Display,
+    Audio, Game Play, Cheats (Max Hit Points only), System.
+  - Display: Brightness, Right Handed / Left Handed, Rotate 180, Invert
+    Colors, Swap Red/Blue, Recalibrate Touch, Companion Strip (5.0").
+  - Audio: Game Sound, AdLib Music, Volume; in a game the effects to hear.
+  - Game Play: Original Games (switch), Enhancements, AD&D 1E Rules, Game
+    Fixes. Original Games on turns every Enhancement, AD&D 1E Rule, Game Fix
+    and Max Hit Points off (the game's own font) and keeps the player's own
+    set, given back when it goes off; any switch can still be turned on by
+    itself meanwhile; the board's settings and the Cheats page's cheats are
+    never touched.
+  - Enhancements: Game Font, Show Rolls, Companion Views, Savegame Info,
+    Auto Join Items, Keep Memorizing, Camp Fix, More Characters, Icon
+    Portrait, Icon Gallery, Large Icon (320x240).
+  - AD&D 1E Rules (section 12): Magic Missile, Multi-Class Hit Points,
+    Thrown Weapons, Magic Items, Coin Exchange, Age with Time, Power Word
+    Kill, Protection from Evil, Raising the Dead.
+  - Game Fixes: Every Game and one page a game (in a game: Every Game and
+    that game's); each fix its own switch, on each page of a game it
+    touches (`rules::fix_info`: names, games, help).
+  - Journal: the entries met so far; Whole Journal (the book).
+  - Cheats: Healer, Merchant, Sanctuary, Trainer, Max Hit Points.
+  - Quick Actions: its page, On / Off at the top (off: dimmed, the
+    originals' Quick).
+  - System: Rescan Card (in a game: leaves it first), Device Info (version,
+    board, chip, screen, PSRAM, memory, each game's release - Steam / GOG /
+    unknown), Card Log, Restart Log, Error Log, Memory Log, Send Logs.
+  - Home: a tap on the game starts it; Rescan Card in System (an empty
+    card's page: a tap scans). No game page, no Dev Tools, no Asset Viewer,
+    no Cheats Tab / Menu Highlight / Readable Messages / Journal Pop-Up / Tap
+    to Stop Demo switches (always on).
+  - The settings file: SET2, 64 bytes (`settings.cpp`); a SET1 file is read
+    into its first 15 bytes, its Game Fixes off = every fix off.
+
 - **One Settings screen** (Tom, 2026-10-12, v0.91.0: "the chooser's
   settings and the game settings ... should be the same (except the game
   specific settings). A player playing a game should be able to adjust
@@ -3139,9 +3179,18 @@ the game's Settings (As Original: all of them).
   letter across the words: `ecl::rune_word`); nothing from
   the wheel or the game in the repo. Other games' PROTECTION: skipped.
 - **AD&D 1E Rules** (Tom, 2026-11-17; `CYD_ADND_RULES`, `rules::adnd`,
-  Settings::rules_off - each rule its own Settings key, on by default, As
-  Original turns them off): rules of the 1st edition books the originals
-  left out - not mistakes in their code, so not Game Fixes.
+  Settings::rules_off / rules_off2 - each rule its own switch, on by
+  default, Original Games turns them off): rules of the 1st edition books the
+  originals left out - not mistakes in their code, so not Game Fixes. Since
+  v0.209.0 these entries below are AD&D 1E Rules, not Game Fixes: Magic
+  Missile (PoolRad's own level / 2 off), A multi-class's hit points (Multi-
+  Class Hit Points), Money (Coin Exchange - also Pool at a paid service in
+  the highest coins, `play::counter_pool`; Share returns the highest coins),
+  Flasks of oil burn and Pool's Flame Tongue (Magic Items), Darkness's and
+  Treasures' clock and age (Age with Time), Darkness's Power Word Kill,
+  Protection from Evil / Good against blows. Every other "Game Fixes" entry
+  of this section is its own switch (`rules::Fix`; its name in
+  `rules.cpp kFixes`).
   - **Thrown Weapons**: a hurled weapon takes Dexterity's missile bonus to
     hit and Strength's damage bonus. The originals give darts and javelins
     (ITEMS flags 0x10 without melee's 4) neither (`rules::recalc`). A weapon

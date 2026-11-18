@@ -72,12 +72,33 @@ struct SetEntry {
     uint8_t id = 0;
 };
 SetEntry set_help;              // the key whose help is up (set_help_on)
+extern const char* help_name;   // (a key of the pages' own - an AD&D 1E Rule, a Game Fix: its words)
+extern const char* help_body;
 bool     set_help_on = false;
 const char* set_name(const SetEntry& e);
 const char* set_help_text(const SetEntry& e);
-void draw_settings_body();
-bool tap_settings_body(const ui::Tap& t);
 ui::Rect game_settings_area();
+// The menu pages (Tom, 2026-11-17 - his tree, v0.209.0): the Game key in a
+// game and Home's Settings open the same pages - each up to 8 keys (2 x 4),
+// Back in the bottom-left corner (Back to Game on the game's top page), the
+// page arrows in the bottom-right one when there are more. In a game the top
+// page is Display, Audio, Game Play, Journal, Cheats, Quick Actions, System,
+// Exit Game; at Home Display, Audio, Game Play, Cheats (its switch) and
+// System. Game Play: Original Games, Enhancements, AD&D 1E Rules, Game
+// Fixes (in a game Every Game and that game's page; at Home every game's).
+enum class Page : uint8_t { Top, Display, Audio, Play, Enhance, Adnd, FixGames, Fixes, Journal, Cheats, Quick, System,
+                            Device };
+Page    page = Page::Top;
+int     page_pg = 0;                // the page's screenful (a page of more than 8 keys)
+uint8_t fix_game = 0;               // the Fixes page's game (games::Game; 0: Every Game)
+int  menu_page = 0;                 // the Journal page's list page
+bool from_menu = false;             // the journal / book screens go back to the menu
+char menu_note[160] = {};
+bool in_game_menu();
+ui::Rect pg_back();
+void page_back();
+void draw_set_entry(const ui::Rect& cell, const SetEntry& e);
+bool set_has_help(const SetEntry& e);
 ui::Rect journal_area();
 
 
@@ -198,8 +219,8 @@ void go(Screen s)
                        s == Screen::Journal || s == Screen::Pdf);
     // The one Settings screen: where it was opened from (its game keys, its
     // bottom keys)
+    if (s == Screen::GameSettings) s = Screen::Settings;      // (no game page's own Settings since v0.209.0)
     if (s == Screen::Settings) set_from = SetFrom::Home;
-    if (s == Screen::GameSettings) set_from = SetFrom::Game;
     if (s == Screen::GameMenu) set_from = SetFrom::InGame;
     if (s != screen) set_help_on = false;
     screen = s;
@@ -1758,7 +1779,6 @@ void draw_home()
     char title[48];
     snprintf(title, sizeof title, "Gold Box Library  %s", env_.version);
     ui::text(gp * 2, (hh - ui::line_h()) / 2, title, style::kText);
-    ui::key_small(home_key(0), "Rescan");
     ui::key_small(home_key(1), "Settings");
     const ui::Rect card = home_card();
     if (scan_result != library::ScanResult::Ok || n_games == 0) {
@@ -1776,7 +1796,7 @@ void draw_home()
         y += lh / 2;
         ui::text(x, y, "/GOLDBOX/Curse of the Azure Bonds", style::kGold);
         y += lh * 3 / 2;
-        ui::text(x, y, "then tap Rescan.", style::kText);
+        ui::text(x, y, "then tap here to scan the card.", style::kText);
         return;
     }
     if (home_page >= n_games) home_page = n_games - 1;
@@ -1829,10 +1849,22 @@ void draw_home()
     if (ipx) draw_icon(g, ix, iy, ipx, st);
 }
 
+bool playable();
+void start_play();
 void tap_home(const ui::Tap& t)
 {
-    if (home_key(0).contains(t.x, t.y)) { rescan(); return; }
-    if (home_key(1).contains(t.x, t.y)) { go(Screen::Settings); return; }
+    if (home_key(1).contains(t.x, t.y)) {
+        page = Page::Top;
+        page_pg = 0;
+        go(Screen::Settings);
+        return;
+    }
+    // (no card or no games: Rescan Card is in Settings - System; a tap on the
+    // page does it too, so the first card needs no hunting)
+    if (scan_result != library::ScanResult::Ok || n_games == 0) {
+        if (home_card().contains(t.x, t.y)) rescan();
+        return;
+    }
     if (scan_result != library::ScanResult::Ok || n_games == 0) return;
     const ui::Rect card = home_card();
     if (!card.contains(t.x, t.y)) return;
@@ -1849,9 +1881,12 @@ void tap_home(const ui::Tap& t)
             dirty = true;
         }
     } else {
+        // (Tom, 2026-11-17: straight into the game - its settings are in its
+        // menu; a game the engine can't play yet: its note)
         game_sel = home_page;
         file_page = 0;
-        go(Screen::Files);                 // the game's page: Play, Settings
+        if (playable()) start_play();
+        else go(Screen::Files);
     }
 }
 
@@ -2016,7 +2051,9 @@ void tap_files(const ui::Tap& t)
         if (chooser_key(i).contains(t.x, t.y)) k = i;
     if (k < 0) return;
     if (!playable() || k == 1) {
-        go(Screen::GameSettings);
+        page = Page::Top;
+        page_pg = 0;
+        go(Screen::Settings);
         return;
     }
     start_play();
@@ -3125,85 +3162,6 @@ bool tap_keyboard(const ui::Tap& t)
 // Journal PDF (the book). More tabs as the engine grows. Back to Game at
 // the bottom.
 
-enum MenuTab { kTabJournal, kTabPdf, kTabSounds, kTabSettings, kTabLogs, kTabQuick, kTabCheats, kTabs };
-// (the Quick tab only with Settings' Quick Actions on - features.h
-// CYD_QUICK_ACTIONS, Tom 2026-11-09; the Cheats tab - last - only with
-// Settings' Cheats Tab on: CYD_CHEATS)
-bool cheats_tab_on();
-bool quick_tab_on();
-bool tab_shown(int t) { return t == kTabCheats ? cheats_tab_on() : t == kTabQuick ? quick_tab_on() : true; }
-int n_tabs()
-{
-    int n = 0;
-    for (int t = 0; t < kTabs; ++t) n += tab_shown(t);
-    return n;
-}
-// The tab in the bar's place `slot` (left to right)
-int tab_at(int slot)
-{
-    for (int t = 0; t < kTabs; ++t)
-        if (tab_shown(t) && slot-- == 0) return t;
-    return kTabJournal;
-}
-int  menu_tab = kTabJournal;
-int  menu_page = 0;
-bool from_menu = false;       // the journal / PDF screens go back to the Menu
-char menu_note[160] = {};
-
-// Exit Game at the tab bar's right, both sizes (Tom, 2026-10-10: it was
-// 320x240's Esc): out of the Play Test, back to the game's page
-// (with seven tabs - the Quick tab on - Exit Game is a narrow key, its two
-// words on two lines, so the tabs keep their room)
-bool menu_esc_narrow() { return n_tabs() >= 7; }
-ui::Rect menu_esc_rect()
-{
-    const int gp = ui::gap(), w = menu_esc_narrow() ? (ui::large() ? 48 : 34) : ui::large() ? 100 : 62;
-    return {ui::width() - gp - w, 2, w, ui::header_h() - 4};
-}
-
-// (the tabs and Exit Game, in the small text - 320x240's book tab is
-// "PDF"; Logs since v0.86.0, Tom: to look at the logs in the game;
-// Settings since v0.91.0, the one Settings screen - was Options)
-const char* const kTabNames[kTabs] = {"Journal", "Journal PDF", "Sounds", "Settings", "Logs", "Quick", "Cheats"};
-const char* const kTabShort[kTabs] = {"Journal", "PDF", "Sounds", "Settings", "Logs", "Quick", "Cheats"};
-const char* tab_label(int t) { return ui::large() ? kTabNames[t] : kTabShort[t]; }
-
-// Each tab as wide as its word plus an equal share of the rest (by its
-// place in the bar)
-ui::Rect tab_rect(int slot)
-{
-    const int gp = ui::gap();
-    const int right = menu_esc_rect().x;
-    int words = 0, x = gp;
-    const int nt = n_tabs();
-    for (int k = 0; k < nt; ++k) words += ui::text_width(tab_label(tab_at(k)), ui::Font::Small);
-    const int extra = (right - gp * (nt + 1) - words) / nt;
-    for (int k = 0; k < slot; ++k) x += ui::text_width(tab_label(tab_at(k)), ui::Font::Small) + extra + gp;
-    return {x, 2, ui::text_width(tab_label(tab_at(slot)), ui::Font::Small) + extra, ui::header_h() - 4};
-}
-
-void draw_tabs(int active)
-{
-    ui::gfx().fillRect(0, 0, ui::width(), ui::header_h(), style::kHeader);
-    for (int i = 0; i < n_tabs(); ++i)
-        ui::key_small(tab_rect(i), tab_label(tab_at(i)), tab_at(i) == active ? ui::KeyStyle::Lit : ui::KeyStyle::Normal);
-    if (menu_esc_narrow()) ui::key_small(menu_esc_rect(), "Exit\nGame");
-    else if (ui::large()) ui::key(menu_esc_rect(), "Exit Game");
-    else ui::key_small(menu_esc_rect(), "Exit Game");
-}
-
-bool menu_esc_hit(const ui::Tap& t)
-{
-    const ui::Rect r = menu_esc_rect();
-    return r.w > 0 && r.contains(t.x, t.y);
-}
-
-int tab_hit(const ui::Tap& t)
-{
-    for (int i = 0; i < n_tabs(); ++i)
-        if (tab_rect(i).contains(t.x, t.y)) return tab_at(i);
-    return -1;
-}
 
 
 ui::Rect journal_area();
@@ -3221,11 +3179,9 @@ int menu_pages()
 void open_menu()
 {
     from_menu = true;
-    menu_tab = kTabJournal;
+    page = Page::Top;
+    page_pg = 0;
     menu_note[0] = 0;
-    const int r = menu_rows();
-    // Start on the page with the latest entry
-    menu_page = r > 0 && play::journal_seen_count() ? (play::journal_seen_count() - 1) / r : 0;
     go(Screen::GameMenu);
 }
 
@@ -3278,16 +3234,19 @@ bool tap_volume(const ui::Rect& r, int x);
 void draw_game_sound(const ui::Rect& r);
 void tap_game_sound(const ui::Rect& r);
 
-ui::Rect sound_key(int i)          // i < 0: the top row (-1 Game Sound, -2 Volume + Mute: two keys' width)
+// i < 0: the top row - -1 Game Sound, -3 AdLib Music (a key each), -2
+// Volume + Mute (two keys' width)
+ui::Rect sound_key(int i)
 {
     const ui::Rect a = journal_area();
     const int gp = ui::gap(), cols = 4, rows = kSoundKeyCount / cols + 1;
     const int w = (a.w - gp * (cols + 1)) / cols, h = (a.h - gp * (rows + 1)) / rows;
-    if (i < 0) {
-        const int dw = (a.w - gp * 4) / 3;
-        if (i == -1) return {a.x + gp, a.y + gp, dw, h};
-        return {a.x + gp * 2 + dw, a.y + gp, a.w - gp * 3 - dw, h};
-    }
+    // (the top row: three equal keys on 480x320; on 320x240 Volume half the
+    // row - its - / + and the percentage need it)
+    const int w3 = ui::large() ? (a.w - gp * 4) / 3 : w;
+    if (i == -1) return {a.x + gp, a.y + gp, w3, h};
+    if (i == -3) return {a.x + gp * 2 + w3, a.y + gp, w3, h};
+    if (i == -2) return {a.x + gp * 3 + w3 * 2, a.y + gp, a.w - gp * 4 - w3 * 2, h};
     return {a.x + gp + (i % cols) * (w + gp), a.y + gp + (i / cols + 1) * (h + gp), w, h};
 }
 
@@ -3295,11 +3254,25 @@ void draw_sounds()
 {
     draw_game_sound(sound_key(-1));
     draw_volume(sound_key(-2));
-    for (int i = 0; i < kSoundKeyCount; ++i) ui::key(sound_key(i), kSoundKeys[i].name);
+    ui::key2(sound_key(-3), "AdLib Music", cfg->music_off ? "Off" : "On", cfg->music_off ? ui::KeyStyle::Normal : ui::KeyStyle::Lit);
+    // (the effects to hear: the game's own driver plays them - in a game only)
+    for (int i = 0; in_game_menu() && i < kSoundKeyCount; ++i) ui::key(sound_key(i), kSoundKeys[i].name);
+    if (!in_game_menu()) {
+        const ui::Rect k = sound_key(0);
+        wrap_text(k.x + ui::gap(), k.y + ui::gap(), journal_area().w - ui::gap() * 4,
+                  "In a game this page also plays each of its sound effects.", ui::Font::Small, style::kTextMuted, true);
+    }
 }
 
 void tap_sounds(const ui::Tap& t)
 {
+    if (sound_key(-3).contains(t.x, t.y)) {
+        cfg->music_off = !cfg->music_off;
+        play::set_music(!cfg->music_off);
+        settings_save(*cfg);
+        ui::key2(sound_key(-3), "AdLib Music", cfg->music_off ? "Off" : "On", cfg->music_off ? ui::KeyStyle::Normal : ui::KeyStyle::Lit);
+        return;
+    }
     if (sound_key(-2).contains(t.x, t.y)) {
         tap_volume(sound_key(-2), t.x);
         return;
@@ -3308,7 +3281,7 @@ void tap_sounds(const ui::Tap& t)
         tap_game_sound(sound_key(-1));
         return;
     }
-    for (int i = 0; i < kSoundKeyCount; ++i)
+    for (int i = 0; in_game_menu() && i < kSoundKeyCount; ++i)
         if (sound_key(i).contains(t.x, t.y)) {
             play::sound_test(kSoundKeys[i].id);
             return;
@@ -3318,41 +3291,34 @@ void tap_sounds(const ui::Tap& t)
 // ---- The engine comforts' switches (Tom, 2026-10-11, v0.72.0) ----------------
 // One set for all games (settings.h comforts_off), on the one Settings
 // screen (below); a comfort compiled out (app/features.h) isn't listed.
-enum Comfort { kCFont, kCGallery, kCBigIcon, kCJournal, kCDemoTap, kCMoreGuys, kCPortrait, kCItemFixes, kCRolls,
-               kCCampFix, kCCheats, kCCompanion, kCMaxHp, kCQuick, kCRead, kCJoin, kCSaveInfo, kCThrown, kCRaise, kComforts };
+enum Comfort { kCFont, kCGallery, kCBigIcon, kCMoreGuys, kCPortrait, kCRolls, kCCampFix, kCCompanion, kCMaxHp, kCQuick,
+               kCJoin, kCSaveInfo, kCKeepMem, kComforts };
 
 bool comfort_built(int c)
 {
     switch (c) {
     case kCFont: return CYD_CLEAR_FONT;
     case kCGallery: return CYD_ICON_GALLERY;
-    case kCBigIcon: return CYD_BIG_ICON_PREVIEW;
-    case kCJournal: return CYD_JOURNAL_POPUP;
-    case kCDemoTap: return CYD_DEMO_TAP_STOPS;
+    case kCBigIcon: return CYD_BIG_ICON_PREVIEW && !ui::large();       // (480x320: always - no key)
     case kCMoreGuys: return CYD_MORE_CHARACTERS;
     case kCPortrait: return CYD_ICON_PORTRAIT;
-    case kCItemFixes: return CYD_ITEM_FIXES;
     case kCRolls: return CYD_COMBAT_ROLLS;
     case kCCampFix: return CYD_CAMP_FIX;
-    case kCCheats: return CYD_CHEATS;
     case kCCompanion: return CYD_COMPANION_VIEWS;
     case kCMaxHp: return CYD_MAX_HP;
     case kCQuick: return CYD_QUICK_ACTIONS;
-    case kCRead: return CYD_READ_TIME;
     case kCJoin: return CYD_AUTO_JOIN;
     case kCSaveInfo: return CYD_SAVE_INFO;
-    case kCThrown:
-    case kCRaise: return CYD_ADND_RULES;
+    case kCKeepMem: return CYD_KEEP_MEMORIZING;
     default: return true;
     }
 }
 // (bits 8 on: comforts_off2's)
 uint16_t comfort_bit(int c)
 {
-    static const uint16_t kBits[kComforts] = {0, kOffGallery, kOffBigIcon, kOffJournal, kOffDemoTap, kOffMoreGuys,
-                                              kOffPortrait, kOffItemFixes, kOffRolls, kOff2CampFix << 8,
-                                              kOff2Cheats << 8, kOff2Companion << 8, 0, kOff2Quick << 8,
-                                              kOff2ReadTime << 8, kOff2AutoJoin << 8, kOff2SaveInfo << 8, 0, 0};
+    static const uint16_t kBits[kComforts] = {0, kOffGallery, kOffBigIcon, kOffMoreGuys, kOffPortrait, kOffRolls,
+                                              kOff2CampFix << 8, kOff2Companion << 8, 0, kOff2Quick << 8,
+                                              kOff2AutoJoin << 8, kOff2SaveInfo << 8, kOff2KeepMem << 8};
     return kBits[c];
 }
 uint16_t comforts_off() { return static_cast<uint16_t>(cfg->comforts_off | cfg->comforts_off2 << 8); }
@@ -3363,45 +3329,49 @@ void set_comforts_off(uint16_t v)
 }
 bool comfort_on(int c)
 {
+    if (c == kCBigIcon) return ui::large() || (CYD_BIG_ICON_PREVIEW && cfg->large_icons != 0);   // (320x240: off unless chosen - it covers the editor)
     if (!comfort_built(c)) return false;
-    if (c == kCBigIcon && !ui::large()) return cfg->large_icons != 0;      // (320x240: off unless chosen - it covers the editor)
     if (c == kCFont) return cfg->game_font != kFontGame;                   // (the game's own unless chosen - Tom)
     if (c == kCMaxHp) return cfg->max_hp != 0;                             // (a cheat: off unless chosen - Tom)
-    if (c == kCThrown) return !(cfg->rules_off & rules::kAdndThrown);     // (the AD&D 1E Rules: Settings::rules_off)
-    if (c == kCRaise) return !(cfg->rules_off & rules::kAdndRaise);
     return !(comforts_off() & comfort_bit(c));
 }
+bool quick_on() { return comfort_on(kCQuick); }
 
-bool cheats_tab_on() { return comfort_on(kCCheats); }
-bool quick_tab_on() { return comfort_on(kCQuick); }
+// The AD&D 1E Rules on (rules::Adnd bits) and the Game Fixes off, as the Settings keep them
+uint16_t adnd_on() { return CYD_ADND_RULES ? static_cast<uint16_t>(rules::kAdndAll & ~settings_rules_off(*cfg)) : 0; }
+uint64_t fixes_off_now() { return CYD_ITEM_FIXES ? settings_fixes_off(cfg->fixes_off) : ~0ull; }
 
 void apply_options()
 {
     play::Options o;
     o.gallery = comfort_on(kCGallery);
-    o.demo_tap = comfort_on(kCDemoTap);
+    o.demo_tap = CYD_DEMO_TAP_STOPS;            // (Tom, 2026-11-17: no switch - always)
     o.more_guys = comfort_on(kCMoreGuys);
     o.portrait = comfort_on(kCPortrait);
-    o.item_fixes = comfort_on(kCItemFixes);
+    o.item_fixes = CYD_ITEM_FIXES;              // (each fix its own switch: fixes_off)
+    o.fixes_off = fixes_off_now();
     o.rolls = comfort_on(kCRolls);
     o.camp_fix = comfort_on(kCCampFix);
-    o.cheats = comfort_on(kCCheats);
+    o.cheats = CYD_CHEATS;                      // (the Cheats page is always there - Tom)
     o.max_hp = comfort_on(kCMaxHp);
     o.quick_acts = comfort_on(kCQuick);
-    o.read_time = comfort_on(kCRead);
+    o.read_time = CYD_READ_TIME;                // (Tom, 2026-11-17: no switch - always)
     o.auto_join = comfort_on(kCJoin);
     o.save_info = comfort_on(kCSaveInfo);
-    o.adnd = static_cast<uint8_t>(0xFF & ~((comfort_on(kCThrown) ? 0 : rules::kAdndThrown) | (comfort_on(kCRaise) ? 0 : rules::kAdndRaise)));
+    o.keep_mem = comfort_on(kCKeepMem);
+    o.adnd = adnd_on();
     play::set_side_panel(ui::large() && comfort_on(kCCompanion));     // (Save Slot Info: the party in the panel)
     o.font = comfort_on(kCFont) ? cfg->game_font : kFontGame;
     play::set_options(o);
 }
 
-// The listed comforts, in order
+// The Enhancements page's switches, in Tom's order
 int comfort_list(int* out)
 {
+    static const uint8_t kOrder[] = {kCFont, kCRolls, kCCompanion, kCSaveInfo, kCJoin, kCKeepMem,
+                                     kCCampFix, kCMoreGuys, kCPortrait, kCGallery, kCBigIcon};
     int n = 0;
-    for (int c = 0; c < kComforts; ++c)
+    for (uint8_t c : kOrder)
         if (comfort_built(c)) out[n++] = c;
     return n;
 }
@@ -3422,11 +3392,10 @@ ui::Rect comfort_qmark(const ui::Rect& cell)
     return {cell.x + cell.w - comfort_help_w(), cell.y, comfort_help_w(), cell.h};
 }
 
-const char* const kComfortNames[kComforts] = {"Game Font",        "Icon Gallery",    "Large Icon",    "Journal Pop-Up",
-                                              "Tap to Stop Demo", "More Characters", "Icon Portrait", "Game Fixes",
-                                              "Show Rolls",       "Camp Fix",        "Cheats Tab",      "Companion Views",
-                                              "Max Hit Points",   "Quick Actions",   "Readable Messages",
-                                              "Auto Join", "Save Slot Info", "Thrown Weapons", "Raising the Dead"};
+const char* const kComfortNames[kComforts] = {"Game Font",       "Icon Gallery",    "Large Icon",     "More Characters",
+                                              "Icon Portrait",   "Show Rolls",      "Camp Fix",       "Companion Views",
+                                              "Max Hit Points",  "Quick Actions",   "Auto Join Items", "Savegame Info",
+                                              "Keep Memorizing"};
 
 // What each option does (sentence case; Tom, v0.84.0)
 const char* comfort_help_text(int c)
@@ -3438,72 +3407,23 @@ const char* comfort_help_text(int c)
                "all capitals, as the games print. Darkness: the font from your own Pools of Darkness (only when it "
                "is on the card). It can change mid-game: the text on screen changes too.";
     case kCGallery:
-        return "The icon editor (Alter - Icon, and Create New Character) opens on pages of ready-made combat icons, "
-               "heads, weapons and colour schemes made from your game's own pictures - and the Gold Box "
+        return "The icon editor (Alter - Icon, and Create New Character) opens on a showcase: pages of ready-made combat icons, "
+               "heads, weapons and colour schemes to pick from, made from your game's own pictures - and the Gold Box "
                "Companion's icons when its GBC folder is on the card. Edit opens the game's own editor. Off: the "
                "game's editor straight away, as the original.";
     case kCBigIcon:
         return "The icon editor also shows the new icon as large as fits, beside the editor on 480x320 and over its "
                "empty right side on 320x240. Tap it to see the ready or the action pose. The game's own icons are "
                "only 24 pixels square.";
-    case kCJournal:
-        return "When the game tells you to read a journal entry, the next tap opens that entry from your own "
-               "Adventurer's Journal (made from your copy during the card scan). The original only prints the "
-               "number. Off: just the number.";
-    case kCDemoTap:
-        return "A tap or key stops the game's demo and brings the title back. In the original the demo can't be "
-               "stopped: it runs until the demo party wins or falls.";
     case kCMoreGuys:
         return "Add Character also lists the members of your saved games, and the characters in the earlier "
                "game's folder on the card (Pool of Radiance characters for Curse, Curse's for Silver Blades). "
                "Off: only what the original lists.";
     case kCPortrait:
         return "View Character shows the character's combat icon three times its size, in a frame of the game's "
-               "own tiles, where a portrait would go. Where the game has a portrait (Pool of Radiance: every "
+               "own tiles, where a portrait would go when the game has none. Where the game has a portrait (Pool of Radiance: every "
                "character) the portrait comes first: tap it to swap to the icon and back. Tap the icon for its "
                "action pose. Off: as the original.";
-    case kCItemFixes:
-        // (the game in hand's own fixes: the whole list doesn't fit a 320x240 screen)
-        // (Treasures: Darkness's engine, the same fixes)
-        if (game_dirs[game_sel].game == games::Game::PoolsOfDarkness ||
-            game_dirs[game_sel].game == games::Game::TreasuresOfTheSavageFrontier)
-            return "The original game's mistakes made as AD&D has them: the races' stat adjustments at "
-                   "character creation (the original never applies them); a cleric's experience bonus from "
-                   "Wisdom 16; Power Word Blind lasts its worked-out time (the original blinds for good); "
-                   "everyone a year older each year of game time (the original: every hundred). A multi-class character's hit points: each class's as a single class of it gets them (its die and Constitution bonus - a fighter's more from 17), added up and divided by the classes. "
-                   "Off: as the original.";
-        if (game_dirs[game_sel].game == games::Game::SecretOfTheSilverBlades)
-            return "The original game's mistakes made as AD&D has them: the elves' +1 to hit with their "
-                   "weapons for elves alone; a dwarf's or gnome's -4 when giants attack, and the Constitution "
-                   "save bonus; Invisibility, Blink, Displacement and Dispel Evil when a monster rolls to hit; "
-                   "a paladin's spells and Strength; a cleric's experience bonus from Wisdom 16; Harm; the "
-                   "Periapt of Health; a multi-class character's hit points (each class's as a single "
-                   "class's, added up and divided by the classes); Sell's weight of coins; "
-                   "money: any coins worth a price pay it (the original takes platinum alone), the change "
-                   "exact, and money kept in the highest coins. Off: as the original.";
-        if (game_dirs[game_sel].game == games::Game::CurseOfTheAzureBonds)
-            return "Money as AD&D has it: any coins worth a price pay it (1 platinum = 5 gold = 10 electrum = "
-                   "100 silver = 1000 copper, the game's own rates) - the original takes some prices in "
-                   "platinum alone - with exact change; afterwards money is kept in the highest coins, so a "
-                   "pile of copper doesn't weigh a character down. A multi-class character's hit points: each class's as a single class of it gets them (its die and Constitution bonus - a fighter's more from 17), added up and divided by the classes. Off: as the original.";
-        if (game_dirs[game_sel].game == games::Game::GatewayToTheSavageFrontier)
-            return "The original game's mistakes made as AD&D has them: the stirge's and the squid's holds "
-                   "hurt; the magic and missile sounds; a new game starts with an empty vault; money: any "
-                   "coins worth a price pay it, the change exact, and money kept in the highest coins. A multi-class character's hit points: each class's as a single class of it gets them (its die and Constitution bonus - a fighter's more from 17), added up and divided by the classes. "
-                   "Off: as the original.";
-        if (game_dirs[game_sel].game != games::Game::PoolOfRadiance)
-            return "The original game's mistakes made as AD&D has them (the Krynn games): among them a "
-                   "paladin's Constitution hit points and its gain past the hit dice as a fighter's, and a "
-                   "multi-class character's hit points - each class's as a single class of it gets them "
-                   "(its die and Constitution bonus, a fighter's or knight's more from 17), added up and "
-                   "divided by the classes. Off: as the original.";
-        return "Items the original game got wrong, made as AD&D describes them. Pool of Radiance's Flame Tongue: "
-               "in the original it is a plain long sword +2 whose blows aren't fire, so a troll it fells gets back "
-               "up (and Use casts Find Traps). Fixed it is a long sword +1 Flame Tongue, as in Curse: +2 against "
-               "regenerating creatures such as trolls, +3 against cold-using and flying ones, +4 against undead, "
-               "and its blows are fire. Your files keep the original's item. Money: any coins worth a price pay "
-               "it - the inn's 1 platinum from 5 gold - with exact change, and money is kept in the highest "
-               "coins. A multi-class character's hit points: each class's as a single class of it gets them (its die and Constitution bonus - a fighter's more from 17), added up and divided by the classes. Off: as the original.";
     case kCRolls:
         return "In a fight, under each message, the dice it tells of: the roll as it came up, the modifiers' "
                "total and the result - \"To Hit: 17+2=19\" and \"Needed: 14\" (the modifiers counted from THAC0 "
@@ -3516,42 +3436,19 @@ const char* comfort_help_text(int c)
                "healing spells, rest and memorize them again until everyone is healed (or their spells run "
                "out), the time passing as it does - a wandering monster can break the rest off. The other "
                "games' camps have Fix already. Off: Pool's camp as the original.";
-    case kCCheats:
-        return "A Cheats tab in the Game menu, while the party stands at the exploring menu: Healer - the "
-               "game's own temple, every cure free; Merchant - the game's own shop selling the goods of all "
-               "its shops at their normal prices, identifying for free, and buying from you as its shops do "
-               "(both with the picture the game's own temples and shops show); "
-               "Sanctuary - the game's own camp, where nothing interrupts a rest (no wandering monsters, no "
-               "city watch); Trainer - the game's own training hall for every class it has, free, with "
-               "Modify Character for anyone there. Off: no Cheats tab.";
     case kCQuick:
         return "Choose what each party member may do when Quick (an NPC: the computer) plays it in a "
                "fight: melee, missiles, spells, items, bandaging first, moving, turning undead, guarding. "
-               "The choices are on the Game menu's Quick tab, kept by the character's name for every saved "
+               "The choices are on this page, kept by the character's name for every saved "
                "game and the later games. Your own characters start with everything but Bandage First and "
                "Spells ticked - Quick as the game's own; Spells ticked is the original's Magic On (its "
                "Alt-M): Quick casts that character's spells. NPCs start with all but Bandage First ticked - "
-               "the game's own AI. Off: as the original, no Quick tab.";
-    case kCRead:
-        return "Messages the game shows only for a moment and then takes away - \"Not Enough Experience\" "
-               "at a training hall, a shop's word, a camp spell's lines, a script's line before it goes on - "
-               "stay at least a second, or until you tap. The originals show them for the game's Speed "
-               "setting's delay, which at the fastest is none at all. Fights keep the Speed setting's "
-               "timing. Off: as the original.";
+               "the game's own AI. Off: as the original - Quick plays as the game's own.";
     case kCJoin:
         return "An item you take from a treasure joins a pile of the same thing its taker already "
                "carries - arrows with arrows, +1 arrows with +1 arrows, the same potions - as the game's "
                "own Join would, so it needs no slot of its own. Off: as the original - each take is a "
                "new item (16 at most); Join them by hand.";
-    case kCThrown:
-        return "AD&D 1st edition's rule for hurled weapons: a thrown weapon gets Dexterity's missile bonus "
-               "to hit and Strength's bonus to damage. The originals give darts and javelins neither. A "
-               "weapon that can be thrown or swung - dagger, hand axe, spear - gets Strength's bonuses in "
-               "melee, and Dexterity's to hit with Strength's damage when thrown. Off: as the original.";
-    case kCRaise:
-        return "AD&D 1st edition's Raise Dead and Resurrection take no Constitution from the one raised. "
-               "The originals take a point for Raise Dead (some for Resurrection too); with this on, no "
-               "point is lost - by spell or at a temple. Off: as the original.";
     case kCSaveInfo:
         return "Save Which Game shows the slots that hold a save in white, the empty ones in grey. While "
                "Save or Load Which Game asks, the text box above the menu tells of the highlighted slot's "
@@ -3562,8 +3459,13 @@ const char* comfort_help_text(int c)
         return "A cheat: a new character's hit points and each level gained by training (a training hall "
                "or the Cheats tab's Trainer) get the most their hit dice can give - 10 a fighter, 8 a "
                "cleric, 6 a thief, 4 a magic-user - instead of a roll; the rest of the game's sum stays "
-               "(Constitution, multi-classes' share). Also on the Cheats tab. Off (the default): rolled, "
+               "(Constitution, multi-classes' share). Off (the default): rolled, "
                "as the original.";
+    case kCKeepMem:
+        return "Rest memorizes again the spells cast, as the originals do, and a rest that is interrupted - "
+               "the watch, a wandering monster - keeps your list of spells to be memorized: the next camp's "
+               "Memorize asks \"Memorize these spells?\" with them and its Rest learns them. Off: as the "
+               "originals - the list is forgotten when the camp breaks.";
     case kCCompanion:
         return "480x320: a tap on the Companion panel beside the game (the map) shows the party - each "
                "member's icon, name, hit points with a bar and what ails or helps them - and, in a fight, "
@@ -3623,9 +3525,9 @@ void draw_set_help()
     g.drawRoundRect(box.x, box.y, box.w, box.h, ui::large() ? 8 : 6, style::kGold);
     const int x = box.x + gp * 2, w = box.w - gp * 4;
     int y = box.y + gp * 2;
-    ui::text(x, y, set_name(e), style::kGold);
+    ui::text(x, y, help_name ? help_name : set_name(e), style::kGold);
     y += ui::line_h() + gp;
-    y = wrap_text(x, y, w, set_help_text(e), ui::Font::Small, style::kText, true) + gp * 2;
+    y = wrap_text(x, y, w, help_body ? help_body : set_help_text(e), ui::Font::Small, style::kText, true) + gp * 2;
     if (e.comfort && e.id == kCFont) {
         // Each font, as it prints (the player's own fonts from the card)
         font::Font* base = new (std::nothrow) font::Font();
@@ -3678,7 +3580,7 @@ bool set_help_tap()
 // A comfort's key tapped: on / off (Game Font: the next font)
 void toggle_comfort(int c)
 {
-    if (c == kCBigIcon && !ui::large()) {
+    if (c == kCBigIcon) {
         cfg->large_icons = !cfg->large_icons;
     } else if (c == kCFont) {
         // Original -> Clear -> Clear Caps -> Pools of Darkness (when its
@@ -3689,44 +3591,64 @@ void toggle_comfort(int c)
                            : cfg->game_font == kFontClearCaps ? kFontDarkness
                                                               : kFontGame;
         cfg->game_font = next == kFontDarkness && !darkness_dir(dd, sizeof dd) ? kFontGame : next;
-    } else if (c == kCCompanion) {
-        cfg->comforts_off2 ^= kOff2Companion;
     } else if (c == kCMaxHp) {
         cfg->max_hp = !cfg->max_hp;
-    } else if (c == kCThrown) {
-        cfg->rules_off ^= rules::kAdndThrown;
-    } else if (c == kCRaise) {
-        cfg->rules_off ^= rules::kAdndRaise;
     } else {
         set_comforts_off(comforts_off() ^ comfort_bit(c));
     }
     settings_save(*cfg);
     apply_options();
 }
-
-// "As Original": every comfort off (or all on again)
-bool all_comforts_off()
+void toggle_adnd(uint16_t bit)
 {
-    int list[kComforts];
-    const int n = comfort_list(list);
-    for (int i = 0; i < n; ++i)
-        if (list[i] != kCCheats && comfort_on(list[i])) return false;   // (the Cheats tab: not As Original's)
-    return true;
+    settings_set_rules_off(*cfg, static_cast<uint16_t>(settings_rules_off(*cfg) ^ bit));
+    settings_save(*cfg);
+    apply_options();
 }
+void toggle_fix(int k)
+{
+    settings_set_fixes_off(cfg->fixes_off, settings_fixes_off(cfg->fixes_off) ^ (1ull << k));
+    settings_save(*cfg);
+    apply_options();
+}
+
+// Original Games (Tom, 2026-11-17): on - every Enhancement, AD&D 1E Rule,
+// Game Fix and the cheats' switch (Max Hit Points) off, the game's own font;
+// the player's own choices kept and given back when it goes off again. While
+// it is on each switch can still be turned on by itself (the Cheats page's
+// actions are never touched - Tom: they are things the player fires). The
+// board's settings (brightness, sound, hand ...) are never touched.
 void toggle_original()
 {
-    const bool on = all_comforts_off();
-    uint16_t all = 0;
-    // (Tom, 2026-11-17: Original Games turns the cheats' switches off - Max Hit
-    // Points, below - but never the Cheats tab; its cheats are things the player
-    // fires, not changes to the game)
-    for (int c = 0; c < kComforts; ++c)
-        if (c != kCCheats) all = static_cast<uint16_t>(all | comfort_bit(c));
-    set_comforts_off(on ? 0 : all);
-    cfg->rules_off = on ? 0 : static_cast<uint8_t>(rules::kAdndThrown | rules::kAdndRaise);   // (the AD&D 1E Rules too)
-    if (!on) cfg->large_icons = 0;
-    cfg->max_hp = 0;                    // (a cheat: As Original turns it off, All On leaves it to the player)
-    cfg->game_font = on ? kFontClear : kFontGame;
+    if (!cfg->original) {
+        cfg->saved_comforts_off = cfg->comforts_off;
+        cfg->saved_comforts_off2 = cfg->comforts_off2;
+        cfg->saved_rules_off = cfg->rules_off;
+        cfg->saved_rules_off2 = cfg->rules_off2;
+        memcpy(cfg->saved_fixes_off, cfg->fixes_off, sizeof cfg->fixes_off);
+        cfg->saved_max_hp = cfg->max_hp;
+        cfg->saved_game_font = cfg->game_font;
+        cfg->saved_large_icons = cfg->large_icons;
+        uint16_t all = 0;
+        for (int c = 0; c < kComforts; ++c) all = static_cast<uint16_t>(all | comfort_bit(c));
+        set_comforts_off(all);
+        settings_set_rules_off(*cfg, rules::kAdndAll);
+        settings_set_fixes_off(cfg->fixes_off, ~0ull);
+        cfg->max_hp = 0;
+        cfg->game_font = kFontGame;
+        cfg->large_icons = 0;
+        cfg->original = 1;
+    } else {
+        cfg->comforts_off = cfg->saved_comforts_off;
+        cfg->comforts_off2 = cfg->saved_comforts_off2;
+        cfg->rules_off = cfg->saved_rules_off;
+        cfg->rules_off2 = cfg->saved_rules_off2;
+        memcpy(cfg->fixes_off, cfg->saved_fixes_off, sizeof cfg->fixes_off);
+        cfg->max_hp = cfg->saved_max_hp;
+        cfg->game_font = cfg->saved_game_font;
+        cfg->large_icons = cfg->saved_large_icons;
+        cfg->original = 0;
+    }
     settings_save(*cfg);
     apply_options();
 }
@@ -3770,34 +3692,36 @@ ui::Rect cheat_key(int i)
 }
 void draw_cheats()
 {
-    ui::key(ui::bottom_key(0, 1), "Back to Game");
+    ui::key(pg_back(), "Back");
     const ui::Rect a = journal_area();
-    const bool ready = play::cheats_ready();
+    const bool game = in_game_menu();
+    const bool ready = game && play::cheats_ready();
     const int x = ui::gap() * 3, w = ui::width() - ui::gap() * 6;
     wrap_text(x, a.y + ui::gap(), w,
-              ready ? "The game's own screens, without their costs or dangers."
-                    : "Only at the exploring or travel menu - not in a fight, camp or shop.",
+              !game   ? "Healer, Merchant, Sanctuary and Trainer are on this page in a game's menu."
+              : ready ? "The game's own screens, without their costs or dangers."
+                      : "Only at the exploring or travel menu - not in a fight, camp or shop.",
               ui::Font::Small, ready ? style::kText : style::kTextMuted, true);
-    for (int i = 0; i < kCheatOpen; ++i)
+    for (int i = 0; game && i < kCheatOpen; ++i)
         ui::key2(cheat_key(i), kCheatKeys[i].name, kCheatKeys[i].sub, ready ? ui::KeyStyle::Normal : ui::KeyStyle::Dim);
     if (CYD_MAX_HP) {
         const bool on = comfort_on(kCMaxHp);
-        ui::key2(cheat_key(kCheatOpen), "Max Hit Points", on ? "On: level-ups" : "Off",
+        ui::key2(cheat_key(game ? kCheatOpen : 0), "Max Hit Points", on ? "On: level-ups" : "Off",
                  on ? ui::KeyStyle::Lit : ui::KeyStyle::Normal);
     }
 }
 void tap_cheats(const ui::Tap& t)
 {
-    if (bottom_hit(t, 1) == 0) {
-        leave_menu();
+    if (pg_back().contains(t.x, t.y)) {
+        page_back();
         return;
     }
-    if (CYD_MAX_HP && cheat_key(kCheatOpen).contains(t.x, t.y)) {
+    if (CYD_MAX_HP && cheat_key(in_game_menu() ? kCheatOpen : 0).contains(t.x, t.y)) {
         toggle_comfort(kCMaxHp);            // (the Settings key's switch)
         dirty = true;
         return;
     }
-    for (int i = 0; i < kCheatOpen; ++i) {
+    for (int i = 0; in_game_menu() && i < kCheatOpen; ++i) {
         if (!cheat_key(i).contains(t.x, t.y)) continue;
         if (!play::cheats_ready()) return;          // (dimmed: the note says why)
         leave_menu();
@@ -3826,15 +3750,16 @@ int  qt_col = -1;               // the switch last tapped (-1: none yet)
 bool qt_help = false;           // the "?" page up
 bool qt_failed = false;         // the last toggle wasn't written
 
-ui::Rect qt_back_rect()
+ui::Rect pg_back();
+ui::Rect pg_corner();
+ui::Rect qt_back_rect() { return pg_back(); }
+ui::Rect qt_help_rect() { return pg_corner(); }
+// Quick Actions on / off (Tom, 2026-11-17: "toggle button at top"): the
+// header's right; off, the page's names and switches are dimmed and do nothing
+ui::Rect qt_onoff_rect()
 {
-    const ui::Rect b = ui::bottom_key(0, 1);
-    return {b.x, b.y, b.w - b.h - ui::gap(), b.h};
-}
-ui::Rect qt_help_rect()
-{
-    const ui::Rect b = ui::bottom_key(0, 1);
-    return {b.x + b.w - b.h, b.y, b.h, b.h};
+    const int w = ui::large() ? 150 : 104;
+    return {ui::width() - w - ui::gap(), 2, w, ui::header_h() - 4};
 }
 // The names' column and the switches' (the switches' keys, then the strip)
 int qt_list_w() { return ui::width() * 3 / 8; }
@@ -3875,7 +3800,7 @@ void qt_draw_name(int r)
 {
     const ui::Rect k = qt_name_rect(r);
     const bool lit = r == qt_sel;
-    ui::key(k, "", lit ? ui::KeyStyle::Lit : ui::KeyStyle::Normal);
+    ui::key(k, "", !quick_on() ? ui::KeyStyle::Dim : lit ? ui::KeyStyle::Lit : ui::KeyStyle::Normal);
 #if defined(CYD_QEMU)
     Serial.printf("[qemu] name %d at %d,%d\n", r, k.x + k.w / 2, k.y + k.h / 2);
 #endif
@@ -3901,7 +3826,7 @@ void qt_draw_key(int k)
 {
     const ui::Rect r = qt_key_rect(k);
     const bool on = (play::quick_get(qt_sel) >> k & 1) != 0;
-    ui::key(r, "", on ? ui::KeyStyle::Lit : ui::KeyStyle::Normal);
+    ui::key(r, "", !quick_on() ? ui::KeyStyle::Dim : on ? ui::KeyStyle::Lit : ui::KeyStyle::Normal);
 #if defined(CYD_QEMU)
     Serial.printf("[qemu] switch '%s' at %d,%d\n", quickacts::kName[k], r.x + r.w / 2, r.y + r.h / 2);
 #endif
@@ -4000,7 +3925,8 @@ void draw_quick_help()
 
 void draw_quick()
 {
-    ui::key(qt_back_rect(), "Back to Game");
+    ui::key(qt_back_rect(), "Back");
+    ui::key2(qt_onoff_rect(), "Quick Actions", quick_on() ? "On" : "Off", quick_on() ? ui::KeyStyle::Lit : ui::KeyStyle::Normal);
     ui::key_help(qt_help_rect());
 #if defined(CYD_QEMU)
     Serial.printf("[qemu] key '?' at %d,%d\n", qt_help_rect().x + qt_help_rect().w / 2, qt_help_rect().y + qt_help_rect().h / 2);
@@ -4013,7 +3939,7 @@ void draw_quick()
 // The tab chosen: the party's rows from the game (a note when it can't be)
 void open_quick()
 {
-    menu_tab = kTabQuick;
+    page = Page::Quick;
     menu_note[0] = 0;
     qt_help = false;
     qt_failed = false;
@@ -4025,12 +3951,19 @@ void open_quick()
     dirty = true;
 }
 
+void page_back();
 void tap_quick(const ui::Tap& t)
 {
     if (qt_back_rect().contains(t.x, t.y)) {
-        leave_menu();
+        page_back();
         return;
     }
+    if (qt_onoff_rect().contains(t.x, t.y)) {
+        toggle_comfort(kCQuick);
+        dirty = true;
+        return;
+    }
+    if (!quick_on()) return;
     if (qt_help_rect().contains(t.x, t.y)) {
         qt_help = true;
         dirty = true;
@@ -4059,46 +3992,482 @@ void tap_quick(const ui::Tap& t)
         }
 }
 
+// ---- The menu pages (Tom's tree, 2026-11-17; their declarations above) -----
+bool in_game_menu() { return set_from == SetFrom::InGame; }
+
+enum ItemKind : uint8_t { kIFolder, kIBoard, kIComfort, kIAdnd, kIFix, kIFixGame, kIAction, kIOriginal };
+enum Act : uint8_t { kAExit, kARescan, kADevice, kALogScan, kALogRestart, kALogError, kALogMemory, kASend };
+struct Item {
+    uint8_t kind, id;
+};
+constexpr int kMaxItems = 48;
+constexpr int kPerScreen = 8;               // 2 columns, 4 rows
+
+const char* page_name(Page p)
+{
+    switch (p) {
+    case Page::Top: return in_game_menu() ? "Game Menu" : "Settings";
+    case Page::Display: return "Display";
+    case Page::Audio: return "Audio";
+    case Page::Play: return "Game Play";
+    case Page::Enhance: return "Enhancements";
+    case Page::Adnd: return "AD&D 1E Rules";
+    case Page::FixGames: return "Game Fixes";
+    case Page::Fixes: return "Game Fixes";
+    case Page::Journal: return "Journal";
+    case Page::Cheats: return "Cheats";
+    case Page::Quick: return "Quick Actions";
+    case Page::System: return "System";
+    case Page::Device: return "Device Info";
+    }
+    return "";
+}
+Page page_parent(Page p)
+{
+    switch (p) {
+    case Page::Enhance:
+    case Page::Adnd:
+    case Page::FixGames: return Page::Play;
+    case Page::Fixes: return Page::FixGames;
+    case Page::Device: return Page::System;
+    default: return Page::Top;
+    }
+}
+
+// The Game Fixes' games, in the series' order (0: Every Game)
+constexpr games::Game kFixGameList[] = {
+    games::Game::Unknown, games::Game::PoolOfRadiance, games::Game::CurseOfTheAzureBonds,
+    games::Game::SecretOfTheSilverBlades, games::Game::PoolsOfDarkness, games::Game::GatewayToTheSavageFrontier,
+    games::Game::TreasuresOfTheSavageFrontier, games::Game::ChampionsOfKrynn, games::Game::DeathKnightsOfKrynn,
+    games::Game::DarkQueenOfKrynn};
+const char* fix_game_name(uint8_t g)
+{
+    switch (static_cast<games::Game>(g)) {
+    case games::Game::PoolOfRadiance: return "PoolRad";
+    case games::Game::CurseOfTheAzureBonds: return "Curse";
+    case games::Game::SecretOfTheSilverBlades: return "Secret";
+    case games::Game::PoolsOfDarkness: return "Darkness";
+    case games::Game::GatewayToTheSavageFrontier: return "Gateway";
+    case games::Game::TreasuresOfTheSavageFrontier: return "Treasures";
+    case games::Game::ChampionsOfKrynn: return "Champions";
+    case games::Game::DeathKnightsOfKrynn: return "Knights";
+    case games::Game::DarkQueenOfKrynn: return "Queen";
+    default: return "Every Game";
+    }
+}
+constexpr uint16_t kEveryGame = 0x3FE;      // (the fixes' games: 1 << each of the nine)
+bool fix_on_page(const rules::FixInfo& f, uint8_t g)
+{
+    if (g == 0) return f.games == kEveryGame;
+    return f.games != kEveryGame && (f.games >> g & 1);
+}
+
+int page_items(Page p, Item* out)
+{
+    int n = 0;
+    auto add = [&](uint8_t kind, uint8_t id) {
+        if (n < kMaxItems) out[n++] = {kind, id};
+    };
+    switch (p) {
+    case Page::Top:
+        add(kIFolder, static_cast<uint8_t>(Page::Display));
+        add(kIFolder, static_cast<uint8_t>(Page::Audio));
+        add(kIFolder, static_cast<uint8_t>(Page::Play));
+        if (in_game_menu()) add(kIFolder, static_cast<uint8_t>(Page::Journal));
+        if (CYD_CHEATS) add(kIFolder, static_cast<uint8_t>(Page::Cheats));
+        if (in_game_menu() && CYD_QUICK_ACTIONS) add(kIFolder, static_cast<uint8_t>(Page::Quick));
+        add(kIFolder, static_cast<uint8_t>(Page::System));
+        if (in_game_menu()) add(kIAction, kAExit);
+        break;
+    case Page::Display:
+        add(kIBoard, kBright);
+        add(kIBoard, kHand);
+        add(kIBoard, kRotate);
+        add(kIBoard, kInvert);
+        add(kIBoard, kSwap);
+        add(kIBoard, kCalibrate);
+#if defined(BOARD_SIDE_STRIP)
+        add(kIBoard, kStrip);
+#endif
+        break;
+    case Page::Play:
+        add(kIOriginal, 0);
+        add(kIFolder, static_cast<uint8_t>(Page::Enhance));
+        if (CYD_ADND_RULES) add(kIFolder, static_cast<uint8_t>(Page::Adnd));
+        if (CYD_ITEM_FIXES) add(kIFolder, static_cast<uint8_t>(Page::FixGames));
+        break;
+    case Page::Enhance: {
+        int list[kComforts];
+        const int c = comfort_list(list);
+        for (int i = 0; i < c; ++i) add(kIComfort, static_cast<uint8_t>(list[i]));
+        break;
+    }
+    case Page::Adnd:
+        for (int k = 0; k < rules::kAdndCount; ++k) add(kIAdnd, static_cast<uint8_t>(k));
+        break;
+    case Page::FixGames:
+        add(kIFixGame, 0);
+        for (games::Game g : kFixGameList)
+            if (g != games::Game::Unknown && (!in_game_menu() || g == game_dirs[game_sel].game))
+                add(kIFixGame, static_cast<uint8_t>(g));
+        break;
+    case Page::Fixes:
+        for (int k = 0; k < rules::kFixCount; ++k)
+            if (fix_on_page(rules::fix_info(k), fix_game)) add(kIFix, static_cast<uint8_t>(k));
+        break;
+    case Page::System:
+        add(kIAction, kARescan);
+        add(kIAction, kADevice);
+        add(kIAction, kALogScan);
+        add(kIAction, kALogRestart);
+        add(kIAction, kALogError);
+        add(kIAction, kALogMemory);
+        add(kIAction, kASend);
+        break;
+    default: break;
+    }
+    return n;
+}
+// A page of keys (not one of its own look: the sounds, the journal, cheats,
+// Quick Actions, the device's lines)
+bool page_is_grid(Page p)
+{
+    return p != Page::Audio && p != Page::Journal && p != Page::Cheats && p != Page::Quick && p != Page::Device;
+}
+int page_screens(Page p)
+{
+    Item it[kMaxItems];
+    const int n = page_items(p, it);
+    return n > kPerScreen ? (n + kPerScreen - 1) / kPerScreen : 1;
+}
+
+// The bottom corners: Back left, the page arrows right (or the Quick page's "?")
+ui::Rect pg_arrow(int i)
+{
+    const int w = ui::key_h() * 5 / 4, gp = ui::gap();
+    return {ui::width() - gp - (2 - i) * (w + gp) + gp, ui::height() - ui::key_h() - gp, w, ui::key_h()};
+}
+const char* back_label();
+ui::Rect pg_back()
+{
+    const int gp = ui::gap();
+    int w = (pg_arrow(0).x - gp * 3) / 2;
+    const int need = ui::text_width(back_label(), ui::Font::Normal) + gp * 6;    // ("Back to Game" on 320x240)
+    if (w < need) w = need;
+    return {gp, ui::height() - ui::key_h() - gp, w, ui::key_h()};
+}
+ui::Rect pg_mid()               // (between Back and the arrows: the Journal page's book)
+{
+    const ui::Rect b = pg_back();
+    const int gp = ui::gap();
+    return {b.x + b.w + gp, b.y, pg_arrow(0).x - gp - (b.x + b.w + gp), b.h};
+}
+ui::Rect pg_corner()
+{
+    const ui::Rect l = pg_arrow(0), r = pg_arrow(1);
+    return {r.x + r.w - l.h, l.y, l.h, l.h};
+}
+const char* back_label() { return page == Page::Top ? (in_game_menu() ? "Back to Game" : "Back") : "Back"; }
+
+const char* item_name(const Item& it)
+{
+    switch (it.kind) {
+    case kIFolder: return page_name(static_cast<Page>(it.id));
+    case kIBoard: return set_name(SetEntry{false, it.id});
+    case kIComfort: return kComfortNames[it.id];
+    case kIAdnd: return rules::adnd_info(it.id).name;
+    case kIFix: return rules::fix_info(it.id).name;
+    case kIFixGame: return fix_game_name(it.id);
+    case kIOriginal: return "Original Games";
+    case kIAction:
+        switch (it.id) {
+        case kAExit: return "Exit Game";
+        case kARescan: return "Rescan Card";
+        case kADevice: return "Device Info";
+        case kALogScan: return "Card Log";
+        case kALogRestart: return "Restart Log";
+        case kALogError: return "Error Log";
+        case kALogMemory: return "Memory Log";
+        case kASend: return "Send Logs";
+        }
+    }
+    return "";
+}
+bool item_switch(const Item& it) { return it.kind == kIAdnd || it.kind == kIFix || it.kind == kIOriginal; }
+bool item_on(const Item& it)
+{
+    if (it.kind == kIAdnd) return (adnd_on() & rules::adnd_info(it.id).bit) != 0;
+    if (it.kind == kIFix) return !(fixes_off_now() >> it.id & 1);
+    if (it.kind == kIOriginal) return cfg->original != 0;
+    return false;
+}
+const char* original_help()
+{
+    return "On: the games as the originals play them - every Enhancement, AD&D 1E Rule and Game Fix off, the "
+           "game's own font, and the Cheats page's Max Hit Points off. Any of them can still be turned on by "
+           "itself while this is on. Off again: your own choices come back as they were. The display, the "
+           "sound and the Cheats page's cheats themselves aren't changed.";
+}
+
+// The "?" of a key that isn't a board key or a comfort (those: set_help)
+const char* help_name = nullptr;
+const char* help_body = nullptr;
+
+void draw_item(const ui::Rect& cell, const Item& it)
+{
+    switch (it.kind) {
+    case kIBoard: draw_set_entry(cell, SetEntry{false, it.id}); return;
+    case kIComfort: draw_set_entry(cell, SetEntry{true, it.id}); return;
+    default: break;
+    }
+    if (item_switch(it)) {
+        const bool on = item_on(it);
+        ui::key2(comfort_key(cell), item_name(it), on ? "On" : "Off", on ? ui::KeyStyle::Lit : ui::KeyStyle::Normal);
+        ui::key_help(comfort_qmark(cell));
+        return;
+    }
+    ui::key(cell, item_name(it));
+}
+
+void draw_audio_page();
+void tap_audio_page(const ui::Tap& t);
+void draw_journal_page();
+void tap_journal_page(const ui::Tap& t);
+void draw_device_page();
+
 void draw_game_menu()
 {
-    if (menu_tab == kTabQuick && qt_help) {
+    if (set_help_on) {
+        draw_set_help();
+        return;
+    }
+    if (page == Page::Quick && qt_help) {
         draw_quick_help();
         return;
     }
     ui::clear();
-    draw_tabs(menu_tab);
-    const ui::Rect a = journal_area();
-    if (menu_tab == kTabSounds) {
-        ui::key(ui::bottom_key(0, 1), "Back to Game");
-        draw_sounds();
-        return;
-    }
-    if (menu_tab == kTabSettings) {
-        if (set_help_on) {
-            draw_set_help();
+    char title[48];
+    if (page == Page::Fixes) snprintf(title, sizeof title, "Game Fixes: %s", fix_game_name(fix_game));
+    else strlcpy(title, page_name(page), sizeof title);
+    ui::header(title, false);
+    switch (page) {
+    case Page::Audio: draw_audio_page(); return;
+    case Page::Journal: draw_journal_page(); return;
+    case Page::Cheats: draw_cheats(); return;
+    case Page::Device: draw_device_page(); return;
+    case Page::Quick:
+        if (!menu_note[0]) {
+            draw_quick();
             return;
         }
-        draw_settings_body();
+        ui::key(pg_back(), "Back");
+        wrap_text(ui::gap() * 3, journal_area().y + ui::gap() * 2, ui::width() - ui::gap() * 6, menu_note,
+                  ui::Font::Normal, style::kText, true);
+        return;
+    default: break;
+    }
+    Item it[kMaxItems];
+    const int n = page_items(page, it);
+    const int screens = page_screens(page);
+    if (page_pg >= screens) page_pg = screens - 1;
+    if (page_pg < 0) page_pg = 0;
+    const int first = page_pg * kPerScreen;
+    for (int i = 0; i < kPerScreen && first + i < n; ++i) draw_item(comfort_cell(journal_area(), i), it[first + i]);
+    if (n == 0) wrap_text(ui::gap() * 3, journal_area().y + ui::gap() * 2, ui::width() - ui::gap() * 6,
+                          "Nothing here for this game.", ui::Font::Normal, style::kTextMuted, true);
+    ui::key(pg_back(), back_label());
+    if (screens > 1) {
+        ui::key_arrow(pg_arrow(0), ui::Arrow::Left, page_pg > 0 ? ui::KeyStyle::Normal : ui::KeyStyle::Dim);
+        ui::key_arrow(pg_arrow(1), ui::Arrow::Right, page_pg < screens - 1 ? ui::KeyStyle::Normal : ui::KeyStyle::Dim);
+    }
+}
+
+// The logs from the menu: the game screen waits on the card meanwhile (as for
+// the book) - the logs and Send Logs' QR code get its memory
+void open_log(int which)            // 0-3 a log, 4 Send Logs
+{
+    if (in_game_menu()) {
+        char cpath[96];
+        canvas_park_path(cpath, sizeof cpath);
+        frame::park(cpath);          // false: the canvas stays (less memory for the logs)
+    }
+    logui::open_one(which, in_game_menu());
+    go(Screen::Logs);
+}
+
+void close_book();
+void page_back()
+{
+    if (page == Page::Top) {
+        if (in_game_menu()) leave_menu();
+        else go(Screen::Home);
         return;
     }
-    if (menu_tab == kTabCheats) {
-        draw_cheats();
+    if (page == Page::Journal) close_book();
+    page = page_parent(page);
+    page_pg = 0;
+    menu_note[0] = 0;
+    dirty = true;
+}
+void open_page(Page p)
+{
+    page = p;
+    page_pg = 0;
+    menu_note[0] = 0;
+    if (p == Page::Quick) open_quick();
+    if (p == Page::Journal) {
+        const int r = menu_rows();
+        // (the page with the latest entry first)
+        menu_page = r > 0 && play::journal_seen_count() ? (play::journal_seen_count() - 1) / r : 0;
+    }
+    dirty = true;
+}
+
+void do_action(uint8_t a)
+{
+    switch (a) {
+    case kAExit: menu_esc(); return;
+    case kARescan:
+        // (in a game: out of it first - the scan remakes the files the game reads)
+        if (in_game_menu()) menu_esc();
+        rescan();
+        return;
+    case kADevice: open_page(Page::Device); return;
+    case kALogScan: open_log(0); return;
+    case kALogRestart: open_log(1); return;
+    case kALogError: open_log(2); return;
+    case kALogMemory: open_log(3); return;
+    case kASend: open_log(4); return;
+    }
+}
+
+bool tap_board_item(int id, const ui::Rect& r, int tx);
+
+void tap_game_menu(const ui::Tap& t)
+{
+    if (set_help_tap()) {
+        help_name = help_body = nullptr;
+        dirty = true;
         return;
     }
-    if (menu_tab == kTabQuick && !menu_note[0]) {
-        draw_quick();
+    if (page == Page::Quick && qt_help) {      // (the "?" page: a tap closes it)
+        qt_help = false;
+        dirty = true;
         return;
     }
-    const int pages = menu_tab == kTabPdf || menu_note[0] ? 1 : menu_pages();   // (a note: no list pages)
+    switch (page) {
+    case Page::Audio: tap_audio_page(t); return;
+    case Page::Journal: tap_journal_page(t); return;
+    case Page::Cheats: tap_cheats(t); return;
+    case Page::Device:
+        if (pg_back().contains(t.x, t.y)) page_back();
+        return;
+    case Page::Quick:
+        if (menu_note[0]) {
+            if (pg_back().contains(t.x, t.y)) page_back();
+        } else {
+            tap_quick(t);
+        }
+        return;
+    default: break;
+    }
+    if (pg_back().contains(t.x, t.y)) {
+        page_back();
+        return;
+    }
+    const int screens = page_screens(page);
+    if (screens > 1) {
+        if (pg_arrow(0).contains(t.x, t.y)) {
+            if (page_pg > 0) --page_pg, dirty = true;
+            return;
+        }
+        if (pg_arrow(1).contains(t.x, t.y)) {
+            if (page_pg < screens - 1) ++page_pg, dirty = true;
+            return;
+        }
+    }
+    Item it[kMaxItems];
+    const int n = page_items(page, it);
+    const int first = page_pg * kPerScreen;
+    for (int i = 0; i < kPerScreen && first + i < n; ++i) {
+        const ui::Rect cell = comfort_cell(journal_area(), i);
+        if (!cell.contains(t.x, t.y)) continue;
+        const Item e = it[first + i];
+        switch (e.kind) {
+        case kIFolder: open_page(static_cast<Page>(e.id)); return;
+        case kIFixGame:
+            fix_game = e.id;
+            page = Page::Fixes;
+            page_pg = 0;
+            dirty = true;
+            return;
+        case kIAction: do_action(e.id); return;
+        case kIBoard:
+        case kIComfort: {
+            const SetEntry se{e.kind == kIComfort, e.id};
+            if (set_has_help(se) && comfort_qmark(cell).contains(t.x, t.y)) {
+                set_help = se;
+                set_help_on = true;
+                dirty = true;
+                return;
+            }
+            if (se.comfort) toggle_comfort(se.id);
+            else if (!tap_board_item(se.id, set_has_help(se) ? comfort_key(cell) : cell, t.x)) return;
+            dirty = true;
+            return;
+        }
+        default: break;
+        }
+        // A switch of the AD&D 1E Rules, the Game Fixes, or Original Games
+        if (comfort_qmark(cell).contains(t.x, t.y)) {
+            help_name = item_name(e);
+            help_body = e.kind == kIAdnd ? rules::adnd_info(e.id).help
+                      : e.kind == kIFix  ? rules::fix_info(e.id).help
+                                         : original_help();
+            set_help = SetEntry{false, 0xFF};
+            set_help_on = true;
+            dirty = true;
+            return;
+        }
+        if (e.kind == kIAdnd) toggle_adnd(rules::adnd_info(e.id).bit);
+        else if (e.kind == kIFix) toggle_fix(e.id);
+        else toggle_original();
+        dirty = true;
+        return;
+    }
+}
+
+// ---- The Audio page (Tom: today's sounds page as it is) - Game Sound,
+// AdLib Music, Volume across the top, the games' effects to hear under them
+void draw_audio_page()
+{
+    ui::key(pg_back(), "Back");
+    draw_sounds();
+}
+void tap_audio_page(const ui::Tap& t)
+{
+    if (pg_back().contains(t.x, t.y)) {
+        page_back();
+        return;
+    }
+    tap_sounds(t);
+}
+
+// ---- The Journal page: the entries the game has mentioned so far (a tap
+// reads one) and the whole book (the journal PDF, or its text)
+bool book_here() { return in_game_menu() && game_dirs[game_sel].journal[0] != 0; }
+void draw_journal_page()
+{
+    const ui::Rect a = journal_area();
+    const int pages = menu_note[0] ? 1 : menu_pages();
+    ui::key(pg_back(), "Back");
+    if (book_here()) ui::key(pg_mid(), "Whole Journal");
     if (pages > 1) {
-        ui::key(ui::bottom_key(0, 3), "Prev Page", menu_page > 0 ? ui::KeyStyle::Normal : ui::KeyStyle::Dim);
-        ui::key(ui::bottom_key(1, 3), "Back to Game");
-        ui::key(ui::bottom_key(2, 3), "Next Page", menu_page < pages - 1 ? ui::KeyStyle::Normal : ui::KeyStyle::Dim);
-    } else {
-        ui::key(ui::bottom_key(0, 1), "Back to Game");
+        ui::key_arrow(pg_arrow(0), ui::Arrow::Left, menu_page > 0 ? ui::KeyStyle::Normal : ui::KeyStyle::Dim);
+        ui::key_arrow(pg_arrow(1), ui::Arrow::Right, menu_page < pages - 1 ? ui::KeyStyle::Normal : ui::KeyStyle::Dim);
     }
     const int x = ui::gap() * 3, wdt = ui::width() - ui::gap() * 6;
-    if (menu_tab == kTabPdf || menu_note[0]) {
+    if (menu_note[0]) {
         wrap_text(x, a.y + ui::gap() * 2, wdt, menu_note, ui::Font::Normal, style::kText, true);
         return;
     }
@@ -4122,84 +4491,31 @@ void draw_game_menu()
         if (i + 1 < r) ui::gfx().drawFastHLine(x, y + rh - 1, wdt, style::kKeyEdge);
     }
 }
-
-// The Logs screen from the game (the Logs tab, Settings' Logs), its Back
-// returns to the Game menu. The game screen waits on the card meanwhile (as
-// for the book): the logs and Send Logs' QR code get its memory
-void open_game_logs()
+void tap_journal_page(const ui::Tap& t)
 {
-    char cpath[96];
-    canvas_park_path(cpath, sizeof cpath);
-    frame::park(cpath);                  // false: the canvas stays (less memory for the logs)
-    logui::open_from_game();
-    go(Screen::Logs);
-}
-
-void tap_game_menu(const ui::Tap& t)
-{
-    if (menu_tab == kTabSettings && set_help_tap()) {
-        dirty = true;
+    if (pg_back().contains(t.x, t.y)) {
+        page_back();
         return;
     }
-    if (menu_tab == kTabQuick && qt_help) {     // (the "?" page: a tap closes it)
-        qt_help = false;
-        dirty = true;
-        return;
-    }
-    if (menu_esc_hit(t)) {
-        menu_esc();
-        return;
-    }
-    const int tab = tab_hit(t);
-    if (tab == kTabPdf) {
-        menu_tab = kTabPdf;
+    if (book_here() && pg_mid().contains(t.x, t.y)) {
         if (!open_book()) {
             strlcpy(menu_note, book_missing_text(), sizeof menu_note);
             dirty = true;
         }
         return;
     }
-    if (tab == kTabLogs) {
-        open_game_logs();
-        return;
+    const int pages = menu_note[0] ? 1 : menu_pages();
+    if (pages > 1) {
+        if (pg_arrow(0).contains(t.x, t.y)) {
+            if (menu_page > 0) --menu_page, dirty = true;
+            return;
+        }
+        if (pg_arrow(1).contains(t.x, t.y)) {
+            if (menu_page < pages - 1) ++menu_page, dirty = true;
+            return;
+        }
     }
-    if (tab == kTabQuick) {
-        open_quick();
-        return;
-    }
-    if (tab == kTabJournal || tab == kTabSounds || tab == kTabSettings || tab == kTabCheats) {
-        menu_tab = tab;
-        menu_note[0] = 0;
-        dirty = true;
-        return;
-    }
-    if (menu_tab == kTabCheats) {
-        tap_cheats(t);
-        return;
-    }
-    if (menu_tab == kTabSounds) {
-        if (bottom_hit(t, 1) == 0) leave_menu();
-        else tap_sounds(t);
-        return;
-    }
-    if (menu_tab == kTabSettings) {
-        tap_settings_body(t);
-        return;
-    }
-    if (menu_tab == kTabQuick && !menu_note[0]) {
-        tap_quick(t);
-        return;
-    }
-    const int pages = menu_tab == kTabPdf || menu_note[0] ? 1 : menu_pages();
-    const int nk = pages > 1 ? 3 : 1;
-    const int k = bottom_hit(t, nk);
-    if (k >= 0) {
-        if (nk == 1 || k == 1) leave_menu();
-        else if (k == 0 && menu_page > 0) --menu_page, dirty = true;
-        else if (k == 2 && menu_page < pages - 1) ++menu_page, dirty = true;
-        return;
-    }
-    if (menu_tab != kTabJournal) return;
+    if (menu_note[0]) return;
     const ui::Rect a = journal_area();
     if (!a.contains(t.x, t.y)) return;
     const int i = menu_page * menu_rows() + (t.y - a.y) / menu_row_h();
@@ -4208,6 +4524,57 @@ void tap_game_menu(const ui::Tap& t)
     if (play::journal_seen(i, &kind, &num) && !open_journal(kind, num)) {
         strlcpy(menu_note, "Not enough memory to show the journal entry just now.", sizeof menu_note);
         dirty = true;
+    }
+}
+
+// ---- Device Info (Tom, 2026-11-17): this software, the games found and
+// their releases (Steam, GOG or unknown), what we know of the board
+const char* release_name(const library::GameDir& g)
+{
+    // (the Steam / SNEG releases: the DAX files in <folder>/GAME/<SHORT>, the
+    // Gold Box Companion beside them; GOG's: its goggame-<id> icon)
+    if (strstr(g.data_dir, "/GAME/") || g.gbc[0]) return "Steam";
+    if (strstr(g.icon, "goggame")) return "GOG";
+    return "unknown release";
+}
+void draw_device_page()
+{
+    ui::key(pg_back(), "Back");
+    const ui::Rect a = journal_area();
+    const int x = ui::gap() * 3, w = ui::width() - ui::gap() * 6;
+    const ui::Font f = ui::Font::Small;
+    const int lh = ui::line_h(f) + 1;
+    int y = a.y + ui::gap();
+    char l[96];
+    auto line = [&](const char* s, uint16_t col) {
+        if (y + lh <= a.y + a.h) y = wrap_text(x, y, w, s, f, col, true);
+    };
+    snprintf(l, sizeof l, "Gold Box Game Engine %s (%s)", env_.version, env_.build);
+    line(l, style::kGold);
+    snprintf(l, sizeof l, "Board: %s", BOARD_NAME);
+    line(l, style::kText);
+    char ps[24];
+    if (ESP.getPsramSize()) snprintf(ps, sizeof ps, "PSRAM %u KB", (unsigned)(ESP.getPsramSize() / 1024));
+    else snprintf(ps, sizeof ps, "no PSRAM");
+    snprintf(l, sizeof l, "%s, screen %d x %d, %s", ESP.getChipModel(), ui::width(), ui::height(), ps);
+    line(l, style::kText);
+    snprintf(l, sizeof l, "Memory free %u KB, largest block %u KB",
+             (unsigned)(heap_caps_get_free_size(MALLOC_CAP_8BIT) / 1024),
+             (unsigned)(heap_caps_get_largest_free_block(MALLOC_CAP_8BIT) / 1024));
+    line(l, style::kText);
+    y += lh / 2;
+    if (in_game_menu()) {
+        const library::GameDir& g = game_dirs[game_sel];
+        snprintf(l, sizeof l, "%s: %s", games::title(g.game), release_name(g));
+        line(l, style::kGold);
+        snprintf(l, sizeof l, "Folder: %s", g.folder);
+        line(l, style::kText);
+        return;
+    }
+    line("Games on the card:", style::kGold);
+    for (int i = 0; i < n_games; ++i) {
+        snprintf(l, sizeof l, "%s: %s", games::title(game_dirs[i].game), release_name(game_dirs[i]));
+        line(l, style::kText);
     }
 }
 
@@ -5033,8 +5400,8 @@ void tap_journal(const ui::Tap& t)
     const JournalKey k = journal_key_at(cell);
     if (k == kJBack) {
         if (jv && jv->book && from_menu) {
-            // The Menu's book tab: back to the Menu (its journal list)
-            menu_tab = kTabJournal;
+            // The menu's book: back to the Journal page (its list)
+            page = Page::Journal;
             menu_note[0] = 0;
         }
         leave_journal();
@@ -5248,9 +5615,9 @@ void tap_pdf(const ui::Tap& t)
     if (k == 3) return;                                       // (the page cell isn't a key)
     if (k == 0) {
         if (from_menu && !jv) {
-            // The Menu's book tab: back to the Menu (its journal list)
+            // The menu's book: back to the Journal page (its list)
             close_book();
-            menu_tab = kTabJournal;
+            page = Page::Journal;
             menu_note[0] = 0;
             go(Screen::GameMenu);
             return;
@@ -5321,7 +5688,7 @@ void leave_play()
     }
     frame::set_left(false);
     frame::set_scale(cfg->scale_15x ? frame::Scale::OneAndHalf : frame::Scale::One);
-    go(Screen::Files);
+    go(Screen::Home);
 }
 
 // Shows what the scripts changed: the canvas rows, and the Companion when
@@ -5733,7 +6100,7 @@ bool play_journal()
     char jk;
     int jn;
     if (!play::journal_request(&jk, &jn)) return false;
-    if (!comfort_on(kCJournal)) {                        // (switched off: as the original, the tap goes on)
+    if (!CYD_JOURNAL_POPUP) {                        // (switched off: as the original, the tap goes on)
         while (play::journal_request(&jk, &jn)) {}       // (any more named with it too)
         return false;
     }
@@ -5898,66 +6265,6 @@ void tap_play(const ui::Tap& t)
 // screen comes calibrated, but Tom's S3 may sit a little off - its own
 // calibration, when made, wins); Asset Viewer's scale only on 480x320, not in the
 // game (the game is always 1:1).
-int set_page = 0;
-constexpr int kSetMax = 28;
-
-// Whether the game in hand has mistakes the engine fixes (Game Fixes)
-bool game_has_fixes() { return set_from != SetFrom::Home && profile::has_item_fixes(game_dirs[game_sel].game); }
-
-int set_entries(SetEntry* out)
-{
-    int n = 0;
-    auto add = [&](bool comfort, int id) {
-        if (n < kSetMax) out[n++] = {comfort, static_cast<uint8_t>(id)};
-    };
-    add(false, kBright);
-    add(false, kVolume);
-    add(false, kSound);
-    add(false, kMusic);
-    add(false, kInvert);
-    add(false, kSwap);
-    add(false, kRotate);
-    add(false, kCalibrate);
-    add(false, kHand);
-#if defined(BOARD_SIDE_STRIP)
-    add(false, kStrip);
-#endif
-    if (ui::large() && set_from != SetFrom::InGame) add(false, kScale);
-    add(false, kLogs);
-    for (int c = 0; c < kComforts; ++c)
-        if (comfort_built(c) && (c != kCItemFixes || game_has_fixes())) add(true, c);
-    add(false, kInfo);
-    return n;
-}
-
-constexpr int kSetPerPage = 8;          // 2 columns, 4 rows
-int set_pages()
-{
-    SetEntry e[kSetMax];
-    return (set_entries(e) + kSetPerPage - 1) / kSetPerPage;
-}
-
-ui::Rect set_area() { return set_from == SetFrom::InGame ? journal_area() : game_settings_area(); }
-ui::Rect set_cell(int slot) { return comfort_cell(set_area(), slot); }
-
-// The page's arrows, bottom right
-ui::Rect set_arrow(int i)
-{
-    const int w = ui::key_h() * 5 / 4, gp = ui::gap();
-    return {ui::width() - gp - (2 - i) * (w + gp) + gp, ui::height() - ui::key_h() - gp, w, ui::key_h()};
-}
-// The bottom keys: As Original / All On; Dev Tools (a game's page), Back to
-// Game (in the game: first) - left of the arrows
-int set_bottom_n() { return set_from == SetFrom::Home ? 1 : 2; }
-ui::Rect set_bottom(int i)
-{
-    const int n = set_bottom_n(), gp = ui::gap();
-    const int right = set_pages() > 1 ? set_arrow(0).x : ui::width();
-    const int w = (right - gp * (n + 1)) / n;
-    return {gp + i * (w + gp), ui::height() - ui::key_h() - gp, w, ui::key_h()};
-}
-int set_original_key() { return set_from == SetFrom::InGame ? 1 : 0; }
-
 // What a key is called, and whether it has a "?" (Tom, v0.84.0: every
 // switch says what it does)
 const char* set_name(const SetEntry& e)
@@ -5967,14 +6274,14 @@ const char* set_name(const SetEntry& e)
     case kBright: return "Brightness";
     case kVolume: return "Volume";
     case kSound: return "Game Sound";
-    case kMusic: return "Music";
+    case kMusic: return "AdLib Music";
     case kInvert: return "Invert Colors";
     case kSwap: return "Swap Red/Blue";
     case kRotate: return "Rotate 180";
     case kCalibrate: return "Recalibrate Touch";
     case kScale: return "Asset Viewer";
     case kLogs: return "Logs";
-    case kHand: return cfg->left_hand ? "Left Hand" : "Right Hand";
+    case kHand: return cfg->left_hand ? "Left Handed" : "Right Handed";
     case kStrip: return "Companion Strip";
     default: return "";
     }
@@ -6018,8 +6325,8 @@ const char* set_help_text(const SetEntry& e)
                "sharpness. Off: the game in the middle with black bars at both sides.";
     case kHand:
         return "Which hand taps the keys under the game. The keys move so that hand covers less of the game: "
-               "Right Hand puts Game, Map and the key switch at the left end of the row and the arrows at the "
-               "right; Left Hand the other way round. On 480x320 the movement and cursor pads change sides.";
+               "Right Handed puts Game, Map and the key switch at the left end of the row and the arrows at the "
+               "right; Left Handed the other way round. On 480x320 the movement and cursor pads change sides.";
     }
     return "";
 }
@@ -6294,12 +6601,12 @@ void draw_set_entry(const ui::Rect& cell, const SetEntry& e)
         case kBright: draw_slider(r); break;
         case kVolume: draw_volume(r); break;
         case kSound: draw_game_sound(r); break;
-        case kMusic: ui::key2(r, "Music", cfg->music_off ? "Off" : "On", lit(!cfg->music_off)); break;
+        case kMusic: ui::key2(r, "AdLib Music", cfg->music_off ? "Off" : "On", lit(!cfg->music_off)); break;
         case kInvert: ui::key2(r, "Invert Colors", pp.invert ? "On" : "Off", lit(pp.invert)); break;
         case kSwap: draw_swap(r, pp.swap_rb); break;
         case kRotate: ui::key2(r, "Rotate 180", cfg->flipped ? "On" : "Off", lit(cfg->flipped)); break;
         case kCalibrate: ui::key(r, "Recalibrate Touch"); break;
-        case kHand: ui::key(r, cfg->left_hand ? "Left Hand" : "Right Hand"); break;
+        case kHand: ui::key(r, cfg->left_hand ? "Left Handed" : "Right Handed"); break;
         case kStrip: ui::key2(r, "Companion Strip", cfg->no_strip ? "Off" : "On", lit(!cfg->no_strip)); break;
         case kScale: ui::key2(r, "Asset Viewer", cfg->scale_15x ? "1.5x" : "1:1", lit(cfg->scale_15x)); break;
         case kLogs: ui::key(r, "Logs"); break;
@@ -6309,139 +6616,57 @@ void draw_set_entry(const ui::Rect& cell, const SetEntry& e)
     if (set_has_help(e)) ui::key_help(comfort_qmark(cell));
 }
 
-// The keys, the bottom row and the arrows (the header or the tabs: the caller's)
-void draw_settings_body()
+// A board key tapped (the Display / Audio pages): false when nothing changed
+bool tap_board_item(int id, const ui::Rect& r, int tx)
 {
-    SetEntry list[kSetMax];
-    const int all = set_entries(list);
-    const int pages = (all + kSetPerPage - 1) / kSetPerPage;
-    if (set_page >= pages) set_page = pages - 1;
-    if (set_page < 0) set_page = 0;
-    const int first = set_page * kSetPerPage;
-    for (int i = 0; i < kSetPerPage && first + i < all; ++i) draw_set_entry(set_cell(i), list[first + i]);
-    ui::key(set_bottom(set_original_key()), all_comforts_off() ? "All On" : "As Original");
-    if (set_from == SetFrom::Game) ui::key(set_bottom(1), "Dev Tools");
-    if (set_from == SetFrom::InGame) ui::key(set_bottom(0), "Back to Game");
-    if (pages > 1) {
-        ui::key_arrow(set_arrow(0), ui::Arrow::Left, set_page > 0 ? ui::KeyStyle::Normal : ui::KeyStyle::Dim);
-        ui::key_arrow(set_arrow(1), ui::Arrow::Right, set_page < pages - 1 ? ui::KeyStyle::Normal : ui::KeyStyle::Dim);
-    }
-}
-
-// A key of the body tapped (true: something happened - the screen is
-// redrawn, or another screen opened)
-bool tap_settings_body(const ui::Tap& t)
-{
-    SetEntry list[kSetMax];
-    const int all = set_entries(list);
-    const int pages = (all + kSetPerPage - 1) / kSetPerPage;
-    if (pages > 1) {
-        if (set_arrow(0).contains(t.x, t.y)) {
-            if (set_page > 0) --set_page, dirty = true;
-            return true;
+    PanelPrefs pp = panel_prefs_get();
+    LGFX& g = ui::gfx();
+    switch (id) {
+    case kBright:
+        if (slider_set(r, tx)) {
+            draw_slider(r);
+            settings_save(*cfg);
         }
-        if (set_arrow(1).contains(t.x, t.y)) {
-            if (set_page < pages - 1) ++set_page, dirty = true;
-            return true;
-        }
-    }
-    if (set_bottom(set_original_key()).contains(t.x, t.y)) {
-        toggle_original();
-        dirty = true;
-        return true;
-    }
-    if (set_from == SetFrom::Game && set_bottom(1).contains(t.x, t.y)) {
-        go(Screen::Dev);
-        return true;
-    }
-    if (set_from == SetFrom::InGame && set_bottom(0).contains(t.x, t.y)) {
-        leave_menu();
-        return true;
-    }
-    const int first = set_page * kSetPerPage;
-    for (int i = 0; i < kSetPerPage && first + i < all; ++i) {
-        const ui::Rect cell = set_cell(i);
-        if (!cell.contains(t.x, t.y)) continue;
-        const SetEntry e = list[first + i];
-        if (set_has_help(e) && comfort_qmark(cell).contains(t.x, t.y)) {
-            set_help = e;
-            set_help_on = true;
-            dirty = true;
-            return true;
-        }
-        if (e.comfort) {
-            toggle_comfort(e.id);
-            dirty = true;
-            return true;
-        }
-        const ui::Rect r = set_has_help(e) ? comfort_key(cell) : cell;
-        PanelPrefs pp = panel_prefs_get();
-        LGFX& g = ui::gfx();
-        switch (e.id) {
-        case kBright:
-            if (slider_set(r, t.x)) {
-                draw_slider(r);
-                settings_save(*cfg);
-            }
-            return true;
-        case kVolume: tap_volume(r, t.x); return true;
-        case kInfo: return false;
-        case kLogs:
-            if (set_from == SetFrom::InGame) {
-                open_game_logs();
-            } else {
-                logui::open(false);
-                go(Screen::Logs);
-            }
-            return true;
-        case kSound: tap_game_sound(r); return true;
-        case kMusic:
-            cfg->music_off = !cfg->music_off;
-            play::set_music(!cfg->music_off);
-            break;
-        case kInvert: pp.invert = !pp.invert; panel_prefs_set(g, pp); break;
-        case kSwap: pp.swap_rb = !pp.swap_rb; panel_prefs_set(g, pp); break;
-        case kRotate:
-            cfg->flipped = !cfg->flipped;
-            env_.apply_rotation(cfg->flipped);
-            break;
-        case kCalibrate: env_.recalibrate(); break;
-        case kHand: cfg->left_hand = !cfg->left_hand; break;       // (the game's keys: drawn so on Back to Game)
+        return false;                    // (drawn already)
+    case kVolume: tap_volume(r, tx); return false;
+    case kInfo: return false;
+    case kSound: tap_game_sound(r); return false;
+    case kMusic:
+        cfg->music_off = !cfg->music_off;
+        play::set_music(!cfg->music_off);
+        break;
+    case kInvert: pp.invert = !pp.invert; panel_prefs_set(g, pp); break;
+    case kSwap: pp.swap_rb = !pp.swap_rb; panel_prefs_set(g, pp); break;
+    case kRotate:
+        cfg->flipped = !cfg->flipped;
+        env_.apply_rotation(cfg->flipped);
+        break;
+    case kCalibrate: env_.recalibrate(); break;
+    case kHand: cfg->left_hand = !cfg->left_hand; break;       // (the game's keys: drawn so on Back to Game)
 #if defined(BOARD_SIDE_STRIP)
-        case kStrip:
-            cfg->no_strip = !cfg->no_strip;
-            g.strip_set(!cfg->no_strip);
-            break;
+    case kStrip:
+        cfg->no_strip = !cfg->no_strip;
+        g.strip_set(!cfg->no_strip);
+        break;
 #endif
-        case kScale:
-            cfg->scale_15x = !cfg->scale_15x;
-            frame::set_scale(cfg->scale_15x ? frame::Scale::OneAndHalf : frame::Scale::One);
-            break;
-        }
-        settings_save(*cfg);
-        dirty = true;
-        return true;
+    default: return false;
     }
-    return false;
+    settings_save(*cfg);
+    return true;
 }
 
 // Dragging the brightness slider: the brightness follows; saved when the
 // stylus lifts (Volume is - / + taps since 2026-10-24)
 bool slider_dragged = false;
 
+bool page_item_cell(int id, ui::Rect* out);
 void settings_tick()
 {
     int dx, dy, x, y;
     const bool dragging = ui::drag(dx, dy);
-    if (dragging && !set_help_on && ui::touch_point(x, y)) {
-        SetEntry list[kSetMax];
-        const int all = set_entries(list);
-        const int first = set_page * kSetPerPage;
-        for (int i = 0; i < kSetPerPage && first + i < all; ++i) {
-            const SetEntry e = list[first + i];
-            if (e.comfort || e.id != kBright) continue;
-            const ui::Rect r = set_cell(i);
-            if (!slider_dragged && (x < r.x || x >= r.x + r.w || y < r.y || y >= r.y + r.h)) continue;
+    ui::Rect r;
+    if (dragging && !set_help_on && ui::touch_point(x, y) && page_item_cell(kBright, &r)) {
+        if (slider_dragged || (x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h)) {
             slider_dragged = true;
             if (slider_set(r, x)) draw_slider(r);
         }
@@ -6451,29 +6676,21 @@ void settings_tick()
     }
 }
 
-// Home's Settings and a game's page's: the header, the body (or a key's help)
-void draw_settings()
-{
-    if (set_help_on) {
-        draw_set_help();
-        return;
-    }
-    ui::clear();
-    ui::header("Settings", true);
-    draw_settings_body();
-}
+// Home's Settings: the menu pages without the game's own
+void draw_settings() { draw_game_menu(); }
+void tap_settings(const ui::Tap& t) { tap_game_menu(t); }
 
-void tap_settings(const ui::Tap& t)
+// The board key's cell on the page shown (the slider's drag)
+bool page_item_cell(int id, ui::Rect* out)
 {
-    if (set_help_tap()) {
-        dirty = true;
-        return;
-    }
-    if (ui::back_rect().contains(t.x, t.y)) {
-        go(set_from == SetFrom::Game ? Screen::Files : Screen::Home);
-        return;
-    }
-    tap_settings_body(t);
+    Item it[kMaxItems];
+    const int n = page_items(page, it), first = page_pg * kPerScreen;
+    for (int i = 0; i < kPerScreen && first + i < n; ++i)
+        if (it[first + i].kind == kIBoard && it[first + i].id == id) {
+            *out = comfort_cell(journal_area(), i);
+            return true;
+        }
+    return false;
 }
 
 
@@ -6595,9 +6812,7 @@ void tick()
                     close_book();            // (the game screen back from the card)
                     go(Screen::GameMenu);
                 } else {
-                    go(logui::from_scan()             ? Screen::Home
-                       : set_from == SetFrom::Game ? Screen::GameSettings
-                                                   : Screen::Settings);
+                    go(logui::from_scan() ? Screen::Home : Screen::Settings);
                 }
             }
             break;
@@ -6628,10 +6843,7 @@ void tick()
         press_key_lit = press_canvas_lit = false;
     }
     if (screen == Screen::Logs && !dirty) logui::tick();
-    if ((screen == Screen::Settings || screen == Screen::GameSettings ||
-         (screen == Screen::GameMenu && menu_tab == kTabSettings)) &&
-        !dirty)
-        settings_tick();
+    if ((screen == Screen::Settings || screen == Screen::GameMenu) && page == Page::Display && !dirty) settings_tick();
 #if defined(CYD_QEMU)
     {
         // (the emulator's script: open a journal entry from the game)

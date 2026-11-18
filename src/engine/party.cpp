@@ -1,4 +1,5 @@
 #include "party.h"
+#include "rules.h"
 
 #include <cstring>
 #include <new>
@@ -861,7 +862,10 @@ bool script_value(const uint8_t* r, int index, uint16_t off, uint16_t* out, bool
     switch (off) {
     case 0x15:  *out = r[0x13]; return true;    // Int
     case 0x18:  *out = r[0x19]; return true;    // Con
-    case 0x72:  *out = r[0x74]; return true;    // race
+    case 0x72:                                  // race (PoolRad's scripts: Race Checks, Game Fixes)
+        if (pool && !rules::fix(rules::kFixPRace)) return false;
+        *out = r[0x74];
+        return true;
     case 0x73:  *out = r[0x75]; return true;    // class
     case 0x9B:  *out = r[0xE0]; return true;    // saving throw: petrification
     case 0xA0:  *out = r[0xE5]; return true;    // hit dice

@@ -269,7 +269,7 @@ void knights()
     // A knight's saves: the original's row 7 level 0 (Game Fixes off), its
     // own level's row with them on
     for (int fx = 0; fx < 2; ++fx) {
-        rules::set_fixes(fx == 1);
+        rules::set_all(fx == 1);
         dice_usual();
         create::begin(c, m->tables, m->facts, m->dice, classes::kKrynnRace + 6, 0, create::Monk, 0, 0);
         create::roll(c, m->tables, m->facts, m->dice);
@@ -282,7 +282,7 @@ void knights()
             expect(P, fx ? "knights: saves with Game Fixes" : "knights: saves as the original", false);
         }
     }
-    rules::set_fixes(true);
+    rules::set_all(true);
     char w[96];
     snprintf(w, sizeof w, "knights: %d petitions and saves as the original", ncase);
     expect(P, w, nbad == 0 && ncase > 0, nbad ? "%d wrong" : "%s", nbad ? std::to_string(nbad).c_str() : "");

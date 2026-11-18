@@ -298,7 +298,7 @@ int learnable(const party::Character& c, const classes::Tables& t, uint8_t* ids,
             // the engine's 0x13C-0x140 - party.cpp kPoolRuns - the low byte of
             // its experience value as a monster: the original's mistake, kept;
             // with the Game Fixes no 7th-level spell, as AD&D's Pool levels)
-            if (rules::fixes()) continue;
+            if (rules::fix(rules::kFixPTrain56)) continue;
             const int o = 0xB1 + 3 * (t.spell_class(s) == Cleric ? 0 : 1) + t.spell_level(s);
             if (o >= 0xB8 && o <= 0xBC && c.rec[0x13C + (o - 0xB8)] > 0) ids[n++] = static_cast<uint8_t>(s);
             continue;

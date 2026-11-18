@@ -620,9 +620,9 @@ void rules_checks()
         expect(kPart, "saves: a natural 20 saves (needs 40)", combat::saving_throw(f, 0, 0, rng));
         f.rec[0xDF] = 15;
         dice_faces({2});
-        rules::set_fixes(false);        // (the original's; the Game Fixes: a save failed - SPEC 12)
+        rules::set_all(false);        // (the original's; the Game Fixes: a save failed - SPEC 12)
         expect(kPart, "saves: a total below 0 wraps round to a save (byte sum: 2 - 4)", combat::saving_throw(f, 0, -4, rng));
-        rules::set_fixes(true);
+        rules::set_all(true);
         dice_faces({2});
         expect(kPart, "saves, Game Fixes: a total below 0 fails", !combat::saving_throw(f, 0, -4, rng));
         dice_usual();
@@ -2039,11 +2039,11 @@ void gw_specials()
     if (!boot()) return;
     const combat::MonFx mx = d->prof->fight.facts.mon;
     const combat::Facts::GateFx& gx = d->prof->fight.facts.gw;
-    const bool fix_was = rules::fixes();
+    const bool fix_was = rules::all_fixes();
     // (the original's ways: Game Fixes off after each fight's start - boot() sets them from the options)
     auto gvs = [&](int area, int id, int copies = 1) {
         const bool ok = vs(area, id, copies);
-        rules::set_fixes(false);
+        rules::set_all(false);
         return ok;
     };
     // attack 1's blow: a hit, each damage die 1, then these
@@ -2115,7 +2115,7 @@ void gw_specials()
         expect(kPart, "Gateway stirge: its step lets go (0x96 in its list) - the victim free",
                !gw_has(b.f[M], gx.sucking) && !gw_has(b.f[P], mx.held_fast));
         // Game Fixes: it drinks 1d4 a turn (AD&D's)
-        rules::set_fixes(true);
+        rules::set_all(true);
         heal_p();
         blow(0, {15, 1, 4});
         const int hp1 = b.f[P].hp();
@@ -2125,7 +2125,7 @@ void gw_specials()
         dice_usual();
         expect(kPart, "Gateway stirge, Game Fixes: it holds on and drinks 1d4 (3)", gw_has(b.f[M], gx.sucking) && n2 >= 2 &&
                ev[0].ev == combat::Ev::DrainsBlood && b.f[P].hp() == hp1 - 3, "events %d hp %d of %d", n2, b.f[P].hp(), hp1);
-        rules::set_fixes(false);
+        rules::set_all(false);
     }
     // -- Held fast at its turn's start (0x3A in the turn-start list, GAME.OVR
     //    0x130DA): no moving, no spells
@@ -2150,7 +2150,7 @@ void gw_specials()
         combat::Event ev[4];
         int bite = -1;
         expect(kPart, "Gateway squid: no squeeze at its turn (the original)", combat::turn_holds(b, M, rng, ev, 4, &bite) == 0);
-        rules::set_fixes(true);
+        rules::set_all(true);
         const int hp0 = b.f[P].hp();
         bool go_on = false;
         dice_faces({2, 1});
@@ -2158,7 +2158,7 @@ void gw_specials()
         dice_usual();
         expect(kPart, "Gateway squid, Game Fixes: it squeezes 2d2 (3) and its turn goes on", n >= 2 &&
                ev[0].ev == combat::Ev::Constricts && go_on && b.f[P].hp() == hp0 - 3, "hp %d of %d", b.f[P].hp(), hp0);
-        rules::set_fixes(false);
+        rules::set_all(false);
         b.f[M].rec[0x1A4] = 1;
         combat::harm(b, M, 5, combat::Harm{}, rng, nullptr);
         expect(kPart, "Gateway squid: fallen - the victim free", !gw_has(b.f[P], mx.held_fast));
@@ -2370,7 +2370,7 @@ void gw_specials()
         combat::harm(b, M, 10, h, rng, nullptr);
         expect(kPart, "Gateway fire giant: dragon breath does nothing (0x49)", b.f[M].hp() == hp0);
     }
-    rules::set_fixes(fix_was);
+    rules::set_all(fix_was);
 }
 
 void dump_items()

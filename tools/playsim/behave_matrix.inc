@@ -531,7 +531,7 @@ void images()
                F(B).hp(), before, left);
     }
     if (fx.items.displace) {
-        const bool works = !fx.items.displace_unused || rules::fixes();
+        const bool works = !fx.items.displace_unused || rules::all_fixes();
         put(A, 0, 10, 10);
         put(B, 1, 11, 10);
         add_aff(B, fx.items.displace, 0);
@@ -560,7 +560,7 @@ void prot_evil()
     const combat::Facts& fx = *play::fg->b.fx;
     if (!fx.prot_evil) return;
     for (int fix = 0; fix < 2; ++fix) {
-        rules::set_fixes(fix == 1);
+        rules::set_all(fix == 1);
         int lowest = 21;
         for (int d20 = 1; d20 <= 20 && lowest == 21; ++d20) {
             put(A, 0, 10, 10);
@@ -578,7 +578,7 @@ void prot_evil()
                  fix ? 12 : 10);
         expect(P, w, lowest == (fix ? 12 : 10), "lowest hit %d", lowest);
     }
-    rules::set_fixes(true);
+    rules::set_all(true);
 }
 
 // ---- T12 morale (coab's FleeCheck sub_3637F; Darkness ovr 0xACAC, Secret
@@ -688,7 +688,7 @@ void run()
             const int h = hit_roll(s, false, &slain);
             int want = hit0;
             if (s.kind == Blinded) want -= 4;
-            if (s.kind == Invisible && (!fx.secret || rules::fixes())) want += 4;
+            if (s.kind == Invisible && (!fx.secret || rules::all_fixes())) want += 4;
             if (s.kind == Faerie) want += fx.secret ? -2 : 2;
             if (s.kind == Held) {
                 snprintf(w, sizeof w, "%s x attacked: slain by one cruel blow", s.name.c_str());
@@ -718,9 +718,9 @@ void run()
             if (s.kind == Bestow || s.kind == Blinded) {
                 // (the original: the total a byte - below 0 it wraps round to a
                 // save made, so a 2 with -4 saves; AD&D's with the Game Fixes)
-                rules::set_fixes(false);
+                rules::set_all(false);
                 const int so = save_roll(s);
-                rules::set_fixes(true);
+                rules::set_all(true);
                 snprintf(w, sizeof w, "%s x saving throw, the original's: a d20 of 2 saves (the byte wraps)", s.name.c_str());
                 expect(P, w, so == 2, "lowest save %d", so);
             }

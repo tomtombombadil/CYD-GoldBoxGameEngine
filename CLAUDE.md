@@ -428,6 +428,41 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   own keys (Game Fixes, for a game with fixes) only with a game in hand;
   bottom: As Original, + Dev Tools (game page) or Back to Game (in game);
   2 x 4 a page, arrows bottom right (viewer.cpp `set_entries`, SetFrom).
+- **The menus** (Tom, 2026-11-17, his tree; v0.209.0 - replaces the Game
+  menu's tabs, the game's page and its Settings / Dev Tools): the Game key
+  and Home's Settings open the same pages (viewer.cpp `Page`, `page_items`),
+  up to 8 keys a page (2 x 4), Back bottom-left (the game's top page: Back to
+  Game), page arrows bottom-right. In a game: Display, Audio, Game Play,
+  Journal, Cheats, Quick Actions, System, Exit Game (one tap); at Home the
+  same less the game-only ones (Journal, Quick Actions, Exit Game; Cheats
+  shows only Max Hit Points). Display: Brightness, Right Handed / Left
+  Handed, Rotate 180, Invert Colors, Swap Red/Blue, Recalibrate Touch,
+  Companion Strip (5.0"). Audio: the old Sounds page (Game Sound, AdLib
+  Music, Volume, the effects to hear - in a game). Game Play: Original Games
+  (on: every Enhancement / 1E Rule / Game Fix / Max Hit Points off, the
+  player's set kept and given back when it goes off; any switch can still be
+  turned on meanwhile; the Cheats page is never hidden), Enhancements, AD&D
+  1E Rules, Game Fixes (in a game Every Game + that game's page; at Home every
+  game's - a fix shared by games shows on each of their pages). Journal: the
+  entries + Whole Journal (the book). Quick Actions: On / Off at the top.
+  System: Rescan Card, Device Info (version, board, memory, each game's
+  release - Steam / GOG / unknown), Card Log, Restart Log, Error Log, Memory
+  Log, Send Logs. Home: a tap on the game starts it (no game page; Rescan
+  only in System, or a tap on an empty card's page). Gone (Tom): Cheats Tab,
+  Asset Viewer 1.5x, Dev Tools, Menu Highlight / Readable Messages /
+  Journal Pop-Up / Tap to Stop Demo switches (always on). The settings file
+  is SET2 (64 bytes; SET1 files read into its start, their Game Fixes off =
+  every fix off). New switches: a page entry, a name, help ("?").
+- **AD&D 1E Rules vs Game Fixes** (Tom, 2026-11-17): a rule of the 1st
+  edition books the originals left out is an AD&D 1E Rule (`rules::adnd`,
+  `Adnd` bits, `rules::adnd_info` - name, games, help): Magic Missile,
+  Multi-Class Hit Points, Thrown Weapons, Magic Items, Coin Exchange, Age
+  with Time, Power Word Kill, Protection from Evil, Raising the Dead. A
+  mistake in an original's code is a Game Fix, each its own switch
+  (`rules::fix(rules::kFix...)`, `rules::fix_info` - name, the games it
+  touches, help). Engine code never asks "the fixes" as one: a new fix gets
+  its own `Fix` (and table row), a new 1E rule its own bit. Tests: 
+  `rules::set_all(bool)` (all fixes and rules) / `rules::all_fixes()`.
 - Clear font (Tom, 2026-10-11, v0.73.0): the engine's OWN 8x8 font
   (`tools/fonts/clear8.txt` -> `make_font.py` -> `engine/font_clear.cpp`),
   bold upright capitals + real lower case, a comfort (`CYD_CLEAR_FONT`,

@@ -616,7 +616,7 @@ __attribute__((noinline)) void play_clip(int v)
     // (Gateway's player: 3 and 6 as 9, the miss - GAME.OVR 0x54C9A; with the
     // Game Fixes a fitting one of its own: Tom, 2026-10-24 - "You don't want
     // the Miss sound played for a hit or a shot")
-    if ((cl.as_nine >> v & 1) && rules::fixes() && cl.fixed_as[v]) v = cl.fixed_as[v];
+    if ((cl.as_nine >> v & 1) && rules::fix(rules::kFixGSounds) && cl.fixed_as[v]) v = cl.fixed_as[v];
     else if (cl.as_nine >> v & 1) v = 9;
     plat::File f;
     if (!open_file(cl.file, f)) return;
@@ -2829,7 +2829,7 @@ bool vault_saved(char slot)
 void vault_new_game()
 {
     const auto& v = d->prof->vault;
-    if (!v.slot_file || !rules::fixes()) return;
+    if (!v.slot_file || !rules::fix(rules::kFixVault)) return;
     char path[200];
     save_path(v.file, path, sizeof path);
     if (!plat::exists(d->save_dir)) plat::mkdir(d->save_dir);
@@ -2943,7 +2943,7 @@ bool load_game(char slot)
     load_journal_list(slot);
     // (Game Fixes: a charm never outlasts its fight - one saved after a
     // fight by PoolRad's rules, or an older engine's, goes; Tom, 2026-11-11)
-    if (rules::fixes() && d->prof->fight.facts.charm)
+    if (rules::fix(rules::kFixPCharm) && d->prof->fight.facts.charm)
         for (int i = 0; i < pt->count; ++i) rules::remove_affects(pt->m[i], d->prof->fight.facts.charm);
     d->main_start = true;
     vm->pool_main_start();
@@ -4482,7 +4482,7 @@ int id_cost() { return secret_files() || (krynn() && !dk_ui()) ? 100 : 200; }
 // five coins any coins worth a price pay it - the payer's, what they lack
 // from the counter's - with exact change (Pool's own drops what's under a
 // gold piece), and money is kept in the highest coins after each deal
-bool coin_fix() { return rules::fixes() && d->prof->ecl_ops && d->prof->ecl_ops->five_coins; }
+bool coin_fix() { return rules::adnd(rules::kAdndCoins) && d->prof->ecl_ops && d->prof->ecl_ops->five_coins; }
 void coins_up(party::Character& ch)
 {
     if (coin_fix()) rules::coins_up(ch);
@@ -4598,7 +4598,7 @@ bool items_yes_no(Ask what, char k, pic::Canvas& c)
             rules::recalc(ch, *names, d->facts);
             int room = rules::max_load(ch) - ch.encumbrance();
             if (room < 0) room = 0;
-            over = (rules::fixes() ? plat + gold % 5 : gold) > room;
+            over = (rules::adnd(rules::kAdndCoins) ? plat + gold % 5 : gold) > room;
             const int p = over && plat > room ? room : plat;
             room -= p;
             const int g = over && gold % 5 > room ? room : gold % 5;
@@ -5114,6 +5114,7 @@ void end_magic();
 magic::Scrolls scroll_facts();
 void open_alter(pic::Canvas& c);
 void fix_party(pic::Canvas& c);
+bool keep_memorizing();             // (Settings' Keep Memorizing - below, with the options)
 
 extern bool cast_event;
 void leave_camp(pic::Canvas& c)
@@ -5123,7 +5124,7 @@ void leave_camp(pic::Canvas& c)
     // (Tom, 2026-10-31) - the rest's time is worked out again when a rest
     // starts (rest_minutes), so the time spent on them is lost
     for (int i = 0; i < pt->count; ++i) {
-        if (!CYD_KEEP_MEMORIZING) magic::cancel(pt->m[i]);
+        if (!keep_memorizing()) magic::cancel(pt->m[i]);
         magic::cancel_scribes(pt->m[i], scroll_facts());
     }
     end_magic();
@@ -6010,6 +6011,7 @@ char import_dir[128] = {};
 char darkness_dir[128] = {};    // the player's Pools of Darkness folder ("" if none): its font
 Options opts;                   // the engine comforts switched on (Settings)
 bool camp_fix_on() { return CYD_CAMP_FIX && opts.camp_fix; }
+bool keep_memorizing() { return CYD_KEEP_MEMORIZING && opts.keep_mem; }
 // Quick Actions (play_quick.inc; features.h CYD_QUICK_ACTIONS): the switches
 // a fighter's Quick turn follows (quickacts::kDefault: as the game), the party's
 // read from the card at a fight's start
@@ -9208,6 +9210,23 @@ void treasure_take(pic::Canvas& c);
 void treasure_detect(pic::Canvas& c);
 void open_loot(pic::Canvas& c);
 
+// The counter's Pool and Share (the shop's, the temple's, a treasure's, the
+// vault's menu). Coin Exchange (AD&D 1E Rules, Tom 2026-11-17): pooled at a
+// shop, temple or other paid service the keeper changes the coins up - a
+// treasure's or the vault's pool stays as it is; shared out, everyone's
+// coins come back in the highest coins
+void counter_pool()
+{
+    rules::pool(*pt, ground->money);
+    if (coin_fix() && !treasure_on() && !vault_on()) rules::coins_up(ground->money);
+}
+void counter_share()
+{
+    if (coin_fix()) rules::coins_up(ground->money);
+    rules::share(*pt, ground->money);
+    for (int i = 0; coin_fix() && i < pt->count; ++i) rules::coins_up(pt->m[i]);
+}
+
 void shop_tap(int x, int y, pic::Canvas& c)
 {
     const int row = y / 8, col = x / 8;
@@ -9239,7 +9258,7 @@ void shop_tap(int x, int y, pic::Canvas& c)
             view_character(c);
             break;
         case 'P':                       // Pool: everyone's coins on the counter
-            rules::pool(*pt, ground->money);
+            counter_pool();
             shop_menu(c);
             break;
         case 'T':                       // Take: coins from the counter (the treasure: coins, items)
@@ -9292,9 +9311,7 @@ void shop_tap(int x, int y, pic::Canvas& c)
             }
             break;
         case 'S':                       // Share: the coins on the counter shared out
-            if (coin_fix()) rules::coins_up(ground->money);
-            rules::share(*pt, ground->money);
-            for (int i = 0; coin_fix() && i < pt->count; ++i) rules::coins_up(pt->m[i]);
+            counter_share();
             shop_menu(c);
             break;
         case 'E':
@@ -13285,8 +13302,8 @@ __attribute__((noinline)) void load_party_text(dax::ByteSource& exe, const exepa
         rules::set_berserk_fx(pi.berserk);
         rules::set_no_heal(d->prof->fight.facts.q.no_heal);
         items::set_passive(pi.passive);
-        items::set_flame_fix(&pi.flame, CYD_ITEM_FIXES && opts.item_fixes);
-        rules::set_fixes(CYD_ITEM_FIXES && opts.item_fixes);
+        rules::set_fixes_off(CYD_ITEM_FIXES && opts.item_fixes ? opts.fixes_off : ~0ull);
+        items::set_flame_fix(&pi.flame, CYD_ADND_RULES && (opts.adnd & rules::kAdndItems));
         rules::set_adnd(CYD_ADND_RULES ? opts.adnd : 0);
         rules::set_worn_facts(pi.effect_data, pi.stat_fx[1]);
         magic::set_empower(d->prof->variant.tr_empower);
@@ -15192,7 +15209,7 @@ void begin_adventuring()
     // hall's 0x4C13). The original's mistake - a save's block state lost
     // on loading it - so Game Fixes keeps them (SPEC 12)
     bool keep_block = resume;
-    if (resume && pool_files() && gs.script != d->last_block && !rules::fixes()) keep_block = false;
+    if (resume && pool_files() && gs.script != d->last_block && !rules::fix(rules::kFixPLoad)) keep_block = false;
     screen = Screen::Game;
     if (!host->load_script(gs.script, ecl::code_of(gs), &gs.code_len) || !vm->init_script(keep_block)) {
         snprintf(msg, sizeof msg, "Script %d of ECL%d.DAX didn't load.", gs.script, gs.game_area);
@@ -18136,10 +18153,10 @@ void set_options(const Options& o)
     opts = o;
     if (!d) return;
     // The items the originals got wrong: as now wanted, the party's too (mid-game)
-    items::set_flame_fix(&d->prof->items.flame, CYD_ITEM_FIXES && opts.item_fixes);
-    rules::set_fixes(CYD_ITEM_FIXES && opts.item_fixes);
-    static uint8_t adnd_was = 0xFF;
-    const uint8_t adnd_now = CYD_ADND_RULES ? opts.adnd : 0;
+    items::set_flame_fix(&d->prof->items.flame, CYD_ADND_RULES && (opts.adnd & rules::kAdndItems));
+    rules::set_fixes_off(CYD_ITEM_FIXES && opts.item_fixes ? opts.fixes_off : ~0ull);
+    static uint16_t adnd_was = 0xFFFF;
+    const uint16_t adnd_now = CYD_ADND_RULES ? opts.adnd : 0;
     rules::set_adnd(adnd_now);
     for (int i = 0; pt && i < pt->count; ++i)
         // (Thrown Weapons changes the record's to-hit: worked out again when it changes)

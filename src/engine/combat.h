@@ -1703,7 +1703,7 @@ struct FightSpell {
     uint8_t   spell;
     SpellDoes does;
     uint8_t   n, sides, plus;           // dice
-    uint8_t   per;                      // 1: + the caster's level, 2: (level + 1) / 2 missiles of 1d4 + 1, 3: level dice,
+    uint8_t   per;                      // 1: + the caster's level, 2: (level + 1) / 2 missiles of 1d4 + 1 (7: PoolRad's level / 2 - AD&D's with rules::kAdndMissile), 3: level dice,
                                         // 5: 3, 5 or 7 dice, 6: level dice + the level; effects: the dice are rounds (4: x 10)
     uint8_t   kind;                     // damage: 1 fire, 2 cold, 4 electricity, 8 magic, 0x10 acid
     uint32_t  word;                     // what's said ("is Blessed", "falls asleep"; GAME.OVR, 0: nothing;

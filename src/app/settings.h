@@ -37,8 +37,16 @@ struct Settings {
                                   // older files too): a board setting, not in As Original
     uint8_t music_off = 0;        // Music (Tom, 2026-11-14): the games' songs, rendered by the scan, off
                                   // (0 = on, the default and older files')
-    uint8_t rules_off = 0;        // the AD&D 1E Rules switched off (rules::Adnd bits - CYD_ADND_RULES,
+    uint8_t rules_off = 0;        // the AD&D 1E Rules switched off (rules::Adnd bits 0-7 - CYD_ADND_RULES,
                                   // Tom 2026-11-17; 0 = all on, the default and older files')
+    // ---- the settings file's second layout (SET2, v0.209.0 - the menus by Tom, 2026-11-17);
+    // a SET1 file fills the fields above, these keep their defaults
+    uint8_t rules_off2 = 0;       // rules::Adnd bits 8-15 switched off
+    uint8_t fixes_off[8] = {};    // the Game Fixes switched off one by one (bit = rules::Fix)
+    uint8_t original = 0;         // Original Games on: everything above off, the player's own set kept below
+    uint8_t saved_comforts_off = 0, saved_comforts_off2 = 0, saved_rules_off = 0, saved_rules_off2 = 0;
+    uint8_t saved_fixes_off[8] = {};
+    uint8_t saved_max_hp = 0, saved_game_font = 0, saved_large_icons = 0;
 };
 
 // The Volume key (Tom, 2026-10-24): 0-100% in 5% steps, kept in the 0-255
@@ -72,7 +80,25 @@ constexpr uint8_t kOffGallery = 1, kOffBigIcon = 2, kOffDemoTap = 4, kOffJournal
 constexpr uint8_t kOff2CampFix = 1, kOff2Cheats = 2, kOff2Companion = 4, kOff2Quick = 8,
                   kOff2ReadTime = 16,   // (Readable Messages, CYD_READ_TIME - Tom, 2026-11-10)
                   kOff2AutoJoin = 32,   // (Auto Join, CYD_AUTO_JOIN - Tom, 2026-11-16)
-                  kOff2SaveInfo = 64;   // (Save Slot Info, CYD_SAVE_INFO - Tom, 2026-11-17)
+                  kOff2SaveInfo = 64,   // (Save Slot Info, CYD_SAVE_INFO - Tom, 2026-11-17)
+                  kOff2KeepMem = 128;   // (Keep Memorizing, CYD_KEEP_MEMORIZING - a Settings key since v0.209.0)
+// The AD&D 1E Rules' and the Game Fixes' switched-off sets, as one number
+inline uint16_t settings_rules_off(const Settings& s) { return static_cast<uint16_t>(s.rules_off | s.rules_off2 << 8); }
+inline void settings_set_rules_off(Settings& s, uint16_t v)
+{
+    s.rules_off = static_cast<uint8_t>(v);
+    s.rules_off2 = static_cast<uint8_t>(v >> 8);
+}
+inline uint64_t settings_fixes_off(const uint8_t* b)
+{
+    uint64_t v = 0;
+    for (int i = 7; i >= 0; --i) v = v << 8 | b[i];
+    return v;
+}
+inline void settings_set_fixes_off(uint8_t* b, uint64_t v)
+{
+    for (int i = 0; i < 8; ++i, v >>= 8) b[i] = static_cast<uint8_t>(v);
+}
 
 
 constexpr uint8_t kMinBrightness = 20;

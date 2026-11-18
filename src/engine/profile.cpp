@@ -1050,7 +1050,7 @@ constexpr combat::FightSpell kPoolFight[] = {
     {0x08, SpellDoes::Affect, 0, 0, 0, 0, 0, 0x28168},
     {0x09, SpellDoes::Damage, 0, 0, 0, 1, 9, 0},            // Burning Hands: the caster's level
     {0x0B, SpellDoes::Affect, 0, 0, 0, 0, 0, 0x280F5},
-    {0x0F, SpellDoes::Damage, 0, 4, 0, 2, 8, 0},            // Magic Missile: (level + 1) / 2 missiles (Tom: the AD&D rule)
+    {0x0F, SpellDoes::Damage, 0, 4, 0, 7, 8, 0},            // Magic Missile: level / 2 missiles; (level + 1) / 2 with the AD&D 1E Rules (Tom)
     {0x10, SpellDoes::Affect, 0, 0, 0, 0, 0, 0x2812E},
     {0x11, SpellDoes::Affect, 0, 0, 0, 0, 0, 0x2812E},
     {0x13, SpellDoes::Affect, 0, 0, 0, 0, 0, 0x284A5},      // Shield

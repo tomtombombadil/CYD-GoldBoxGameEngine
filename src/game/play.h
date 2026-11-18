@@ -161,9 +161,11 @@ struct Options {
     bool cheats = true;           // the Game menu's Cheats tab (CYD_CHEATS)
     bool quick_acts = true;       // the per-character Quick Actions and the Game menu's Quick tab (CYD_QUICK_ACTIONS)
     bool read_time = true;        // timed messages at least 1 s (CYD_READ_TIME)
-    uint8_t adnd = 0xFF;          // the AD&D 1E Rules on (rules::Adnd bits - CYD_ADND_RULES)
+    uint16_t adnd = 0xFFFF;       // the AD&D 1E Rules on (rules::Adnd bits - CYD_ADND_RULES)
+    uint64_t fixes_off = 0;       // the Game Fixes switched off one by one (bit = rules::Fix; item_fixes off: all)
     bool auto_join = true;        // a taken item joins its taker's same pile (CYD_AUTO_JOIN)
     bool save_info = true;        // Save / Load Which show the slots' saves (CYD_SAVE_INFO)
+    bool keep_mem = true;         // an interrupted rest keeps the spells to memorize (CYD_KEEP_MEMORIZING)
     bool max_hp = false;          // hit dice at their highest (training, creation) - a cheat the player opts into (CYD_MAX_HP)
     uint8_t font = 0;             // the game's text (CYD_CLEAR_FONT): 0 its own (the default), 1 the engine's
                                   // Clear font, 2 the player's Pools of Darkness font (set_darkness_dir),

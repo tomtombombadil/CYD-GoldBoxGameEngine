@@ -149,7 +149,7 @@ void race_effects()
     // the original - nothing at the roll (a 5 hits); with the rules fixes -4
     for (int fix = 0; fix < 2; ++fix)
         for (int g = 0; g < 2; ++g) {
-            rules::set_fixes(fix);
+            rules::set_all(fix);
             put(a, 1, 10, 10, 60, 10);
             F(a).rec[0x14B] = 0x2C;
             F(a).flags2 = 1;
@@ -161,7 +161,7 @@ void race_effects()
                      fix ? "-4 (an 8 misses)" : "no -4 at the roll (an 8 hits)");
             expect(P, w, (hits > 0) == !fix, "%d hits", hits);
         }
-    rules::set_fixes(true);
+    rules::set_all(true);
     // The ranger (0x69, ranger level 0x115 = 7): + 7 against flags 1 & 8 next to it; not from afar
     for (int far = 0; far < 2; ++far)
         for (int giant = 0; giant < 2; ++giant) {
@@ -181,7 +181,7 @@ void race_effects()
     // original none (the save 12, the d20 10 fails); with the rules fixes made
     for (int fix = 0; fix < 2; ++fix)
         for (int kind = 0; kind < 5; ++kind) {
-            rules::set_fixes(fix);
+            rules::set_all(fix);
             put(a, 0, 10, 10, 60);
             give(a, rc.con_save);
             F(a).rec[0x19] = F(a).rec[0x18] = 17;
@@ -194,7 +194,7 @@ void race_effects()
             snprintf(w, sizeof w, "the Constitution effect, fixes %s: a save of kind %d, a 10 against 12", fix ? "on" : "off", kind);
             expect(P, w, made == want, "%s, the original's %s", made ? "made" : "failed", want ? "made" : "failed");
         }
-    rules::set_fixes(true);
+    rules::set_all(true);
     // The elf (0x5F) and half-elf (0x12): 90% / 30% against sleep (0x35) and charm (0x0B)
 }
 
@@ -351,7 +351,7 @@ void class_tables()
                         v = adj + base;
                         if (sk < 6) v += (*dd)[sk];
                     }
-                    if (v < 0 && rules::fixes()) v = 0;         // (the original's byte wraps; Game Fixes: 0 - SPEC 12)
+                    if (v < 0 && rules::all_fixes()) v = 0;         // (the original's byte wraps; Game Fixes: 0 - SPEC 12)
                     v &= 0xFF;
                     if (c.rec[0xEA + sk - 1] != v) {
                         ok = false;
@@ -390,7 +390,7 @@ int con_fig(int con, int k)
 // The gain for classes `mask` (levels already raised); *inc the rolled part
 int want_gain(const int lv[8], int mask, int con, bool high, int held, int* inc)
 {
-    if (rules::fixes() && held > 1) {
+    if (rules::all_fixes() && held > 1) {
         // (Game Fixes - Tom, 2026-11-06: each class as a single class - its
         // roll + Constitution x count, or past the hit dice its fixed gain, at
         // least 1 - summed, over the classes held, at least 1)
@@ -425,8 +425,8 @@ int want_gain(const int lv[8], int mask, int con, bool high, int held, int* inc)
     int i = (rolled & 0xFF) / held;
     if (i < 1) i = 1;
     *inc = i;
-    int cp = rules::fixes() ? static_cast<int8_t>(cs & 0xFF) / held : (cs & 0xFF) / held;
-    if (rules::fixes() && i + cp < 1) cp = 1 - i;       // (AD&D: at least 1 a level)
+    int cp = rules::all_fixes() ? static_cast<int8_t>(cs & 0xFF) / held : (cs & 0xFF) / held;
+    if (rules::all_fixes() && i + cp < 1) cp = 1 - i;       // (AD&D: at least 1 a level)
     return i + cp;
 }
 void hit_points()
@@ -444,7 +444,7 @@ void hit_points()
                     for (int k = 0; k < 7; ++k) {
                         if (!((kMultiBits[cls] >> k) & 1)) continue;
                         for (int L = 1; L < 18 && L < top_level(k); ++L) {
-                            rules::set_fixes(fix);
+                            rules::set_all(fix);
                             bare(c, 7, cls < 8 ? cls : 2);
                             c.rec[0x75] = static_cast<uint8_t>(cls);
                             int lv[8] = {};
@@ -477,7 +477,7 @@ void hit_points()
                         }
                     }
         }
-    rules::set_fixes(true);
+    rules::set_all(true);
     snprintf(w, sizeof w, "training's hit points: %d class / level / Constitution / dice cases", n);
     expect(P, w, bad == 0, "%d wrong", bad);
 }

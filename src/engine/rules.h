@@ -301,24 +301,118 @@ int jewel_value(int d100, create::Dice& d, int div = 1, int span41 = 0);   // sp
 // (script word 0x7F6D: 1 = 1/16 ... 0x10 normal ... 0x80 = x8)
 int price(const uint8_t* item, int factor);
 
-// The originals' rule mistakes fixed (Tom's Game Fixes switch - Item Fixes until v0.139.0 - CYD_ITEM_FIXES:
-// on by default): where a game's program never applies a rule AD&D has (e.g.
+// The originals' rule mistakes fixed (Tom's Game Fixes - Item Fixes until
+// v0.139.0): where a game's program never applies a rule AD&D has (e.g.
 // Secret's phase lists leaving an effect out), the engine applies it while
-// this is on and does as the original when it is off. Each such place says
-// so and is listed in SPEC section 12.
+// that fix's switch is on and does as the original when it is off. Since
+// v0.209.0 (Tom, 2026-11-17: "each a switch") every fix is its own switch
+// (rules::Fix); each place says which and is listed in SPEC section 12.
+enum Fix : uint8_t {
+    // Every game
+    kFixSaves,          // Saving Throws: no wrap below 0, no save worse for a level gained
+    kFixThief,          // Thief Skills: no wrap below 0%
+    kFixHeld,           // Held Mid-Step: held / stunned by a free attack, no step
+    kFixBolt,           // Bounced Bolt Length: exactly its range
+    kFixHpLevel,        // Hit Points a Level: at least 1, a Constitution penalty counted signed
+    kFixHarm,           // Harm: never wraps the hit points round
+    // PoolRad (Curse too where said)
+    kFixPRace,          // Race Checks: the scripts see the race (Podol Plaza, the Temple of Bane)
+    kFixPSpell,         // Who Has It Memorized: the script's spell search
+    kFixPTrain56,       // Training New Spells: spell 56's slots
+    kFixPShare,         // NPCs' Coin Share: not cut to 255
+    kFixPLoad,          // Loaded Game's Area: a load keeps the block's state
+    kFixPCharm,         // Charm After a Fight: ends with it; NPCs' 255 lost levels none
+    kFixPClock,         // Script Clock: the script's CLOCK moves the clock
+    kFixHealDead,       // Healing the Dead: the computer cures its own side's bodies only (Curse too)
+    // Curse
+    kFixCFormer,        // Former Clerics: turn undead by their cleric level
+    // Secret (Darkness / Treasures / Knights where said)
+    kFixSBark,          // Barkskin: its own effect, no Heal
+    kFixPoison,         // Poison: a point every 10 minutes (Secret, Darkness, Treasures)
+    kFixDiff,           // Difficulty To-Hit (Secret, Knights)
+    kFixSOwn,           // Secret's Own List: elves' +1, dwarves' / gnomes' -4, Con saves, blink, displacement, periapt, 18/xx
+    kFixPalCast,        // Paladins' Casting: by the paladin's level (Secret, Darkness, Treasures, Knights)
+    // Darkness (Treasures / Krynn where said)
+    kFixRaceAdj,        // Race Adjustments at creation (Darkness, Champions, Knights)
+    kFixClericXp,       // Cleric's Experience Bonus from Wisdom 16 (Darkness, Treasures)
+    kFixRemCurse,       // Remove Curse takes off the curse (Darkness, Knights)
+    kFixPwBlind,        // Power Word Blind: its time, not for good
+    kFixDragonFear,     // Dragon Fear ends with the fight
+    kFixBulette,        // Bulette's Leap: one round in four
+    kFixSummon,         // Monster Summoning: room for big monsters
+    kFixVault,          // New Game's Vault: emptied (Darkness, Treasures, Gateway)
+    // Treasures
+    kFixTBoots,         // Jumping Boots: land on any free square in reach
+    // Gateway
+    kFixGHolds,         // Stirge and Squid: their holds hurt
+    kFixGSounds,        // Missing Sounds: magic hit and sling, not the miss
+    // Champions (Knights / Queen where said)
+    kFixThiefRace,      // Thief Skills by Race (Champions, Knights)
+    kFixKSaves,         // Knights' Saves: the right row
+    kFixBozak,          // Bozak Stun ends with the fight
+    kFixPalHp,          // Paladins' Hit Points (Champions, Knights)
+    kFixStench,         // The Stench hurts the victims (Champions, Knights, Queen)
+    // Death Knights
+    kFixKFeeble,        // Feeblemind: the spell's own effect, not a drain
+    kFixKHeal,          // Heal Cures Feeblemind
+    // The Dark Queen
+    kFixQAnemone,       // Anemone squirts its target
+    kFixQDamage,        // DAMAGE Saves: a script's damage allows its save
+    kFixQHooks,         // To-Hit Hooks: Invisible to Animals and the like
+    kFixQItemDmg,       // Dawnshine's Damage: the item effect's damage counts
+    kFixQSaves18,       // Saves Past 18th Level keep improving
+    kFixQWis13,         // Wisdom 13: the multi-class cleric rule fires
+    kFixCount
+};
+static_assert(kFixCount <= 64, "the fixes' bits");
+// Every fix on (true) or off - the tests' and As Original's way; the
+// Settings' own choice: set_fixes_off
 void set_fixes(bool on);
-bool fixes();
+// The fixes switched off (bit k = Fix k); the rest on
+void set_fixes_off(uint64_t off);
+uint64_t fixes_off();
+bool fix(Fix f);
+// What the Settings show of a fix: its key's words, the games it touches
+// (bit = games::Game), what it does
+struct FixInfo {
+    Fix         id;
+    const char* name;
+    uint16_t    games;
+    const char* help;
+};
+const FixInfo& fix_info(int k);         // k < kFixCount, in the order above
 // The AD&D 1E Rules (Tom, 2026-11-17): rules of the 1st edition books the
 // originals left out - not mistakes in their code, so not Game Fixes. Each
 // rule its own switch (a bit; all on by default); off: as the original.
-enum Adnd : uint8_t {
-    kAdndThrown = 1,    // Thrown Weapons: a hurled weapon takes Dexterity's missile bonus to hit and
-                        // Strength's damage; a weapon both melee and thrown (dagger, hand axe, spear)
-                        // Strength to hit in melee, Dexterity to hit when thrown
-    kAdndRaise  = 2,    // Raise Dead / Resurrection cost no Constitution (the 1E books have none)
+enum Adnd : uint16_t {
+    kAdndThrown   = 1,      // Thrown Weapons: a hurled weapon takes Dexterity's missile bonus to hit and
+                            // Strength's damage; a weapon both melee and thrown (dagger, hand axe, spear)
+                            // Strength to hit in melee, Dexterity to hit when thrown
+    kAdndRaise    = 2,      // Raising the Dead: Raise Dead / Resurrection cost no Constitution
+    kAdndMissile  = 4,      // Magic Missile: (level + 1) / 2 missiles (PoolRad's own: level / 2)
+    kAdndMultiHp  = 8,      // Multi-Class Hit Points: each class's, added up and divided by the classes
+    kAdndItems    = 0x10,   // Magic Items: the Flame Tongue as AD&D's; flasks of oil burn
+    kAdndCoins    = 0x20,   // Coin Exchange: any coins pay, the change and the purse in the highest coins
+    kAdndAge      = 0x40,   // Age with Time: a year older for each year of game time
+    kAdndPwk      = 0x80,   // Power Word Kill: by hit points, 120 in all
+    kAdndProtEvil = 0x100,  // Protection from Evil: -2 to hit for evil attackers; the 10' radius wards those near
+    kAdndAll      = 0x1FF,
 };
-void set_adnd(uint8_t bits);
-bool adnd(uint8_t rule);
+constexpr int kAdndCount = 9;
+void set_adnd(uint16_t bits);
+uint16_t adnd_bits();
+bool adnd(uint16_t rule);
+struct AdndInfo {
+    uint16_t    bit;
+    const char* name;
+    uint16_t    games;                  // (bit = games::Game; the games it changes)
+    const char* help;
+};
+const AdndInfo& adnd_info(int k);       // k < kAdndCount
+// Every Game Fix and every AD&D 1E Rule on, or all off (as the originals - the tests' way)
+void set_all(bool on);
+// No fix switched off (the tests' look at set_all's state)
+bool all_fixes();
 // A weapon both melee and thrown, thrown (Thrown Weapons): the record's
 // to-hit holds the melee figure (Strength's), this is the change for a throw
 // - Dexterity's missile bonus less Strength's to-hit

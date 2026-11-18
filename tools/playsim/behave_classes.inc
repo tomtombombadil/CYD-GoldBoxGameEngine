@@ -62,7 +62,7 @@ int othac0(int cls, int lvl)
 const std::vector<int>* osave(int cls, int lvl)
 {
     const std::vector<int>* r = b_row("save", cls, lvl);
-    if (!r || !rules::fixes()) return r;
+    if (!r || !rules::all_fixes()) return r;
     static std::vector<int> best;
     best = *r;
     for (int l = 1; l < lvl; ++l)
@@ -169,7 +169,7 @@ int fix_gain(const int lv[8], int mask_classes, int con, int face, int held, int
     *share = std::max(1, dice / held);
     return std::max(1, sum / held);
 }
-bool fix_multi(int held) { return rules::fixes() && held > 1; }
+bool fix_multi(int held) { return rules::all_fixes() && held > 1; }
 
 // ---- 1. The tables: THAC0, saves, spell slots, thief skills, attacks, by level
 void tables()
@@ -696,7 +696,7 @@ void levelling()
         const int gain = hp_dice(lv, 1 << 2, 0);
         int share = 0;
         // (Game Fixes: the fighter's own d10 + 2, shared by 2 - Tom, 2026-11-06)
-        const int up = rules::fixes() ? fix_gain(lv, 1 << 2, 16, 0, 2, &share) : (gain + con_adj(lv, 16, 13)) / 2;
+        const int up = rules::all_fixes() ? fix_gain(lv, 1 << 2, 16, 0, 2, &share) : (gain + con_adj(lv, 16, 13)) / 2;
         expect(P, "F/MU fighter 3 -> 4: hit points shared by 2", c.hp_max() == 40 + up && c.rec[0x12C] == 30 + gain / 2,
                "+%d (rolled +%d), the original's +%d (+%d)", c.hp_max() - 40, c.rec[0x12C] - 30, up, gain / 2);
     }

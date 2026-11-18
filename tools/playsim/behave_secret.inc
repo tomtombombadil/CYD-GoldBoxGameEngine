@@ -56,7 +56,7 @@ int othac0(int k, int lv)
 const std::vector<int>* osave(int k, int lv)
 {
     const std::vector<int>* r = b_row("save", k, lv);
-    if (!r || !rules::fixes()) return r;
+    if (!r || !rules::all_fixes()) return r;
     static std::vector<int> ring[4];
     static int at = 0;
     std::vector<int>& best = ring[at++ & 3];

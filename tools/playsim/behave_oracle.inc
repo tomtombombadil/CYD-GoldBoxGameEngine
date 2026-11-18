@@ -111,7 +111,7 @@ static void b_krynn_stats_check(play::Making* m, const char* P)
             for (int fx = 0; fx < 2; ++fx)
                 for (int sex = 0; sex < 2; ++sex)
                     for (int dm = 0; dm < 3; ++dm) {
-                        rules::set_fixes(fx == 1);
+                        rules::set_all(fx == 1);
                         if (dm == 0) dice_low();
                         else if (dm == 1) dice_mid();
                         else dice_high();
@@ -138,7 +138,7 @@ static void b_krynn_stats_check(play::Making* m, const char* P)
                     }
         }
     }
-    rules::set_fixes(true);
+    rules::set_all(true);
     char w[120];
     snprintf(w, sizeof w, "stats: %d rolls as the original (no race adjustment; the races' own with Game Fixes)", ncase);
     expect(P, w, nbad == 0 && ncase > 0, nbad ? "%d wrong" : "%s", nbad ? std::to_string(nbad).c_str() : "");

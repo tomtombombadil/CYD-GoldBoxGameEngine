@@ -13,10 +13,12 @@ namespace {
 constexpr int kLogs = 4;
 const char* const kLogFiles[kLogs] = {"SCAN.TXT", "RESTART.TXT", "ERRORS.TXT", "MEMORY.TXT"};
 const char* const kTab[kLogs] = {"Card Scan", "Restarts", "Errors", "Memory"};
+const char* const kOne[kLogs] = {"Card Log", "Restart Log", "Error Log", "Memory Log"};
 
 bool after_scan_ = false;
 bool from_game_ = false;
 int  tab = 0;
+int  one_ = -1;             // one log alone (open_one: 0-3; 4 Send Logs alone), -1: the tabs
 
 int body_top() { return ui::header_h() + ui::gap(); }
 int body_bottom() { return ui::height() - ui::key_h() - ui::gap() * 2; }
@@ -43,6 +45,7 @@ void open(bool after_scan, const char* fallback)
 {
     after_scan_ = after_scan;
     from_game_ = false;
+    one_ = -1;
     tab = 0;
     if (!load(0) && fallback) logview::open_text(fallback, true);
     ui::allow_drag(true);
@@ -56,6 +59,20 @@ void open_from_game()
     load(tab);
 }
 
+void open_one(int which, bool in_game)
+{
+    after_scan_ = false;
+    from_game_ = in_game;
+    one_ = which;
+    tab = which < kLogs ? which : 0;
+    if (which >= kLogs) {
+        sendlog::open();
+    } else if (!load(tab)) {
+        logview::open_text("This log isn't on the card yet.", true);
+    }
+    ui::allow_drag(true);
+}
+
 bool from_scan() { return after_scan_; }
 bool from_game() { return from_game_; }
 
@@ -66,13 +83,14 @@ void draw()
         return;
     }
     ui::clear();
-    ui::header(after_scan_ ? "Card Scan" : "Logs", !after_scan_);
+    ui::header(after_scan_ ? "Card Scan" : one_ >= 0 && one_ < kLogs ? kOne[one_] : "Logs", !after_scan_);
     logview::set_area({ui::gap(), body_top(), ui::width() - ui::gap() * 2, body_bottom() - body_top()});
     logview::draw();
     if (after_scan_) {
         ui::key(tab_key(0), "Continue", ui::KeyStyle::Lit);
         return;
     }
+    if (one_ >= 0) return;                 // (one log: Back in the header, nothing else)
     ui::key(send_key(), "Send Logs");
     for (int i = 0; i < kLogs; ++i) ui::key(tab_key(i), kTab[i], tab == i ? ui::KeyStyle::Lit : ui::KeyStyle::Normal);
 }
@@ -82,12 +100,16 @@ bool tap(const ui::Tap& t)
     bool stay = true;
     if (sendlog::is_open()) {
         if (!sendlog::tap(t)) {           // Back: the log shown before, again
+            if (one_ >= kLogs) {          // (Send Logs alone: back to the page)
+                ui::allow_drag(false);
+                return false;
+            }
             load(tab);
             draw();
         }
         return true;
     }
-    if (!after_scan_ && send_key().contains(t.x, t.y)) {
+    if (one_ < 0 && !after_scan_ && send_key().contains(t.x, t.y)) {
         logview::close();                 // (its text's memory goes to the packing)
         sendlog::open();
         return true;
@@ -98,7 +120,7 @@ bool tap(const ui::Tap& t)
         stay = true;
     } else if (after_scan_) {
         stay = !tab_key(0).contains(t.x, t.y);
-    } else {
+    } else if (one_ < 0) {
         for (int i = 0; i < kLogs; ++i)
             if (tab_key(i).contains(t.x, t.y) && tab != i) {
                 tab = i;

@@ -25,12 +25,12 @@ int orow(int s, int k)
 // clerics: the cleric's level or the paladin's (Secret: no "- 8"), 1 druids:
 // the ranger's - 7 (at least 0), 3 magic-users: the magic-user's or the
 // ranger's - 8, 4 items / monsters: 12; from an item (not class 4): 6.
-// (rules::fixes(): the paladin as AD&D - from 9th level, level - 8)
+// (rules::all_fixes(): the paladin as AD&D - from 9th level, level - 8)
 int level_rule(const party::Character& c, int s, bool item)
 {
     const int cls = orow(s, OCls);
     int lvl = 0;
-    const bool fix = rules::fixes();
+    const bool fix = rules::all_fixes();
     if (c.level(classes::Cleric) == 0 && c.level(classes::MagicUser) == 0 && c.level(classes::Ranger) < 8 &&
         (!fix || c.level(classes::Paladin) < 9))
         lvl = 6;
@@ -214,7 +214,7 @@ void caster_levels()
     } who[] = {{classes::Cleric, 9}, {classes::MagicUser, 11}, {classes::Ranger, 10}, {classes::Ranger, 7},
                {classes::Paladin, 10}, {classes::Paladin, 8}, {classes::Fighter, 9}, {classes::Thief, 12}};
     for (int fx = 0; fx < 2; ++fx) {
-        rules::set_fixes(fx == 1);
+        rules::set_all(fx == 1);
         int bad = 0;
         char first[160] = "";
         for (const Who& h : who)
@@ -233,7 +233,7 @@ void caster_levels()
         snprintf(w, sizeof w, "the caster's level for every spell and caster (fixes %s)", fx ? "on" : "off");
         expect(S, w, bad == 0, "%d wrong; %s", bad, first);
     }
-    rules::set_fixes(true);
+    rules::set_all(true);
 }
 
 // 3. Times: every spell's effect time at levels 1-14 outside fights
@@ -609,7 +609,7 @@ void own_routines()
     // byte - more than it has (255) when its HP are under the roll (rules::fixes:
     // AD&D's - nothing then)
     for (int fx = 0; fx < 2; ++fx) {
-        rules::set_fixes(fx == 1);
+        rules::set_all(fx == 1);
         setup_cast(56, 3);
         dice(1);
         cast(c, 56, {t});
@@ -624,7 +624,7 @@ void own_routines()
         snprintf(w, sizeof w, "Harm on 40 hit points: down to the roll (fixes %s)", fx ? "on" : "off");
         expect(S, w, F(t).hp() == 4, "HP %d", F(t).hp());
     }
-    rules::set_fixes(true);
+    rules::set_all(true);
     // Globe of Invulnerability (112's effect 0x39, handler 0x123D3): spells of
     // the 4th level and lower do nothing on it; Minor Globe (0x3F) the 3rd
     for (int globe : {0x39, 0x3F})
@@ -690,9 +690,9 @@ void own_routines()
     }
     // At the roll (secret_facts_2.md 29: Secret's effect phases): invisibility
     // (-4), Dispel Evil against the evil (-7) and Blink (a miss) never touch the
-    // roll in the original - AD&D's with rules::fixes()
+    // roll in the original - AD&D's with rules::all_fixes()
     for (int fx = 0; fx < 2; ++fx) {
-        rules::set_fixes(fx == 1);
+        rules::set_all(fx == 1);
         struct Case {
             const char* what;
             int effect, d20;
@@ -708,7 +708,7 @@ void own_routines()
             expect(S, w, (hits > 0) == (fx == 0), "%d hits", hits);
         }
     }
-    rules::set_fixes(true);
+    rules::set_all(true);
 }
 
 // =====================================================================
@@ -725,7 +725,7 @@ void camp_own()
     const auto& cures = d->prof->cures;
     // Heal (36, GAME.OVR 0x2F699) and Barkskin (90: the same routine - no
     // effect given): the most HP less 1d4; blindness, disease, feeblemind cured
-    rules::set_fixes(false);        // (Barkskin: the original's - Game Fixes off; with them below)
+    rules::set_all(false);        // (Barkskin: the original's - Game Fixes off; with them below)
     for (int s : {36, 90}) {
         member(0, s == 36 ? classes::Cleric : classes::Ranger, 16);
         member(1, classes::Fighter, 5, 60);
@@ -743,7 +743,7 @@ void camp_own()
         snprintf(w, sizeof w, "camp: spell %d gives no effect", s);
         expect(S, w, caff(1, 0x0D) < 0 && mem(1).n_affects == 0, "%d effects", mem(1).n_affects);
     }
-    rules::set_fixes(true);
+    rules::set_all(true);
     // Barkskin with the Game Fixes (SPEC 12): no healing, nothing cured, its
     // effect 0x0D for 4 + the caster's level
     {
@@ -1158,7 +1158,7 @@ void all_spells()
         expect(S, "boot", false);
         return;
     }
-    rules::set_fixes(true);
+    rules::set_all(true);
     table_rows();
     caster_levels();
     times();

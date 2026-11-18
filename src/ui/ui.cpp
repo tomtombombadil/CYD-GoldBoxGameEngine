@@ -600,9 +600,12 @@ void key2(const Rect& r, const char* label, const char* sub, KeyStyle s, int lef
     const int rad = large() ? 6 : 4;
     g->fillRoundRect(r.x, r.y, r.w, r.h, rad, fill);
     g->drawRoundRect(r.x, r.y, r.w, r.h, rad, s == KeyStyle::Lit ? style::kGold : style::kKeyEdge);
-    const int lh = line_h(Font::Normal), sh = line_h(Font::Small);
+    // (a label too wide for the key in the normal letters: the small ones -
+    // the menus' long switch names, "Multi-Class Hit Points")
+    const Font lf = text_width(label, Font::Normal) <= r.w - left_inset - (large() ? 8 : 6) ? Font::Normal : Font::Small;
+    const int lh = line_h(lf), sh = line_h(Font::Small);
     const int top = r.y + (r.h - lh - sh - 2) / 2;
-    use_font(Font::Normal);
+    use_font(lf);
     g->setTextColor(s == KeyStyle::Dim ? style::kTextMuted : style::kText);
     g->setTextDatum(textdatum_t::top_center);
     const int cx = r.x + left_inset + (r.w - left_inset) / 2;

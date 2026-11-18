@@ -251,9 +251,9 @@ void sell()
 {
     const int f0 = fails, f1 = fails;
     int cases = 0;
-    const bool fix_was = rules::fixes();
+    const bool fix_was = rules::all_fixes();
     for (int k = 0; k < 600 && !recs.empty(); ++k) {
-        rules::set_fixes(k % 2 == 1);
+        rules::set_all(k % 2 == 1);
         party::Character& c = bare();
         ground->clear();
         rules::add_item(c, recs[rn(static_cast<int>(recs.size()))].data());
@@ -294,7 +294,7 @@ void sell()
             bad("S2 Sell takes the item", "still %d items", c.n_items);
             continue;
         }
-        if (rules::fixes() && fam() != kChampF && fam() != kDarkF) {
+        if (rules::all_fixes() && fam() != kChampF && fam() != kDarkF) {
             // (Game Fixes' coins made the highest: the worth counts)
             const long got = worth(c) + worth(ground->money) - w0;
             const long want_c = static_cast<long>(price / 5) * 1000 + (price % 5) * 200;
@@ -325,7 +325,7 @@ void sell()
         if (c.encumbrance() > rules::max_load(c) && fam() != kCurseF)
             bad("S2 nobody past the load", "%d of %d after selling for %d", c.encumbrance(), rules::max_load(c), price);
     }
-    rules::set_fixes(fix_was);
+    rules::set_all(fix_was);
     (void)f1;
     back();
     ground->clear();
@@ -338,9 +338,9 @@ void identify()
 {
     const int f0 = fails;
     int cases = 0;
-    const bool fix_was = rules::fixes();
+    const bool fix_was = rules::all_fixes();
     for (int k = 0; k < 300 && !recs.empty(); ++k) {
-        rules::set_fixes(k % 2 == 1);
+        rules::set_all(k % 2 == 1);
         party::Character& c = bare();
         ground->clear();
         rules::add_item(c, recs[rn(static_cast<int>(recs.size()))].data());
@@ -408,12 +408,12 @@ void identify()
             continue;
         }
         // gold: the worth (Curse's family rounds it; Game Fixes: exact)
-        const bool set = !rules::fixes() && (pool_files() || d->prof->game == games::Game::CurseOfTheAzureBonds || gateway());
+        const bool set = !rules::all_fixes() && (pool_files() || d->prof->game == games::Game::CurseOfTheAzureBonds || gateway());
         const long cw = static_cast<long>(cost) * 200;
         const long own_w = set ? (w0 + 100) / 200 * 200 : w0, ctr_w = set ? (g0 + 100) / 200 * 200 : g0;
         long want_own = w0, want_ctr = g0;
         bool can = true;
-        if (rules::fixes()) {
+        if (rules::all_fixes()) {
             if (w0 >= cw) want_own = w0 - cw;
             else if (w0 + g0 >= cw) want_own = 0, want_ctr = g0 - (cw - w0);
             else can = false;
@@ -428,7 +428,7 @@ void identify()
             bad("I1 Id's price", "worths %ld / %ld -> %ld / %ld known %d; the program's %ld / %ld (%d)", w0, g0, worth(c),
                 worth(ground->money), known, want_own, want_ctr, can);
     }
-    rules::set_fixes(fix_was);
+    rules::set_all(fix_was);
     back();
     ground->clear();
     summary("I1 Id: the game's price from the seller or the counter, the item known", cases, f0);
@@ -439,10 +439,10 @@ void buy_check()
 {
     const int f0 = fails;
     int cases = 0;
-    const bool fix_was = rules::fixes();
+    const bool fix_was = rules::all_fixes();
     const uint16_t f_was = vm->get(0x7F6D);
     for (int k = 0; k < 400 && !recs.empty(); ++k) {
-        rules::set_fixes(k % 2 == 1);
+        rules::set_all(k % 2 == 1);
         party::Character& c = bare();
         ground->clear();
         const int f = 1 << rn(8);
@@ -488,7 +488,7 @@ void buy_check()
         if (dk_ui() || krynn()) {
             if (c.money(pcoin) != own0 - want) bad("B1 Buy: the price paid", "%d -> %d, price %ld", own0, c.money(pcoin), want);
         } else {
-            const bool set = !rules::fixes() && (pool_files() || d->prof->game == games::Game::CurseOfTheAzureBonds || gateway());
+            const bool set = !rules::all_fixes() && (pool_files() || d->prof->game == games::Game::CurseOfTheAzureBonds || gateway());
             const long wantw = set ? ((w0 + 100) / 200 - want) * 200 : w0 - want * 200;
             if (worth(c) != wantw) bad("B1 Buy: the price paid", "worth %ld -> %ld, the program's %ld (price %ld)", w0, worth(c), wantw, want);
         }
@@ -496,13 +496,86 @@ void buy_check()
             if (!items::fix_item(g)) bad("B1 Buy: the item as the shop had it", "type %d", g[0x2E]);
     }
     vm->set(0x7F6D, f_was);
-    rules::set_fixes(fix_was);
+    rules::set_all(fix_was);
     back();
     ground->clear();
     summary("B1 Buy: the price by the shop's factor, paid, the item added", cases, f0);
 }
 
 // ---- T1 / T2
+// T3 Coin Exchange at a paid service (the AD&D 1E Rules - Tom, 2026-11-17:
+// "anytime (at a Merchant, Healer, or other service that takes payment) when
+// the user Pools their funds. Sharing them out again returns the highest
+// denominations"): counter_pool / counter_share as the shop's menu calls
+// them. On: the pool in the highest coins worth the same; shared, each
+// member's coins the highest worth what they had and got. Off: the coins as
+// they were put down, kind for kind (the originals'). The games with five
+// coins (play::coin_fix); the others' money is their own
+void exchange()
+{
+    if (!d->prof->ecl_ops || !d->prof->ecl_ops->five_coins) {
+        printf("  (economy: no five coins in this game - no Coin Exchange)\n");
+        return;
+    }
+    const int f0 = fails;
+    int cases = 0;
+    for (int k = 0; k < 400; ++k) {
+        const bool on = k & 1;
+        rules::set_all(true);
+        rules::set_adnd(on ? rules::kAdndAll : static_cast<uint16_t>(rules::kAdndAll & ~rules::kAdndCoins));
+        back();
+        ground->clear();
+        const int n = pt->count;
+        int sum0[7] = {};
+        long w0 = 0;
+        for (int i = 0; i < n; ++i) {
+            party::Character& c = pt->m[i];
+            for (int m = 0; m < 7; ++m) set_money(c, m, rn(3) == 0 ? rn(m >= 5 ? 5 : 400) : 0);
+            rules::recalc(c, *names, d->facts);
+            if (!c.npc())
+                for (int m = 0; m < 7; ++m) sum0[m] += c.money(m);
+            if (!c.npc()) w0 += worth(c);
+        }
+        counter_pool();
+        ++cases;
+        if (worth(ground->money) != w0) bad("T3 Pool keeps the money's worth", "%ld -> %ld", w0, worth(ground->money));
+        if (on) {
+            int want[7];
+            rules::coins_of(w0, want);
+            bool up = true;
+            for (int m = 0; m < 5; ++m) up &= ground->money[m] == want[m];
+            if (!up) bad("T3 Coin Exchange: pooled at a shop, the highest coins", "worth %ld", w0);
+        } else {
+            for (int m = 0; m < 7; ++m)
+                if (ground->money[m] != sum0[m]) bad("T3 without Coin Exchange the coins pooled as they were", "kind %d: %d, %d", m, ground->money[m], sum0[m]);
+        }
+        const long before = worth(ground->money);
+        long mem_before = 0;
+        for (int i = 0; i < n; ++i) mem_before += worth(pt->m[i]);
+        counter_share();
+        long mem_after = 0;
+        for (int i = 0; i < n; ++i) mem_after += worth(pt->m[i]);
+        if (mem_after + worth(ground->money) != mem_before + before)
+            bad("T3 Share keeps the money's worth", "%ld -> %ld", mem_before + before, mem_after + worth(ground->money));
+        for (int i = 0; on && i < n; ++i) {
+            const party::Character& c = pt->m[i];
+            int have[7], want[7];
+            for (int m = 0; m < 7; ++m) have[m] = c.money(m);
+            rules::coins_of(worth(c), want);
+            bool up = true;
+            for (int m = 0; m < 5; ++m) up &= have[m] <= want[m] || worth(have) != worth(want);
+            int coins = 0, wcoins = 0;
+            for (int m = 0; m < 5; ++m) coins += have[m], wcoins += want[m];
+            if (coins > wcoins && worth(c) <= 65535L * 1000) bad("T3 Coin Exchange: shared out in the highest coins", "member %d: %d coins, %d would do", i, coins, wcoins);
+            (void)up;
+        }
+    }
+    rules::set_all(true);
+    back();
+    ground->clear();
+    summary("T3 Coin Exchange: Pool at a shop and Share in the highest coins (on), as put down (off)", cases, f0);
+}
+
 void share()
 {
     const int f0 = fails;
@@ -596,7 +669,7 @@ void share()
         take_coins(ask, C);
         note_until = 0;
         ++cases;
-        if (rules::fixes()) {
+        if (rules::all_fixes()) {
             // (Game Fixes: the coins made the highest - the worth counts)
             if (kind < 5 && worth(c) + worth(ground->money) != static_cast<long>(own) * 0 + w_before)
                 bad("T2 Take keeps the coins (Game Fixes)", "worth %ld -> %ld", w_before, worth(c) + worth(ground->money));
@@ -606,7 +679,7 @@ void share()
         if (took + ground->money[kind] != there) bad("T2 Take keeps the coins", "%d there, took %d, %d left", there, took, ground->money[kind]);
         if (took > there) bad("T2 never more than lies there", "%d of %d", took, there);
         const int want = std::min(ask, there);
-        if (!rules::fixes() && took != (want <= room ? want : 0))
+        if (!rules::all_fixes() && took != (want <= room ? want : 0))
             bad("T2 Take: all asked, or nothing when too heavy", "asked %d (%d there, room %d): took %d", ask, there, room, took);
     }
     back();
@@ -660,7 +733,7 @@ void appraise()
             continue;
         }
         const long got = worth(c) + worth(ground->money) - w0;
-        const long want = dk_ui() ? v * 1000L : (v / 5) * 1000L + (rules::fixes() ? (v % 5) * 200 : 0);
+        const long want = dk_ui() ? v * 1000L : (v / 5) * 1000L + (rules::all_fixes() ? (v % 5) * 200 : 0);
         if (got != want && !krynn()) bad("G1 sold: its value", "worth +%ld copper, valued %d (%ld)", got, v, want);
     }
     back();
@@ -962,6 +1035,7 @@ void run()
     if (want("id")) identify();
     if (want("buy")) buy_check();
     if (want("share") || want("take")) share();
+    if (want("exchange")) exchange();
     if (want("appraise")) appraise();
     if (want("appraise")) appraise_values();
     if (want("cheats")) cheats();

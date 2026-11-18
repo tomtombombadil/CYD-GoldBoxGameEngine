@@ -233,7 +233,7 @@ int force_fix = -1;     // (a fight's boot sets the Game Fixes from the settings
 std::vector<int> engine_turn(const Case& c)
 {
     fight();
-    if (force_fix >= 0) rules::set_fixes(force_fix != 0);
+    if (force_fix >= 0) rules::set_all(force_fix != 0);
     mx::put(0, 0, 10, 10, 50);
     levels(0, {}, {}, 0);
     for (auto [k, l] : c.lv) F(0).rec[0x109 + k] = static_cast<uint8_t>(l);
@@ -291,7 +291,7 @@ void turning()
         if (static_cast<int>(c.types.size()) > room) continue;
         const bool pal = c.lv.size() && c.lv[0].first == 3;
         F(0).rec[0x109] = 0;
-        const std::vector<int> got = engine_turn(c), want = ref(c, rule, rules::fixes());
+        const std::vector<int> got = engine_turn(c), want = ref(c, rule, rules::all_fixes());
         // (a paladin turns only where the game lets it: Gateway's / Darkness's menu)
         if (pal && !(rule == 1 || tcols == 11)) continue;
         ++done;
@@ -373,7 +373,7 @@ void former()
         expect(P, w, bad == 0 && n > 0, "%d of %d wrong", bad, n);
     }
     force_fix = -1;
-    rules::set_fixes(true);
+    rules::set_all(true);
 }
 
 // ---- R: Restoration and training with levels lost (coab's cast_restore,
@@ -503,8 +503,8 @@ void rest()
     // out, renews 0x1A instead of itself (GAME.OVR 0x112AE / 0x1AE7B / 0x2096F) -
     // one point lost, then none; still dead when Slow Poison runs out
     if (cu.poison_renew) {
-        const bool fx0 = rules::fixes();
-        rules::set_fixes(false);
+        const bool fx0 = rules::all_fixes();
+        rules::set_all(false);
         reset(20);
         add_aff(c, cu.poisoned, 0, 0xFF);
         add_aff(c, cu.slow_poison, 60, 0xFF);
@@ -516,7 +516,7 @@ void rest()
         expect(P, "the original's poison (Game Fixes off): one hit point, the damage effect renewed as 0x1A, dead when Slow Poison runs out",
                hp == 19 && renewed && c.rec[0x195] == party::Dead, "HP at 50 %d, damage effect gone %d, status %d", hp, renewed,
                c.rec[0x195]);
-        rules::set_fixes(fx0);
+        rules::set_all(fx0);
     }
     // Poison damage never below 1 HP
     reset(3);
@@ -1126,9 +1126,9 @@ void stench()
         ++n;
         if (!ok && !bad++) printf("  (stench: %s)\n", what);
     };
-    const bool was = rules::fixes();
+    const bool was = rules::all_fixes();
     for (int fix = 0; fix < 2; ++fix) {
-        rules::set_fixes(fix != 0);
+        rules::set_all(fix != 0);
         for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
         const int A = b.party_size > 1 ? 1 : 0;
         mx::put(0, 0, 10, 10, 50);
@@ -1163,7 +1163,7 @@ void stench()
         for (int j = 0; j < k2; ++j) aff2 += ev[j].ev == combat::Ev::StenchAffected;
         chk(aff2 == 0, "a foe 3 squares off untouched");
     }
-    rules::set_fixes(was);
+    rules::set_all(was);
     expect(P, "the stench: Champions' ghast 0x4F (GAME.OVR 0x13747), the Dark Queen's 0x89 (DQK.EXE 0x50221)",
            bad == 0, "%d of %d wrong", bad, n);
 }
@@ -1726,9 +1726,9 @@ void queen_hits22()
         chk(said > 0 && agree == 40, "crippled by venom: 0xCF");
     }
     // the anemone's squirt: the attacker (original), the one hit (Game Fixes)
-    const bool was = rules::fixes();
+    const bool was = rules::all_fixes();
     for (int fix = 0; fix < 2; ++fix) {
-        rules::set_fixes(fix != 0);
+        rules::set_all(fix != 0);
         scene(m.q_squirt);
         create::Dice d2(5);
         const combat::Attack r = combat::attack(b, B, 0, nullptr, d2);
@@ -1737,7 +1737,7 @@ void queen_hits22()
             fix ? "Game Fixes: the one hit squirted" : "the original: the anemone squirts itself");
         if (!fix) chk(F(B).hp() >= 200 - 12 && F(B).hp() <= 200 - 3, "the squirt: 3d4");
     }
-    rules::set_fixes(was);
+    rules::set_all(was);
     // green fire: given on a failed save, 1d8 at each round's start, gone when whole
     {
         int given = 0;
@@ -2273,7 +2273,7 @@ void dk_caster()
     int bad = 0, n = 0;
     char first[140] = "";
     for (int fx = 0; fx < 2; ++fx) {
-        rules::set_fixes(fx == 1);
+        rules::set_all(fx == 1);
         for (const Case& c : cases) {
             levels(0, {{0, c.cl}, {3, c.pa}, {4, c.ra}, {5, c.mu}});
             const int want = fx ? c.fixed : c.orig;
@@ -2289,7 +2289,7 @@ void dk_caster()
             }
         }
     }
-    rules::set_fixes(true);
+    rules::set_all(true);
     expect(P, "Darkness-type caster levels: no paladin test (6), skill levels, ranger - 7 / - 8; AD&D's paladin with the fixes",
            bad == 0 && sp[0] && sp[1] && sp[2], "%d of %d wrong (%s; spells %d %d %d)", bad, n, first, sp[0], sp[1], sp[2]);
 }
@@ -2474,7 +2474,7 @@ void learning()
                     // slot count (0xB1 + 3 x class + level): Pool's 0xB8 is the engine's 0x13C)
                     if (kind == 1 && level > 3) {
                         const int o = 0xB1 + 3 * code + level;
-                        if (!rules::fixes() && c >= 0 && o >= 0xB8 && o <= 0xBC && ch.rec[0x13C + o - 0xB8] > 0)
+                        if (!rules::all_fixes() && c >= 0 && o >= 0xB8 && o <= 0xBC && ch.rec[0x13C + o - 0xB8] > 0)
                             want.push_back(static_cast<int>(s));     // (Game Fixes: none)
                         continue;
                     }
@@ -2803,7 +2803,7 @@ void treasures_fight_items()
             fail("no fight");
             break;
         }
-        rules::set_fixes(cs == 5);
+        rules::set_all(cs == 5);
         combat::Battle& b = fg->b;
         int i = -1;
         for (int k = 0; k < b.party_size; ++k)
@@ -2868,7 +2868,7 @@ void treasures_fight_items()
             fail(w2);
         }
     }
-    rules::set_fixes(true);
+    rules::set_all(true);
     // The map in a fight: shown, nothing used, the turn not over
     if (fight()) {
         combat::Battle& b = fg->b;
@@ -4343,7 +4343,7 @@ void feeblemind()
     const uint8_t drain2 = b.fx ? b.fx->mon.drain2 : 0;
     for (int fixes = 0; fixes < 2; ++fixes) {
         if (g != 6 && fixes) break;               // (Darkness / Treasures: no fix - the same either way)
-        rules::set_fixes(fixes != 0);
+        rules::set_all(fixes != 0);
         for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
         mx::put(0, 0, 10, 10, 60);
         mx::put(B, 1, 11, 10, 60);
@@ -4404,7 +4404,7 @@ void feeblemind()
         f.rec[magic::kListAt + 11] = 0;
         f.spell = 0;
     }
-    rules::set_fixes(true);
+    rules::set_all(true);
     // Darkness / Treasures: the stats' recalculation (GAME.OVR 0x3307E /
     // 0x3CD87) keeps Intelligence / Wisdom at 3 while effect 0x44 lasts
     if (g != 6) {
@@ -4481,12 +4481,12 @@ void knights_hit()
         if (got != want && !bad++) snprintf(first, sizeof first, "%s: drained %d, want %d", what, got, want);
     };
     for (int fixes = 0; fixes < 2; ++fixes) {
-        rules::set_fixes(fixes != 0);
+        rules::set_all(fixes != 0);
         check("attack 1, damage", blow(0, 1), ev2);
         check("attack 2, damage", blow(1, 1), ev3);
         check("attack 1, no damage", blow(0, 0), need == 1 ? false : ev2);
     }
-    rules::set_fixes(true);
+    rules::set_all(true);
     expect(P, "Death Knights: a holder of its drain-2 effect (the party's feebleminded too) drains whoever its damaging blow hits (oracle_knights_hit: events 2 / 3, the damage test)",
            bad == 0 && need >= 0, "%d of %d wrong (%s)", bad, n, first);
 }
@@ -5037,7 +5037,7 @@ void onhit_check()
         if (got != want && !bad++) snprintf(first, sizeof first, "%s: %d, want %d", what, got, want);
     };
     for (int fixes = 0; fixes < 2; ++fixes) {
-        rules::set_fixes(fixes != 0);
+        rules::set_all(fixes != 0);
         if (mf.poison) {
             const int slot = ways ? 0 : 1;
             check("poison, a damaging blow", blow(mf.poison, slot, 1, false, 1, combat::Ev::Poisoned), true);
@@ -5050,7 +5050,7 @@ void onhit_check()
             check("vorpal, a blow of no damage", blow(b.fx->dk.vorpal, 0, 0, false, 20, combat::Ev::Beheaded), need == 0);
         }
     }
-    rules::set_fixes(true);
+    rules::set_all(true);
     for (int k = 0; k < b.n; ++k) b.f[k].size = 0;
     combat::occupancy(b);
     expect(P, "the on-hit specials after a blow of no damage as the original's (oracle_onhit: the blow's damage test, the Dark Queen's 0xB8)",
@@ -5234,7 +5234,7 @@ void queen_hooks()
         create::g_die_hook = nullptr;
         return got;
     };
-    rules::set_fixes(false);
+    rules::set_all(false);
     scene();
     const int base = thresh(false);
     int n = 0, bad = 0;
@@ -5308,14 +5308,14 @@ void queen_hooks()
                         F(T).x = static_cast<int16_t>(10 + cut + 2);
                         combat::occupancy(b);
                     }
-                    rules::set_fixes(fixes);
+                    rules::set_all(fixes);
                     create::g_die_hook = [](int k) { return k == 20 ? 19 : k == 6 ? 4 : k == 4 ? 2 : 0; };
                     F(A).attacks[0] = 1;
                     F(A).attacks[1] = 0;
                     F(T).rec[0x1A4] = 60;
                     const combat::Attack at = combat::attack(b, A, T, nullptr, rng, false);
                     create::g_die_hook = nullptr;
-                    rules::set_fixes(false);
+                    rules::set_all(false);
                     return at.n > 0 && at.hits[0].hit ? at.hits[0].damage : -1;
                 };
                 const int plain = blow(false, false, true), plain_far = blow(false, false, false);
@@ -5422,7 +5422,7 @@ void queen_hooks()
     q_add(F(T), 0x11, 0);
     q_add(F(T), 0x1E, 0);
     check("Shield + coughing (fixes off): the Shield lost, 2 worse", thresh(false), 8);
-    rules::set_fixes(true);
+    rules::set_all(true);
     check("Shield + coughing (Game Fixes): AC 3 at worst, 2 worse", thresh(false), 15);
     // Invisible to Animals with the Game Fixes: the attacker's flags / sight
     scene();
@@ -5431,7 +5431,7 @@ void queen_hooks()
     check("0x45 (Game Fixes): the target's own flags no longer count", thresh(false), 10);
     F(A).rec[0x14B] = 0x45;
     check("0x45 (Game Fixes): an attacker of flags & 0x45 not seeing invisible -4", thresh(false), 14);
-    rules::set_fixes(false);
+    rules::set_all(false);
     expect(P, "the Dark Queen's to-hit hooks as DQK.EXE's handlers (oracle_qhooks: events 0xA / 0x10 / 0xB), the hooked roll under 0 a miss",
            lines > 20 && bad == 0, "%d lines, %d of %d wrong (%s)", lines, bad, n, first);
     // The dragons' fear (effect 0x64, its handler 0x4F361): no save - the
@@ -5466,7 +5466,7 @@ void queen_hooks()
     expect(P, "the Dark Queen's clock (0x5EFF via 0x61AD from the round's start 0x2336C): effects a minute on as each round begins, not at its end",
            clock_line && one_gone && two_left && end_kept, "oracle %d, 1-minute gone %d, 3-minute at 2 %d, kept past the end %d", clock_line,
            one_gone, two_left, end_kept);
-    rules::set_fixes(true);
+    rules::set_all(true);
 }
 
 // The sides' to-hit bonuses (round 11): oracle_tohit_<game>.txt from the
@@ -5516,7 +5516,7 @@ void to_hit_sides()
     int bad = 0, n = 0;
     char first[160] = "";
     for (int fixes = 0; fixes <= 1; ++fixes) {
-        rules::set_fixes(fixes != 0);
+        rules::set_all(fixes != 0);
         for (int v = 0; v <= 6; ++v) {
             if (!diff_at && v) break;
             if (party_at) vm->set(static_cast<uint16_t>(party_at), 3);
@@ -5531,7 +5531,7 @@ void to_hit_sides()
                          b.to_hit_monsters, want_p);
         }
     }
-    rules::set_fixes(true);
+    rules::set_all(true);
     if (party_at) vm->set(static_cast<uint16_t>(party_at), keep_p);
     if (mons_at) vm->set(static_cast<uint16_t>(mons_at), keep_m);
     if (diff_at) vm->set(static_cast<uint16_t>(diff_at), keep_d);
@@ -5547,7 +5547,7 @@ void run()
         expect(P, "the game booted, rule tables", false);
         return;
     }
-    rules::set_fixes(true);
+    rules::set_all(true);
     const char* only = getenv("ONLY");
     auto want = [&](const char* s) { return !only || strstr(only, s); };
     if (!fight()) {
@@ -5563,9 +5563,9 @@ void run()
     if (want("learn")) {
         learning();
         if (game() == 1) {                  // (PoolRad's spell 56: the original's rule, without the Game Fixes)
-            rules::set_fixes(false);
+            rules::set_all(false);
             learning();
-            rules::set_fixes(true);
+            rules::set_all(true);
         }
     }
     if (want("use")) using_items();
@@ -5628,7 +5628,7 @@ void run()
     if (want("aicast")) aicast::run();
     if (want("restore")) restore();
     if (want("rest")) rest();
-    rules::set_fixes(true);
+    rules::set_all(true);
 }
 
 } // namespace r4

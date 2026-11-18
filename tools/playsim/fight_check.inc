@@ -204,7 +204,7 @@ void on_act(const combat::Battle& b, int i, combat::TestAct a, int t, int extra)
     if ((!f.size || f.gone || f.escaped || !f.up() || !stands(f)) && !death_cast)
         bad("R1", std::string(act_name(a)) + " by one who can't act: " + who(b, i) + (own ? " (own turn)" : ""));
     // (the step a free attack held it in: the original takes it, the Game Fixes not - SPEC 12)
-    else if (held(b, f) && !(a == TestAct::Step && !rules::fixes()) && !death_cast)
+    else if (held(b, f) && !(a == TestAct::Step && !rules::all_fixes()) && !death_cast)
         bad("R2", std::string(act_name(a)) + " by a held / stunned one: " + who(b, i) + (own ? " (own turn)" : ""));
     // R5: one fleeing strikes on its own turn only with its run over; no specials
     // (a hold's bite at the turn's start - Pool's mantis, its own rule: not a blow of its choosing)
@@ -342,7 +342,7 @@ void fight_end()
     auto ended_by_fight = [&](uint8_t t) {
         for (uint8_t e : fp.ends)
             if (e && e == t) return true;
-        if (rules::fixes() && ((fp.facts.charm && t == fp.facts.charm) || (fp.facts.dk.feared && t == fp.facts.dk.feared)))
+        if (rules::all_fixes() && ((fp.facts.charm && t == fp.facts.charm) || (fp.facts.dk.feared && t == fp.facts.dk.feared)))
             return true;
         return false;
     };

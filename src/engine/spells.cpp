@@ -110,10 +110,10 @@ int base_power(const party::Character& c, const classes::Tables& t, int s)
     if (s <= 0) return 0;
     using classes::skill_level;
     // Secret's (GAME.OVR 0x3AFD7) has no paladin in either test - a paladin
-    // casts at 6th level; AD&D's (Curse's) paladin - 8 with rules::fixes()
+    // casts at 6th level; AD&D's (Curse's) paladin - 8 with the switch
     // (Darkness / Treasures - GAME.OVR 0x36C2E / 0x40CC7 - the same, and by
     // their skill levels: the larger of a class's level and its former one)
-    const bool pal_rule = !(t.lay.secret || t.lay.dk) || rules::fixes();
+    const bool pal_rule = !(t.lay.secret || t.lay.dk) || rules::fix(rules::kFixPalCast);
     auto most = [](int a, int b) { return a > b ? a : b; };
     // Champions (GAME.OVR 0x38FA4) and Death Knights (0x34DCA) count their
     // knights (class 7), not paladins: Champions a cleric's spells at
@@ -417,7 +417,7 @@ int cast(party::Party& p, int caster, int target, const CampSpell& cs, const cla
             // (Game Fixes: the curse as well - what the original lifts stays)
             const uint8_t curse = f.curse_dk ? f.curse_dk : cures.curse;
             bool lifted = cure(c, curse);
-            if (curse != cures.curse && rules::fixes() && cure(c, cures.curse)) lifted = true;   // (both, not one or the other)
+            if (curse != cures.curse && rules::fix(rules::kFixRemCurse) && cure(c, cures.curse)) lifted = true;   // (both, not one or the other)
             if (lifted) {
                 o.say(who[k], Said::Cured);
                 o.say(who[k], Said::Uncursed);
@@ -512,7 +512,7 @@ int cast(party::Party& p, int caster, int target, const CampSpell& cs, const cla
         // (Secret's Barkskin with the Game Fixes: AD&D's - no healing, its
         // effect 0x0D (+ 1 to saves not against magic) for 4 + the level
         // rounds; SPEC 12)
-        if (t.lay.secret && cs.spell == 0x5A && rules::fixes()) {
+        if (t.lay.secret && cs.spell == 0x5A && rules::fix(rules::kFixSBark)) {
             for (int k = 0; k < n; ++k) give(p.m[who[k]], 0x0D, 4 + pw, 0, false);
             break;
         }
@@ -540,7 +540,7 @@ int cast(party::Party& p, int caster, int target, const CampSpell& cs, const cla
                 }
                 const uint8_t fb = f.heal_feeble ? f.heal_feeble : cures.feeblemind;
                 bool fed = fb && cure(c, fb);
-                if (!fed && f.heal_feeble && rules::fixes() && cures.feeblemind) fed = cure(c, cures.feeblemind);
+                if (!fed && f.heal_feeble && rules::fix(rules::kFixKHeal) && cures.feeblemind) fed = cure(c, cures.feeblemind);
                 if (fed) {
                     o.say(who[k], Said::Cured);
                     if (cs.word4) o.say(who[k], Said::Word4);
@@ -616,8 +616,8 @@ int cast(party::Party& p, int caster, int target, const CampSpell& cs, const cla
             const int bonus = d.roll(die, 1);
             int str = c.stat(0) + bonus, str00 = 0;
             // Secret (GAME.OVR 0x2F546): 18/xx for a fighter or a ranger - not a
-            // paladin (AD&D's, with rules::fixes(), as Curse's)
-            const bool pal = !t.lay.secret || rules::fixes();
+            // paladin (AD&D's, with the switch, as Curse's)
+            const bool pal = !t.lay.secret || rules::fix(rules::kFixSOwn);
             if (str > 18) {
                 if (had(classes::Fighter) || (pal && had(classes::Paladin)) || had(classes::Ranger)) {
                     str00 = c.str00() + (str - 18) * 10;

@@ -1,4 +1,5 @@
 #include "rules.h"
+#include "games.h"
 
 #include <cstring>
 
@@ -491,7 +492,7 @@ void recalc_values(party::Character& c, const items::Names& names, const ItemFac
         dmg += plus;
         // (Secret's program gives it to every race - GAME.OVR 0x382C6, no race
         // test: the original's mistake, kept only with the fixes off)
-        if (c.race() == 2 || (f.elf_bonus_any_race && !fixes()))
+        if (c.race() == 2 || (f.elf_bonus_any_race && !fix(kFixSOwn)))
             for (uint8_t e : f.elf_bonus)
                 if (e && it.type() == e) {
                     ++plus;
@@ -1053,7 +1054,7 @@ bool same_pile(const uint8_t* a, const uint8_t* b)
 // (nothing added, the item gone - with rules::fixes() it's left be)
 static bool secret_pile(const uint8_t* a, const uint8_t* b)
 {
-    if (a[0x39] == 0 || (b[0x39] == 0 && fixes())) return false;
+    if (a[0x39] == 0 || (b[0x39] == 0 && fix(kFixSOwn))) return false;
     static const int kSame[] = {0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33, 0x36};
     for (int o : kSame)
         if (a[o] != b[o]) return false;
@@ -1352,7 +1353,7 @@ bool poison_clock(party::Character& c, int minutes, const CureFacts& f)
     const bool over = left > 0 && minutes >= left;
     const int pd = f.poison_damage ? find_effect(c, f.poison_damage) : -1;
     const int span = over ? left - 1 : minutes;
-    if (pd >= 0 && f.poison_renew && f.poison_renew != f.poison_damage && !fixes()) {
+    if (pd >= 0 && f.poison_renew && f.poison_renew != f.poison_damage && !fix(kFixPoison)) {
         // (Secret / Darkness / Treasures: one point, then the other effect for 10)
         uint8_t* a = c.affects[pd];
         const int m = a[1] | a[2] << 8;
@@ -1515,15 +1516,193 @@ int jewel_value(int r, create::Dice& d, int div, int span41)
 }
 
 namespace {
-bool g_fixes = true;
-}
-void set_fixes(bool on) { g_fixes = on; }
-bool fixes() { return g_fixes; }
-uint8_t g_adnd = 0xFF;
-void set_adnd(uint8_t bits) { g_adnd = bits; }
-bool adnd(uint8_t rule) { return (g_adnd & rule) != 0; }
+uint64_t g_fixes_off = 0;       // (bit k: Fix k switched off)
+uint16_t g_adnd = kAdndAll;
 
-int lost_levels(uint8_t lost) { return g_fixes && lost >= 0x80 ? 0 : lost; }
+constexpr uint16_t G(games::Game g) { return static_cast<uint16_t>(1u << static_cast<int>(g)); }
+constexpr uint16_t kPool = G(games::Game::PoolOfRadiance), kCurse = G(games::Game::CurseOfTheAzureBonds),
+                   kSecret = G(games::Game::SecretOfTheSilverBlades), kDark = G(games::Game::PoolsOfDarkness),
+                   kChamp = G(games::Game::ChampionsOfKrynn), kKnights = G(games::Game::DeathKnightsOfKrynn),
+                   kQueen = G(games::Game::DarkQueenOfKrynn), kGate = G(games::Game::GatewayToTheSavageFrontier),
+                   kTreas = G(games::Game::TreasuresOfTheSavageFrontier);
+constexpr uint16_t kAll = kPool | kCurse | kSecret | kDark | kChamp | kKnights | kQueen | kGate | kTreas;
+
+// (in Fix's order - fix_info checks it)
+const FixInfo kFixes[kFixCount] = {
+    {kFixSaves, "Saving Throws", kAll,
+     "A saving throw whose total falls below 0 is failed (the originals wrap it round to a save made - a 2 "
+     "rolled while blinded saved), and no save gets worse for a level gained (the originals' tables have such "
+     "rows: a paladin's 8th level, Darkness's and Treasures' 19th-level thief)."},
+    {kFixThief, "Thief Skills", kAll,
+     "A thief skill that a low Dexterity takes below 0% stays at 0%. The originals wrap it round: Dexterity 9 "
+     "at 1st level gave Move Silently 251%, never failing."},
+    {kFixHeld, "Held Mid-Step", kAll,
+     "A fighter put to sleep, held or stunned by the free attack of the foe it steps away from stays where it "
+     "is, its turn over. The originals still take that step."},
+    {kFixBolt, "Bounced Bolt Length", kAll,
+     "A lightning bolt (and the breath and item bolts) goes exactly its length from the square aimed at, "
+     "bounces included. The originals' count after a bounce made it shorter, longer, or bounce for ever."},
+    {kFixHpLevel, "Hit Points a Level", kAll,
+     "Every level gained gives at least 1 hit point, and a low Constitution's minus is counted as a minus. "
+     "The originals could give none, or read the minus as a large gain for a multi-class character."},
+    {kFixHarm, "Harm", kAll,
+     "Harm takes its victim down to 1d4 hit points and no lower. The originals' sum wraps round when the "
+     "victim has fewer, killing it outright."},
+    {kFixPRace, "Race Checks", kPool,
+     "PoolRad's scripts see each character's race: Podol Plaza's patrols stop parties with humans more often, "
+     "and elves and half-elves find the Temple of Bane's trap doors. The original never gives its scripts "
+     "the race, so neither ever happens."},
+    {kFixPSpell, "Who Has It Memorized", kPool,
+     "PoolRad's scripts that look for a character with a spell memorized (Knock at Kovel's mansion) find "
+     "one. The original's search never runs and always takes the first character."},
+    {kFixPTrain56, "Training New Spells", kPool,
+     "PoolRad's training offers no 7th-level cleric spell. The original reads a stray byte as the slots for "
+     "spell 56."},
+    {kFixPShare, "NPCs' Coin Share", kPool,
+     "A hired NPC in PoolRad takes its whole share of a treasure's coins. The original cuts each share to "
+     "255."},
+    {kFixPLoad, "Loaded Game's Area", kPool,
+     "Loading a PoolRad save keeps what had happened in that part of the map. The original forgets it when "
+     "the save was made in another block than the one in play."},
+    {kFixPCharm, "Charm After a Fight", kPool,
+     "In PoolRad a charm ends with the fight, and an NPC brought in from a monster record has no lost levels "
+     "(the original counts its 255 as levels drained)."},
+    {kFixPClock, "Script Clock", kPool,
+     "When a PoolRad script says time passes (the nomads' escort), the clock moves. The original's never "
+     "does."},
+    {kFixHealDead, "Healing the Dead", kPool | kCurse,
+     "A computer-run caster's Cure Light Wounds goes to its own side's hurt, not to a body lying on the "
+     "field (the originals cure either side's bodies)."},
+    {kFixCFormer, "Former Clerics", kCurse,
+     "A human who changed class from cleric turns undead by the cleric level held. The original uses "
+     "column 0 of the table - nearly never turning."},
+    {kFixSBark, "Barkskin", kSecret,
+     "Barkskin gives its own protection (+1 to saves not against magic) for 4 rounds plus the caster's "
+     "level. The original runs Heal for it instead."},
+    {kFixPoison, "Poison", kSecret | kDark | kTreas,
+     "A slowed poison costs a hit point every 10 minutes until it's cured. The originals take one point and "
+     "then no more."},
+    {kFixDiff, "Difficulty To-Hit", kSecret | kKnights,
+     "The difficulty setting changes both sides' to-hit rolls, as in the other games. These originals "
+     "compare against a fixed value and never apply it."},
+    {kFixSOwn, "Secret's Own List", kSecret,
+     "Secret's small mistakes: the elves' +1 with their weapons for elves only, dwarves' and gnomes' -4 "
+     "against giants, the Constitution bonus to their saves, Blink and Invisibility at the attack roll, "
+     "Displacement working, the Periapt of Health against disease, Strength 18/xx for paladins."},
+    {kFixPalCast, "Paladins' Casting", kSecret | kDark | kTreas | kKnights,
+     "A paladin casts at its paladin level less 8, as AD&D says. These originals leave the paladin out and "
+     "cast its spells at a fixed level."},
+    {kFixRaceAdj, "Race Adjustments", kDark | kChamp | kKnights,
+     "A new character gets its race's ability adjustments. These originals test the human line of the list "
+     "instead of the race picked, so they never add them."},
+    {kFixClericXp, "Cleric's Experience Bonus", kDark | kTreas,
+     "A cleric gets the 10% experience bonus from Wisdom 16. The original asks for more."},
+    {kFixRemCurse, "Remove Curse", kDark | kKnights,
+     "Remove Curse takes off a bestowed curse. The originals look for another effect, so the curse stays."},
+    {kFixPwBlind, "Power Word Blind", kDark,
+     "Power Word Blind lasts the time it works out. The original blinds for good."},
+    {kFixDragonFear, "Dragon Fear", kDark,
+     "A dragon's fear ends with the fight. The original keeps its -2 for ever."},
+    {kFixBulette, "Bulette's Leap", kDark,
+     "The bulette leaps one round in four (8 attacks). The original sets the leap and writes over it at "
+     "once, so it never leaps."},
+    {kFixSummon, "Monster Summoning", kDark,
+     "A summoned big monster gets the room it needs on the field. The original places it on one square."},
+    {kFixVault, "New Game's Vault", kDark | kTreas | kGate,
+     "A new game starts with an empty vault. The originals leave the last game's money and items there."},
+    {kFixTBoots, "Jumping Boots", kTreas,
+     "The boots' jump lands on any free square in reach, as Dimension Door. The original only lands where "
+     "nobody - and no wall - stands in the way."},
+    {kFixGHolds, "Stirge and Squid", kGate,
+     "The stirge drinks blood and the squid squeezes the one they hold. In the original their holds do "
+     "nothing."},
+    {kFixGSounds, "Missing Sounds", kGate,
+     "A magic hit and a sling's shot get sounds of their own. The original plays the miss sound for them."},
+    {kFixThiefRace, "Thief Skills by Race", kChamp | kKnights,
+     "A thief's skills use its own race's row. The originals read the row for another race."},
+    {kFixKSaves, "Knights' Saves", kChamp,
+     "A knight's saving throws come from its own level. The original gives every knight the 0-level row "
+     "when that's lower."},
+    {kFixBozak, "Bozak Stun", kChamp,
+     "A bozak's stun ends with the fight. The original's lasts until something removes it."},
+    {kFixPalHp, "Paladins' Hit Points", kChamp | kKnights,
+     "A paladin gets a fighter's Constitution bonus and its gain past the hit dice. These originals give "
+     "both to the knights instead."},
+    {kFixStench, "The Stench", kChamp | kKnights | kQueen,
+     "A ghast's stench gives -2 to hit to the one who fails the save. The originals give it to the ghast."},
+    {kFixKFeeble, "Feeblemind", kKnights,
+     "Feeblemind does what the spell says. The original gives a level drain's effect instead."},
+    {kFixKHeal, "Heal Cures Feeblemind", kKnights,
+     "Heal cures Feeblemind. The original's Heal cures another effect."},
+    {kFixQAnemone, "Anemone", kQueen,
+     "The anemone squirts the one it hit. The original squirts whoever was attacking - often itself."},
+    {kFixQDamage, "DAMAGE Saves", kQueen,
+     "A script's damage that allows a save gives it on the right side. The original swaps its branches."},
+    {kFixQHooks, "To-Hit Hooks", kQueen,
+     "Invisible to Animals, the giants' and gnomes' bonuses, Dispel Evil and the like count at the attack "
+     "roll. The original works them out and drops them."},
+    {kFixQItemDmg, "Dawnshine's Damage", kQueen,
+     "The damage worked out by Dawnshine's effect counts. The original works it out and throws it away."},
+    {kFixQSaves18, "Saves Past 18th", kQueen,
+     "Past 18th level the saving throws keep the 18th level's row. The original's rows there are empty, so "
+     "every save is made."},
+    {kFixQWis13, "Wisdom 13", kQueen,
+     "A multi-class cleric needs Wisdom 13, and creation gives it. The original's rule never fires."},
+};
+
+const AdndInfo kAdnd[kAdndCount] = {
+    {kAdndMissile, "Magic Missile", kPool,
+     "One missile for every two levels, rounding up - (level + 1) / 2 - as AD&D 1st edition. PoolRad's "
+     "original rounds down: a 1st-level magic-user's missile does nothing. (The other games already round up.)"},
+    {kAdndMultiHp, "Multi-Class Hit Points", kAll,
+     "Each class gains the hit points a single class of it would (its die and Constitution bonus, a "
+     "fighter's more from 17), added up and divided by the classes - AD&D 1st edition. The originals share "
+     "one sum: PoolRad, Curse and Gateway add the Constitution bonus for every class held and never give a "
+     "multi-class fighter its 17+ bonus; the later games split the dice and the bonus separately."},
+    {kAdndThrown, "Thrown Weapons", kAll,
+     "A thrown weapon gets Dexterity's missile bonus to hit and Strength's bonus to damage. The originals "
+     "give darts and javelins no Strength (PoolRad's darts no Dexterity either). A dagger, hand axe or spear "
+     "uses Strength in melee, and Dexterity to hit with Strength's damage when thrown."},
+    {kAdndItems, "Magic Items", kAll,
+     "Magic items as AD&D 1st edition has them: PoolRad's Flame Tongue is the AD&D sword, and a flask of oil "
+     "burns (fire damage - a troll it brings down stays down). The originals' oil is a plain blow."},
+    {kAdndCoins, "Coin Exchange", kPool | kCurse | kSecret | kGate,
+     "Any mix of coins pays a price, with exact change, and the shopkeeper changes coins up: after a "
+     "purchase, after pooling the party's money at a shop, temple or other paid service, and when it's "
+     "shared out again, money is kept in the highest coins - so copper doesn't weigh anyone down. Some "
+     "originals take certain prices in platinum alone."},
+    {kAdndAge, "Age with Time", kDark | kTreas,
+     "Everyone grows a year older for each year of game time. The originals' clock ages nobody until a "
+     "hundred years have passed."},
+    {kAdndPwk, "Power Word Kill", kDark,
+     "Power Word Kill as AD&D 1st edition: by hit points - one creature of 11-60, or those of 10 or less up "
+     "to 120 in all. The original goes by maximum hit points."},
+    {kAdndProtEvil, "Protection from Evil", kAll,
+     "An evil attacker is -2 to hit one protected (good for Protection from Good), and the 10' radius "
+     "version wards those next to its holder. The originals keep only the +2 to the holder's saves."},
+    {kAdndRaise, "Raising the Dead", kAll,
+     "Raise Dead and Resurrection take no Constitution from the one raised - AD&D 1st edition has no such "
+     "cost. The originals take a point for Raise Dead, by spell or at a temple."},
+};
+} // namespace
+
+void set_fixes(bool on) { g_fixes_off = on ? 0 : ~0ull; }
+void set_fixes_off(uint64_t off) { g_fixes_off = off; }
+uint64_t fixes_off() { return g_fixes_off; }
+bool fix(Fix f) { return !(g_fixes_off >> f & 1); }
+const FixInfo& fix_info(int k) { return kFixes[k >= 0 && k < kFixCount ? k : 0]; }
+void set_adnd(uint16_t bits) { g_adnd = bits; }
+uint16_t adnd_bits() { return g_adnd; }
+bool adnd(uint16_t rule) { return (g_adnd & rule) != 0; }
+const AdndInfo& adnd_info(int k) { return kAdnd[k >= 0 && k < kAdndCount ? k : 0]; }
+bool all_fixes() { return g_fixes_off == 0; }
+void set_all(bool on)
+{
+    set_fixes(on);
+    set_adnd(on ? kAdndAll : 0);
+}
+
+int lost_levels(uint8_t lost) { return fix(kFixPCharm) && lost >= 0x80 ? 0 : lost; }
 
 } // namespace rules
 

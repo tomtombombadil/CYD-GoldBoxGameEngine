@@ -27,8 +27,12 @@ the Project as claude/TODO.md.
       Knights, the Dark Queen (the same program family), then Gateway / Champions / Secret / Curse / PoolRad
       - find each one's IF handler's flag bytes and who writes them; scan every script for COMBAT followed
       by an IF with no compare between.
-- [ ] **Menu rework - decided, NOT coded yet** (Tom, 2026-11-17; his edited tree; waits for his final
-      word before coding). Every page up to 8 keys (2 x 4), Back in one bottom corner (Back to Game on the top
+- [x] **Menu rework** - v0.209.0 (Tom, 2026-11-17: "Go ahead with the whole lot"; SPEC 5c, CLAUDE.md
+      "The menus"). Checked: every page drawn and tapped in QEMU on 480x320 (4.0" S3) and 320x240 (5.0"),
+      Home and in a game; host test of the switch tables; behave suites all nine games; economy T3
+      (Coin Exchange). Tom: try it on a board - the pages, Back / arrows, Original Games on and off
+      again (your set comes back), a Game Fix / 1E rule switched off by itself.
+      (The plan as decided:) Every page up to 8 keys (2 x 4), Back in one bottom corner (Back to Game on the top
       page), < > in the other. Top (in game, the Game key): Display (Brightness, Right Handed / Left Handed,
       Rotate 180, Invert, Swap Red/Blue, Recalibrate Touch, Companion Strip), Audio (today's sounds page as
       is), Game Play (Original Games; Enhancements: Game Font, Show Rolls, Companion Views, Savegame Info,
@@ -51,6 +55,9 @@ the Project as claude/TODO.md.
       Cheats (Tom, 2026-11-17): the Cheats page fires the cheats (Healer, Merchant, ...); its switches
       (Max Hit Points) are what Original Games turns off - the page itself stays.
       For the PortMaster session: the PDF viewer of the games' journal PDFs is the port's alone (Tom).
+      Also for it (v0.209.0): play::Options has `fixes_off` (bit = rules::Fix), `adnd` (uint16, rules::Adnd
+      bits) and `keep_mem`; the old fields still work (all switches on by default). rules::fix_info /
+      adnd_info give each switch's name, games and help for the port's own Settings.
 - [ ] Treasures play-through leftovers (2026-11-17): a fight page read "LORDSMAN goes down LORDSMAN" /
       "COCKATRICE goes down COCKATRICE" in the playsim's PAGELOG (two pages joined, or a wrong second line?);
       "INVISIBILITY, 10' RADIU" in the spell book list (cut at the frame - the original's?).

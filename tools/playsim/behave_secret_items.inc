@@ -200,7 +200,7 @@ SVals s_expect(const party::Character& c)
         if ((t.flags & 0x01) && arrows) plus += static_cast<int8_t>(arrows[0x32]);
         v.dmg += plus;
         // every race in the original; an elf's alone with the mistakes fixed
-        if (s_in("it_plus1_types", weapon[0x2E]) && (c.rec[0x74] == 2 || !rules::fixes())) ++plus;
+        if (s_in("it_plus1_types", weapon[0x2E]) && (c.rec[0x74] == 2 || !rules::all_fixes())) ++plus;
         v.hit += plus;
         v.dice = t.d;
         v.sides = t.s;
@@ -270,9 +270,9 @@ void s_readied_values()
         int race, str, e, dex;
         const char* what;
     } whos[] = {{7, 18, 76, 16, "human 18/76"}, {2, 12, 0, 17, "elf 12"}};
-    const bool fx = rules::fixes();
+    const bool fx = rules::all_fixes();
     for (int pass = 0; pass < 2; ++pass) {
-        rules::set_fixes(pass == 0);
+        rules::set_all(pass == 0);
         for (const Who& w : whos)
             for (const SItem& s : s_items) {
                 party::Character& c = s_fresh(w.race, w.str, w.e, w.dex, lv);
@@ -286,7 +286,7 @@ void s_readied_values()
                 s_same(t, c);
             }
     }
-    rules::set_fixes(fx);
+    rules::set_all(fx);
     // Launchers with their ammunition's plus: every bow / crossbow / sling
     // record with the best arrows and quarrels
     const uint8_t* best_arrow = nullptr;
@@ -933,9 +933,9 @@ void s_fights()
     // handler acts at its wearer's own turn); with the mistakes fixed the
     // first attack on it a fight misses
     {
-        const bool fx = rules::fixes();
+        const bool fx = rules::all_fixes();
         for (int on : {1, 0}) {
-            rules::set_fixes(on != 0);
+            rules::set_all(on != 0);
             put(t, 0, 11, 10, 60);
             give(t, ix.displace);
             F(t).rec[0x19A] = F(t).rec[0x19B] = 50;
@@ -946,14 +946,14 @@ void s_fights()
                      on ? "misses" : "hits");
             expect(PI, w, hits == (on ? 0 : 1), "%d hits", hits);
         }
-        rules::set_fixes(fx);
+        rules::set_all(fx);
     }
     // The Periapt of Health (0x4C): disease resisted with the mistakes fixed
     // (AD&D's), not in the original (an empty handler)
     {
-        const bool fx = rules::fixes();
+        const bool fx = rules::all_fixes();
         for (int on : {1, 0}) {
-            rules::set_fixes(on != 0);
+            rules::set_all(on != 0);
             put(t, 0, 11, 10, 60);
             give(t, ix.no_disease);
             combat::Harm h;
@@ -963,7 +963,7 @@ void s_fights()
             snprintf(w, sizeof w, "the Periapt of Health, fixes %s: disease %s", on ? "on" : "off", on ? "resisted" : "not");
             expect(PI, w, res == (on != 0));
         }
-        rules::set_fixes(fx);
+        rules::set_all(fx);
     }
     // A mirror / silver shield (0x48): readied, a stone gaze sent back
     // (GAME.OVR 0x12522) - the effect is what the gaze looks for

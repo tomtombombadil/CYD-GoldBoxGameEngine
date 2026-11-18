@@ -780,7 +780,7 @@ int main(int argc, char** argv)
 {
     setvbuf(stdout, nullptr, _IOLBF, 0);       // (lines out at once: a hang or a crash keeps them)
     play::load_begins = getenv("LOADBEGINS") != nullptr;   // (Pool's load straight into the game: LOADBEGINS=1)
-    if (getenv("NOFIXES")) rules::set_fixes(false);    // NOFIXES=1: Game Fixes off (the originals' ways)
+    if (getenv("NOFIXES")) rules::set_all(false);    // NOFIXES=1: Game Fixes off (the originals' ways)
     if (getenv("PAGELOG")) play::log_pages = true;     // (every fight page's lines, any run)
     if (getenv("NOPORTRAIT")) play::opts.portrait = false;
     if (getenv("SIDEPANEL")) play::set_side_panel(true);       // SIDEPANEL=1: a Companion panel beside the game (480x320)     // NOPORTRAIT=1: Icon Portrait off (View as the original)
@@ -1112,7 +1112,7 @@ int main(int argc, char** argv)
         }
         if (getenv("RULECHECK")) {      // RULECHECK: each member's class values as the tables make them, against the record's
             play::MagicRules* mr = nullptr;
-            if (getenv("NOFIXES")) rules::set_fixes(false);
+            if (getenv("NOFIXES")) rules::set_all(false);
             if (play::load_rules(mr))
                 for (int i = 0; i < play::pt->count; ++i) {
                     const party::Character& o = play::pt->m[i];

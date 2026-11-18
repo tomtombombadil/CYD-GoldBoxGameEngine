@@ -3278,7 +3278,7 @@ static void test_coin_fixes()
         c[3 + i * 4] = static_cast<uint8_t>((kBase + first) >> 8);
     }
     for (bool fix : {true, false}) {
-        rules::set_fixes(fix);
+        rules::set_all(fix);
         static ecl::GameState gs;
         gs = ecl::GameState{};
         TestHost host;
@@ -3302,7 +3302,7 @@ static void test_coin_fixes()
             CHECK(vm.get(0x4C00) == 0 && m.money(0) == 500 && m.money(3) == 30 && m.money(4) == 0);
         }
     }
-    rules::set_fixes(true);
+    rules::set_all(true);
 }
 
 // Pool's PROTECTION runes read as the word of the script's that fits
@@ -5447,14 +5447,14 @@ static void test_items()
         ecl::GameState gd;
         TestHost hd;
         ecl::Vm vd(gd, hd, *dk->ecl_ops);
-        rules::set_fixes(false);
+        rules::set_all(false);
         vd.set(0x4BCC, 98);
         vd.set(0x4BCB, 11);
         vd.advance_clock(5, 1);                       // a month: a year passes
         CHECK(vd.get(0x4BCB) == 0 && vd.get(0x4BCC) == 99 && hd.aged == 0);
         vd.advance_clock(5, 12);
         CHECK(vd.get(0x4BCC) == 0 && hd.aged == 1);
-        rules::set_fixes(true);
+        rules::set_all(true);
         vd.advance_clock(5, 24);
         CHECK(vd.get(0x4BCC) == 2 && hd.aged == 3);
     }
@@ -5850,18 +5850,18 @@ static void test_pool_rules()
     bare(7, create::ClericFighter);
     p.rec[0x109] = p.rec[0x109 + 2] = 1;
     p.rec[0x19] = 18;
-    const bool fixes0 = rules::fixes();
-    rules::set_fixes(false);
+    const bool fixes0 = rules::all_fixes();
+    rules::set_all(false);
     CHECK(create::con_hp_adj(p, t) == 4);                  // (2 a class, no fighter's extra)
     // Modify's bounds: the most every die high, then the adjustment (4) once, averaged
     CHECK(create::hp_most(p, t, f) == (f.hp_dice[0] * f.hp_count[0] + f.hp_dice[2] * f.hp_count[2] + 4) / 2);
     CHECK(create::hp_least(p, t, f) == (f.hp_count[0] + f.hp_count[2] + 4) / 2);
     // (Game Fixes - Tom, 2026-11-06: each class's own figure, the fighter's extra too: 2 + 4)
-    rules::set_fixes(true);
+    rules::set_all(true);
     CHECK(create::con_hp_adj(p, t) == 6);
     CHECK(create::hp_most(p, t, f) == (f.hp_dice[0] * f.hp_count[0] + f.hp_dice[2] * f.hp_count[2] + 6) / 2);
     CHECK(create::hp_least(p, t, f) == (f.hp_count[0] + f.hp_count[2] + 6) / 2);
-    rules::set_fixes(fixes0);
+    rules::set_all(fixes0);
     // Modify: Strength 17 -> 18 first, then a fighter's 18/01
     bare(7, create::Fighter);
     p.rec[0x109 + 2] = 1;
@@ -6019,18 +6019,18 @@ static void test_heal_target()
     combat::occupancy(b);
     CHECK(combat::heal_target(b, 0) == 2);
     b.ground[12][10] = 0x37; b.f[3].y = 11; b.f[3].x = 11; b.ground[11][11] = 0x1F;
-    const bool was = rules::fixes();
-    rules::set_fixes(false);
+    const bool was = rules::all_fixes();
+    rules::set_all(false);
     CHECK(combat::heal_target(b, 0) == 3);          // none under 8: the body (any side)
     rec[2][0x1A4] = 7;
     CHECK(combat::heal_target(b, 0) == 2);          // one under 8 first
     rec[2][0x1A4] = 12;
-    rules::set_fixes(true);
+    rules::set_all(true);
     CHECK(combat::heal_target(b, 0) == 2);          // the fixes: not the enemy's body
     rec[3][0x195] = party::Dead;
-    rules::set_fixes(false);
+    rules::set_all(false);
     CHECK(combat::heal_target(b, 0) == 2);          // not the dead
-    rules::set_fixes(was);
+    rules::set_all(was);
 }
 
 // The items' rules in fights (behaviour_facts.md items, coab's facts): a
@@ -6894,9 +6894,14 @@ static void test_spells()
     CHECK(cast(2, spells::Does::Heal, 1, 3, 8, 20) == 1 && out[0].what == spells::Said::Fully && b.hp() == 20);
     b.rec[0x195] = party::Dead;
     CHECK(cast(2, spells::Does::Heal, 1, 1, 8, 0) == 0);
-    // Raised: 1 HP, a point of Constitution; an elf can't be
+    // Raised: 1 HP - as the originals a point of Constitution; with the AD&D 1E
+    // Rules' Raising the Dead none (Tom, 2026-11-17); an elf can't be
+    rules::set_adnd(rules::kAdndAll & ~rules::kAdndRaise);
     CHECK(cast(6, spells::Does::Raise, 1) == 1 && out[0].what == spells::Said::Raised);
     CHECK(b.health() == party::Okay && b.hp() == 1 && b.rec[0x18] == 9 && b.rec[0x19] == 9 && b.in_combat());
+    b.rec[0x195] = party::Dead;
+    rules::set_adnd(rules::kAdndAll);
+    CHECK(cast(6, spells::Does::Raise, 1) == 1 && b.health() == party::Okay && b.rec[0x18] == 9 && b.rec[0x19] == 9);
     // PoolRad's camp Animate Dead (GAME.OVR 0x29087, its stand-up 0x2C753):
     // the dead get up at their most hit points, "gets back up", then animated
     {
@@ -8814,8 +8819,8 @@ static void test_spells_batch2()
     combat::occupancy(b);
     int bh[16], nsg = 0;
     combat::BoltSeg sg[16];
-    const bool was_fix = rules::fixes();
-    rules::set_fixes(false);                                                         // the original's path
+    const bool was_fix = rules::all_fixes();
+    rules::set_all(false);                                                         // the original's path
     int nh = combat::bolt_path(b, t, 0, 13, 10, 7, true, bh, 16, sg, &nsg, 16);
     CHECK(nh == 0 && nsg == 1 && sg[0].x1 == 20 && sg[0].y1 == 10);                 // open floor: 7 squares on
     b.ground[10][16] = 0x01;                                                         // a wall 6 squares out
@@ -8829,7 +8834,7 @@ static void test_spells_batch2()
     // square within range while half squares / 2 <= 7), the turn at a
     // wall's face free
     b.indoors = true;
-    rules::set_fixes(true);
+    rules::set_all(true);
     b.ground[10][16] = 0x37;
     nh = combat::bolt_path(b, t, 0, 13, 10, 7, true, bh, 16, sg, &nsg, 16);
     CHECK(nh == 0 && nsg == 1 && sg[0].x1 == 20 && sg[0].y1 == 10);                 // straight: 14..20
@@ -8864,14 +8869,14 @@ static void test_spells_batch2()
     b.ground[10][12] = 0x01;
     nh = combat::bolt_path(b, t, 0, 11, 10, 7, false, bh, 16, sg, &nsg, 16);
     CHECK(nh == 0 && nsg == 8 && sg[nsg - 1].x1 == 11);
-    rules::set_fixes(false);
+    rules::set_all(false);
     nh = combat::bolt_path(b, t, 0, 11, 10, 7, false, bh, 16, sg, &nsg, 16);
     CHECK(nh == 0 && nsg >= 1 && nsg <= 8);
     b.ground[10][10] = 0x37;
     b.ground[10][12] = 0x37;
     b.f[0].x = 10;
     combat::occupancy(b);
-    rules::set_fixes(was_fix);
+    rules::set_all(was_fix);
 }
 
 // Slow Poison, Spiritual Hammer, Animate Dead, Restoration
@@ -8972,7 +8977,7 @@ static void test_spells_batch3()
     {
         cf.poison_renew = 0x1A;
         for (int fx = 0; fx < 2; ++fx) {
-            rules::set_fixes(fx == 1);
+            rules::set_all(fx == 1);
             ch = party::Character{};
             ch.rec[0x1A4] = 10; ch.rec[0x195] = party::Okay;
             ch.affects[0][0] = 0x37; ch.affects[0][3] = 0xFF;
@@ -8983,16 +8988,16 @@ static void test_spells_batch3()
             magic::tick_affects(ch, 35);
             CHECK(fx ? ch.n_affects == 3 && ch.affects[2][0] == 0x0F : ch.n_affects == 2);
         }
-        rules::set_fixes(true);
+        rules::set_all(true);
         ch = party::Character{};
         ch.affects[0][0] = 0x37; ch.affects[1][0] = 0x16; ch.affects[1][1] = 120;
         ch.affects[2][0] = 0x0F; ch.affects[2][1] = 10; ch.n_affects = 3; ch.rec[0x1A4] = 10;
-        rules::set_fixes(false);
+        rules::set_all(false);
         CHECK(!rules::poison_clock(ch, 12, cf) && ch.rec[0x1A4] == 9 && ch.affects[2][0] == 0x1A);
         magic::tick_affects(ch, 12);
         CHECK(ch.affects[2][1] == 8);
         cf.poison_renew = 0;
-        rules::set_fixes(true);
+        rules::set_all(true);
     }
     // Constitution: the Girdle of the Dwarves rebuilds the hit points; 20+ heals
     {
@@ -9212,15 +9217,49 @@ static void test_drained()
     CHECK(!create::drained(npc));
     npc.rec[0xE7] = 250;
     CHECK(!create::drained(npc));
-    rules::set_fixes(true);
+    rules::set_all(true);
     CHECK(rules::lost_levels(0xFF) == 0 && rules::lost_levels(2) == 2);
-    rules::set_fixes(false);
+    rules::set_all(false);
     CHECK(rules::lost_levels(0xFF) == 0xFF);
-    rules::set_fixes(true);
+    rules::set_all(true);
+}
+
+// The Game Fixes' and the AD&D 1E Rules' switches (v0.209.0, Tom 2026-11-17:
+// "each a switch"): the tables in their enums' order, names unique and
+// short enough for a key, every entry some game's; each switch off alone
+// turns off itself only; set_all / all_fixes
+static void test_fix_switches()
+{
+    for (int k = 0; k < rules::kFixCount; ++k) {
+        const rules::FixInfo& f = rules::fix_info(k);
+        CHECK(f.id == k);
+        CHECK(f.name && f.name[0] && strlen(f.name) <= 26);
+        CHECK(f.help && strlen(f.help) > 20);
+        CHECK(f.games != 0);
+        for (int j = 0; j < k; ++j) CHECK(strcmp(f.name, rules::fix_info(j).name) != 0);
+        rules::set_fixes_off(1ull << k);
+        for (int j = 0; j < rules::kFixCount; ++j) CHECK(rules::fix(static_cast<rules::Fix>(j)) == (j != k));
+        CHECK(!rules::all_fixes());
+    }
+    uint16_t bits = 0;
+    for (int k = 0; k < rules::kAdndCount; ++k) {
+        const rules::AdndInfo& a = rules::adnd_info(k);
+        CHECK(a.bit && !(a.bit & (a.bit - 1)) && !(bits & a.bit));
+        bits = static_cast<uint16_t>(bits | a.bit);
+        CHECK(a.name && a.name[0] && strlen(a.name) <= 26 && a.games && a.help);
+        rules::set_adnd(static_cast<uint16_t>(rules::kAdndAll & ~a.bit));
+        for (int j = 0; j < rules::kAdndCount; ++j) CHECK(rules::adnd(rules::adnd_info(j).bit) == (j != k));
+    }
+    CHECK(bits == rules::kAdndAll);
+    rules::set_all(false);
+    CHECK(!rules::all_fixes() && !rules::adnd(rules::kAdndThrown) && !rules::fix(rules::kFixSaves));
+    rules::set_all(true);
+    CHECK(rules::all_fixes() && rules::adnd(rules::kAdndAll) == true && rules::fixes_off() == 0);
 }
 
 int main()
 {
+    test_fix_switches();
     test_drained();
     test_rle_known_bytes();
     test_quickacts();

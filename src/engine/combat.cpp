@@ -1673,7 +1673,7 @@ int tick(Battle& b, Event* out, int cap)
         // while still poisoned - "dies from poison"
         if (sting && !slow_over && hasx(f, b.fx->sp.slow_poison)) {
             // (Secret / Darkness / Treasures renew another effect - SPEC 12)
-            const uint8_t re = b.fx->poison_renew && !rules::fixes() ? b.fx->poison_renew : b.fx->sp.poison_damage;
+            const uint8_t re = b.fx->poison_renew && !rules::fix(rules::kFixPoison) ? b.fx->poison_renew : b.fx->sp.poison_damage;
             give_aff(f, re, 10, 0xFF, true);
             if (f.hp() > 1) f.rec[kHp] = static_cast<uint8_t>(f.hp() - 1);
         }
@@ -1997,7 +1997,7 @@ int start_round(Battle& b, create::Dice& d, Event* out, int cap)
         // Darkness's bulette (0x63, facts L5): its handler sets 8 half-attacks
         // one round in four, else 4 - written over at once in the original (it
         // never leaps); with the rules fixes as meant (Tom, 2026-10-23; SPEC 12)
-        if (b.fx && b.fx->dk.rake && rules::fixes() && hasx(f, b.fx->dk.rake)) half2 = d.roll(4, 1) == 1 ? 8 : 4;
+        if (b.fx && b.fx->dk.rake && rules::fix(rules::kFixBulette) && hasx(f, b.fx->dk.rake)) half2 = d.roll(4, 1) == 1 ? 8 : 4;
         if (b.fx && f.has(b.fx->haste)) half2 *= 2;
         if (b.fx && f.has(b.fx->slow)) half2 /= 2;
         f.attacks[1] = attacks_this_round(half2, b.round);
@@ -2407,7 +2407,7 @@ void after_hit_own(Battle& b, int a, int c, int slot, int roll, int hits1, creat
                 give_aff(at, holding, minutes, c, true);
             };
             // (with the fixes the stirge holds 12 hit points' blood: Pool's time / 16)
-            latch_gw(gw.stirge, gw.sucking, Ev::DrainsBlood, rules::fixes() ? 0xCF : 0);
+            latch_gw(gw.stirge, gw.sucking, Ev::DrainsBlood, rules::fix(rules::kFixGHolds) ? 0xCF : 0);
             if (hasx(at, gw.harpy) && tg.up() && b.fx->charm && !tg.has(b.fx->charm) && !saving_throw(tg, 4, 0, d)) {
                 give_aff(tg, b.fx->charm, 0, (at.team() ? 0x80 : 0) | 3, true);
                 tg.rec[kTeam] = static_cast<uint8_t>(at.team());
@@ -2584,7 +2584,7 @@ void after_hit_own(Battle& b, int a, int c, int slot, int roll, int hits1, creat
         }
     }
     if (slot == 1 && hasx(at, m.q_squirt) && out.n > 0 && out.hits[out.n - 1].damage <= 15 && std::abs(tg.x - at.x) <= 1 && std::abs(tg.y - at.y) <= 1) {
-        const int who = rules::fixes() ? c : a;
+        const int who = rules::fix(rules::kFixQAnemone) ? c : a;
         add_event(out, who, Ev::SquirtedQ);
         bool dn = false;
         Harm h;
@@ -2663,7 +2663,7 @@ int queen_ac(const Battle& b, const Fighter& tg, bool rear)
     if (hasx(tg, fx.cough)) {
         front = tg.rec[kAc];
         back = tg.rec[kAcBehind];
-        if (shield && rules::fixes() && front < 0x39) front = 0x39;
+        if (shield && rules::fix(rules::kFixQHooks) && front < 0x39) front = 0x39;
         front -= 2;
         back -= 2;
     }
@@ -2796,13 +2796,13 @@ int queen_roll_hooks(Battle& b, int a, int c, bool* miss, int* fixes_side)
     const bool sees = hasx(at, fx.mon.detect);
     if (hasx(tg, fx.invisible) && !sees) h -= 4;
     if (hasx(tg, fx.q.animals)) {
-        const Fighter& w = rules::fixes() ? at : tg;
+        const Fighter& w = rules::fix(rules::kFixQHooks) ? at : tg;
         if ((w.rec[0x14B] & 0x45) && !hasx(w, fx.mon.detect)) h -= 4;
     }
     if (hasx(tg, fx.blink) && tg.delay == 0) *miss = true;
     if (hasx(tg, fx.q.giants) && (at.rec[0x14B] & 4)) h -= 4;
     if (hasx(tg, fx.q.tgt_minus1)) --h;
-    if (rules::fixes()) {
+    if (rules::fix(rules::kFixQHooks)) {
         if (hasx(tg, fx.race.gnome_extra) && (at.rec[0x14B] & 0x20)) *fixes_side -= 4;
         // (Dispel Evil's -7 against the evil, 0x4DFF8: event 0xB, before the d20 - lost)
         if (hasx(tg, fx.sp.evil_ward) && (at.rec[0x14B] & 1)) *fixes_side -= 7;
@@ -2947,8 +2947,8 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
         // Secret's program never applies these at the roll (its handlers 0x116CE
         // invisibility and 0x1105F Dispel Evil run in phases before the d20 is
         // rolled or at the holder's own turn - the d20 they lower is rolled
-        // after): AD&D's only with rules::fixes()
-        const bool at_roll = !fx.secret || rules::fixes();
+        // after): AD&D's only with the switch
+        const bool at_roll = !fx.secret || rules::fix(rules::kFixSOwn);
         if (at_roll && hasx(tg, fx.invisible) && !sees) side -= 4;              // an invisible target
         if (at_roll && hasx(tg, fx.sp.evil_ward) && (at.rec[0x14B] & 1)) side -= 7;   // Dispel Evil against the evil
         // The races: dwarves +1 against orcs, gnomes +1 against their foes;
@@ -2988,7 +2988,7 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
             // Its dwarves' / gnomes' -4 against flags 1 & 4 / & 0x20 (handlers
             // 0x12269 / 0x1228E) come before the roll (phase 0xB, 0x16259) and
             // are lost: only with the rules fixes
-            if (rules::fixes()) {
+            if (rules::fix(rules::kFixSOwn)) {
                 if (hasx(tg, fx.race.giants) && (at.rec[0x14B] & 4)) side -= 4;
                 if (hasx(tg, fx.race.gnome_extra) && (at.rec[0x14B] & 0x20)) side -= 4;
             }
@@ -3022,7 +3022,7 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
         // the roll and is lost; only the saves count. With the Game Fixes
         // the AD&D spell: an evil / good attacker -2 to hit one warded -
         // SPEC 12)
-        if (rules::fixes()) {
+        if (rules::adnd(rules::kAdndProtEvil)) {
             const int al = at.rec[0x11B];
             bool warded = false;
             if ((al == 0 || al == 3 || al == 6) && (hasx(tg, fx.prot_good) || hasx(tg, fx.mon.prot_good_too))) warded = true;
@@ -3098,10 +3098,10 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
             log_roll(c, RollKind::Hit, out.n, roll, static_cast<int8_t>(at.rec[kHit]) - 40 + side + q_hook + extra, ac - 40);
             // Blinking, once it has acted this round: not there to be hit
             // (Secret's 0x11C9D runs only at the blinker's own turn and for being
-            // seen - never at the roll: AD&D's with rules::fixes())
-            if (!qh && b.fx && b.fx->blink && tg.has(b.fx->blink) && tg.delay == 0 && (!b.fx->secret || rules::fixes())) hit = false;
+            // seen - never at the roll: AD&D's with the switch)
+            if (!qh && b.fx && b.fx->blink && tg.has(b.fx->blink) && tg.delay == 0 && (!b.fx->secret || rules::fix(rules::kFixSOwn))) hit = false;
             // Displacement: the first attack (past a 1) on it this fight misses, even a 20
-            if (b.fx && b.fx->items.displace && roll > 1 && !(b.fx->items.displace_unused && !rules::fixes())) {
+            if (b.fx && b.fx->items.displace && roll > 1 && !(b.fx->items.displace_unused && !rules::fix(rules::kFixSOwn))) {
                 const int k = find_aff(tg, b.fx->items.displace);
                 if (k >= 0 && !(tg.aff[k][3] & 0x10)) {
                     tg.aff[k][3] |= 0x10;
@@ -3121,7 +3121,7 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
             int dmg = nat + bo;
             // The Dark Queen's 0x83 with the Game Fixes (round 18; SPEC 12):
             // its handler's damage, which the original throws away
-            if (q_hdmg >= 0 && rules::fixes()) dmg = q_hdmg;
+            if (q_hdmg >= 0 && rules::fix(rules::kFixQItemDmg)) dmg = q_hdmg;
             if (b.fx && b.fx->dk.kalistes && hasx(at, b.fx->dk.kalistes)) {
                 dmg = kalistes_blow(at, d, dmg);
                 if (at.blows >= 1 && at.blows <= 6) h.weapon = at.blows;
@@ -3314,7 +3314,7 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
             // A flask of oil burns (Tom, 2026-10-12: "the flasks of oil should
             // do fire damage" - the originals made it a plain 2d6 blow): its
             // blow is fire, so a troll it brings down stays down
-            const bool oil = item && names && names->flask() && item[0x2E] == names->flask();
+            const bool oil = item && names && names->flask() && item[0x2E] == names->flask() && rules::adnd(rules::kAdndItems);   // (Magic Items, AD&D 1E Rules)
             const int blow_kind = oil ? 1 : flame ? 9 : 0;
             if (blow_kind) g_kind = blow_kind;
             if (bane) {
@@ -3514,9 +3514,9 @@ int turn_holds(Battle& b, int i, create::Dice& d, Event* out, int cap, int* bite
         return &x;
     };
     // The stirge: blood while both are in the fight and it isn't full
-    // (Gateway's with rules::fixes(): its 0x96 never drinks in the original)
+    // (Gateway's with the switch: its 0x96 never drinks in the original)
     const Facts::GateFx& gw = b.fx->gw;
-    const bool gw_fix = rules::fixes() && gw.ways;
+    const bool gw_fix = rules::fix(rules::kFixGHolds) && gw.ways;
     const uint8_t suck = m.sucking ? m.sucking : gw_fix ? gw.sucking : 0;
     const int s = suck ? find_aff(f, suck) : -1;
     if (s >= 0) {
@@ -3566,7 +3566,7 @@ int turn_holds(Battle& b, int i, create::Dice& d, Event* out, int cap, int* bite
         if (dn) ev(v, Ev::Down);
         return n;
     }
-    // Gateway's squid with rules::fixes(): it squeezes the one it holds - two
+    // Gateway's squid with the switch: it squeezes the one it holds - two
     // of its handler's 1d2 (GAME.OVR 0x1ABA3, never reached in the original);
     // its turn goes on
     const int q = gw_fix && gw.constrict ? find_aff(f, gw.constrict) : -1;
@@ -3650,8 +3650,8 @@ bool resists(Battle& b, int c, int effect, const Harm& h, create::Dice& d)
     if (hasx(f, m.elf_sleep) && sleep_charm && d.roll(100, 1) <= 90) return true;
     if (hasx(f, m.charm_sleep) && sleep_charm) return true;
     // Secret's Periapt of Health: immune to disease (AD&D's; its program's
-    // handler does nothing - with rules::fixes() only)
-    if (rules::fixes() && fx.items.no_disease && hasx(f, fx.items.no_disease) && effect > 0 &&
+    // handler does nothing - with the switch only)
+    if (rules::fix(rules::kFixSOwn) && fx.items.no_disease && hasx(f, fx.items.no_disease) && effect > 0 &&
         (effect == fx.sp.ill || effect == fx.sp.weak || effect == fx.sp.sick))
         return true;
     // Darkness's 0x4C (GAME.OVR 0x1C661, phase 9): the disease does nothing (R14)
@@ -3966,7 +3966,7 @@ int award(Battle& b, int total, bool give)
         for (int k = 0; k < 8; ++k)
             if (r[0x109 + k]) ++classes;
         switch (r[0x75]) {
-        case 0: if (wis >= (b.fx && b.fx->cleric_xp_wis && !rules::fixes() ? b.fx->cleric_xp_wis : 16)) add += share / 10; break;
+        case 0: if (wis >= (b.fx && b.fx->cleric_xp_wis && !rules::fix(rules::kFixClericXp) ? b.fx->cleric_xp_wis : 16)) add += share / 10; break;
         case 2: if (str > 15) add += share / 10; break;
         case 3: if (str > 15 && wis > 15) add += share / 10; break;
         case 4: if (str > 15 && in > 15 && wis > 15) add += share / 10; break;
@@ -4841,7 +4841,7 @@ bool saving_throw(const Fighter& f, int type, int bonus, create::Dice& d)
         // Dwarves', gnomes', halflings' Constitution: against spells and wands
         // (Secret's program never applies it - 0x61 is in no effect phase;
         // only with the rules fixes there)
-        if ((type == 4 || type == 2) && hasx(f, fx.race.con_save) && (!fx.race.secret_flags || rules::fixes())) {
+        if ((type == 4 || type == 2) && hasx(f, fx.race.con_save) && (!fx.race.secret_flags || rules::fix(rules::kFixSOwn))) {
             const int con = f.rec[0x19];
             bonus += con >= 4 && con <= 6 ? 1 : con >= 7 && con <= 10 ? 2 : con >= 11 && con <= 13 ? 3 : con >= 14 && con <= 17 ? 4
                      : con >= 18 && con <= 20 ? 5 : 0;
@@ -4867,7 +4867,7 @@ bool saving_throw(const Fighter& f, int type, int bonus, create::Dice& d)
                 bool warded = hasx(f, fx.prot_evil) || hasx(f, fx.mon.prot_evil_near);
                 // (next to a 10' radius one: Game Fixes - the originals' 0x2D is the
                 // holder's own, the handler of 0x08: Curse GAME.OVR 0x1010B, Darkness 0x1ACC0)
-                for (int c = 0; !warded && fx.mon.prot_evil_near && rules::fixes() && c < g_b->n; ++c) {
+                for (int c = 0; !warded && fx.mon.prot_evil_near && rules::adnd(rules::kAdndProtEvil) && c < g_b->n; ++c) {
                     const Fighter& o = g_b->f[c];
                     if (&o == &f || !o.size || !f.size || !o.has(fx.mon.prot_evil_near)) continue;
                     const int ddx = o.x - f.x, ddy = o.y - f.y;
@@ -4884,7 +4884,7 @@ bool saving_throw(const Fighter& f, int type, int bonus, create::Dice& d)
     // (with the Game Fixes a total below 0 is no save - AD&D's; the
     // original's wrap made a 2 with -4 - blinded, a bestowed curse - a save
     // made: the status matrix, 2026-11-01; SPEC 12)
-    if (total < 0 && rules::fixes()) return false;
+    if (total < 0 && rules::fix(rules::kFixSaves)) return false;
     return (total & 0xFF) >= f.rec[0xDF + type];
 }
 
@@ -4968,7 +4968,7 @@ int power_of(const Rec& r, const classes::Tables& st, int s, bool item, int robe
     }
     // (Secret, GAME.OVR 0x3AFD7, and Darkness / Treasures, 0x36C2E /
     // 0x40CC7: no paladin in either test - spells::power)
-    const bool pal_rule = !(st.lay.secret || st.lay.dk) || rules::fixes();
+    const bool pal_rule = !(st.lay.secret || st.lay.dk) || rules::fix(rules::kFixPalCast);
     // The levels that count (classes::skill_level): a human who changed
     // class adds the old class's levels once the new class has passed them
     // (coab's facts: spellMaxTargetCount uses the skill levels) - Darkness /
@@ -5424,8 +5424,9 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
                 plus += pw;
             }
             if (fs.per == 1) plus += pw;
-            if (fs.per == 2) {
-                count = (pw + 1) / 2;
+            if (fs.per == 2 || fs.per == 7) {
+                // (7: PoolRad's - level / 2, its 1st level none; AD&D's with the Magic Missile rule)
+                count = fs.per == 7 && !rules::adnd(rules::kAdndMissile) ? pw / 2 : (pw + 1) / 2;
                 plus += count;
             }
             if (fs.per == 3) count = pw;
@@ -5562,7 +5563,7 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
                 say(who[k], Did::Unaffected, 0);
                 continue;
             }
-            if (b.fx && b.fx->feeble_drain && !rules::fixes()) {
+            if (b.fx && b.fx->feeble_drain && !rules::fix(rules::kFixKFeeble)) {
                 // Death Knights' own (feeble_drain): the drain-2 effect for
                 // ever, then its handler - the target's target drained 2
                 // levels ("gets drained")
@@ -5770,7 +5771,7 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
             // (Game Fixes: the bestowed curse as well - what the original lifts stays)
             const uint8_t cz = b.fx && b.fx->curse_slip ? b.fx->curse_slip : b.fx ? b.fx->bestow : 0;
             int at = cz ? find_aff(f, cz) : -1;
-            if (at < 0 && b.fx && cz != b.fx->bestow && b.fx->bestow && rules::fixes()) at = find_aff(f, b.fx->bestow);
+            if (at < 0 && b.fx && cz != b.fx->bestow && b.fx->bestow && rules::fix(rules::kFixRemCurse)) at = find_aff(f, b.fx->bestow);
             if (at >= 0) {
                 drop_aff(f, at);
                 say(who[k], Did::Word2, 0);         // "is Cured"
@@ -5900,7 +5901,7 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
     case SpellDoes::FullHeal:
         // (Secret's Barkskin with the Game Fixes: AD&D's - no healing, its
         // effect 0x0D for 4 + the level rounds; SPEC 12)
-        if (spell == 0x5A && b.fx && b.fx->secret && rules::fixes()) {
+        if (spell == 0x5A && b.fx && b.fx->secret && rules::fix(rules::kFixSBark)) {
             for (int k = 0; k < m; ++k)
                 if (b.f[who[k]].up()) give_aff(b.f[who[k]], 0x0D, 4 + pw, 0, false);
             break;
@@ -5933,7 +5934,7 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
                 // (Death Knights: 0x3D - and its Feeblemind's 0x44 with the Game Fixes)
                 const uint8_t fb = b.fx->heal_feeble ? b.fx->heal_feeble : b.fx->feeble;
                 at = fb ? find_aff(f, fb) : -1;
-                if (at < 0 && b.fx->heal_feeble2 && rules::fixes()) at = find_aff(f, b.fx->heal_feeble2);
+                if (at < 0 && b.fx->heal_feeble2 && rules::fix(rules::kFixKHeal)) at = find_aff(f, b.fx->heal_feeble2);
                 if (at >= 0) {
                     drop_aff(f, at);
                     if (fs.word4) say(who[k], Did::Word4, 0);
@@ -5960,8 +5961,8 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
             const int left = d.roll(fs.sides, fs.n);
             // (the original, GAME.OVR 0x305DB: the damage HP - 1d4 as a byte - under
             // the roll it wraps round to over 250: dead. AD&D's - nothing then -
-            // with rules::fixes())
-            if (f.hp() == left || (f.hp() < left && rules::fixes())) continue;
+            // with the switch)
+            if (f.hp() == left || (f.hp() < left && rules::fix(rules::kFixHarm))) continue;
             Harm h = hs;
             h.dice = fs.n;
             bool dn = false;
@@ -6148,7 +6149,7 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
             if (f.hp_max() <= 100 && total + f.hp_max() <= 100) total += f.hp_max();
         }
         int rounds = minutes;
-        if (rules::fixes()) {
+        if (rules::fix(rules::kFixPwBlind)) {
             rounds = d.roll(4, 1) + 1;
             if (total < 51) rounds *= 10;
         }
@@ -6177,7 +6178,7 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
         // With the rules fixes AD&D's (1st edition; Tom, 2026-10-23 - SPEC
         // 12): by hit points now - the first of 11-60 alone, else those of
         // 10 or less while their total stays at 120 or less
-        if (rules::fixes()) {
+        if (rules::adnd(rules::kAdndPwk)) {
             const int h0 = b.f[who[0]].hp();
             if (h0 > 10 && h0 <= 60) {
                 if (b.f[who[0]].up()) slay(0);
@@ -6455,7 +6456,7 @@ int bolt_path(const Battle& b, const Tables& t, int caster, int tx, int ty, int 
 {
     *n_segs = 0;
     if (b.f[caster].x == tx && b.f[caster].y == ty) return 0;
-    if (rules::fixes()) return bolt_exact(b, t, caster, tx, ty, length, hits, hit_cap, segs, n_segs, seg_cap);
+    if (rules::fix(rules::kFixBolt)) return bolt_exact(b, t, caster, tx, ty, length, hits, hit_cap, segs, n_segs, seg_cap);
     bool looped = false;
     const int nh = bolt_original(b, t, caster, tx, ty, length, near_rule, hits, hit_cap, segs, n_segs, seg_cap,
                                  false, &looped);
@@ -6494,7 +6495,7 @@ int heal_target(const Battle& b, int i)
                 const int s = o.status();
                 if (o.member < 0 || o.size || o.x != x || o.y != y) continue;
                 if (s == party::Dead || s == party::Stoned || s == party::Gone) continue;
-                if (rules::fixes() && o.team() != f.team()) continue;
+                if (rules::fix(rules::kFixHealDead) && o.team() != f.team()) continue;
                 body = c;
             }
         }
@@ -7328,7 +7329,7 @@ int turn_undead(Battle& b, const Tables& t, int cleric, create::Dice& d, int* ou
     // tenth (Gateway: none at 0)
     int lv = skill_level(me.rec, 0);
     if (t.turn_rule == 1 && skill_level(me.rec, 3) - 2 > lv) lv = skill_level(me.rec, 3) - 2;
-    const int col = lv >= 1 && lv <= 8 ? (t.turn_rule == 1 || rules::fixes() ? lv : me.rec[0x109]) : lv >= 9 && lv <= 13 ? 9 : 10;
+    const int col = lv >= 1 && lv <= 8 ? (t.turn_rule == 1 || rules::fix(rules::kFixCFormer) ? lv : me.rec[0x109]) : lv >= 9 && lv <= 13 ? 9 : 10;
     int count = d.roll(12, 1);
     const int roll = d.roll(20, 1);
     int extra = 6, n = 0;
@@ -8054,8 +8055,8 @@ void release_holds(Battle& b, int i)
     let_go(b, f, m.sucking);
     let_go(b, f, m.holding);
     // (Gateway's list 0D 3A 8B 90 96 - GAME.OVR img 0x5F10: the stirge's hold
-    // goes before it can drink; with rules::fixes() it holds on and drinks)
-    if (!rules::fixes()) let_go(b, f, b.fx->gw.sucking);
+    // goes before it can drink; with the switch it holds on and drinks)
+    if (!rules::fix(rules::kFixGHolds)) let_go(b, f, b.fx->gw.sucking);
     const uint8_t mine[2] = {m.suffocate, m.held_fast};
     for (uint8_t t : mine) {
         const int k = t ? find_aff(f, t) : -1;
@@ -8296,7 +8297,7 @@ int special(Battle& b, const Tables& t, int i, create::Dice& d, Event* out, int 
     // Game Fixes
     if (m.stench && hasx(f, m.stench)) {
         ev(i, Ev::EmitsStench);
-        const bool fix = rules::fixes();
+        const bool fix = rules::fix(rules::kFixStench);
         for (int c = 0; c < b.n; ++c) {
             Fighter& v = b.f[c];
             if (c == i || !v.size || !v.up() || v.team() == f.team()) continue;

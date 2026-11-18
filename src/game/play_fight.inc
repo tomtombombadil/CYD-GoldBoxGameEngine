@@ -526,7 +526,7 @@ void side_bonuses(combat::Battle& b)
         b.to_hit_party = static_cast<int8_t>(vm->get(0x7F71));
         b.to_hit_monsters = static_cast<int8_t>(vm->get(0x7F70));
         if (gateway()) level = vm->get(0x4CF4);
-        else if (rules::fixes() && (secret_files() || dkk())) level = vm->get(0x4CF4) - (dkk() ? 1 : 0);
+        else if (rules::fix(rules::kFixDiff) && (secret_files() || dkk())) level = vm->get(0x4CF4) - (dkk() ? 1 : 0);
     }
     static constexpr int8_t kLevel[5] = {2, 1, 0, -1, -2};
     if (level >= 0 && level < 5) b.to_hit_party += kLevel[level];
@@ -3916,7 +3916,7 @@ void tr_jump(pic::Canvas& c)
     char w[32];
     draw_fight(c);
     const bool moved = x >= 0 && y >= 0 &&
-                       (rules::fixes() ? combat::teleport(b, fg->t, i, x, y) : combat::jump_to(b, i, x, y));
+                       (rules::fix(rules::kFixTBoots) ? combat::teleport(b, fg->t, i, x, y) : combat::jump_to(b, i, x, y));
     if (moved) {
         // (moved first here, said after: the pages show it in its new square)
         if (combat::lose_aff(f, v.tr_held)) {
@@ -4629,7 +4629,7 @@ void try_step(pic::Canvas& c, int dir)
     // original still takes the step (coab's move_step_away_attack, then the
     // step - only one out of the fight stops), AD&D's with the Game Fixes:
     // no step, the turn over (SPEC 12)
-    if (rules::fixes() && (combat::helpless(b, f) || combat::stunned(b, f))) {
+    if (rules::fix(rules::kFixHeld) && (combat::helpless(b, f) || combat::stunned(b, f))) {
         draw_fight(c);
         say(c, FSt::Next);
         return;
@@ -5428,7 +5428,7 @@ void ai_step(pic::Canvas& c)
         free_attacks(c, i, p.dir);
         // (held / stunned by a free attack: no step with the Game Fixes; held
         // fast - moves 0 - none at all: see try_step)
-        if (f.up() && f.moves > 0 && !(rules::fixes() && (combat::helpless(b, f) || combat::stunned(b, f)))) {
+        if (f.up() && f.moves > 0 && !(rules::fix(rules::kFixHeld) && (combat::helpless(b, f) || combat::stunned(b, f)))) {
             combat::step(b, i, p.dir);
             sfx(sound::kStep);
             f.moves = static_cast<int16_t>(f.moves > cost ? f.moves - cost : 0);
@@ -5878,14 +5878,16 @@ void fight_cleanup_party(combat::Result r)
         // (PoolRad's fight end - no list of effects it takes away - keeps the
         // charm's effect; with Game Fixes it ends with the fight, as the later
         // games' lists and AD&D have it: Tom, 2026-11-11, Valhingen's vampire)
-        if (charm && rules::fixes()) rules::remove_affects(ch, charm);
+        if (charm && rules::fix(rules::kFixPCharm)) rules::remove_affects(ch, charm);
         ch.rec[0x197] = 0;                              // (whatever happened: the party's side after a fight)
         for (uint8_t t : d->prof->fight.ends)
-            if (t) rules::remove_affects(ch, t);
+            // (Champions' bozak stun 0x6A: in the engine's list - Bozak Stun, Game Fixes)
+            if (t && !(t == 0x6A && d->prof->game == games::Game::ChampionsOfKrynn && !rules::fix(rules::kFixBozak)))
+                rules::remove_affects(ch, t);
         // Darkness's dragon fear (0x78, R17): the original keeps its -2 / -2
         // after the fight (no time, not in the list); with the fixes it ends
         // with the fight (Tom, 2026-10-23; SPEC 12)
-        if (rules::fixes() && d->prof->fight.facts.dk.feared) rules::remove_affects(ch, d->prof->fight.facts.dk.feared);
+        if (rules::fix(rules::kFixDragonFear) && d->prof->fight.facts.dk.feared) rules::remove_affects(ch, d->prof->fight.facts.dk.feared);
         rules::keep_hammer(ch, *names, d->facts);       // (its effect ended: the hammer goes)
         // Animated dead: they collapse - dead, on their own side again
         const uint8_t anim = d->prof->fight.facts.sp.animated;
@@ -6346,7 +6348,7 @@ bool npc_share_page(pic::Canvas& c)
     for (int k = 0; k < 7; ++k) {
         if (ground->money[k] <= 0) continue;
         int each = ground->money[k] / total;
-        if (!rules::fixes()) each &= 0xFF;
+        if (!rules::fix(rules::kFixPShare)) each &= 0xFF;
         ground->money[k] -= each * npc;
         any = true;
     }
@@ -7038,7 +7040,7 @@ void summon(int caster, const combat::FightSpell& fs)
             // with Game Fixes every square it takes is free plain ground)
             const int size = (r[0xDE] & 7) ? (r[0xDE] & 7) : 1;
             int sx[4] = {}, sy[4] = {};
-            const int n_sq = rules::fixes() ? combat::squares(size, sx, sy) : 1;
+            const int n_sq = rules::fix(rules::kFixSummon) ? combat::squares(size, sx, sy) : 1;
             auto free_at = [&](int xx, int yy) {
                 for (int q = 0; q < n_sq; ++q) {
                     const int px = xx + sx[q], py = yy + sy[q];

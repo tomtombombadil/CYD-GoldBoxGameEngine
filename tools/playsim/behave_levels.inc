@@ -473,13 +473,13 @@ void vbad(const char* what, const char* fmt, ...)
 bool want_saves(int k, int L, int out[5])
 {
     auto row = [&](int l) {
-        const std::vector<int>* r = rules::fixes() ? lvr("savefix", {k, l}) : lvr("saveorig", {k, l});
+        const std::vector<int>* r = rules::all_fixes() ? lvr("savefix", {k, l}) : lvr("saveorig", {k, l});
         return r ? r : lvr("save", {k, l});
     };
     const auto* r = row(L);
     if (!r || r->size() < 7) return false;
     for (int s = 0; s < 5; ++s) out[s] = (*r)[2 + s];
-    for (int l = 1; rules::fixes() && l < L; ++l)
+    for (int l = 1; rules::all_fixes() && l < L; ++l)
         if (const auto* e = row(l))
             for (int s = 0; s < 5; ++s) out[s] = std::min(out[s], (*e)[2 + s]);
     return true;
@@ -536,7 +536,7 @@ void check_level(const party::Character& c, int k, int tag, int L, int stat, con
                 int want[8];
                 bool ok = true;
                 for (int s = 0; s < 8; ++s) {
-                    want[s] = rules::fixes() ? std::max(0, (*t)[2 + s]) : (*t)[2 + s] & 0xFF;
+                    want[s] = rules::all_fixes() ? std::max(0, (*t)[2 + s]) : (*t)[2 + s] & 0xFF;
                     ok = ok && c.rec[0xEA + s] == want[s];
                 }
                 if (!ok) {
@@ -580,13 +580,13 @@ void values()
     }
     static party::Character c, was;
     int classes_done = 0, levels_done = 0;
-    const bool fixes0 = rules::fixes();
+    const bool fixes0 = rules::all_fixes();
     for (const auto& cr : lvo["class"]) {
         const int k = cr[0], tag = cr[1], last = cr[2];
         if (k == 1 || (k == 7 && !krynn()) || last < 2) continue;      // (no druids; Curse's monk unused)
         ++classes_done;
         for (int fx = 0; fx < 2; ++fx) {
-            rules::set_fixes(fx == 1);
+            rules::set_all(fx == 1);
             for (int con : {18, 16, 12, 5})
                 for (int hi = 0; hi < 2; ++hi) {
                     if (tag && con != 18) continue;
@@ -638,11 +638,11 @@ void values()
                         // (`hpfix`: the Game Fixes' gain where the original's is a mistake -
                         // the Krynn games' paladins, not fighters for their hit points)
                         const auto* hr = tag ? lvr("hpv", {k, tag, L + 1}) : nullptr;
-                        if (!tag && rules::fixes()) hr = lvr("hpfix", {k, L + 1, con});
+                        if (!tag && rules::all_fixes()) hr = lvr("hpfix", {k, L + 1, con});
                         if (!tag && !hr) hr = lvr("hp", {k, L + 1, con});
                         if (hr) {
                             int want = (*hr)[tag ? 3 + (hi ? 0 : 1) : 3 + (hi ? 0 : 1)];
-                            if (rules::fixes() && want < 1) want = 1;
+                            if (rules::all_fixes() && want < 1) want = 1;
                             const int up = c.hp_max() - was.hp_max();
                             ++vchecks;
                             if (up != want || c.hp() - was.hp() != up) {
@@ -669,7 +669,7 @@ void values()
             }
         }
     }
-    rules::set_fixes(fixes0);
+    rules::set_all(fixes0);
     char w[200];
     snprintf(w, sizeof w, "values: %d classes trained to their last levels (%d levels), %ld checks: V1-V8", classes_done,
              levels_done, vchecks);
@@ -704,7 +704,7 @@ void multi()
     }
     const int fam = ov("hpfam", {}, 0, -1);
     static party::Character c, was;
-    const bool fixes0 = rules::fixes();
+    const bool fixes0 = rules::all_fixes();
     int combos = 0, steps = 0;
     long checks0 = vchecks;
     const int fails0 = vfails;
@@ -727,7 +727,7 @@ void multi()
         for (int fx = 0; fx < 2; ++fx)
             for (int con : multi_cons())
                 for (int hi = 0; hi < 2; ++hi) {
-                    rules::set_fixes(fx == 1);
+                    rules::set_all(fx == 1);
                     char how[64];
                     snprintf(how, sizeof how, "fixes %s, Con %d, dice %s", fx ? "on" : "off", con, hi ? "high" : "low");
                     // A half-elf (no race saves; its limits only end the run sooner) of the multi-class, each class 1st
@@ -772,17 +772,17 @@ void multi()
                             const bool dice = fam == 3 || L < stop;
                             const int n = fam == 3 ? ov("hd", {pick}, 1, 1) : 1;
                             int past = ov("past", {pick}, 1, 0);
-                            if (rules::fixes() && lvr("pastfix", {pick})) past = ov("pastfix", {pick}, 1, past);
+                            if (rules::all_fixes() && lvr("pastfix", {pick})) past = ov("pastfix", {pick}, 1, past);
                             int fig = ov("mfig", {pick, con}, 2, 0);
-                            if (rules::fixes() && lvr("mfigfix", {pick, con})) fig = ov("mfigfix", {pick, con}, 2, fig);
+                            if (rules::all_fixes() && lvr("mfigfix", {pick, con})) fig = ov("mfigfix", {pick, con}, 2, fig);
                             const int roll = dice ? n * (hi ? sides : 1) : past;
                             int want;
                             // (Game Fixes - Tom, 2026-11-06: each class's gain as a single
                             // class's - the oracle's `hp` / `hpfix` rows, at least 1 - over
                             // the classes held, at least 1)
-                            const auto* sr = rules::fixes() ? lvr("hpfix", {pick, L, con}) : nullptr;
-                            if (rules::fixes() && !sr) sr = lvr("hp", {pick, L, con});
-                            const bool unknown = rules::fixes() && !sr;      // (no single-class row: not checked)
+                            const auto* sr = rules::all_fixes() ? lvr("hpfix", {pick, L, con}) : nullptr;
+                            if (rules::all_fixes() && !sr) sr = lvr("hp", {pick, L, con});
+                            const bool unknown = rules::all_fixes() && !sr;      // (no single-class row: not checked)
                             if (sr) {
                                 const int g = std::max(1, (*sr)[hi ? 3 : 4]);
                                 want = std::max(1, g / held);
@@ -799,15 +799,15 @@ void multi()
                             } else {
                                 const int inc = std::max(1, roll / held);
                                 const int cb = (dice ? fig : 0) & 0xFF;
-                                int cp = rules::fixes() ? static_cast<int8_t>(cb) / held : cb / held;
-                                if (rules::fixes() && inc + cp < 1) cp = 1 - inc;
+                                int cp = rules::all_fixes() ? static_cast<int8_t>(cb) / held : cb / held;
+                                if (rules::all_fixes() && inc + cp < 1) cp = 1 - inc;
                                 want = inc + cp;
                             }
                             const int up = static_cast<uint8_t>(c.hp_max() - was.hp_max());
                             vchecks += !unknown;
                             if (getenv("LVSHOW"))       // (a line a training: hand checks)
                                 printf("  hp multi %d class %d -> %d Con %d dice %s fixes %s: +%d (want %d%s)\n", id, pick, L,
-                                       con, hi ? "high" : "low", rules::fixes() ? "on" : "off", up, want,
+                                       con, hi ? "high" : "low", rules::all_fixes() ? "on" : "off", up, want,
                                        unknown ? ", not checked" : "");
                             if (!unknown && up != (want & 0xFF)) {
                                 snprintf(w, sizeof w, "V6m hit points multi %d class %d level %d (%s)", id, pick, L, how);
@@ -859,7 +859,7 @@ void multi()
                     }
                 }
     }
-    rules::set_fixes(fixes0);
+    rules::set_all(fixes0);
     char w[200];
     snprintf(w, sizeof w, "multi: %d multi-classes trained a class at a time (%d trainings), %ld checks: V3-V7, V6m", combos,
              steps, vchecks - checks0);

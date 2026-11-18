@@ -58,7 +58,7 @@ int con_fig(int con, int k)
 // The hit point routine (facts 43.1) for the classes in `mask`
 int want_gain(const int lv[8], int mask, int con, bool high, int held, int* inc)
 {
-    if (rules::fixes() && held > 1) {
+    if (rules::all_fixes() && held > 1) {
         // (Game Fixes - Tom, 2026-11-06: each class as a single class - its
         // roll + Constitution x count, or past the hit dice its fixed gain, at
         // least 1 - summed, over the classes held, at least 1)
@@ -93,8 +93,8 @@ int want_gain(const int lv[8], int mask, int con, bool high, int held, int* inc)
     int i = (rolled & 0xFF) / held;
     if (i < 1) i = 1;
     *inc = i;
-    int cp = rules::fixes() ? static_cast<int8_t>(cs & 0xFF) / held : (cs & 0xFF) / held;
-    if (rules::fixes() && i + cp < 1) cp = 1 - i;
+    int cp = rules::all_fixes() ? static_cast<int8_t>(cs & 0xFF) / held : (cs & 0xFF) / held;
+    if (rules::all_fixes() && i + cp < 1) cp = 1 - i;
     return i + cp;
 }
 // Training's race limits (darkness_facts.md 36; Darkness race numbers)
@@ -169,7 +169,7 @@ void creation()
                 for (size_t ai = 1; al && ai < al->size(); ++ai)
                     for (int sex = 0; sex < 2; ++sex)
                         for (int high = 0; high < 2; ++high) {
-                            rules::set_fixes(fix);
+                            rules::set_all(fix);
                             if (high) dice_high();
                             else dice_low();
                             create::begin(c, m->tables, m->facts, m->dice, race, sex, cls, (*al)[ai]);
@@ -325,7 +325,7 @@ void creation()
                         }
             }
         }
-    rules::set_fixes(true);
+    rules::set_all(true);
     snprintf(w, sizeof w, "Create New Character: %d race / class / alignment / sex / dice / fixes cases", ncase);
     expect(P, w, nbad == 0, "%d wrong", nbad);
 }

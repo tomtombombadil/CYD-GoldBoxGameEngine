@@ -139,7 +139,7 @@ Values expected(const Raw& r, const uint8_t (*it)[items::kRecordSize], int n)
         if ((ti.flags & 0x01) && arrows) plus += sb(arrows[0x32]);
         v.b1 += plus;
         // (Secret: any race - GAME.OVR 0x382C6; AD&D's elves only with the fixes on)
-        if (in_row("m_hit_types", weapon[0x2E]) && (!rules::fixes() || s[0x6B] == 1)) ++plus;
+        if (in_row("m_hit_types", weapon[0x2E]) && (!rules::all_fixes() || s[0x6B] == 1)) ++plus;
         v.hit += plus;
         v.d1 = ti.dice;
         v.s1 = ti.sides;
@@ -212,7 +212,7 @@ void every_monster(bool fixes_on)
 {
     using namespace play;
     int checked = 0;
-    rules::set_fixes(fixes_on);
+    rules::set_all(fixes_on);
     const char* Q = fixes_on ? "secret monsters (fixes on)" : "secret monsters";
     for (int id : ids()) {
         Raw r;
@@ -337,7 +337,7 @@ void every_monster(bool fixes_on)
         ++checked;
     }
     printf("  (%d monsters)\n", checked);
-    rules::set_fixes(true);
+    rules::set_all(true);
 }
 
 // ---- A2: the Level (GAME.OVR 0x101A) on every monster: the other side's
@@ -773,7 +773,7 @@ void effects()
             {5, 45, 1, true, "5 + 45 hits one with Protection from Evil (an evil monster)"},
             {5, 45, 2, false, "Game Fixes: 5 + 45 misses one with Protection from Evil (AD&D's -2)"}};
         for (const auto& c : th) {
-            rules::set_fixes(c.pe == 2);
+            rules::set_all(c.pe == 2);
             only({m, p});
             put(m, 1, 11, 10, 60, 5);
             F(m).rec[0x11B] = 8;                         // (chaotic evil)
@@ -796,7 +796,7 @@ void effects()
             snprintf(w, sizeof w, "a monster's blow: %s", c.what);
             expect(Q, w, hits(r) == c.hits && (!c.hits || F(p).hp() == 60 - (4 + 5 + 3)), "hit %d, HP %d", hits(r), F(p).hp());
         }
-        rules::set_fixes(true);
+        rules::set_all(true);
     }
     // Morale (GAME.OVR 0xE22F, Curse's): control & 0x7F x 2 (0x80: 0) - under
     // the share of its hit points lost, or 0: its side's health against 100
@@ -1078,7 +1078,7 @@ void fight_end()
                     {6, {0x17}, 1, "thief"}, {1, {0x15}, 1, "druid (none)"}, {3, {0x11, 0x15}, 1, "paladin"}};
     for (int fixes = 0; fixes < 2; ++fixes)
         for (int value : {15, 16}) {
-            rules::set_fixes(fixes != 0);
+            rules::set_all(fixes != 0);
             for (int i = 0; i < 6; ++i) {
                 put(i, 0, 2 + i, 2, 30);
                 for (int k = 0x10; k < 0x1E; ++k) F(i).rec[k] = 10;
@@ -1096,7 +1096,7 @@ void fight_end()
                 expect(Q, w, share == 1000 && xp(i) == want, "share %d, got %u, the original's %u", share, xp(i), want);
             }
         }
-    rules::set_fixes(true);
+    rules::set_all(true);
     // Out of the fight (in combat 0) or animated: no share, not counted;
     // a fighter / magic-user (class 13) half
     for (int i = 0; i < 6; ++i) {

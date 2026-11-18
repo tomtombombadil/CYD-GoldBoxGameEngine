@@ -131,7 +131,7 @@ void fixes_checks()
             expect(D_, "a fight for dragon fear", false);
             return;
         }
-        rules::set_fixes(fix);
+        rules::set_all(fix);
         const uint8_t feared = play::fg->b.fx->dk.feared;
         dkfight::add_aff(0, feared);
         party::Character& ch = play::pt->m[F(0).member];
@@ -141,7 +141,7 @@ void fixes_checks()
         // The bulette (0x63): half-attacks 4 in its second slot; 1d4 = 1 -
         // the original's leap never takes (2 attacks), mended: 8 halves (4)
         dkfight::new_fight();
-        rules::set_fixes(fix);
+        rules::set_all(fix);
         combat::Battle& b = play::fg->b;
         int mon = -1;
         for (int i = 0; i < b.n && mon < 0; ++i)
@@ -165,7 +165,7 @@ void fixes_checks()
         snprintf(w, sizeof w, "the bulette's leap, Game Fixes %s: 1d4 = 1 %d claws, else 2", fix ? "on" : "off", fix ? 4 : 2);
         expect(D_, w, got[1] == (fix ? 4 : 2) && got[0] == 2, "1d4 = 1: %d, 1d4 = 4: %d", got[1], got[0]);
     }
-    rules::set_fixes(true);
+    rules::set_all(true);
 }
 
 
@@ -326,7 +326,7 @@ void camp_checks()
     rules::set_adnd(0xFF);
     // Resurrection (0x2EF05): dead only, all hit points; Con kept either way (AD&D 1E has no cost - Tom, 2026-11-17)
     for (bool fix : {false, true}) {
-        rules::set_fixes(fix);
+        rules::set_all(fix);
         member(1, classes::Fighter, 8, 70);
         mem(1).rec[0x195] = party::Dead;
         mem(1).rec[0x196] = 0;
@@ -343,10 +343,10 @@ void camp_checks()
         snprintf(w, sizeof w, "camp: Resurrection (Game Fixes %s) on one not dead: nothing", fix ? "on" : "off");
         expect(D_, w, mem(1).health() == party::Unconscious && cn == 0);
     }
-    rules::set_fixes(true);
+    rules::set_all(true);
     // Remove Curse: the original looks for effect 0x2B; Game Fixes the curse 0x24 as well
     for (bool fix : {false, true}) {
-        rules::set_fixes(fix);
+        rules::set_all(fix);
         member(1, classes::Fighter, 8);
         spells::add_affect(mem(1), static_cast<uint8_t>(fx(0)), 0, 0, false);
         spells::add_affect(mem(1), static_cast<uint8_t>(fx(1)), 0, 0, false);
@@ -356,7 +356,7 @@ void camp_checks()
                  fix ? "0x2B and the curse (0x24)" : "0x2B, not the curse");
         expect(D_, w, gone2b && gone24 == fix && csaid(1, spells::Said::Cured) == 1 && csaid(1, spells::Said::Uncursed) == 1);
     }
-    rules::set_fixes(true);
+    rules::set_all(true);
     // Cure Disease: "is Cured" for each disease it takes, then "is cured"
     member(1, classes::Fighter, 8);
     for (uint8_t e : {0x22, 0x2B, 0x2C, 0x1F}) spells::add_affect(mem(1), e, 0, 0, false);

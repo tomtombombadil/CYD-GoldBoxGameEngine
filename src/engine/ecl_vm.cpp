@@ -148,7 +148,7 @@ void Vm::advance_clock(int slot, int amount)
             // fight's end looks at old age); so the clock never ages anyone
             // in a game. Game Fixes: a year older each year that passes.
             int v = get(0x4BCC) + carry;
-            const int ages = rules::fixes() ? carry : v / 100;
+            const int ages = rules::adnd(rules::kAdndAge) ? carry : v / 100;
             v %= 100;
             set(0x4BCC, static_cast<uint16_t>(v));
             if (ages) h_.age_party(ages);
@@ -852,7 +852,7 @@ uint16_t Vm::krynn_coin_code(uint16_t off) const
 
 void Vm::coins_touch(uint16_t a, bool write) const
 {
-    if (!set_.five_coins || a < 0x7CBB || a > 0x7CC3 || ((a - 0x7CBB) & 1) || !rules::fixes()) return;
+    if (!set_.five_coins || a < 0x7CBB || a > 0x7CC3 || ((a - 0x7CBB) & 1) || !rules::adnd(rules::kAdndCoins)) return;
     if (sel_mon_ >= 0 || !party_ || !party_->sel() || party_->selected >= 16) return;
     const uint16_t bit = static_cast<uint16_t>(1u << party_->selected);
     if (coins_seen_ & bit) return;
@@ -2262,7 +2262,7 @@ Stop Vm::step()
             // 0x80) the selected one, type 0 no save (type - 1 the save's)
             const int bonus = f & 0x0F, type = t & 7;
             auto one = [&](int i, bool save, int ty, bool swapped) {
-                const int got = save ? queen_damage(saves(i, ty, bonus), f, dmg, swapped, rules::fixes()) : dmg;
+                const int got = save ? queen_damage(saves(i, ty, bonus), f, dmg, swapped, rules::fix(rules::kFixQDamage)) : dmg;
                 if (got >= 0) hurt(i, got & 0xFF);
             };
             if (f & 0x40) {
@@ -2300,7 +2300,7 @@ Stop Vm::step()
                     bool miss = false;
                     const int sel = before >= 0 && before < count ? before : i;
                     const int q =
-                        static_cast<int8_t>(r + queen_target_hooks(party_->m[i], party_->m[sel], rules::fixes(), &miss, r, q_rounds_));
+                        static_cast<int8_t>(r + queen_target_hooks(party_->m[i], party_->m[sel], rules::fix(rules::kFixQHooks), &miss, r, q_rounds_));
                     if (!miss && q >= 0 && q + t > c.rec[0x19A]) hurt(i, dmg & 0xFF);
                 } else if (r > 1 && r + t > c.rec[0x19A]) {
                     hurt(i, dmg & 0xFF);
@@ -2388,7 +2388,7 @@ Stop Vm::step()
             // the clock doesn't move: DOSBox, the nomads' escort to the hut
             // (ECL7 block 17, its only use) leaves it at 22:48. Game Fixes:
             // the minutes the script asks for)
-            if (set_.pool_map && !rules::fixes()) return Stop::Running;
+            if (set_.pool_map && !rules::fix(rules::kFixPClock)) return Stop::Running;
             advance_clock(1, value(o[0]) & 0xFF);
             return Stop::Running;
         }
@@ -2453,7 +2453,7 @@ Stop Vm::step()
         if (!need(3)) return Stop::Error;
         const int sp = value(o[0]) & 0xFF;
         int place = 0xFF, who = 0;
-        if (set_.pool_map && !rules::fixes()) {
+        if (set_.pool_map && !rules::fix(rules::kFixPSpell)) {
             // (Pool: its search never runs - the "found" byte is left
             // uninitialised (START ovr4 +0x2C03, [bp-8]) and holds the ON
             // GOTO before it's target high byte, never 0, so it answers

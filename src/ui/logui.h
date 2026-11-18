@@ -17,6 +17,10 @@ namespace logui {
 void open(bool after_scan, const char* fallback = nullptr);
 // From the Game menu's Logs tab (Tom, 2026-10-12): leaving goes back there
 void open_from_game();
+// One log alone (the System page's Card Log, Restart Log, Error Log, Memory
+// Log - Tom, 2026-11-17: which 0-3), or which 4: Send Logs' QR code
+// straight away; leaving goes back to the page (in_game: the game's menu)
+void open_one(int which, bool in_game);
 bool from_game();
 
 void draw();
