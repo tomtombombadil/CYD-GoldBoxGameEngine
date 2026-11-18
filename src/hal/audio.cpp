@@ -10,7 +10,6 @@
 #elif defined(BOARD_AUDIO_ES8311) || defined(BOARD_AUDIO_PDM) || defined(BOARD_AUDIO_I2S)
 #include <driver/i2s_std.h>
 #include <driver/i2s_pdm.h>
-#include <driver/gpio.h>
 #include "hal/es8311.h"
 #include "hal/i2c_lock.h"
 #endif
@@ -270,13 +269,11 @@ void codec_setup()
     if (!(out_open() && out_enable())) {
         if (h) out_close();
         memlog::note("sound: the I2S output didn't start - no sound");
-        return;
     }
-    // (v0.210.2: the pins at their strongest - the LRCLK shares its line
-    // with the touch's INT, and the NS4168 wants 0.7 x 5 V for a high)
-    gpio_set_drive_capability(static_cast<gpio_num_t>(BOARD_PIN_I2S_LRCK), GPIO_DRIVE_CAP_3);
-    gpio_set_drive_capability(static_cast<gpio_num_t>(BOARD_PIN_I2S_BCLK), GPIO_DRIVE_CAP_3);
-    gpio_set_drive_capability(static_cast<gpio_num_t>(BOARD_PIN_I2S_DOUT), GPIO_DRIVE_CAP_3);
+    // (v0.210.2 set the I2S pins to their strongest drive; v0.210.4 took it
+    // out again - Tom's 5.0": taps came late or not at all. GPIO 17 / 18 sit
+    // beside the touch's I2C pins 19 / 20, and the sharper edges likely
+    // broke its reads. The music's fix was the touch reset leaving 18 alone.)
 }
 #else
 // The PDM line, once: open, on, and a slow ramp from 0 V to the middle (the

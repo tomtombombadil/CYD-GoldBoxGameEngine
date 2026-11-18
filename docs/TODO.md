@@ -6,6 +6,12 @@ to the bottom with their version, then drop off after a while. Synced to
 the Project as claude/TODO.md.
 
 ## Tom
+- [ ] v0.210.4 (Tom, 2026-11-18 11:10: with v0.210.3 the 5.0"'s music is right, but taps "do not
+      seem to land at all. Then they land all at once"): v0.210.2's full drive on the I2S pins taken
+      out again (GPIO 17 / 18 beside the touch's I2C 19 / 20 - the likely cause); the touch reset stays
+      RST only (LovyanGFX's own config for this pin layout, Sunton 8048S050, does the same). Tom: taps on
+      the 5.0" - at the title with the music playing and after it (in the 3D view); and the music still
+      clean? If taps are still late: only while music plays, or always?
 - [ ] v0.210.2 (Tom, 2026-11-18: Death Knights' / the Dark Queen's AdLib intro music "harsh static"
       on the 5.0", fine on the 3.5"): the GT911's reset no longer drives GPIO 18 (the touch's INT is
       the NS4168's LRCLK; the old reset's INT sync likely left the touch chip driving the line against
