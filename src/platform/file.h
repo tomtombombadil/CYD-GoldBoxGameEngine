@@ -69,6 +69,12 @@ bool rename(const char* from, const char* to);
 // it: play.cpp has a weak stand-in (false: not known).
 bool file_time(const char* path, char* out, size_t cap);
 
+// Called after each card read of a FileSource while set (nullptr: none) -
+// the game's music keeps its ring filled through long loads with it
+// (play.cpp music_busy; 2026-11-18, Tom: the music dropped out at every
+// screen change). The hook must not use a FileSource itself.
+inline void (*busy_hook)() = nullptr;
+
 // A DAX source over an open file, with a 512-byte read-ahead buffer
 class FileSource : public dax::ByteSource {
 public:
@@ -85,6 +91,7 @@ public:
                 if (got <= 0) break;
                 cache_pos_ = p;
                 cache_len_ = static_cast<uint32_t>(got);
+                if (busy_hook) busy_hook();
             }
             const uint32_t off = p - cache_pos_;
             uint32_t take = cache_len_ - off;

@@ -13,10 +13,16 @@ the Project as claude/TODO.md.
       the 5.0": (a) the intro music of Death Knights / the Dark Queen; (b) taps still land (the chip
       may now answer at 0x14 - the serial line's "[touch] GT911 at 0x.."); (c) did Hit / Miss / the
       step sound right before this build? If the music is still static: does it change while
-      touching the screen? Also the 4.0" S3 (same 16-bit music path): music right there?
-- [ ] Dark Queen's intro music on the 3.5" (Tom, 2026-11-18): "a couple of off pauses" - the DAC
-      boards' music ring is 16 KB (0.74 s); a title step that keeps the loop longer than that gaps it.
-      Claude: find which steps (memory log / a pump-gap note), then a bigger ring or pumping inside them.
+      touching the screen? (The 4.0" S3 - the same 16-bit music path - plays it perfectly: Tom,
+      2026-11-18; so the 5.0"'s static is its own wiring.)
+- [ ] v0.210.3 (Tom, 2026-11-18): the intro music paused / dropped out at each screen change on the
+      classic boards (the 3.5": "a couple of off pauses" in the Dark Queen's) - the game's loop filled
+      the music's ring (16 KB, 0.74 s there) only between its work, and a screen change's picture
+      loads kept it away longer. Now the ring is also filled from inside the card reads
+      (`plat::busy_hook`, play.cpp music_busy - every 50 ms at most; the serial line's "[music] song
+      N stopped (K fills inside card reads)" counts them). And the title music starts with the title's
+      first screen on show (it began a good second before - the 4.0" S3, Tom). Tom: listen on a
+      classic board (Death Knights, the Dark Queen); if a drop-out stays, at which screen.
 - [x] v0.210.1 (Tom, 2026-11-18, four reports): (1) **Modify Character** - a Krynn knight's 18(xx) went to
       plain 18 (the knight wasn't a fighter type: every original's code - Curse 0x22F40, Champions 0x2332B,
       Death Knights 0x17F24, the Dark Queen 0x3E30B - gives 18/xx to its fighter types, the Krynn knight

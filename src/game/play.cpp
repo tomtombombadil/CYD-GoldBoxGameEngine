@@ -454,9 +454,11 @@ bool clip_fill(uint8_t* buf, int n, void* ctx)
 // music; leaving the title stops it too. Only while it plays: the ring.
 bool music_on = true;                           // (Settings' Music)
 bool title_music = false;                       // the game has songs (music_make.h songs()): song 1 at the title
+bool title_music_due = false;                   // song 1 to start at the next tick (the title's first screen up)
 music::Stream* mus = nullptr;
 std::atomic<bool> mus_rendering{false};
 int mus_song = 0;
+uint32_t mus_hook_at = 0, mus_hooked = 0;        // (music_busy's last fill, its fills this song)
 uint32_t mus_pos = 0, mus_end = 0;              // the file's next byte to read, its data's end
 // The ring: 16 KB of 8-bit samples on the DAC boards (0.74 s at 22,050 Hz -
 // a long card read doesn't gap it), 64 KB of 16-bit ones on the I2S boards
@@ -500,7 +502,9 @@ void start_output()
 void music_stop()
 {
     if (!mus) return;
-    plat::log("[music] song %d stopped\n", mus_song);
+    plat::busy_hook = nullptr;
+    plat::log("[music] song %d stopped (%u fills inside card reads)\n", mus_song, static_cast<unsigned>(mus_hooked));
+    mus_hooked = 0;
     audio_stop();                               // (the output was the music's: it ends with it)
     while (mus_rendering.load()) {}
     delete mus;
@@ -508,10 +512,15 @@ void music_stop()
     mus_song = 0;
 }
 
-// Reads the song's file on into the ring (the game's loop, often)
-void music_pump()
+// Reads the song's file on into the ring (the game's loop, often - and,
+// through plat::busy_hook, from inside long card reads: a screen change's
+// picture loads kept the loop away longer than the ring lasts, and the
+// music dropped out - Tom, 2026-11-18). From the hook a file it can't
+// open (all the card's slots in use) is tried again later.
+bool mus_pumping = false;
+void music_pump(bool hooked = false)
 {
-    if (!mus) return;
+    if (!mus || mus_pumping) return;
     if (mus->done()) {
         music_stop();
         return;
@@ -521,14 +530,17 @@ void music_pump()
         if (mus_pos >= mus_end) mus->end();
         return;
     }
-    char path[200];
+    // (static: the hook runs deep inside picture loads - no half-KB frame there)
+    static char path[200];
+    static int16_t buf[256];
+    mus_pumping = true;
     musicfiles::path(d->cache_dir, mus_song, path, sizeof path);
     plat::File f = plat::open(path, "r");
     if (!f || !f.seek(mus_pos)) {
-        mus->end();
+        mus_pumping = false;
+        if (!hooked) mus->end();
         return;
     }
-    int16_t buf[256];
     uint32_t want = (room < mus_end - mus_pos ? room : mus_end - mus_pos) & ~1u;
     while (want) {
         const int got = f.read(reinterpret_cast<uint8_t*>(buf), want < sizeof buf ? want : sizeof buf) & ~1;
@@ -541,6 +553,18 @@ void music_pump()
         want -= static_cast<uint32_t>(got);
     }
     f.close();
+    mus_pumping = false;
+}
+
+// The hook: at most every 50 ms, and only once a fair part of the ring is free
+void music_busy()
+{
+    if (!mus || mus_pumping || mus->done()) return;
+    const uint32_t now = plat::now_ms();
+    if (now - mus_hook_at < 50) return;
+    mus_hook_at = now;
+    ++mus_hooked;
+    music_pump(true);
 }
 
 // Song n as the game asks for it (a script's SOUND 0x80 + n, the title's 1)
@@ -582,6 +606,7 @@ __attribute__((noinline)) void music_start(int n)
     mus_pos = music::kWavHeader;
     mus_end = music::kWavHeader + (len < size - music::kWavHeader ? len : size - music::kWavHeader);
     music_pump();
+    plat::busy_hook = music_busy;
     if (wide) audio_play16(music_fill16, nullptr);
     else audio_play(music_fill, nullptr);
     plat::log("[music] song %d\n", n);
@@ -17152,7 +17177,10 @@ bool start_title(pic::Canvas& c, uint32_t timeout_ms)
     // (the title music: song 1 - Darkness GAME.OVR 0x125, Death Knights
     // 0x61C, Treasures 0x150, Gateway 0x95B with its setup's Music On, the
     // Dark Queen's DQK.EXE 0x3872D (sound 0x20), Champions' GAME.OVR 0x73B)
-    if (title_music) music_start(1);
+    // Started at the first tick after this, once the front end has put the
+    // title's first screen up (Tom, 2026-11-18: it began a good second before
+    // the screen changed - the rest of Play's start comes after this)
+    title_music_due = title_music;
     plat::File f;
     if ((p.title_version || p.title_menu) && open_file(p.program, f)) {
         plat::FileSource src(f);
@@ -19877,6 +19905,10 @@ void tap(int x, int y, pic::Canvas& c)
 void tick(uint32_t now, pic::Canvas& c)
 {
     if (!d) return;
+    if (title_music_due) {
+        title_music_due = false;
+        if (title_run) music_start(1);
+    }
     music_pump();
     tidy_memory();
     // Effects run out as game time passes (walking, searching, scripts)
