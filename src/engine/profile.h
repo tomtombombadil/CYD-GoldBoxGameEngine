@@ -135,6 +135,7 @@ enum MagicWord {
     kRestTime, kRestMenu, kStopResting, kHealedAll, kHasMemorized, kInterrupted,
     kBonusSpells,                                               // the Krynn games' "Bonus      :" (the moon's extras)
     kSpellsKeep,                                                // Death Knights' "spells OK? " answers: "Keep" (+ Exit)
+    kSpecialSpells,                                             // Champions' / Death Knights' "   Special :" (101-107)
     kMagicWords
 };
 

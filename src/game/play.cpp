@@ -10006,7 +10006,25 @@ void draw_counts(pic::Canvas& c)
     static const int kKind[3] = {profile::kClericSpells, profile::kDruidSpells, profile::kMuSpells};
     const bool bonus_word = d->prof->magic.words[profile::kBonusSpells] != 0;
     int num_col = 0;
-    for (int k = 0; k < 3; ++k) {
+    // (Champions / Death Knights: "Special : N" between Druid and
+    // Magic-User - the god's specials left, shown for a cleric whose god
+    // gives any, or while some are left; GAME.OVR 0xEFA4 / 0xF000)
+    const bool specials = d->prof->magic.words[profile::kSpecialSpells] != 0;
+    for (int kk = 0; kk < 4; ++kk) {
+        if (kk == 2) {
+            const int sr = specials ? magic::special_room(ch, t) : 0;
+            if (specials && row <= 22 &&
+                ((ch.level(classes::Cleric) > 0 && ch.ext[party::kExtGod] != 6) || sr > 0)) {
+                mw(profile::kSpecialSpells, w1, sizeof w1);
+                put(c, w1, 1, row, 10);
+                char n[4];
+                snprintf(n, sizeof n, "%d", sr);
+                put(c, n, 1 + static_cast<int>(strlen(w1)) + 1, row, 10);
+                ++row;
+            }
+            continue;
+        }
+        const int k = kk < 2 ? kk : 2;
         bool any = false;
         for (int lv = 1; lv <= t.slot_levels(); ++lv)
             if (classes::slots(ch, k, lv)) any = true;
@@ -13764,7 +13782,8 @@ __attribute__((noinline)) void load_party_text(dax::ByteSource& exe, const exepa
         text::read_pascal(exe, info, pm.levels.at + static_cast<uint32_t>(i) * pm.levels.stride, d->w_level[i],
                           sizeof d->w_level[i]);
     // (the Dark Queen's "Special" - its god-given spells - just before "1st Level")
-    if (hl() && pm.levels.at)
+    // (Champions' and Death Knights' too: their specials, spells 101-107)
+    if ((hl() || krynn_rules()) && pm.levels.at)
         text::read_pascal(exe, info, pm.levels.at - pm.levels.stride, d->w_special, sizeof d->w_special);
     if (pm.these_spells) text::read_pascal(exe, info, pm.these_spells, d->w_these, sizeof d->w_these);
     for (int i = 0; i < 3 && i < pm.kind_names.count && pm.kind_names.at; ++i)

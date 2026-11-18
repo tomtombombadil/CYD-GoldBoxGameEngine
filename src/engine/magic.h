@@ -34,6 +34,12 @@ void set_fight_check(const items::Names* names, bool (*fighting)());
 // Spells in the list: kind and level counted (learnt and being learnt)
 int held(const party::Character& c, const classes::Tables& t, int cls, int level);
 // How many more of that kind and level they may memorize
+// Champions' / Death Knights' special spells (101-107: their rows' class
+// code 2, level 0 - "Special"): a cleric's, as many as the god gives
+// (Champions GAME.OVR 0x1AD6E, Death Knights 0xEBFC: god 4 three, god 6
+// none, any other one), less those memorized
+bool special(const classes::Tables& t, int s);
+int special_room(const party::Character& c, const classes::Tables& t);
 int room(const party::Character& c, const classes::Tables& t, int cls, int level);
 // The room at a level from its slots alone (the moon's extras left out -
 // the Krynn games show those on a line of their own)

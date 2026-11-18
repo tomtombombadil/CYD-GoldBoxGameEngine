@@ -286,7 +286,7 @@ static void item_ops(const char* ops)
 // 'v' / '^' the cursor keys Down / Up, '[' gives the selected one a magic-user's scroll of 3 spells, ']' lists their items and spell book,
 // '{' a readied potion of healing, '}' a readied wand of magic missiles, '(' a readied bow and 20 arrows,
 // '|' the Quick Actions page opened, '<' / '>' the cursor keys Left / Right, ',' Select (each a snapshot qa<n>),
-// '*' Esc (play::back), @X a tap on the menu word X (a digit too: "1st-color"); CAMPTICK=ms the time after
+// '*' Esc (play::back), 'Z' everyone's memorized spells forgotten, @X a tap on the menu word X (a digit too: "1st-color"); CAMPTICK=ms the time after
 // each op (5000)
 static void run_ops(const char* q)
 {
@@ -314,6 +314,9 @@ static void run_ops(const char* q)
             it = ch.items[ch.n_items++]; memset(it, 0, 63); it[0x2E] = 73; it[0x34] = 1; it[0x39] = 20; it[0x37] = 1; it[0x2F] = 0x49; }
         else if (*q == ']') { const party::Character& ch = *play::pt->sel(); printf("  items %d:", ch.n_items); for (int i = 0; i < ch.n_items; ++i) printf(" %02X(%02X %02X %02X w%02X)", ch.items[i][0x2E], ch.items[i][0x3C], ch.items[i][0x3D], ch.items[i][0x3E], ch.items[i][0x30]); printf("  book:"); for (int s2 = 1; s2 <= 100; ++s2) if (ch.rec[0x79 + s2 - 1]) printf(" %d", s2); printf("\n"); }
         else if (*q == '-') { ++q; play::pt->m[*q - '0'].rec[0x1A4] = 1; }
+        else if (*q == 'Z') {                   // 'Z': every member's memorized spells forgotten (a memorize check's start)
+            for (int i = 0; i < play::pt->count; ++i) { memset(play::pt->m[i].rec + 0x1E, 0, 84); play::pt->m[i].rec[0x72] = 0; }
+            printf("  memorized spells cleared\n"); }
         else if (*q == '!') { for (int i = 0; i < play::pt->count; ++i) { const party::Character& ch = play::pt->m[i]; char nm[20]; ch.name(nm, 20); printf("  %s HP %d/%d st %d fx:", nm, ch.hp(), ch.hp_max(), ch.health()); for (int k = 0; k < ch.n_affects; ++k) printf(" %02X/%d/%d", ch.affects[k][0], ch.affects[k][1] | ch.affects[k][2] << 8, ch.affects[k][3]); printf("\n"); } }
         else if (*q == '~') { for (int k = 0; k < 600; ++k) { g_now += 100; play::tick(g_now, C); } }
         // (the Quick tab's model: '|' quick_begin and each row's switches, ','

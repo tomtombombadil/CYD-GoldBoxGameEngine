@@ -85,8 +85,28 @@ static bool armoured_in_fight(const party::Character& c, const classes::Tables& 
     return false;
 }
 
+bool special(const classes::Tables& t, int s)
+{
+    return t.lay.krynn && !t.lay.queen && s >= 1 && s < t.lay.spell_count && t.spell_code(s) == 2;
+}
+
+int special_room(const party::Character& c, const classes::Tables& t)
+{
+    if (!t.lay.krynn || t.lay.queen || c.level(classes::Cleric) <= 0) return 0;
+    const int god = c.ext[party::kExtGod];
+    int r = god == 4 ? 3 : god == 6 ? 0 : 1;
+    for (int i = 0; i < kListSize; ++i) {
+        const int v = c.rec[kListAt + i] & 0x7F;
+        if (v > 100 && v < 108) --r;
+    }
+    return r > 0 ? r : 0;
+}
+
 bool can_use(const party::Character& c, const classes::Tables& t, int s)
 {
+    // (a special: the cleric's - the rooms' test; no armour rule, not a
+    // magic-user's spell)
+    if (special(t, s)) return c.level(classes::Cleric) > 0;
     if (s >= 1 && s < t.lay.spell_count && armoured_in_fight(c, t) &&
         (t.lay.queen ? t.spell_code(s) == 3 : t.spell_class(s) == MagicUser))
         return false;
@@ -184,7 +204,9 @@ namespace { int g_fire15 = 0; }
 void set_fire15(int type) { g_fire15 = type; }
 int fire15() { return g_fire15; }
 
-int moon_levels(const classes::Tables& t) { return t.lay.queen ? 9 : 5; }
+// (the levels the extras are counted over: Champions 1-5, Death Knights
+// 1-8 - GAME.OVR 0xF180's loop - the Dark Queen 1-9)
+int moon_levels(const classes::Tables& t) { return t.lay.queen ? 9 : t.lay.dkk ? 8 : 5; }
 
 int moon_bonus(const party::Character& c, const classes::Tables& t)
 {
@@ -219,12 +241,16 @@ int room(const party::Character& c, const classes::Tables& t, int cls, int level
     // level - its memorize, DQK.EXE 0x45519: no room there (0x44AD8, slots
     // less memorized) and a magic-user spell with extras left - no level or
     // slot asked; its list, mode 1 0x5AF2D, is every known spell it may use)
-    if (cls == MagicUser && level <= moon_levels(t) && (t.lay.queen || cast_count(c, t, cls, level) > 0)) r += moon_bonus(c, t);
+    // (Death Knights' memorize, GAME.OVR 0xF600: no room, then a magic-user
+    // spell while extras are left - any level, as the Dark Queen's)
+    if (cls == MagicUser && level <= moon_levels(t) && (t.lay.queen || t.lay.dkk || cast_count(c, t, cls, level) > 0))
+        r += moon_bonus(c, t);
     return r;
 }
 
 bool any_room(const party::Character& c, const classes::Tables& t)
 {
+    if (special_room(c, t) > 0) return true;
     for (int cls = 0; cls < 3; ++cls)
         for (int lv = 1; lv <= t.slot_levels(); ++lv)
             if (cast_count(c, t, cls, lv) > 0) return true;
@@ -321,7 +347,11 @@ void learn(party::Character& c, int s) { classes::to_book(c, s); }
 
 bool add(party::Character& c, const classes::Tables& t, int s)
 {
-    if (!usable(t, s) || room(c, t, t.spell_class(s), t.spell_level(s)) <= 0) return false;
+    if (special(t, s)) {
+        if (special_room(c, t) <= 0) return false;
+    } else if (!usable(t, s) || room(c, t, t.spell_class(s), t.spell_level(s)) <= 0) {
+        return false;
+    }
     for (int i = kListSize - 1; i >= 0; --i)
         if (!c.rec[kListAt + i]) {
             c.rec[kListAt + i] = static_cast<uint8_t>(s | 0x80);
