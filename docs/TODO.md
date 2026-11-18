@@ -6,6 +6,22 @@ to the bottom with their version, then drop off after a while. Synced to
 the Project as claude/TODO.md.
 
 ## Tom
+- [ ] v0.210.5 (Tom, 2026-11-18 12:57, Death Knights' camp, Cinder): (1) memorizing Magic Missiles
+      past the 1st-level slots dropped the 2nd / 3rd-level counts - the moon's extra spells (Cinder's
+      robe's moon full: 2, shared by levels 1-5) were added into every level's count. The original
+      (DOSBox, Celeste) shows the slots' counts alone and the extras on a line of their own, "Bonus : 2",
+      gone once used (`kBonusSpells`: Death Knights, Champions, the Dark Queen - only Death Knights seen).
+      (2) the list before memorizing: the original asks "spells OK? Keep Exit" (not Yes No) over a list
+      with each spell once and its count - "*CURE LIGHT WOUNDS (2)" - and a lit line Up / Down move (the
+      window's page turns as it passes the edge) - so the original has no overflow and joins them; now
+      the engine's too (`sl.confirming`, `kSpellsKeep`). Tom asked "Magic Missile x5": the original's own
+      "(5)" kept. Checked: playsim (Celeste, every spell twice), navcheck Knights (YesNo probed, 0 failures).
+      Found, NOT fixed yet: the original lists Celeste's god-given spell under "SPECIAL" (Charm Person,
+      "Special : 1" in the counts) - the engine shows neither, so a Death Knights character can't memorize
+      its special spells (Claude: next). Darkness / Treasures (the same family) not looked at.
+- [ ] Tom (2026-11-18 12:58): the 5.0"'s taps feel less sensitive since the music fix - asked: switch
+      the touch chip's reset back between songs? (Claude: each switch is ~0.1 s with no touch, and the
+      amplifier's clock runs from Play's start for the sound effects too.) Waiting for his answer.
 - [ ] v0.210.4 (Tom, 2026-11-18 11:10: with v0.210.3 the 5.0"'s music is right, but taps "do not
       seem to land at all. Then they land all at once"): v0.210.2's full drive on the I2S pins taken
       out again (GPIO 17 / 18 beside the touch's I2C 19 / 20 - the likely cause); the touch reset stays

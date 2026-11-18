@@ -133,6 +133,8 @@ enum MagicWord {
     kClericSpells, kDruidSpells, kMuSpells,                     // "    Cleric Spells:" ...
     kCannotMemorize, kNoCondition, kMemorizeSpells,             // "cannot memorize any spells", "is in no condition to ", ...
     kRestTime, kRestMenu, kStopResting, kHealedAll, kHasMemorized, kInterrupted,
+    kBonusSpells,                                               // the Krynn games' "Bonus      :" (the moon's extras)
+    kSpellsKeep,                                                // Death Knights' "spells OK? " answers: "Keep" (+ Exit)
     kMagicWords
 };
 

@@ -206,10 +206,15 @@ int moon_bonus(const party::Character& c, const classes::Tables& t)
     return bonus;
 }
 
+int slot_room(const party::Character& c, const classes::Tables& t, int cls, int level)
+{
+    const int r = cast_count(c, t, cls, level) - held(c, t, cls, level);
+    return r > 0 ? r : 0;
+}
+
 int room(const party::Character& c, const classes::Tables& t, int cls, int level)
 {
-    int r = cast_count(c, t, cls, level) - held(c, t, cls, level);
-    if (r < 0) r = 0;
+    int r = slot_room(c, t, cls, level);
     // (the extras: Champions' at levels with slots; the Dark Queen's at any
     // level - its memorize, DQK.EXE 0x45519: no room there (0x44AD8, slots
     // less memorized) and a magic-user spell with extras left - no level or

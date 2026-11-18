@@ -35,6 +35,9 @@ void set_fight_check(const items::Names* names, bool (*fighting)());
 int held(const party::Character& c, const classes::Tables& t, int cls, int level);
 // How many more of that kind and level they may memorize
 int room(const party::Character& c, const classes::Tables& t, int cls, int level);
+// The room at a level from its slots alone (the moon's extras left out -
+// the Krynn games show those on a line of their own)
+int slot_room(const party::Character& c, const classes::Tables& t, int cls, int level);
 // Champions: the moons' phases (white, red, black - its area words
 // 0x4CF9-0x4CFB) and a mage's extra spells by its moon (0: none)
 void set_moons(int white, int red, int black);

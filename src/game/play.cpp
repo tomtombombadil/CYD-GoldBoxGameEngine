@@ -5878,11 +5878,21 @@ void rom_answer(int k, pic::Canvas& c)
     rom_next(c);                        // (the picture stays up until the end)
 }
 
+bool mem_keep_exit = false;         // Death Knights' "spells OK? Keep Exit" (confirm_memorize sets it)
+void mw(int i, char* out, size_t cap);
+
 void ask_yes_no(pic::Canvas& c, Ask what, const char* prompt)
 {
     ask = what;
     screen = Screen::YesNo;
     text::build(menu, prompt, rw(Data::kYesNo));
+    if (what == Ask::MemorizeThese && mem_keep_exit) {
+        // (Death Knights: "spells OK? Keep Exit" - DOSBox)
+        char k[12], w[24];
+        mw(profile::kSpellsKeep, k, sizeof k);
+        snprintf(w, sizeof w, "%s%s", k, d->w_exit[0] == ' ' ? d->w_exit : " Exit");
+        text::build(menu, prompt, w);
+    }
     menu.selected = 1;          // the games start on No
     dk_slot = -1;
     // (Darkness's camp "Lose it?" lights Yes - GAME.OVR 0x2AFCB: 0x108:0x43 with 'Y')
@@ -5986,6 +5996,7 @@ void yes_no_tap(int x, int y, pic::Canvas& c)
 void yes_no_key(char k, pic::Canvas& c)
 {
     if (ask == Ask::Knight) k = k == 'C' ? 'Y' : k == 'E' ? 'N' : 0;     // (Champions: "Change Exit" / "Exit")
+    if (ask == Ask::MemorizeThese && mem_keep_exit) k = k == 'K' ? 'Y' : k == 'E' ? 'N' : 0;     // ("Keep Exit")
     if (k != 'Y' && k != 'N') return;
     const Ask what = ask;
     ask = Ask::None;
@@ -9870,6 +9881,8 @@ struct SpellLines {
     bool    fighting = false;       // "in Memory" in a fight: the chosen one is cast there
     int     reading = -1;           // a scroll's spells (the item): "on Scroll", Cast reads one (Use)
     bool    viewing = false;        // View Character's Spells: "in Memory", only looked at
+    bool    confirming = false;     // Death Knights' "to Memorize" under "spells OK? Keep Exit": a spell
+                                    // once a line with its count, "*" before, a lit line Up / Down move
 } sl;
 int gw_preview = -1;                // Gateway: the spells to memorize shown first (the question's word)
 
@@ -9899,7 +9912,7 @@ void build_lines(const uint8_t* ids, int n)
     const classes::Tables& t = mrules->tables;
     // (Darkness's Cast and View list a spell held more than once on one
     // line with its count - "Cure Light Wounds (6)", DOSBox)
-    const bool counted = (darkness_files() || hl()) && (sl.casting || sl.viewing);
+    const bool counted = ((darkness_files() || hl()) && (sl.casting || sl.viewing)) || (sl.confirming && sl.learning);
     for (int i = 0; i < n && sl.n < 143; ++i) {
         int lv = t.spell_level(ids[i]);
         // (Gateway: a heading for each level and kind - lvl's high bits the kind)
@@ -9991,6 +10004,8 @@ void draw_counts(pic::Canvas& c)
         row = 20;
     }
     static const int kKind[3] = {profile::kClericSpells, profile::kDruidSpells, profile::kMuSpells};
+    const bool bonus_word = d->prof->magic.words[profile::kBonusSpells] != 0;
+    int num_col = 0;
     for (int k = 0; k < 3; ++k) {
         bool any = false;
         for (int lv = 1; lv <= t.slot_levels(); ++lv)
@@ -10001,13 +10016,26 @@ void draw_counts(pic::Canvas& c)
         // (the counts a column past the heading: Curse's / Secret's 18 letters
         // put them at 20, Darkness's "    Cleric :" at 14)
         const int col0 = 1 + static_cast<int>(strlen(w1)) + 1;
+        num_col = col0;
         for (int lv = 1; lv <= t.slot_levels(); ++lv) {
             if (!classes::slots(ch, k, lv)) continue;
             char n[4];
-            snprintf(n, sizeof n, "%d", magic::room(ch, t, k, lv));
+            // (the Krynn games' counts are the slots' alone, the moon's extras
+            // a line of their own under them - DOSBox, Death Knights' Celeste:
+            // "Magic-User : 4 2 2", "Bonus : 2"; Tom, 2026-11-18)
+            snprintf(n, sizeof n, "%d", bonus_word ? magic::slot_room(ch, t, k, lv) : magic::room(ch, t, k, lv));
             put(c, n, col0 + (lv - 1) * 3, row, 10);
         }
         ++row;
+    }
+    // "Bonus : N" - the moon's extras left, while there are any (DOSBox)
+    const int extra = bonus_word ? magic::moon_bonus(ch, t) : 0;
+    if (extra > 0 && row <= 22) {
+        mw(profile::kBonusSpells, w1, sizeof w1);
+        put(c, w1, 1, row, 10);
+        char n[4];
+        snprintf(n, sizeof n, "%d", extra);
+        put(c, n, num_col ? num_col : 1 + static_cast<int>(strlen(w1)) + 1, row, 10);     // (under the 1st level's)
     }
     dirty_rows(17, 22);
 }
@@ -10072,6 +10100,15 @@ void draw_spells(pic::Canvas& c)
         char line[40];
         if (sl.count[i] > 1) snprintf(line, sizeof line, "  %s (%d)", spell_name(sl.id[i]), sl.count[i]);
         else snprintf(line, sizeof line, "  %s", spell_name(sl.id[i]));
+        if (sl.confirming && sl.learning) {
+            // (Death Knights: "*" before each, its count after - "*CURE LIGHT
+            // WOUNDS (2)" - and the lit line boxed; DOSBox, 2026-11-18)
+            if (sl.count[i] > 1) snprintf(line, sizeof line, " *%s (%d)", spell_name(sl.id[i]), sl.count[i]);
+            else snprintf(line, sizeof line, " *%s", spell_name(sl.id[i]));
+            if (i == sl.sel) hl_text(c, line + 1, 2, row);
+            else put(c, line, 1, row, ink);
+            continue;
+        }
         if ((gateway() || pool_files()) && sl.learning) {
             // (Gateway, Pool: "*" before a spell to memorize; lit while it's
             // shown first)
@@ -10141,6 +10178,7 @@ void confirm_memorize(pic::Canvas& c, int word)
     uint8_t ids[84];
     const int n = magic::in_memory(*pt->sel(), mrules->tables, true, ids, 84);
     sl.learning = true;
+    sl.confirming = mem_keep_exit = d->prof->magic.words[profile::kSpellsKeep] != 0;
     sl.casting = false;
     sl.scrolls = false;
     sl.choosing = false;
@@ -10166,6 +10204,8 @@ void confirm_memorize(pic::Canvas& c, int word)
         snprintf(q, sizeof q, "%s%s", k, d->w_these);
     } else {
         mw(word, q, sizeof q);
+        // (Death Knights asks "spells OK?" whichever way the list was left - DOSBox)
+        if (!q[0] && mem_keep_exit) mw(profile::kMemorizeThese, q, sizeof q);
     }
     ask_yes_no(c, Ask::MemorizeThese, q);
     ask_yellow(c);
@@ -10201,6 +10241,7 @@ void confirm_scribe(pic::Canvas& c, int word, Ask what)
     uint8_t ids[48];
     const int n = magic::scroll_spells(*pt->sel(), mrules->tables, scroll_facts(), true, ids, 48);
     sl.learning = true;
+    sl.confirming = false;
     sl.casting = false;
     sl.scrolls = true;
     sl.choosing = false;
@@ -19165,6 +19206,24 @@ bool nav_list(int step, pic::Canvas& c)
         return true;
     }
 #endif
+    if (screen == Screen::YesNo && ask == Ask::MemorizeThese && sl.confirming && sl.learning && sl.sel >= 0) {
+        // (Death Knights' list under "spells OK?": the lit line moves, the
+        // page turning as it passes the window's edge - the original's list
+        // routine; DOSBox)
+        const int rows = list_rows();
+        int i = sl.sel;
+        for (int k = 0; k < sl.n; ++k) {
+            i = (i + step + sl.n) % sl.n;
+            if (sl.id[i]) break;
+        }
+        sl.sel = i;
+        while (sl.sel < sl.top) sl.top = sl.top >= rows ? sl.top - rows : 0;
+        while (sl.sel >= sl.top + rows) sl.top += rows;
+        draw_spells(c);
+        show_menu_line(c);
+        keep_menu_choice(keep, c);
+        return true;
+    }
     if (screen == Screen::SpellList && !sl.learning && sl.sel >= 0) {
         const int rows = list_rows();
         int i = sl.sel;
