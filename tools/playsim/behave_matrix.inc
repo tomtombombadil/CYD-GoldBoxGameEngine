@@ -375,6 +375,103 @@ int adnd_str_dmg(int s, int e)
     if (s == 18 && e <= 99) return 5;
     return 6;                           // 18/00
 }
+
+// ---- Flasks of Oil (an Enhancement, Tom 2026-11-17: ordinary, not magic):
+// a thrown flask's blow is fire, so a regenerating monster (the troll's
+// death effect) it brings down stays down; switched off, as the originals - a
+// plain blow: it gets up again (troll_up). A game without the effect has
+// nothing for the switch to change
+bool has_aff(int i, int type)
+{
+    const combat::Fighter& f = F(i);
+    for (int k = 0; f.n_aff && k < *f.n_aff; ++k)
+        if (f.aff[k][0] == type) return true;
+    return false;
+}
+void oil()
+{
+    const combat::MonFx& m = play::fg->b.fx->mon;
+    const int flask = play::names ? play::names->oil() : 0;
+    if (!flask || !m.troll_death || !m.troll_up) {
+        printf("  (matrix: Flasks of Oil - %s)\n", !flask ? "no flask of oil" : "no regenerating monster's effect");
+        return;
+    }
+    static uint8_t pile[1][items::kRecordSize];
+    auto* keep = F(A).items;
+    const int keep_n = F(A).n_items;
+    bool up[2];
+    for (int on = 0; on < 2; ++on) {
+        put(A, 0, 10, 10);
+        put(B, 1, 12, 10, 1);
+        add_aff(B, m.troll_death);
+        memset(pile, 0, sizeof pile);
+        pile[0][0x2E] = static_cast<uint8_t>(flask);
+        pile[0][0x34] = 1;
+        pile[0][0x39] = 1;
+        F(A).items = pile;
+        F(A).n_items = 1;
+        F(A).attacks[0] = 1;
+        F(A).attacks[1] = 0;
+        rules::set_enh(on ? rules::kEnhAll : rules::kEnhAll & ~rules::kEnhOil);
+        dice(20);
+        play::fg->cur = A;
+        combat::attack(play::fg->b, A, B, play::names, play::rng);
+        dice_off();
+        up[on] = has_aff(B, m.troll_up);
+        F(A).items = keep;
+        F(A).n_items = keep_n;
+    }
+    rules::set_enh(rules::kEnhAll);
+    expect(P, "Flasks of Oil: a regenerating monster a thrown flask brings down stays down (on); gets up again (off)",
+           !up[1] && up[0], "on: gets up %d; off: gets up %d", (int)up[1], (int)up[0]);
+}
+
+// ---- Held Mid-Step (a Game Fix, every game): a fighter held when it steps
+// away from a foe (the foe's free attack) - the fix: no step, its turn over;
+// off, the originals: the step is taken. (The hold is put on before the
+// step, the foe not next to it - a blow on the held is a cruel one: the
+// free attack's own hold is the same state when the step comes.)
+void held_step()
+{
+    const combat::Facts& fx = *play::fg->b.fx;
+    int held = 0;
+    for (int k = 0; k < 4 && !held; ++k) held = fx.held[k];
+    if (!held) {
+        printf("  (matrix: Held Mid-Step - no held effect)\n");
+        return;
+    }
+    int x_after[2];
+    const uint64_t keep = rules::fixes_off();
+    // (three goes - the first only settles the field: the squares an earlier
+    // check left taken show as taken on its first step)
+    for (int go = 0; go < 3; ++go) {
+        const int on = go < 2 ? 1 : 0;
+        combat::Battle& b = play::fg->b;
+        for (int i = 0; i < b.n; ++i)
+            if (i != A && i != B) b.f[i].size = 0;              // (the field to these two)
+        for (int x = 7; x <= 13; ++x) b.ground[10][x] = b.ground[20][20];   // (no body left there by an earlier check)
+        put(A, 0, 10, 10);
+        put(B, 1, 12, 10);                  // (not next to it: any blow on the held is a cruel one - no step either way)
+        add_aff(A, held);
+        rules::set_fixes_off(on ? keep & ~(1ull << rules::kFixHeld) : keep | 1ull << rules::kFixHeld);
+        dice(2);                            // (the free attack misses)
+        play::fg->cur = A;
+        if (getenv("HELDDBG")) {
+            bool e; int bl;
+            printf("  held dbg pre: moves %d up %d cost %d edge %d blk %d helpless %d\n", F(A).moves, (int)F(A).up(),
+                   combat::step_cost(play::fg->b, play::fg->t, A, 6, &e, &bl), (int)e, bl, (int)combat::helpless(play::fg->b, F(A)));
+        }
+        play::try_step(C, 6);               // (west: away from the foe)
+        dice_off();
+        x_after[on] = F(A).x;
+        if (getenv("HELDDBG")) printf("  held dbg: on %d x %d moves %d st %d note %d\n", on, F(A).x, F(A).moves, (int)play::fg->st, (int)(play::note_until != 0));
+        play::fg->pages = 0;
+    }
+    rules::set_fixes_off(keep);
+    expect(P, "Held Mid-Step: a held fighter stepping away stays (fix on), takes the step (off - the originals)",
+           x_after[1] == 10 && x_after[0] == 9, "on x %d, off x %d (from 10)", x_after[1], x_after[0]);
+}
+
 void darts()
 {
     const int dart = play::d->prof->items.dart;
@@ -853,6 +950,8 @@ void run()
     }
     weapons();
     darts();
+    oil();
+    held_step();
     images();
     morale_tests();
     prot_evil();

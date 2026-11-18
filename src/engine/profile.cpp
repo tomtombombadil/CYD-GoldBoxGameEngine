@@ -4225,7 +4225,7 @@ const Profile kProfiles[] = {
                // 0xFF (goods_runs; rows of ITEM0.DAX block 1); the random scroll's
                // spells by DS 0x578A + 16 s; the temple's cures (DS 0x08E0)
                .goods_first = 0, .goods_last = 0, .goods_rows = 0, .spell_class = 0x578A,
-               .rows_file = "ITEM0.DAX", .temple_spells = 0x08E0, .goods_runs = true, .str_fighter_now = true},
+               .rows_file = "ITEM0.DAX", .temple_spells = 0x08E0, .goods_runs = true, .str_fighter_now = true, .oil = 87},
      // Character rules (treasures_facts.md 6): Darkness's tables byte for byte
      // at Treasures' places - spells 0x5789, THAC0 0x5F98, flags 0x6032, masks
      // 0x603A (a 0 for the monk), ... class records 0x6436, saves 0x6C83; the

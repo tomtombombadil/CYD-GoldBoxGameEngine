@@ -287,6 +287,9 @@ bool read_tables(Tables& t, const TableAt& at, ReadDs read, void* ctx)
     } else if (t.mood_known && !read(ctx, at.mood_rows, t.mood, sizeof t.mood)) {
         return false;
     }
+    // (no terrain table - Secret, Darkness: no flags, not whatever the memory held -
+    // the outdoor field was made from leftovers, v0.209.1)
+    if (!at.terrain) memset(t.terrain, 0, sizeof t.terrain);
     if (at.reserve && !(read(ctx, at.reserve, t.reserve_mon, 5) && read(ctx, static_cast<uint16_t>(at.reserve + 5), t.reserve_pic, 5)))
         return false;
     return read(ctx, at.ground, &t.ground[0][0], sizeof t.ground) &&
@@ -3314,7 +3317,7 @@ Attack attack(Battle& b, int a, int c, const items::Names* names, create::Dice& 
             // A flask of oil burns (Tom, 2026-10-12: "the flasks of oil should
             // do fire damage" - the originals made it a plain 2d6 blow): its
             // blow is fire, so a troll it brings down stays down
-            const bool oil = item && names && names->flask() && item[0x2E] == names->flask() && rules::enh(rules::kEnhOil);   // (Flasks of Oil, an Enhancement)
+            const bool oil = item && names && names->oil() && item[0x2E] == names->oil() && rules::enh(rules::kEnhOil);   // (Flasks of Oil, an Enhancement)
             const int blow_kind = oil ? 1 : flame ? 9 : 0;
             if (blow_kind) g_kind = blow_kind;
             if (bane) {

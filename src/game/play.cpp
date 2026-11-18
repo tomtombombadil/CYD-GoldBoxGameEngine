@@ -13273,6 +13273,7 @@ __attribute__((noinline)) void load_party_text(dax::ByteSource& exe, const exepa
             names->set_words(buf, pi.words.count, pi.words.stride);
         free(buf);
         names->set_plural(items::Names::Plural{pi.arrow, pi.quarrel, pi.dart, pi.flask, pi.keep1, pi.keep2});
+        names->set_oil(pi.oil);
         // (every game's names are made from the item's words when shown -
         // Secret's too: its records' own names are a list line's left-overs,
         // "Two-Handed Sword of Giant Slaying" shows as "Two-Handed Sword of

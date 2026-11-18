@@ -9274,6 +9274,14 @@ static void test_fix_switches()
 
 int main()
 {
+#ifdef CYD_TEST_HOOKS
+    // (the toggle checks - tools/devkit/toggles_host.sh: FIXOFF / ADNDOFF / ENHOFF hex masks
+    // hold those switches off whatever the tests set; the CHECKs that then fail are that switch's)
+    rules::test::off_fix = getenv("FIXOFF") ? strtoull(getenv("FIXOFF"), nullptr, 16) : 0;
+    rules::test::off_adnd = static_cast<uint16_t>(getenv("ADNDOFF") ? strtoul(getenv("ADNDOFF"), nullptr, 16) : 0);
+    rules::test::off_enh = static_cast<uint8_t>(getenv("ENHOFF") ? strtoul(getenv("ENHOFF"), nullptr, 16) : 0);
+    if (!rules::test::off_fix && !rules::test::off_adnd && !rules::test::off_enh)   // (it checks the switches themselves)
+#endif
     test_fix_switches();
     test_drained();
     test_rle_known_bytes();

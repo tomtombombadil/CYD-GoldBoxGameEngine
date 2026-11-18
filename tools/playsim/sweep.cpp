@@ -1758,7 +1758,24 @@ static bool expect(const char* part, const char* what, bool ok, const char* fmt,
     va_start(ap, fmt);
     vsnprintf(detail, sizeof detail, fmt, ap);
     va_end(ap);
-    printf("%s %s: %s%s%s\n", ok ? "PASS" : "FAIL", part, what, detail[0] ? " - " : "", detail);
+    // TOGGLEMAP=1: the switches the engine asked since the last check (F = Game Fix by
+    // its number, A = AD&D 1E Rule bit, E = Enhancement bit) - the toggle checks' map
+    char sw[300] = "";
+    static const bool map = getenv("TOGGLEMAP") != nullptr;
+    if (map) {
+        int n = 0;
+        for (int k = 0; k < rules::kFixCount; ++k)
+            if (rules::test::seen_fix >> k & 1) n += snprintf(sw + n, sizeof sw - n, "%sF%d", n ? "," : " [sw ", k);
+        for (int b = 0; b < 16; ++b)
+            if (rules::test::seen_adnd >> b & 1) n += snprintf(sw + n, sizeof sw - n, "%sA%x", n ? "," : " [sw ", 1 << b);
+        for (int b = 0; b < 8; ++b)
+            if (rules::test::seen_enh >> b & 1) n += snprintf(sw + n, sizeof sw - n, "%sE%d", n ? "," : " [sw ", 1 << b);
+        if (n) snprintf(sw + n, sizeof sw - n, "]");
+        rules::test::seen_fix = 0;
+        rules::test::seen_adnd = 0;
+        rules::test::seen_enh = 0;
+    }
+    printf("%s %s: %s%s%s%s\n", ok ? "PASS" : "FAIL", part, what, detail[0] ? " - " : "", detail, sw);
     if (ok) ++b_pass;
     else {
         ++b_fail;
@@ -1840,6 +1857,9 @@ static void dice_faces(std::initializer_list<int> f) { dice_usual(); b_faces.ass
 #ifdef BEHAVE_ECONOMY
 #include "behave_economy.inc"
 #endif
+#ifdef BEHAVE_TOGGLES
+#include "behave_toggles.inc"
+#endif
 #ifdef BEHAVE_ROUND4
 #include "behave_round4.inc"
 #endif
@@ -1869,6 +1889,20 @@ int main(int argc, char** argv)
     const int arg = argc > 3 ? atoi(argv[3]) : 0;
 #ifdef CYD_TEST_HOOKS
     if (getenv("FCHECK")) fc::install();        // (FCHECK=1: the fight checker / FCACTLOG trace in any mode)
+    // The toggle checks: FIXOFF / ADNDOFF / ENHOFF (hex masks) hold those switches off
+    // whatever the checks set (FIXOFF bit k = Game Fix k; "all" = every one)
+    {
+        auto mask = [](const char* v) -> uint64_t { return !v ? 0 : !strcmp(v, "all") ? ~0ull : strtoull(v, nullptr, 16); };
+        rules::test::off_fix = mask(getenv("FIXOFF"));
+        rules::test::off_adnd = static_cast<uint16_t>(mask(getenv("ADNDOFF")));
+        rules::test::off_enh = static_cast<uint8_t>(mask(getenv("ENHOFF")));
+        if (getenv("FIXLIST")) {
+            for (int k = 0; k < rules::kFixCount; ++k)
+                printf("F%d %s games %03x\n", k, rules::fix_info(k).name, rules::fix_info(k).games);
+            for (int k = 0; k < rules::kAdndCount; ++k)
+                printf("A%x %s games %03x\n", rules::adnd_info(k).bit, rules::adnd_info(k).name, rules::adnd_info(k).games);
+        }
+    }
 #endif
     if (mode == "spells") sweep_spells();
     else if (mode == "campspells") sweep_campspells();
@@ -1966,6 +2000,9 @@ int main(int argc, char** argv)
 #endif
 #ifdef BEHAVE_FEATURES
         if (want("features")) behave_features();
+#endif
+#ifdef BEHAVE_TOGGLES
+        if (want("toggles")) behave_toggles();
 #endif
 #ifdef BEHAVE_ROUND4
         if (want("rules4")) behave_round4();

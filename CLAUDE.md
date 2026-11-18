@@ -456,8 +456,11 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
 - **AD&D 1E Rules vs Game Fixes** (Tom, 2026-11-17): a rule of the 1st
   edition books the originals left out is an AD&D 1E Rule (`rules::adnd`,
   `Adnd` bits, `rules::adnd_info` - name, games, help): Magic Missile,
-  Multi-Class Hit Points, Thrown Weapons, Magic Items, Coin Exchange, Age
-  with Time, Power Word Kill, Protection from Evil, Raising the Dead. A
+  Multi-Class Hit Points, Thrown Weapons, Magic Items (PoolRad's Flame
+  Tongue only), Age with Time, Power Word Kill, Protection from Evil,
+  Raising the Dead. An addition of ours the engine applies is an
+  Enhancement (`rules::enh`, `Enh` bits; Tom, 2026-11-17): Coin Exchange,
+  Flasks of Oil (oil is no magic item). A
   mistake in an original's code is a Game Fix, each its own switch
   (`rules::fix(rules::kFix...)`, `rules::fix_info` - name, the games it
   touches, help). Engine code never asks "the fixes" as one: a new fix gets
@@ -526,7 +529,7 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   **Max Hit Points** (`CYD_MAX_HP`, `Settings::max_hp`, OFF by default):
   a Settings key and the same switch on the Cheats tab; training's hit
   dice at their highest (`create::Dice::max`), the rest of the game's sum
-  unchanged; level-ups only, not creation.
+  unchanged; level-ups and (Tom, 2026-11-06) a new character's dice too.
 - Auto Join (Tom, 2026-11-16; `CYD_AUTO_JOIN`, Settings key, `comforts_off2`
   bit 32, on by default; SPEC 11): an item taken from a treasure joins a pile
   of the same its taker carries (Join's own test), needing no slot.
@@ -759,6 +762,18 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   Darkness-type), who may turn, Restoration and training's lost levels,
   Haste's ageing, poison / disease over a rest, the Krynn moons; facts in
   the Project's claude/rules_round4_facts.md.
+  **Toggle checks** (Tom, 2026-11-17: every switch, every game, before a
+  release): with -DCYD_TEST_HOOKS the engine notes each switch a check asks
+  (TOGGLEMAP=1 ends each check line with them) and FIXOFF / ADNDOFF /
+  ENHOFF (hex masks) hold switches off whatever the checks set.
+  `tools/devkit/toggles_build.sh` (a binary a game: its behave part + the
+  common suites + `behave toggles` - the Enhancements both ways),
+  `toggles.sh base`, `toggles_each.sh` (each switch off by itself, every
+  game and suite), `toggles.py <logs> base each <fixlist>` (per switch and
+  game: the checks it decides; "changes OUTSIDE its games" = a games mask
+  in `rules::kFixes` / `kAdnd` short of where the code acts),
+  `toggles_host.sh` (the same on the host tests). A new switch needs a
+  check that fails with it held off, in each game it lists.
 - **DOSBox here** (2026-10-12): the ORIGINAL games run on Claude's side -
   `apt-get install dosbox xdotool x11-apps imagemagick`, a virtual display
   (`Xvfb :5`), `DISPLAY=:5 SDL_AUDIODRIVER=dummy dosbox -conf <conf>`

@@ -1,4 +1,7 @@
 #include "items.h"
+#ifdef CYD_TEST_HOOKS
+#include "rules.h"
+#endif
 
 #include <cstdio>
 #include <cstring>
@@ -163,7 +166,12 @@ bool fix_item(uint8_t* r, bool original)
     if (!f || r[0x2E] != f->type || r[0x2F] != f->word) return false;
     const bool is_orig = r[0x30] == f->plus_word && r[0x32] == f->plus && r[0x3D] == f->spell && r[0x3E] == 0;
     const bool is_fixed = r[0x30] == f->plus1_word && r[0x32] == 1 && r[0x3D] == f->effect && r[0x3E] == f->code;
-    const bool want_fixed = g_flame_on && !original;
+    bool on = g_flame_on;
+#ifdef CYD_TEST_HOOKS
+    rules::test::seen_adnd |= rules::kAdndItems;    // (the toggle checks: Magic Items is this switch)
+    if (rules::test::off_adnd & rules::kAdndItems) on = false;
+#endif
+    const bool want_fixed = on && !original;
     if (want_fixed && is_orig) {
         r[0x30] = f->plus1_word;            // (the name: "+1")
         r[0x32] = 1;

@@ -334,11 +334,11 @@ enum Fix : uint8_t {
     kFixPalCast,        // Paladins' Casting: by the paladin's level (Secret, Darkness, Treasures, Knights)
     // Darkness (Treasures / Krynn where said)
     kFixRaceAdj,        // Race Adjustments at creation (Darkness, Champions, Knights)
-    kFixClericXp,       // Cleric's Experience Bonus from Wisdom 16 (Darkness, Treasures)
-    kFixRemCurse,       // Remove Curse takes off the curse (Darkness, Knights)
-    kFixPwBlind,        // Power Word Blind: its time, not for good
-    kFixDragonFear,     // Dragon Fear ends with the fight
-    kFixBulette,        // Bulette's Leap: one round in four
+    kFixClericXp,       // Cleric's Experience Bonus from Wisdom 16 (Secret, Darkness, Treasures)
+    kFixRemCurse,       // Remove Curse takes off the curse (Darkness, Treasures, Knights, Queen)
+    kFixPwBlind,        // Power Word Blind: its time, not for good (Darkness, Treasures)
+    kFixDragonFear,     // Dragon Fear ends with the fight (Darkness, Treasures)
+    kFixBulette,        // Bulette's Leap: one round in four (Darkness, Treasures)
     kFixSummon,         // Monster Summoning: room for big monsters
     kFixVault,          // New Game's Vault: emptied (Darkness, Treasures, Gateway)
     // Treasures
@@ -425,6 +425,16 @@ bool enh(uint8_t e);
 void set_all(bool on);
 // No fix switched off (the tests' look at set_all's state)
 bool all_fixes();
+#ifdef CYD_TEST_HOOKS
+// The toggle checks (sweep's TOGGLEMAP / FIXOFF / ADNDOFF / ENHOFF): which
+// switches were asked since the masks were last cleared, and switches held off
+// whatever set_* says
+namespace test {
+extern uint64_t seen_fix, off_fix;
+extern uint16_t seen_adnd, off_adnd;
+extern uint8_t seen_enh, off_enh;
+}
+#endif
 // A weapon both melee and thrown, thrown (Thrown Weapons): the record's
 // to-hit holds the melee figure (Strength's), this is the change for a throw
 // - Dexterity's missile bonus less Strength's to-hit

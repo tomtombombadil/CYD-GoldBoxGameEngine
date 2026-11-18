@@ -348,11 +348,14 @@ stay in the session's scratch space, never in the repo.
     itself meanwhile; the board's settings and the Cheats page's cheats are
     never touched.
   - Enhancements: Game Font, Show Rolls, Companion Views, Savegame Info,
-    Auto Join Items, Keep Memorizing, Camp Fix, More Characters, Icon
-    Portrait, Icon Gallery, Large Icon (320x240).
+    Auto Join Items, Keep Memorizing, Camp Fix, Coin Exchange, Flasks of
+    Oil, More Characters, Icon Portrait, Icon Gallery, Large Icon (320x240).
+    (Coin Exchange and Flasks of Oil - Tom, 2026-11-17: additions of ours,
+    not 1E rules; the engine's `rules::enh` bits.)
   - AD&D 1E Rules (section 12): Magic Missile, Multi-Class Hit Points,
-    Thrown Weapons, Magic Items, Coin Exchange, Age with Time, Power Word
-    Kill, Protection from Evil, Raising the Dead.
+    Thrown Weapons, Magic Items (PoolRad's Flame Tongue only - oil is no
+    magic item), Age with Time, Power Word Kill, Protection from Evil,
+    Raising the Dead.
   - Game Fixes: Every Game and one page a game (in a game: Every Game and
     that game's); each fix its own switch, on each page of a game it
     touches (`rules::fix_info`: names, games, help).
@@ -2467,6 +2470,17 @@ How it works (v0.12.0, Curse):
   text look is only the fallback (no game open, the canvas parked, the
   card won't take SCREEN.TMP). No Settings switch: it is the look Tom
   asked for, nothing of the original games is changed by it.
+- 2026-11-17 (Tom, PoolRad's journal on the board: Column "zooms in very
+  very close and you can't see or read anything"; "you didn't include the
+  page width view"): the book's Zoom is **Column** (the start) -> **Page
+  Width** -> **Whole**. Columns: a run of the page under a third as wide as
+  its widest joins its nearer neighbour (`journal::join_margins` - PoolRad's
+  first page, one column between two scanned margin borders, is one
+  column: the same as its page). Page Width: a scan wider than tall is two
+  facing book pages, each across the screen (the key between Prev / Next
+  says Left / Right); else the page itself. Changing the zoom keeps the
+  spot in the middle (`View::mid_x / mid_y`). The PortMaster port's own
+  viewer of every PDF the games came with is the port's (Tom).
 
 ## 8. Copy protection (Tom, 2026-10-06)
 
@@ -3184,13 +3198,15 @@ the game's Settings (As Original: all of them).
   originals left out - not mistakes in their code, so not Game Fixes. Since
   v0.209.0 these entries below are AD&D 1E Rules, not Game Fixes: Magic
   Missile (PoolRad's own level / 2 off), A multi-class's hit points (Multi-
-  Class Hit Points), Money (Coin Exchange - also Pool at a paid service in
-  the highest coins, `play::counter_pool`; Share returns the highest coins),
-  Flasks of oil burn and Pool's Flame Tongue (Magic Items), Darkness's and
+  Class Hit Points), Pool's Flame Tongue (Magic Items), Darkness's and
   Treasures' clock and age (Age with Time), Darkness's Power Word Kill,
   Protection from Evil / Good against blows. Every other "Game Fixes" entry
   of this section is its own switch (`rules::Fix`; its name in
-  `rules.cpp kFixes`).
+  `rules.cpp kFixes`). Money (Coin Exchange - also Pool at a paid service
+  in the highest coins, `play::counter_pool`; Share returns the highest
+  coins) and Flasks of oil burn are **Enhancements** since v0.209.1 (Tom,
+  2026-11-17: "Flasks of oil are non-magical and as ordinary as a Molotov
+  Cocktail"; `rules::kEnhCoins` / `kEnhOil`).
   - **Thrown Weapons**: a hurled weapon takes Dexterity's missile bonus to
     hit and Strength's damage bonus. The originals give darts and javelins
     (ITEMS flags 0x10 without melee's 4) neither (`rules::recalc`). A weapon

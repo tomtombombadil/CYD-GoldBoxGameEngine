@@ -85,6 +85,9 @@ public:
     // DOSBox), whatever the words
     bool plural_first = false;
     int flask() const { return plural_.flask; }      // the flask of oil's item type
+    // The flask of oil a throw burns (Flasks of Oil): profile items.oil, else flask
+    void set_oil(int t) { oil_ = static_cast<uint8_t>(t); }
+    int oil() const { return oil_ ? oil_ : plural_.flask; }
 
     // The item's name as the games print it ("Long Sword", "3 Arrows",
     // "Long Sword +1"), with the count in front when there is one.
@@ -99,6 +102,7 @@ private:
     size_t   used_ = 1;
     TypeInfo types_[kTypes];
     Plural   plural_{73, 28, 9, 86, 0x87, 0xB1};
+    uint8_t  oil_ = 0;
 };
 
 // Treasure on the ground / a shop's goods (TREASURE in the scripts): coins

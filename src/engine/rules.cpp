@@ -1586,25 +1586,26 @@ const FixInfo kFixes[kFixCount] = {
     {kFixDiff, "Difficulty To-Hit", kSecret | kKnights,
      "The difficulty setting changes both sides' to-hit rolls, as in the other games. These originals "
      "compare against a fixed value and never apply it."},
-    {kFixSOwn, "Secret's Own List", kSecret,
+    {kFixSOwn, "Secret's Own List", kSecret | kDark | kTreas,
      "Secret's small mistakes: the elves' +1 with their weapons for elves only, dwarves' and gnomes' -4 "
      "against giants, the Constitution bonus to their saves, Blink and Invisibility at the attack roll, "
-     "Displacement working, the Periapt of Health against disease, Strength 18/xx for paladins."},
+     "Displacement working, the Periapt of Health against disease, Strength 18/xx for paladins. Darkness and "
+     "Treasures share two of them: Invisibility at the attack roll and Displacement."},
     {kFixPalCast, "Paladins' Casting", kSecret | kDark | kTreas | kKnights,
      "A paladin casts at its paladin level less 8, as AD&D says. These originals leave the paladin out and "
      "cast its spells at a fixed level."},
     {kFixRaceAdj, "Race Adjustments", kDark | kChamp | kKnights,
      "A new character gets its race's ability adjustments. These originals test the human line of the list "
      "instead of the race picked, so they never add them."},
-    {kFixClericXp, "Cleric's Experience Bonus", kDark | kTreas,
+    {kFixClericXp, "Cleric's Experience Bonus", kSecret | kDark | kTreas,
      "A cleric gets the 10% experience bonus from Wisdom 16. The original asks for more."},
-    {kFixRemCurse, "Remove Curse", kDark | kKnights,
+    {kFixRemCurse, "Remove Curse", kDark | kTreas | kKnights | kQueen,
      "Remove Curse takes off a bestowed curse. The originals look for another effect, so the curse stays."},
-    {kFixPwBlind, "Power Word Blind", kDark,
+    {kFixPwBlind, "Power Word Blind", kDark | kTreas,
      "Power Word Blind lasts the time it works out. The original blinds for good."},
-    {kFixDragonFear, "Dragon Fear", kDark,
+    {kFixDragonFear, "Dragon Fear", kDark | kTreas,
      "A dragon's fear ends with the fight. The original keeps its -2 for ever."},
-    {kFixBulette, "Bulette's Leap", kDark,
+    {kFixBulette, "Bulette's Leap", kDark | kTreas,
      "The bulette leaps one round in four (8 attacks). The original sets the leap and writes over it at "
      "once, so it never leaps."},
     {kFixSummon, "Monster Summoning", kDark,
@@ -1686,15 +1687,38 @@ const AdndInfo kAdnd[kAdndCount] = {
 void set_fixes(bool on) { g_fixes_off = on ? 0 : ~0ull; }
 void set_fixes_off(uint64_t off) { g_fixes_off = off; }
 uint64_t fixes_off() { return g_fixes_off; }
+#ifdef CYD_TEST_HOOKS
+namespace test {
+uint64_t seen_fix = 0, off_fix = 0;
+uint16_t seen_adnd = 0, off_adnd = 0;
+uint8_t seen_enh = 0, off_enh = 0;
+}
+bool fix(Fix f)
+{
+    test::seen_fix |= 1ull << f;
+    return !((g_fixes_off | test::off_fix) >> f & 1);
+}
+bool adnd(uint16_t rule)
+{
+    test::seen_adnd |= rule;
+    return (g_adnd & ~test::off_adnd & rule) != 0;
+}
+bool enh(uint8_t e)
+{
+    test::seen_enh |= e;
+    return (g_enh & ~test::off_enh & e) != 0;
+}
+#else
 bool fix(Fix f) { return !(g_fixes_off >> f & 1); }
+bool adnd(uint16_t rule) { return (g_adnd & rule) != 0; }
+bool enh(uint8_t e) { return (g_enh & e) != 0; }
+#endif
 const FixInfo& fix_info(int k) { return kFixes[k >= 0 && k < kFixCount ? k : 0]; }
 void set_adnd(uint16_t bits) { g_adnd = bits; }
 uint16_t adnd_bits() { return g_adnd; }
-bool adnd(uint16_t rule) { return (g_adnd & rule) != 0; }
 const AdndInfo& adnd_info(int k) { return kAdnd[k >= 0 && k < kAdndCount ? k : 0]; }
 bool all_fixes() { return g_fixes_off == 0; }
 void set_enh(uint8_t bits) { g_enh = bits; }
-bool enh(uint8_t e) { return (g_enh & e) != 0; }
 void set_all(bool on)
 {
     set_fixes(on);

@@ -468,6 +468,10 @@ struct Profile {
         // in the data segment at data_base; words.stride unused)
         bool        words_far = false;
         bool        str_fighter_now = false;       // (rules::ItemFacts::str_fighter_now; with stat_fx)
+        // The flask of oil for Flasks of Oil (an Enhancement) when it isn't
+        // `flask` - a game whose flask has no name rule of Curse's (Treasures
+        // 87 - its shops' "flask of oil"); 0: `flask`
+        uint8_t     oil = 0;
     } items;
 
     // Character rules (making and training characters): the rule tables in

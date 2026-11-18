@@ -58,6 +58,21 @@ the Project as claude/TODO.md.
       Also for it (v0.209.0): play::Options has `fixes_off` (bit = rules::Fix), `adnd` (uint16, rules::Adnd
       bits) and `keep_mem`; the old fields still work (all switches on by default). rules::fix_info /
       adnd_info give each switch's name, games and help for the port's own Settings.
+- [ ] **Toggle checks before a release** (Tom, 2026-11-17: "check each toggle and verify its effect in each
+      game ... I have announced this repo and the PortMaster repo on reddit"). v0.209.1: every Game Fix /
+      AD&D 1E Rule / engine Enhancement held off by itself in every game's suites (tools/devkit/toggles.sh,
+      toggles_each.sh, toggles.py - the engine reports the switches each check asked: TOGGLEMAP), the
+      Enhancements both ways (`behave toggles`, E1-E8), Flasks of Oil (matrix). Results and what is left:
+      the summary to Tom; switches no check reaches get checks of their own before the release.
+- [ ] Secret's outdoor fight field (v0.209.1): Secret has no terrain table in our facts, and the engine read
+      its flags from leftover memory (behave secret failed when the run's folder path was longer - found by
+      the toggle checks). Now no flags (plain grass, the default scatter). Check Secret's own outdoor
+      builder in its GAME.OVR (Darkness's reads DS 0x097C[15]): which flags, if any, it uses.
+- [ ] The book's Page Width and single-column Column (v0.209.1): checked with the board's own column
+      code on every GOG / some SNEG journal page (tools/devkit/src/book_columns.cpp) and host tests; not
+      yet seen drawn (QEMU or a board). Tom: PoolRad's journal page 1 on Column, then Page Width / Whole.
+- [ ] For the PortMaster session (v0.209.1): play::Options `coin_exchange`, `oil_burns` (Enhancements now,
+      `rules::enh`); kAdndItems is PoolRad's Flame Tongue only; Coin Exchange's old bit 0x20 is free.
 - [ ] Treasures play-through leftovers (2026-11-17): a fight page read "LORDSMAN goes down LORDSMAN" /
       "COCKATRICE goes down COCKATRICE" in the playsim's PAGELOG (two pages joined, or a wrong second line?);
       "INVISIBILITY, 10' RADIU" in the spell book list (cut at the frame - the original's?).
