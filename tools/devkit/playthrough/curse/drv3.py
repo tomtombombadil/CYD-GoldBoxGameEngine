@@ -65,7 +65,9 @@ def cast(who, name, target=None):
 
 for step in range(int(os.environ.get('STEPS', '260'))):
     log = run(T)
-    if '[fight] won' in log: print('WON', re.findall(r'\[fight\] won.*', log)[-1][:90]); break
+    wins = re.findall(r'\[fight\] won.*', log)
+    if step == 0: won0 = len(wins)       # (fights won before this one - the start's tokens)
+    if len(wins) > won0: print('WON', wins[-1][:90]); break
     st = re.findall(r'  \? screen (\d+) menu \[([^\]]*)\]', log)
     if not st: print('no state'); break
     scr, menu = st[-1]
@@ -74,7 +76,7 @@ for step in range(int(os.environ.get('STEPS', '260'))):
     n = len(set(f[0] for f in figs)); figs = figs[-n:]
     F = {int(f[0]): dict(name=f[2], x=int(f[3]), y=int(f[4]), team=int(f[5]), hp=int(f[6])) for f in figs}
     for k, v in F.items(): maxhp[k] = max(maxhp.get(k, 0), v['hp'])
-    who = (re.findall(r'  \? turn (.+)', log) or [''])[-1].strip()
+    who = (re.findall(r'  \? turn (.+?)(?: \(fight state.*)?$', log, re.M) or [''])[-1].strip()
     sig = (who, menu, tuple(sorted((k, v['hp'], v['x'], v['y']) for k, v in F.items())))
     if sig == lastsig and 'Aim:' not in menu:
         T += '/E,/Q,' if 'Aim:' in menu else '{,/Q,'; lastsig = None; continue
@@ -128,6 +130,11 @@ for step in range(int(os.environ.get('STEPS', '260'))):
         formed.add(who)
         if FORM[who] and 'Move' in menu:
             T += '/M' + ''.join('}%d' % d for d in FORM[who]) + '{,'; continue
+    # DUST=NAME: that member Uses item 0 (the Dust of Disappearance, readied) at their first turn
+    if os.environ.get('DUST') == who and 'Use' in menu and 'dust' not in wands:
+        wands['dust'] = 1; T += '/U/R/U,'
+        if os.environ.get('VERB'): print(step, who, 'dust', flush=True)
+        continue
     # WAND="NAME:index:FOE": that member Uses item <index> (readied the first time) on the nearest FOE in RANGE
     wd = os.environ.get('WAND', '').split(':')
     if len(wd) == 3 and who == wd[0] and 'Use' in menu and wands.get(who, 0) < int(os.environ.get('WANDN', '20')):
@@ -191,4 +198,4 @@ for step in range(int(os.environ.get('STEPS', '260'))):
     if os.environ.get('VERB'): print(step, who, a, 'party', sum(F[k]['hp'] for k in party), 'foes', len(foes), sum(F[k]['hp'] for k in foes), flush=True)
     T += a
 open(P + '/ftok.txt', 'w').write(T)
-print('party', [(F[k]['name'], F[k]['hp']) for k in F if F[k]['team'] == 0])
+print('party', [(F[k]['name'], F[k]['hp']) for k in F if F[k]['team'] == 0] if 'F' in dir() else '')
