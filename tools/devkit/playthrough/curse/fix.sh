@@ -1,9 +1,16 @@
 #!/bin/bash
 # fix.sh <slot> [rest]: the Cheats tab's Healer on every hurt member (0 HP: Raise Dead first, then Cure
-# Critical Wounds until full), then (rest=1) the Sanctuary's rest; saved back to the slot. Prints the party.
+# Critical Wounds until full; a stoned one Stone to Flesh before), then (rest=1) the Sanctuary's rest; saved back to the slot. Prints the party.
 P=/tmp/claude-0/cplay; S=$1
 TAILN=0 $P/bin/p.sh "|B" SAVE=$S PARTYDUMP=1 > /dev/null
 T='|B"0'
+# (Stoned members - status 7 - get the Healer's Stone to Flesh first; status 8, Gone, has no cure)
+TAILN=0 $P/bin/p.sh "" SAVE=$S CAMPRUN='!' > /dev/null
+k=0
+while read -r st; do
+  [ "$st" = 7 ] && T="$T%$k/Hvvvvvvvvv/H/N/E"
+  k=$((k + 1))
+done < <(grep -a " HP .* st " $P/run.log | sed -E 's/.* st ([0-9]+).*/\1/')
 while read -r i hp mx; do
   [ "$hp" = "$mx" ] && continue
   [ "$hp" = 0 ] && T="$T%$i/Hvvvvvvv/H/N/E%$i/Hvvvvv/H/N/E"
