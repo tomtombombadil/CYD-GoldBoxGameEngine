@@ -135,13 +135,13 @@ for step in range(int(os.environ.get('STEPS', '260'))):
         wands['dust'] = 1; T += '/U/R/U,'
         if os.environ.get('VERB'): print(step, who, 'dust', flush=True)
         continue
-    # WAND="NAME:index:FOE": that member Uses item <index> (readied the first time) on the nearest FOE in RANGE
+    # WAND="NAME:index:FOE": that member Uses item <index> (readied the first time - WANDREADY=1: already readied) on the nearest FOE in RANGE
     wd = os.environ.get('WAND', '').split(':')
     if len(wd) == 3 and who == wd[0] and 'Use' in menu and wands.get(who, 0) < int(os.environ.get('WANDN', '20')):
         tg = [k for k in foes if wd[2] in F[k]['name'] and cheb(F[k], m) <= int(os.environ.get('RANGE', '12'))]
         if tg:
             k = min(tg, key=lambda k: cheb(F[k], m))
-            T += '/U' + 'v' * int(wd[1]) + ('' if who in wands else '/R') + f'/U#@{k};/T~/E~,'
+            T += '/U' + 'v' * int(wd[1]) + ('' if who in wands or os.environ.get('WANDREADY') else '/R') + f'/U#@{k};/T~/E~,'
             wands[who] = wands.get(who, 0) + 1
             if os.environ.get('VERB'): print(step, who, 'wand at', k, flush=True)
             continue
