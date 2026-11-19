@@ -34,17 +34,32 @@ pending = {}; hasted = set(); wands = {}; maxhp = {}; formed = set(); prayed = s
 # SPEED=NAME,NAME (Tom, 2026-11-19): those members drink a Potion of Speed at their first turn (doubled
 # attacks for the fight); the potions' places from the save's item dump
 QUAFF = {}
-if os.environ.get('SPEED'):
+# INVIS=NAME,NAME: those drink a Potion of Invisibility first (a turn), then SPEED's potion (the next turn)
+DRINKS = [('INVIS', 'Potion of Invisibility'), ('SPEED', 'Potion of Speed')]
+if any(os.environ.get(e) for e, _ in DRINKS):
     d = subprocess.run(['bash', P + '/bin/p.sh', '', 'SAVE=' + slot, 'ITEMDUMP=1'], capture_output=True, text=True)
-    cur = None; idx = 0
+    cur = None; idx = 0; SHIELD = {}; AT = {}
     for l in open(P + '/run.log', errors='replace'):
         m = re.match(r'  member \d (\S+) ', l)
         if m: cur = m.group(1); idx = 0; continue
-        m = re.match(r'    [* ] (.*)', l)
+        m = re.match(r'    ([* ]) (.*)', l)
         if m and cur:
-            if m.group(1).strip() == 'Potion of Speed' and cur not in QUAFF and cur in os.environ['SPEED'].split(','):
-                QUAFF[cur] = idx
+            for e, nm in DRINKS:
+                if m.group(2).strip() == nm and cur in os.environ.get(e, '').split(',') and (cur, nm) not in AT:
+                    AT[(cur, nm)] = idx
+            if m.group(1) == '*' and m.group(2).startswith('Shield') and cur not in SHIELD: SHIELD[cur] = idx
             idx += 1
+    # (a potion is readied before it's used and needs a free hand: the shield comes off first - the game's
+    # hands rule; it stays off for the fight, fin.sh readies it again; a drunk potion leaves the list)
+    for w in set(c for c, _ in AT):
+        seq = []; gone = []; off = False
+        for _, nm in DRINKS:
+            if (w, nm) not in AT: continue
+            q = AT[(w, nm)]; q -= sum(1 for g in gone if g < q); h = SHIELD.get(w, -1)
+            if h >= 0 and not off: t = 'v' * h + '/R' + ('v' * (q - h) if q > h else '^' * (h - q)); off = True
+            else: t = 'v' * q
+            seq.append(t); gone.append(AT[(w, nm)])
+        QUAFF[w] = seq
 quaffed = set()
 
 def run(t):
@@ -146,8 +161,8 @@ for step in range(int(os.environ.get('STEPS', '260'))):
         formed.add(who)
         if FORM[who] and 'Move' in menu:
             T += '/M' + ''.join('}%d' % d for d in FORM[who]) + '{,'; continue
-    if who in QUAFF and who not in quaffed and 'Use' in menu:
-        quaffed.add(who); T += '/U' + 'v' * QUAFF[who] + '/U,'
+    if QUAFF.get(who) and 'Use' in menu:
+        T += '/U' + QUAFF[who].pop(0) + '/R/U,'
         if os.environ.get('VERB'): print(step, who, 'speed', flush=True)
         continue
     # DUST=NAME: that member Uses item 0 (the Dust of Disappearance, readied) at their first turn
@@ -159,6 +174,15 @@ for step in range(int(os.environ.get('STEPS', '260'))):
     wd = os.environ.get('WAND', '').split(':')
     if len(wd) == 3 and who == wd[0] and 'Use' in menu and wands.get(who, 0) < int(os.environ.get('WANDN', '20')):
         tg = [k for k in foes if wd[2] in F[k]['name'] and cheb(F[k], m) <= int(os.environ.get('RANGE', '12'))]
+        if os.environ.get('WANDAREA'):
+            # (an area wand - Fireballs: the foe at the burst's centre with the most foes round it and none
+            # of ours within the safe distance; leaders count 3)
+            rad, safe, _ = AREA[os.environ['WANDAREA']]
+            ours = [v for v in F.values() if v['team'] == 0 and v['hp'] > 0]
+            tg = [k for k in tg if not any(cheb(F[k], v) <= safe for v in ours)]
+            sc = {k: sum(3 if any(z in F[j]['name'] for z in PRIO) else 1 for j in foes if cheb(F[j], F[k]) <= rad) for k in tg}
+            tg = [k for k in tg if sc[k] >= 3]
+            if tg: tg = [max(tg, key=lambda k: sc[k])]
         if tg:
             k = min(tg, key=lambda k: cheb(F[k], m))
             T += '/U' + 'v' * int(wd[1]) + ('' if who in wands or os.environ.get('WANDREADY') else '/R') + f'/U#@{k};/T~/E~,'
