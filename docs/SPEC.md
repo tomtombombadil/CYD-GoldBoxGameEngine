@@ -2994,6 +2994,19 @@ a PC, PortMaster handhelds):
     block and clock words at their places per format, the end's member
     files) and each member's record into a `SavePeek` (~4 KB on the heap
     while the question is up). The list drawn again as the question ends.
+  - `CYD_ADD_INFO` (Tom, 2026-11-18): **Character Info** (on by default,
+    `comforts_off3` bit 1; an Enhancement) - while Add Character to Party
+    lists the characters (every game, every source; not the Dark Queen's
+    Delete list) the screen's right half (columns 20-38, a grey divider
+    at 19) shows the highlighted one in the game's View Character style:
+    the name in cyan, sex and race, alignment, class (over two rows when
+    long), the levels; the six scores in green beside the combat icon
+    twice its size; AC / hit points / THAC0 with the game's own words,
+    the numbers to the right edge; the readied weapon and armour; "from
+    saved game A" for a saved game's member; the state when not Okay. A
+    saved game's member's line shortens to the name and the slot letter.
+    The character is read as Add reads it (`load_guy`, into `AddPeek`,
+    ~5 KB on the heap while the list is up), the party untouched.
   - `CYD_QUICK_ACTIONS` (Tom, 2026-11-09): **Quick Actions** - what each
     party member may do when Quick (an NPC: the computer) plays it in a
     fight. The Game menu's **Quick** tab (between Logs and Cheats; with it

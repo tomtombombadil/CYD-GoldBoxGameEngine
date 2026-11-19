@@ -47,6 +47,8 @@ struct Settings {
     uint8_t saved_comforts_off = 0, saved_comforts_off2 = 0, saved_rules_off = 0, saved_rules_off2 = 0;
     uint8_t saved_fixes_off[8] = {};
     uint8_t saved_max_hp = 0, saved_game_font = 0, saved_large_icons = 0;
+    uint8_t comforts_off3 = 0;    // more comforts switched off (kOff3*; 0 in older files = all on)
+    uint8_t saved_comforts_off3 = 0;
 };
 
 // The Volume key (Tom, 2026-10-24): 0-100% in 5% steps, kept in the 0-255
@@ -85,6 +87,8 @@ constexpr uint8_t kOff2CampFix = 1, kOff2Cheats = 2, kOff2Companion = 4, kOff2Qu
                   kOff2AutoJoin = 32,   // (Auto Join, CYD_AUTO_JOIN - Tom, 2026-11-16)
                   kOff2SaveInfo = 64,   // (Save Slot Info, CYD_SAVE_INFO - Tom, 2026-11-17)
                   kOff2KeepMem = 128;   // (Keep Memorizing, CYD_KEEP_MEMORIZING - a Settings key since v0.209.0)
+// comforts_off3 bits
+constexpr uint8_t kOff3AddInfo = 1;     // (Character Info on Add Character, CYD_ADD_INFO - Tom, 2026-11-18)
 // The AD&D 1E Rules' and the Game Fixes' switched-off sets, as one number
 inline uint16_t settings_rules_off(const Settings& s) { return static_cast<uint16_t>(s.rules_off | s.rules_off2 << 8); }
 inline void settings_set_rules_off(Settings& s, uint16_t v)

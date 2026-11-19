@@ -165,6 +165,7 @@ struct Options {
     uint64_t fixes_off = 0;       // the Game Fixes switched off one by one (bit = rules::Fix; item_fixes off: all)
     bool auto_join = true;        // a taken item joins its taker's same pile (CYD_AUTO_JOIN)
     bool save_info = true;        // Save / Load Which show the slots' saves (CYD_SAVE_INFO)
+    bool add_info = true;         // Add Character shows the highlighted character (CYD_ADD_INFO)
     bool keep_mem = true;         // an interrupted rest keeps the spells to memorize (CYD_KEEP_MEMORIZING)
     bool coin_exchange = true;    // Coin Exchange (an Enhancement - rules::kEnhCoins)
     bool oil_burns = true;        // Flasks of Oil burn (an Enhancement - rules::kEnhOil)

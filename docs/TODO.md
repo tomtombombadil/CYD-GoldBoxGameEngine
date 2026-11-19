@@ -399,6 +399,16 @@ the Project as claude/TODO.md.
       characters one by one).
 
 ## Claude
+- [ ] **PortMaster port, Character Info (v0.211.0)**: `play::Options::add_info`
+      (on by default) wants a Settings line under Enhancements there.
+- [x] v0.211.0 **Character Info on Add Character** (Tom, 2026-11-18): the list's
+      empty half shows the highlighted character - name, race, class /
+      levels, HP, AC, readied weapon, worn armour, the six scores, the icon
+      (the Companion's party card if it fits); like Save Slot Info, an
+      Enhancement with its own Settings switch; every game's Add list
+      (.GUY files, saved games' members, earlier-game imports, Krynn).
+      Look (Tom): the game's own View Character screen's style - its
+      labels, colours and layout, fitted into the half.
 - [x] v0.207.2 - from the Treasures play-through's first hour (the PortMaster
       session, 2026-11-17; the original in DOSBox beside the engine):
       (1) Gateway characters added in Treasures kept Gateway's item numbers -

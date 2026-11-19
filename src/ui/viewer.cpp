@@ -3292,7 +3292,7 @@ void tap_sounds(const ui::Tap& t)
 // One set for all games (settings.h comforts_off), on the one Settings
 // screen (below); a comfort compiled out (app/features.h) isn't listed.
 enum Comfort { kCFont, kCGallery, kCBigIcon, kCMoreGuys, kCPortrait, kCRolls, kCCampFix, kCCompanion, kCMaxHp, kCQuick,
-               kCJoin, kCSaveInfo, kCKeepMem, kCCoins, kCOil, kComforts };
+               kCJoin, kCSaveInfo, kCKeepMem, kCCoins, kCOil, kCAddInfo, kComforts };
 
 bool comfort_built(int c)
 {
@@ -3312,23 +3312,28 @@ bool comfort_built(int c)
     case kCKeepMem: return CYD_KEEP_MEMORIZING;
     case kCCoins: return CYD_COIN_EXCHANGE;
     case kCOil: return CYD_OIL_BURNS;
+    case kCAddInfo: return CYD_ADD_INFO;
     default: return true;
     }
 }
-// (bits 8 on: comforts_off2's)
-uint16_t comfort_bit(int c)
+// (bits 8 on: comforts_off2's, 16 on: comforts_off3's)
+uint32_t comfort_bit(int c)
 {
-    static const uint16_t kBits[kComforts] = {0, kOffGallery, kOffBigIcon, kOffMoreGuys, kOffPortrait, kOffRolls,
+    static const uint32_t kBits[kComforts] = {0, kOffGallery, kOffBigIcon, kOffMoreGuys, kOffPortrait, kOffRolls,
                                               kOff2CampFix << 8, kOff2Companion << 8, 0, kOff2Quick << 8,
                                               kOff2AutoJoin << 8, kOff2SaveInfo << 8, kOff2KeepMem << 8, kOffCoins,
-                                              kOffOil};
+                                              kOffOil, static_cast<uint32_t>(kOff3AddInfo) << 16};
     return kBits[c];
 }
-uint16_t comforts_off() { return static_cast<uint16_t>(cfg->comforts_off | cfg->comforts_off2 << 8); }
-void set_comforts_off(uint16_t v)
+uint32_t comforts_off()
+{
+    return static_cast<uint32_t>(cfg->comforts_off | cfg->comforts_off2 << 8 | cfg->comforts_off3 << 16);
+}
+void set_comforts_off(uint32_t v)
 {
     cfg->comforts_off = static_cast<uint8_t>(v);
     cfg->comforts_off2 = static_cast<uint8_t>(v >> 8);
+    cfg->comforts_off3 = static_cast<uint8_t>(v >> 16);
 }
 bool comfort_on(int c)
 {
@@ -3361,6 +3366,7 @@ void apply_options()
     o.read_time = CYD_READ_TIME;                // (Tom, 2026-11-17: no switch - always)
     o.auto_join = comfort_on(kCJoin);
     o.save_info = comfort_on(kCSaveInfo);
+    o.add_info = comfort_on(kCAddInfo);
     o.keep_mem = comfort_on(kCKeepMem);
     o.coin_exchange = comfort_on(kCCoins);
     o.oil_burns = comfort_on(kCOil);
@@ -3373,7 +3379,7 @@ void apply_options()
 // The Enhancements page's switches, in Tom's order
 int comfort_list(int* out)
 {
-    static const uint8_t kOrder[] = {kCFont, kCRolls, kCCompanion, kCSaveInfo, kCJoin, kCKeepMem,
+    static const uint8_t kOrder[] = {kCFont, kCRolls, kCCompanion, kCSaveInfo, kCAddInfo, kCJoin, kCKeepMem,
                                      kCCampFix, kCCoins, kCOil, kCMoreGuys, kCPortrait, kCGallery, kCBigIcon};
     int n = 0;
     for (uint8_t c : kOrder)
@@ -3400,7 +3406,8 @@ ui::Rect comfort_qmark(const ui::Rect& cell)
 const char* const kComfortNames[kComforts] = {"Game Font",       "Icon Gallery",    "Large Icon",     "More Characters",
                                               "Icon Portrait",   "Show Rolls",      "Camp Fix",       "Companion Views",
                                               "Max Hit Points",  "Quick Actions",   "Auto Join Items", "Savegame Info",
-                                              "Keep Memorizing", "Coin Exchange",   "Flasks of Oil"};
+                                              "Keep Memorizing", "Coin Exchange",   "Flasks of Oil",
+                                              "Character Info"};
 
 // What each option does (sentence case; Tom, v0.84.0)
 const char* comfort_help_text(int c)
@@ -3472,6 +3479,11 @@ const char* comfort_help_text(int c)
                "shared out again, the money is kept in the highest coins - so copper doesn't weigh anyone down. "
                "Off: as the originals (some take certain prices in platinum alone). PoolRad, Curse, Secret and "
                "Gateway - the games with five kinds of coins.";
+    case kCAddInfo:
+        return "While Add Character to Party lists your characters, the empty half of the screen shows the "
+               "highlighted one as the game's View Character does: name, race, class and levels, the six "
+               "ability scores, armour class, hit points, THAC0, the readied weapon and armour, and the "
+               "combat icon. Off: as the original.";
     case kCOil:
         return "A thrown flask of oil bursts into flames: fire damage, as an ordinary firebomb would - a troll it "
                "brings down stays down. Off: as the originals, a plain blow.";
@@ -3637,14 +3649,15 @@ void toggle_original()
     if (!cfg->original) {
         cfg->saved_comforts_off = cfg->comforts_off;
         cfg->saved_comforts_off2 = cfg->comforts_off2;
+        cfg->saved_comforts_off3 = cfg->comforts_off3;
         cfg->saved_rules_off = cfg->rules_off;
         cfg->saved_rules_off2 = cfg->rules_off2;
         memcpy(cfg->saved_fixes_off, cfg->fixes_off, sizeof cfg->fixes_off);
         cfg->saved_max_hp = cfg->max_hp;
         cfg->saved_game_font = cfg->game_font;
         cfg->saved_large_icons = cfg->large_icons;
-        uint16_t all = 0;
-        for (int c = 0; c < kComforts; ++c) all = static_cast<uint16_t>(all | comfort_bit(c));
+        uint32_t all = 0;
+        for (int c = 0; c < kComforts; ++c) all |= comfort_bit(c);
         set_comforts_off(all);
         settings_set_rules_off(*cfg, rules::kAdndAll);
         settings_set_fixes_off(cfg->fixes_off, ~0ull);
@@ -3655,6 +3668,7 @@ void toggle_original()
     } else {
         cfg->comforts_off = cfg->saved_comforts_off;
         cfg->comforts_off2 = cfg->saved_comforts_off2;
+        cfg->comforts_off3 = cfg->saved_comforts_off3;
         cfg->rules_off = cfg->saved_rules_off;
         cfg->rules_off2 = cfg->saved_rules_off2;
         memcpy(cfg->fixes_off, cfg->saved_fixes_off, sizeof cfg->fixes_off);

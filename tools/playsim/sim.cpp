@@ -2034,6 +2034,8 @@ int main(int argc, char** argv)
             continue;
         }
         if (*m == '`') { g_quiet = !g_quiet; continue; }
+        if (*m == '\'' && getenv("RESEED")) {    // (' : the dice from here on as SEED=RESEED - a later fight tried on other rolls)
+            play::rng = create::Dice(static_cast<uint32_t>(strtoul(getenv("RESEED"), nullptr, 10))); continue; }
         if (*m == '#' && m[1]) {
             // "#NAME;": in a fight's aim, the Next word until the aimed fighter's name starts with NAME
             // (a play-through's "focus on that one": the board's own Next / Target words)
