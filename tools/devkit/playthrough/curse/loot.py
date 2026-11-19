@@ -39,7 +39,11 @@ def items_of(k):
 
 EXIT = '/E/E/E'
 import os
-SELL = [x for x in os.environ.get('SELL', '').split(',') if x]   # (names sold whatever they are: magic no one uses)
+SELL = [x for x in os.environ.get('SELL', '').split(',') if x]
+# SELLN="m:Name:n,...": sell at most n of that name from member m (the rest kept - e.g. potions past two)
+SELLN = {}
+for x in [y for y in os.environ.get('SELLN', '').split(',') if y]:
+    m_, nm_, n_ = x.split(':'); SELLN[(int(m_), nm_)] = int(n_)   # (names sold whatever they are: magic no one uses)
 for k in members:
     i = len(items_of(k)) - 1
     while i >= 0:
@@ -55,6 +59,9 @@ for k in members:
         protect = known and re.search(r'Mail|Armor|Shield|Ring|Bracers|Cloak|Robe|Girdle|Gauntlets|Boots|Helm', base)
         if not ready and name in SELL and protect:
             print(f'  {k}: {name} - magic armour / protection, kept'); i -= 1; continue
+        if not ready and SELLN.get((k, name), 0) > 0:
+            SELLN[(k, name)] -= 1
+            run(sel + '/S/Y' + EXIT, f'SAVENOW={S}'); print(f'  {k}: {name} sold (SELLN)'); i -= 1; continue
         if not ready and name in SELL:
             run(sel + '/S/Y' + EXIT, f'SAVENOW={S}'); print(f'  {k}: {name} sold (SELL)'); i -= 1; continue
         if ready or known or any(w in name for w in KEEP):
