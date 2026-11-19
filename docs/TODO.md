@@ -485,7 +485,16 @@ the Project as claude/TODO.md.
       Sleep / Hold Person / Stinking Cloud, focus fire). 2026-11-17: Tilverton, sewers,
       hideout, wilderness, Hap (patrols / barn counts checked), the Dracolich Cave (Silk's mark,
       Crimdrac) and the Wizard's Tower's roof done; next: the tower's floors, Yulash.
+      2026-11-19: through Yulash, the Pit, Zhentil Keep, the Burial Glen and the Myth Drannor
+      ruins to Tyranthraxus's door in the Grand Ruined Temple.
       Open questions found on the way:
+  - [ ] Tom: the final battle (28 margoyles, Tyranthraxus, 8 high priests; the party on the
+        top wall with margoyles adjacent) lost 20 times with the kit's tactics (Speed, Haste,
+        Invisibility potions, the Wand of Fireballs aimed clear of the party). Options: more
+        seeds; Modify the casters' hit points higher; a hand-played fight; or your own advice.
+  - [ ] A Shadowdale save came back in Curse's script 81 with town 1 - a dead end there (no
+        Journey list, no Inn: towns 0-4 are script 80's); not reproduced. If seen again: the
+        steps that made it.
   - [x] The Cheats tab at Curse's travel menu and menu-only towns too (Tom, 2026-11-16) -
         v0.204.0
   - [ ] Curse's sphere duel in the Wizard's Tower: a fighter (Aldric) won it though its text
