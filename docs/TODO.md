@@ -503,6 +503,10 @@ the Project as claude/TODO.md.
         creation sets 0xE6 = hit dice too) - the original's bug? If so: Game Fixes.
   - [ ] Curse's dwarf poison save: Thorin's shows 14 in Curse vs 10 in PoolRad (classes.cpp
         adds the Constitution bonus to the save number "as the games do") - check it.
+  - [ ] Curse's camp on the travel map (seen 2026-11-19, outside Zhentil Keep): the camp is drawn over the
+        map with no party list, so View / Drop act on the first member only - the player can't pick anyone
+        else there. DOSBox: does the original's travel camp show the party list (as Death Knights' PROGRAM 9
+        camp does, v0.210.1)? Then the same for Curse.
   - [ ] Add Character lists 48 entries at most (a save folder with many slots hides some).
   - [ ] Curse's hideout leader fight: Mira's unidentified Dust (Dust of Disappearance) - Use in the
         fight left the items list up and nothing happened; what does the original do?
