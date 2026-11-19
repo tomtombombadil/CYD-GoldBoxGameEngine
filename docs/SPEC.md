@@ -3093,6 +3093,15 @@ a PC, PortMaster handhelds):
 
 ## 12. Where the engine differs from the original games (Tom, 2026-10-10: keep this list up to date)
 
+- **Spell lists, every game (Tom, 2026-11-18; v0.210.9)**: one way in all
+  nine - Up / Down move the lit spell a line at a time and the window
+  scrolls a line as it passes its edge (the originals: Curse-type lists
+  wrap inside the page, the Dark Queen's scroll a line with a scroll bar);
+  Next / Prev on the menu line turn a page (no further than the last full
+  page) whenever there is more below / above - Prev whenever the window
+  isn't at the top (Curse-type originals: only past the first heading;
+  the Dark Queen's have no Next / Prev). A turned page lights its first
+  spell (the originals keep the line). `sl_scroll_to_sel`, `sl_page`.
 - **Modify (every game; v0.210.1)**: no difference now in its steps - the
   stats, 18/xx (the fighter types, the Krynn knight too; 17 -> 18 first)
   and the hit points' one-bound-at-a-time rule are the originals'

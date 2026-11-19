@@ -19,6 +19,13 @@ the Project as claude/TODO.md.
       Found, NOT fixed yet: the original lists Celeste's god-given spell under "SPECIAL" (Charm Person,
       "Special : 1" in the counts) - the engine shows neither, so a Death Knights character can't memorize
       its special spells (Claude: next). Darkness / Treasures (the same family) not looked at.
+- [ ] v0.210.9 (Tom, 2026-11-18 20:01: "make them uniform ... scroll the list one at a time ... Next and
+      Prev ... like PgDn and PgUp"): every game's spell lists - Up / Down a line at a time, the window
+      scrolling a line past its edge (the heading above shown when scrolling up to its first spell), Next /
+      Prev a page whenever there's more (the Dark Queen's too; SPEC 12). Checked: playsim - Curse's Shara
+      (down through two scrolls, Next, up past the top, Prev), the Dark Queen's Lenduira; navcheck Curse,
+      Darkness, Queen, Champions (only the old Save Which failure). Tom: try it on a board. The Dark Queen
+      question (scroll bar or Next / Prev) is answered by this.
 - [ ] v0.210.8 (Tom, 2026-11-18: "Check the other games spells and memorizations. Don't leave anything
       out."). Every game's memorize screens run side by side in DOSBox and the engine (save A with the
       memorized spells cleared, every caster: lists, counts, Next / Prev, the list before memorizing, the
@@ -42,9 +49,8 @@ the Project as claude/TODO.md.
       question for Tom below); the item / shop lists' Next likely clamps the same way (coab's shared list
       routine) - not changed, not checked; navcheck's "Save Which Game" N3 (Curse, Secret) fails before and
       after this change - to look at.
-- [ ] Tom (question, 2026-11-18): the Dark Queen's original lists (spells, and probably items / shops)
-      scroll a line at a time with a scroll bar on the right and no Next / Prev words. Keep the engine's
-      Next / Prev pages there (easier with a stylus), or copy the scroll bar (its arrows tappable)?
+- [x] Tom (2026-11-18): the Dark Queen's spell lists - answered: Next / Prev plus line scrolling, as every
+      game's (v0.210.9).
 - [ ] v0.210.7 (Tom, 2026-11-18 13:43: "Fix the special spell slots, and test the other games ... magic items,
       classes, Gods, whatever ... verify ... compared to DOSbox"). Fixed, from each original's code: (1) the
       specials (spells 101-107, "Special") of Champions and Death Knights - a cleric's, god 4 three, god 6 none,

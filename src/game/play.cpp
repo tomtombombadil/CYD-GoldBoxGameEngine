@@ -10016,16 +10016,27 @@ void sl_page(int dir)
     if (sl.sel >= old && sl.sel < old + rows) dk_page_sel();
 }
 
-// Prev is offered past the list's leading headings (Curse's sl_select_item
-// ovr027 +0x1065: the top line past the headings before the first entry -
-// DOSBox: Philippe's last page from line 1, Sparkle's: no Prev); Pool's any
-// top past 0
-bool sl_prev_shown()
+// Prev whenever the window isn't at the list's top - every game the same
+// (Tom, 2026-11-18: the spell lists work alike everywhere - Up / Down a line
+// at a time, the window scrolling a line past its edge, Next / Prev a page;
+// the originals: Curse-type lists offer Prev only past the first heading,
+// the Dark Queen's scroll a line with a scroll bar and no Next / Prev -
+// SPEC 12)
+bool sl_prev_shown() { return sl.top > 0; }
+
+// The window follows the lit line a line at a time: past the bottom it
+// scrolls so the line is the last one shown, past the top the first (with
+// the heading just above it when that fits)
+void sl_scroll_to_sel(int rows)
 {
-    if (pool_files()) return sl.top > 0;
-    int lead = 0;
-    while (lead < sl.n && !sl.id[lead]) ++lead;
-    return sl.top > lead;
+    if (sl.sel < 0) return;
+    if (sl.sel < sl.top) {
+        sl.top = sl.sel;
+        while (sl.top > 0 && !sl.id[sl.top - 1] && sl.sel < sl.top - 1 + rows) --sl.top;
+    }
+    if (sl.sel >= sl.top + rows) sl.top = sl.sel - rows + 1;
+    if (sl.top > sl.n - rows) sl.top = sl.n > rows ? sl.n - rows : 0;
+    if (sl.top < 0) sl.top = 0;
 }
 
 // "NAME can memorize:" and the counts a kind (cleric, druid, magic-user)
@@ -19291,8 +19302,7 @@ bool nav_list(int step, pic::Canvas& c)
             if (sl.id[i]) break;
         }
         sl.sel = i;
-        while (sl.sel < sl.top) sl.top = sl.top >= rows ? sl.top - rows : 0;
-        while (sl.sel >= sl.top + rows) sl.top += rows;
+        sl_scroll_to_sel(rows);
         draw_spells(c);
         show_menu_line(c);
         keep_menu_choice(keep, c);
@@ -19325,10 +19335,9 @@ bool nav_list(int step, pic::Canvas& c)
             if (sl.id[i]) break;
         }
         sl.sel = i;
-        while (sl.sel < sl.top) sl.top = sl.top >= rows ? sl.top - rows : 0;
-        while (sl.sel >= sl.top + rows) sl.top += rows;
-        if (sl.top > sl.n - rows) sl.top = sl.n > rows ? sl.n - rows : 0;
+        sl_scroll_to_sel(rows);
         draw_spells(c);
+        show_menu_line(c);      // (Next / Prev follow the window)
         keep_menu_choice(keep, c);
         return true;
     }
