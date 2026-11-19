@@ -1,5 +1,13 @@
 # Open tasks (Tom and Claude)
 
+- [x] v0.211.1 (the PortMaster session; Tom, 2026-11-18: Treasures' first fight - black floor, a few wall pieces): since
+      v0.203.12 (Gateway's maze fights, 2026-11-17) the fight's view-limits block stood between the indoor builder and its
+      "else" chain, so in EVERY game but Gateway an outdoor field was built over every indoor fight (Curse's dungeon fights
+      in a wood, Treasures' / Darkness's floors black) and Gateway's wilderness fights got no field at all. The block moved
+      after the builders. Seen in the playsim (VGA=1 and EGA): Treasures save A RUNAT 874D, Curse save A RUNAT 8AC2 -
+      indoors again. NOT checked: the other games one by one, Gateway's wilderness; the battlefield survey
+      (tools/devkit/fieldsurvey) should be run again on every game.
+
 Tom, 2026-10-12: "start keeping a list of tasks we need to do - both you
 and me." Kept up to date with every push (CLAUDE.md); finished items go
 to the bottom with their version, then drop off after a while. Synced to

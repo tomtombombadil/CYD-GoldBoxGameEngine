@@ -5683,6 +5683,15 @@ void fight_start(pic::Canvas& c)
     fg->maze = fg->t.field_ends_at_map && vm && vm->get(0x4D01) == 1 && !in_demo;
     if (b.indoors)
         combat::build_indoors(b, fg->t, d->map, d->gs.x, d->gs.y, rng, !pool_files() && !d->prof->variant.vga && !gw_under);
+    else if (d->prof->variant.overland_map) combat::build_outdoors_pool(b, pool_place_flags(), rng);
+    else if (darkness_files() || hl()) {
+        combat::build_outdoors_dk(b, fg->t, vm->get(0x33) != 0, rng);   // (its own: facts L9)
+        plat::log("[fight] outdoors: river %d, region %d\n", vm->get(0x33), vm->get(0x3A));
+    }
+    else combat::build_outdoors(b, fg->t, vm->get(0x4CA1) & 0xFF, rng);
+    // (Gateway's view limits: AFTER the builders. v0.203.12 put this block between the indoor builder and
+    // its "else" chain, so the outdoor builders ran after every indoor field in every game but Gateway -
+    // black floors with stray walls, Tom's Treasures fight, 2026-11-18 - and Gateway's wilderness got none)
     if (fg->t.field_ends_at_map) {
         int x0 = combat::kW, x1 = -1, y0 = combat::kH, y1 = -1;
         for (int y = 0; y < combat::kH; ++y)
@@ -5698,12 +5707,6 @@ void fight_start(pic::Canvas& c)
             fg->view_y0 = static_cast<uint8_t>(y0); fg->view_y1 = static_cast<uint8_t>(y1);
         }
     }
-    else if (d->prof->variant.overland_map) combat::build_outdoors_pool(b, pool_place_flags(), rng);
-    else if (darkness_files() || hl()) {
-        combat::build_outdoors_dk(b, fg->t, vm->get(0x33) != 0, rng);   // (its own: facts L9)
-        plat::log("[fight] outdoors: river %d, region %d\n", vm->get(0x33), vm->get(0x3A));
-    }
-    else combat::build_outdoors(b, fg->t, vm->get(0x4CA1) & 0xFF, rng);
     // (Pool: the field's scattered pieces - ovr11 +0x0 at both builders'
     // ends; DOSBox: Valjevo's fights)
     if (pool_files()) combat::pool_debris(b, fg->t, d->gs.script, rng);
