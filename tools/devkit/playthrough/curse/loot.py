@@ -8,7 +8,7 @@
 import re, subprocess, sys
 P = '/tmp/claude-0/cplay'; S = sys.argv[1]
 members = [int(x) for x in sys.argv[2].split(',')] if len(sys.argv) > 2 else [0, 1, 2, 3, 4, 5]
-KEEP = ('Composite Long Bow', 'Arrow', 'Sling', 'Quarrel', 'Dart', 'Scroll')
+KEEP = ('Composite Long Bow', 'Arrow', 'Sling', 'Quarrel', 'Dart', 'Scroll', 'Mirror', 'Potion', 'Javelin', 'Chain Mail')
 GENERIC = ('Potion', 'Ring', 'Wand', 'Scroll', 'Dust', 'Bracers', 'Cloak', 'Necklace', 'Gauntlets', 'Boots',
            'Girdle', 'Robe', 'Helm', 'Stone', 'Book', 'Rod', 'Staff', 'Amulet', 'Medallion', 'Jewelry', 'Gem')
 
