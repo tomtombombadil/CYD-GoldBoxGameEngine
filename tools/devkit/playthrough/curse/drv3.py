@@ -31,6 +31,22 @@ DIRS = {(0, -1): 0, (1, -1): 1, (1, 0): 2, (1, 1): 3, (0, 1): 4, (-1, 1): 5, (-1
 pending = {}; hasted = set(); wands = {}; maxhp = {}; formed = set(); prayed = set(); lastsig = None; stuck = 0; aimn = 0
 
 
+# SPEED=NAME,NAME (Tom, 2026-11-19): those members drink a Potion of Speed at their first turn (doubled
+# attacks for the fight); the potions' places from the save's item dump
+QUAFF = {}
+if os.environ.get('SPEED'):
+    d = subprocess.run(['bash', P + '/bin/p.sh', '', 'SAVE=' + slot, 'ITEMDUMP=1'], capture_output=True, text=True)
+    cur = None; idx = 0
+    for l in open(P + '/run.log', errors='replace'):
+        m = re.match(r'  member \d (\S+) ', l)
+        if m: cur = m.group(1); idx = 0; continue
+        m = re.match(r'    [* ] (.*)', l)
+        if m and cur:
+            if m.group(1).strip() == 'Potion of Speed' and cur not in QUAFF and cur in os.environ['SPEED'].split(','):
+                QUAFF[cur] = idx
+            idx += 1
+quaffed = set()
+
 def run(t):
     subprocess.run([P + '/bin/p.sh', t + '?[', f'SAVE={slot}', 'PAGELOG=1'], env=dict(env, TAILN='0'),
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -130,6 +146,10 @@ for step in range(int(os.environ.get('STEPS', '260'))):
         formed.add(who)
         if FORM[who] and 'Move' in menu:
             T += '/M' + ''.join('}%d' % d for d in FORM[who]) + '{,'; continue
+    if who in QUAFF and who not in quaffed and 'Use' in menu:
+        quaffed.add(who); T += '/U' + 'v' * QUAFF[who] + '/U,'
+        if os.environ.get('VERB'): print(step, who, 'speed', flush=True)
+        continue
     # DUST=NAME: that member Uses item 0 (the Dust of Disappearance, readied) at their first turn
     if os.environ.get('DUST') == who and 'Use' in menu and 'dust' not in wands:
         wands['dust'] = 1; T += '/U/R/U,'
