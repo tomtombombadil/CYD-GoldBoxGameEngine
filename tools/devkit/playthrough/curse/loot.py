@@ -50,6 +50,11 @@ for k in members:
         known = bool(re.search(r' [+-]\d', base))            # (identified magic: kept for the hand-out)
         base = re.sub(r'^Drow ', '', re.sub(r' [+-]\d.*$', '', base))
         sel = '"1%%%d/V/I' % k + 'v' * i
+        # (Tom, 2026-11-19: magic armour and protection are never sold - SELL passes them over: a spare suit,
+        # ring or bracers is the next upgrade for someone)
+        protect = known and re.search(r'Mail|Armor|Shield|Ring|Bracers|Cloak|Robe|Girdle|Gauntlets|Boots|Helm', base)
+        if not ready and name in SELL and protect:
+            print(f'  {k}: {name} - magic armour / protection, kept'); i -= 1; continue
         if not ready and name in SELL:
             run(sel + '/S/Y' + EXIT, f'SAVENOW={S}'); print(f'  {k}: {name} sold (SELL)'); i -= 1; continue
         if ready or known or any(w in name for w in KEEP):
