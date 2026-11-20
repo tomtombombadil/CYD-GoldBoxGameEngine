@@ -1750,6 +1750,43 @@ int main(int argc, char** argv)
         q = strchr(q, ';');
         if (q) ++q;
     }
+    // GIVE=m:i,i;m:i...: member m gets records i of ITEMS_BIN (sweep testchars' 63-byte item records,
+    // identified, not readied) - a play-through's stand-in for loot it should have taken
+    if (const char* gq = getenv("GIVE")) {
+        std::vector<uint8_t> bin;
+        if (FILE* f = fopen(getenv("ITEMS_BIN") ? getenv("ITEMS_BIN") : "", "rb")) {
+            uint8_t b[63];
+            while (fread(b, 1, 63, f) == 63) bin.insert(bin.end(), b, b + 63);
+            fclose(f);
+        }
+        // (GIVEFRESH=1: each member named in GIVE gives up everything first)
+        if (getenv("GIVEFRESH"))
+            for (const char* q = gq; q && *q;) {
+                const int m = atoi(q);
+                if (m >= 0 && m < play::pt->count) play::pt->m[m].n_items = 0;
+                q = strchr(q, ';');
+                if (q) ++q;
+            }
+        for (const char* q = gq; q && *q;) {
+            const int m = atoi(q);
+            const char* c = strchr(q, ':');
+            if (!c || m < 0 || m >= play::pt->count) break;
+            for (++c; *c && *c != ';';) {
+                char* e;
+                const long v = strtol(c, &e, 10);
+                if (e == c) break;
+                party::Character& ch = play::pt->m[m];
+                if ((v + 1) * 63 <= (long)bin.size() && ch.n_items < party::kMaxItems) {
+                    uint8_t* it = ch.items[ch.n_items++];
+                    memcpy(it, bin.data() + v * 63, 63);
+                    it[0x34] = 0; it[0x35] = 0;
+                } else printf("  (GIVE %d:%ld: no record or no room)\n", m, v);
+                c = *e == ',' ? e + 1 : e;
+            }
+            q = strchr(q, ';');
+            if (q) ++q;
+        }
+    }
     // SETAGE=m:age,...: member m that old; AGEUP=n: the clock's years make
     // everyone n older (Darkness / Treasures - old age at the next fight's end)
     for (const char* q = getenv("SETAGE"); q && *q;) {

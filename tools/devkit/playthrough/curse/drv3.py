@@ -167,11 +167,12 @@ for step in range(int(os.environ.get('STEPS', '260'))):
         continue
     # DUST=NAME: that member Uses item 0 (the Dust of Disappearance, readied) at their first turn
     if os.environ.get('DUST') == who and 'Use' in menu and 'dust' not in wands:
-        wands['dust'] = 1; T += '/U/R/U,'
+        wands['dust'] = 1; T += '/U' + ('' if os.environ.get('WANDREADY') else '/R') + '/U,'
         if os.environ.get('VERB'): print(step, who, 'dust', flush=True)
         continue
     # WAND="NAME:index:FOE": that member Uses item <index> (readied the first time - WANDREADY=1: already readied) on the nearest FOE in RANGE
-    wd = os.environ.get('WAND', '').split(':')
+    # (several: WAND="A:i:FOE|B:j:FOE" - each member's own)
+    wd = next((w.split(':') for w in os.environ.get('WAND', '').split('|') if w.split(':')[0] == who), [])
     if len(wd) == 3 and who == wd[0] and 'Use' in menu and wands.get(who, 0) < int(os.environ.get('WANDN', '20')):
         tg = [k for k in foes if wd[2] in F[k]['name'] and cheb(F[k], m) <= int(os.environ.get('RANGE', '12'))]
         if os.environ.get('WANDAREA'):
