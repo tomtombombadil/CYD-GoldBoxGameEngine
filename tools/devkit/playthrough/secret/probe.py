@@ -26,7 +26,7 @@ while front:
             if not r: continue
             edges[f'{x},{y},{l},{d}'] = r
             nx, ny, nl, sc, menu, t = r
-            if sc != '24' and menu.startswith('|Move') and (nx, ny, nl) not in seen:
+            if (nx, ny, nl) not in seen:   # (a fight / question square too: the party stands there after it)
                 seen.add((nx, ny, nl)); nf.append((nx, ny, nl))
     front = nf
     print(len(seen), 'places', flush=True)
