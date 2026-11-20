@@ -8,7 +8,10 @@
       in its program; Knights / Treasures no locked sides; Queen's HLIB maps not scanned.
 - [ ] Secret play-through (Tom, 2026-11-19; the Project's claude/playthrough_secret.md): New Verdigris, the Well,
       the Ruins' dragons and bier, the Black Circle HQ under way; then the Temple of Tyr, the mines, dungeon,
-      crevasses, castle, Eldamar and the ending (Secret's PROGRAM 8 has no profile entry yet - check there).
+      crevasses, castle, Eldamar. Secret has NO ending program (2026-11-20: every ECL1-3 block
+      disassembled - its only PROGRAMs are 3 and 0; after Eldamar's gem the game goes on, as the guides
+      say) - no `won` entry needed. Checked by hand there: the riddles (typed answer, any case; a wrong
+      one to the Well), the Brass Key only with the Amulet (4C53), the staff chain (4C84 = FF, Derf).
 
 - [x] v0.211.1 (the PortMaster session; Tom, 2026-11-18: Treasures' first fight - black floor, a few wall pieces): since
       v0.203.12 (Gateway's maze fights, 2026-11-17) the fight's view-limits block stood between the indoor builder and its
@@ -463,7 +466,7 @@ the Project as claude/TODO.md.
       member when none leaves, 24 when one of seven does) and all six ending
       pages against DOSBox screenshots.
 - [ ] **The other games' PROGRAM 8** (found 2026-11-17): only Curse and
-      PoolRad have an ending in the profile; Secret, Champions, Death Knights,
+      PoolRad have an ending in the profile (Secret: none needed - it has no PROGRAM 8, 2026-11-20); Champions, Death Knights,
       Darkness, Treasures run Curse's pages with no words (`won = {}`) and
       then stop the script at the party menu. Each game's handler (Gateway's:
       GAME.OVR 0x3FA0, "cmp al,8") says what its PROGRAM 8 does and whether
