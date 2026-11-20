@@ -1,5 +1,18 @@
 # Open tasks (Tom and Claude)
 
+- [x] v0.211.3 (the PortMaster session's Treasures play-through, 2026-11-20; each checked against the original in
+      DOSBox): **Treasures' overland.** (1) A save made on the overland kept the last town's wall blocks where the
+      original keeps the overland map's number (save byte 0x407): loaded, the engine drew a 3D view with a noise
+      floor in the map's place and Area showed wall lines; the ORIGINAL stopped at "No #13 in OVER.DAX" on such a
+      save. Now the map's number is kept (load_look / load_slot), and an old save of ours is mended as it loads (the
+      map's own number when OVER.DAX has no such block) - the original loads the new save and shows the same map.
+      (2) Overland fights were built from the 3D map (its walls are the rivers) and drawn with WILDCOM's pictures:
+      every square a river bank. Now outdoors, as the original (grass, rocks, bushes, trees). (3) The overland's menu
+      had Area; the original's is "Move Cast View Encamp Search Look".
+- [ ] Treasures, open from the same play-through: an overland fight's starting distance (the original showed a foe
+      at Range 21 - after stray keys, so not a clean reading; ours start next to the party); the Leilon potion the
+      guides speak of was not among the loot taken (AUTOLOOT) - which fight drops it?
+
 - [x] v0.211.2 (the Secret play-through, 2026-11-20, the Black Circle HQ's door at 8,7): **Secret's locked doors
       stopped the party without a word** - its profile had no door words (the menu's words empty = the originals'
       no-choice case), so Bash / Pick / Knock were never offered. Now its GAME.OVR's "Bash" ... "Locked. " (0x19C6E

@@ -2185,7 +2185,10 @@ void idle_menu(pic::Canvas& c)
         static char prompt3d[32];
         prompt3d[0] = 0;
         if (moving) ow(d->prof->variant.move_prompt, prompt3d, sizeof prompt3d);
-        text::build(menu, prompt3d, moving ? "Exit" : "Move Area Cast View Encamp Search Look");
+        // (Treasures' overland - game byte 0x3F: no Area, its map is the view. DOSBox, the PortMaster
+        // session 2026-11-20: "Move Cast View Encamp Search Look")
+        const bool tr_ov = d->prof->variant.tr && d->gs.area1[0x3F];
+        text::build(menu, prompt3d, moving ? "Exit" : tr_ov ? "Move Cast View Encamp Search Look" : "Move Area Cast View Encamp Search Look");
         menu.selected = 0;
         if (!moving && kept_hl()) {
             // (Darkness's exploring routine, GAME.OVR 0xD78B: its place from the
@@ -14151,6 +14154,13 @@ struct Host : ecl::Host {
             // Treasures' overland (game byte 0x3F): the look is its map
             // picture, OVER.DAX (o144+0xA70)
             d->tr_over = static_cast<uint8_t>(look);
+            // (the save keeps it where a town's first wall slot goes - byte 0x407: the original loads
+            // OVER.DAX's block of that number. Until v0.211.3 a save made on the overland still held the
+            // last town's blocks: loaded, the engine drew a 3D view in the map's place, and the original
+            // stopped at "No #13 in OVER.DAX" - DOSBox, the PortMaster session's Treasures play-through)
+            d->save.look = static_cast<uint16_t>(look & 0xFF);
+            d->save.look_slot = 0;
+            plat::log("[play] overland map %d (look)\n", look);
             if (screen == Screen::Game && bigpic < 0) {
                 anim_stop();
                 pic_shown = false;
@@ -14191,6 +14201,11 @@ struct Host : ecl::Host {
     {
         if (d->gs.area1[0x3F]) {
             if (block >= 0) d->tr_over = static_cast<uint8_t>(block);     // (the overland's map: o144+0x1511)
+            if (block >= 0) {
+                d->save.look = static_cast<uint16_t>(block & 0xFF);
+                d->save.look_slot = 0;
+            }
+            if (block >= 0) plat::log("[play] overland map %d (slot %d)\n", block, slot);
             return;
         }
         view3d::World& wd = d->world;
@@ -14207,6 +14222,7 @@ struct Host : ecl::Host {
     void slots_done() override
     {
         view3d::World& wd = d->world;
+        if (d->gs.area1[0x3F]) return;      // (the overland: no wall slots - the save keeps its map's number, load_slot / load_look)
         view3d::tr_pool_reset(wd);
         plat::File f;
         bool ok = true;
@@ -15457,7 +15473,17 @@ void begin_adventuring()
             // (Treasures: its map and the three slots' blocks - the save's
             // bytes 0x407-0x409, ovl 0x7C +0x2877)
             host->load_map(vm->get(0x4BC5) & 0xFF);
-            const int blk[3] = {d->save.look & 0xFF, d->save.look >> 8, d->save.look_slot & 0xFF};
+            int blk[3] = {d->save.look & 0xFF, d->save.look >> 8, d->save.look_slot & 0xFF};
+            if (d->gs.area1[0x3F]) {
+                // (the overland: byte 0x407 is its OVER.DAX map. A save of ours made there before
+                // v0.211.3 holds the last town's wall blocks instead: the map's own number then - the
+                // overland script's look is its map's number)
+                plat::File f;
+                const bool has = blk[0] && open_dax("OVER.DAX", f) && d->idx.find(static_cast<uint8_t>(blk[0]));
+                f.close();
+                if (!has) blk[0] = vm->get(0x4BC5) & 0xFF;
+                blk[1] = blk[2] = 0;
+            }
             for (int s2 = 0; s2 < 3; ++s2) host->load_slot(s2, blk[s2] ? blk[s2] : -1);
             host->slots_done();
         } else if (dungeon && hl()) {
@@ -19354,7 +19380,7 @@ bool act(Act a, pic::Canvas& c)
     case Act::StepLeft:   step((g.dir + 6) & 7); return true;     // Tom: the same checks as a step that way
     case Act::StepRight:  step((g.dir + 2) & 7); return true;
     case Act::Area:
-        if (vm->get(0x4BFB) == 0) area_view = !area_view;
+        if (vm->get(0x4BFB) == 0 && !(d->prof->variant.tr && d->gs.area1[0x3F])) area_view = !area_view;     // (Treasures' overland has no Area)
         pic_shown = false;
         break;
     case Act::Look: {

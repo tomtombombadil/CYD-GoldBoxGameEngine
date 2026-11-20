@@ -5668,6 +5668,10 @@ void fight_start(pic::Canvas& c)
     if (d->prof->variant.tr) {
         b.weather = d->gs.area1[0x52];
         b.weather_free = 0x9E;
+        // (its overland - game byte 0x3F - is fought outdoors: the 3D flag stays set there, its map's
+        // walls are the rivers. Until v0.211.3 the field was built from that map and drawn with WILDCOM's
+        // pictures - every square a river bank; DOSBox: grass, rocks, bushes, a tree)
+        if (d->gs.area1[0x3F]) b.indoors = false;
     }
     // Pool: only its wilderness areas are fought outdoors (the rest from the 3D map)
     const int over = d->prof->variant.overland_area;
