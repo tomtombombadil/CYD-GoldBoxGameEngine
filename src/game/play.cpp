@@ -3857,6 +3857,9 @@ void redraw_menu(pic::Canvas& c)
 // A message on the menu line for the game's delay (as the games do)
 void note(pic::Canvas& c, const char* t)
 {
+#ifdef CYD_TEST_HOOKS
+    plat::log("[note] %s", t);
+#endif
     clear_menu_line(c);
     put(c, t, 0, text::kMenuRow, 10);
     // (one game delay: the games' menu-line message routine prints and
