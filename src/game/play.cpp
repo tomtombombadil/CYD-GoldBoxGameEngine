@@ -1881,10 +1881,25 @@ int   hl_hold_at = 0;               // ... and that place (till the player moves
 int hl_sig()
 {
     uint32_t v = static_cast<uint32_t>(menu.count);
-    for (const char* p = menu.prompt; *p; ++p) v = v * 31u + static_cast<uint8_t>(*p);
+    // (a number in the prompt is not part of what the menu is: "GameSpeed (5) :" and "(4)" are one menu.
+    // Until v0.211.4 each Faster made it a new menu, back on its first word - Slower in Gateway's order,
+    // so the next press undid it: Tom, 2026-11-20)
+    for (const char* p = menu.prompt; *p; ++p)
+        if (*p < '0' || *p > '9') v = v * 31u + static_cast<uint8_t>(*p);
     for (int k = 0; k < menu.count; ++k) v = v * 31u + static_cast<uint8_t>(text::key(menu, k));
     return static_cast<int>(v & 0x7FFFFFFF);
 }
+// The menu's prompt alone (its numbers left out), 0: none - a menu whose words change while it stays
+// the same menu (Aim's Target comes and goes, Speed's Faster at the fastest)
+int hl_prompt_sig()
+{
+    uint32_t v = 0;
+    for (const char* p = menu.prompt; *p; ++p)
+        if (*p != ' ' && (*p < '0' || *p > '9')) v = v * 31u + static_cast<uint8_t>(*p);
+    return static_cast<int>(v & 0x7FFFFFFF);
+}
+int  hl_last_prompt = 0;            // the last pick: its menu's prompt ...
+char hl_last_key = 0;               // ... and the word's key
 // Whether menu word k is Exit
 bool is_exit_word(int k)
 {
@@ -1922,6 +1937,8 @@ void hl_remember(int at)
     hl_mem[slot].sig = s;
     hl_mem[slot].at = static_cast<int8_t>(is_exit_word(at) ? 0 : at);
     hl_after_pick = true;
+    hl_last_prompt = hl_prompt_sig();
+    hl_last_key = is_exit_word(at) ? 0 : text::key(menu, at);
 #else
     (void)at;
 #endif
@@ -1956,6 +1973,7 @@ void hl_apply()
 #if CYD_MENU_HIGHLIGHT
     const int s = hl_sig();
     if (s != hl_shown_sig || hl_after_pick) {
+        const bool picked = hl_after_pick;
         hl_shown_sig = s;
         hl_after_pick = false;
         hl_hold_sig = -1;
@@ -1964,6 +1982,16 @@ void hl_apply()
                 hl_hold_sig = s;
                 hl_hold_at = m.at;
             }
+        // (the same menu with other words - its prompt the same, a word come or gone: the word picked
+        // last keeps the highlight, before any place kept for these words from an earlier time. Aim's Prev
+        // stayed Prev only while Target didn't come or go; v0.211.4)
+        if (picked && hl_last_key && hl_last_prompt && hl_last_prompt == hl_prompt_sig())
+            for (int k = 0; k < menu.count; ++k)
+                if (text::key(menu, k) == hl_last_key) {
+                    hl_hold_sig = s;
+                    hl_hold_at = k;
+                    break;
+                }
     }
     if (hl_hold_sig == s) menu.selected = hl_hold_at;
 #endif

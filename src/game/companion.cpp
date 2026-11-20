@@ -45,6 +45,7 @@ void put(Painter& p, int x, int y, const char* s, uint16_t col, int n = 64)
 constexpr uint16_t kWhite  = rgb(255, 255, 255);
 constexpr uint16_t kGood   = rgb(40, 200, 40);      // OK and the helpful effects
 constexpr uint16_t kYellow = rgb(230, 200, 40);     // the rest
+constexpr uint16_t kReady  = rgb(255, 85, 255);    // can train: the games' own magenta (Tom, 2026-11-20 - Gateway's party list)
 
 struct Word {
     const char* full;
@@ -95,7 +96,7 @@ int state_words(int health, uint16_t fx, bool drained, Word* w)
 
 // The classes: "Fighter 7" / "Cleric 6/Ranger 6" long, "F7" / "C6/R6" short;
 // a former class grey, the "/" grey, a class with the experience for its
-// next level yellow, name and level (Tom, 2026-11-14). Returns the length.
+// next level magenta, name and level (Tom, 2026-11-14; magenta since 2026-11-20, was yellow). Returns the length.
 int class_spans(const play::PanelMember& m, bool full, Span* sp, int* ns)
 {
     static const char* const kName[8] = {"Cleric", "Druid", "Fighter", "Paladin", "Ranger", "Magic-User", "Thief", "Monk"};
@@ -111,7 +112,7 @@ int class_spans(const play::PanelMember& m, bool full, Span* sp, int* ns)
         const char* nm = full ? (m.krynn && c == 5 ? "Mage" : m.knight && c == 7 ? "Knight" : kName[c])
                               : (m.knight && c == 7 ? "K" : kLetter[c]);
         len += snprintf(sp[n].t, sizeof sp[n].t, full ? "%s %d" : "%s%d", nm, m.lv[c]);
-        sp[n++].col = (m.stopped >> c & 1) ? style::kTextMuted : (m.ready >> c & 1) ? kYellow : kWhite;
+        sp[n++].col = (m.stopped >> c & 1) ? style::kTextMuted : (m.ready >> c & 1) ? kReady : kWhite;
     }
     *ns = n;
     return len;
@@ -219,7 +220,9 @@ void party_row(Painter& p, const Rows& r, int i, const play::PanelMember& m)
     snprintf(hp, sizeof hp, "%d/%d", m.hp, m.hp_max);
     const int hl = static_cast<int>(strlen(hp));
     // (the chosen one white, the rest cyan - the originals' party list; Tom, 2026-11-14)
-    put(p, r.tx, y, m.name, m.current ? kWhite : style::kCyan, cols - hl - 1);
+    // (the name magenta too while a class of theirs can train - as the games' party list, where the
+    // chosen member stays white; Tom, 2026-11-20)
+    put(p, r.tx, y, m.name, m.current ? kWhite : (m.ready & ~m.stopped) ? kReady : style::kCyan, cols - hl - 1);
     put(p, r.tx + (cols - hl) * kCharW, y, hp, style::kText);
     // The bar: green, yellow under half, red under a quarter
     const int by = y + 9, bh = r.pitch >= 24 ? 4 : 3;

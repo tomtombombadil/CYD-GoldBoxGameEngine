@@ -5004,6 +5004,16 @@ void speed_menu(pic::Canvas& c)
     show_menu_line(c);
 }
 
+// Speed's Exit: back to the menu Speed is a word of - the Done menu, or the fight menu itself where
+// Speed is on its second row (Darkness, Gateway, Treasures, Krynn). Until v0.211.4 it always built the
+// Done menu, which those games don't have: an empty menu line until a cursor key (Tom, 2026-11-20,
+// Gateway's first fight on the PortMaster port)
+void speed_exit(pic::Canvas& c)
+{
+    if (dk_menu()) fight_menu(c);
+    else done_menu(c);
+}
+
 // ---- The computer's turn
 // Everyone the computer plays - Quick members, NPCs and the monsters too
 // (the original's computer turn readies weapons for all: coab's facts,
@@ -7616,7 +7626,7 @@ void fight_tap(int x, int y, pic::Canvas& c)
         switch (text::key(menu, text::hit(menu, col))) {
         case 'S': if (speed < 9) ++speed; break;
         case 'F': if (speed > 0) --speed; break;
-        case 'E': done_menu(c); return;
+        case 'E': speed_exit(c); return;
         default: return;
         }
         vm->set(0x4BFC, static_cast<uint16_t>(high | speed));
@@ -7757,7 +7767,7 @@ bool fight_back(pic::Canvas& c)
         aim_exit(c);
         return true;
     case FSt::DoneMenu: fight_menu(c); return true;
-    case FSt::Speed: done_menu(c); return true;
+    case FSt::Speed: speed_exit(c); return true;
     case FSt::AllyAsk:
     case FSt::FleeAsk: fight_menu(c); return true;
     case FSt::AbortAsk: aim_menu(c); return true;

@@ -2174,9 +2174,9 @@ int main(int argc, char** argv)
             continue;
         }
         if (*m == '?') {                // "?": the screen, the menu line, what the script waits for
-            printf("  ? screen %d menu [%s|%s] wait %d text [%s] selected %d\n", (int)play::screen, play::menu.prompt,
+            printf("  ? screen %d menu [%s|%s] wait %d text [%s] selected %d word %d\n", (int)play::screen, play::menu.prompt,
                    play::menu.s, (int)play::vm->wait(), play::vm->wait() == ecl::Wait::Print ? play::vm->text() : "",
-                   play::pt ? play::pt->selected : -1);
+                   play::pt ? play::pt->selected : -1, play::menu.selected);      // (word: the menu's highlighted word)
             if (play::fg && play::fg->cur >= 0 && play::fg->cur < play::fg->b.n &&
                 (play::screen == play::Screen::Fight || play::screen == play::Screen::SpellList ||
                  play::screen == play::Screen::Items)) {     // (a fight: whose turn; its records freed after it)
