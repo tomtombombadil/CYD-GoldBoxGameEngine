@@ -1,5 +1,15 @@
 # Open tasks (Tom and Claude)
 
+- [x] v0.211.2 (the Secret play-through, 2026-11-20, the Black Circle HQ's door at 8,7): **Secret's locked doors
+      stopped the party without a word** - its profile had no door words (the menu's words empty = the originals'
+      no-choice case), so Bash / Pick / Knock were never offered. Now its GAME.OVR's "Bash" ... "Locked. " (0x19C6E
+      on; Knock 0x1F): "Locked. Bash Pick Exit" there, Bash opened it (the alarm), Pick by a thief. Every game checked
+      (tools/devkit/doors): Curse, PoolRad, Champions, Gateway had theirs; Darkness has locked sides but no such words
+      in its program; Knights / Treasures no locked sides; Queen's HLIB maps not scanned.
+- [ ] Secret play-through (Tom, 2026-11-19; the Project's claude/playthrough_secret.md): New Verdigris, the Well,
+      the Ruins' dragons and bier, the Black Circle HQ under way; then the Temple of Tyr, the mines, dungeon,
+      crevasses, castle, Eldamar and the ending (Secret's PROGRAM 8 has no profile entry yet - check there).
+
 - [x] v0.211.1 (the PortMaster session; Tom, 2026-11-18: Treasures' first fight - black floor, a few wall pieces): since
       v0.203.12 (Gateway's maze fights, 2026-11-17) the fight's view-limits block stood between the indoor builder and its
       "else" chain, so in EVERY game but Gateway an outdoor field was built over every indoor fight (Curse's dungeon fights

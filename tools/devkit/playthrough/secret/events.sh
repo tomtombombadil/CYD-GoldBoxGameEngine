@@ -13,7 +13,7 @@ for i,l in enumerate(dis):
 cands=[]
 for i,l in enumerate(dis):
     if 'op 2F:' in l and 'C04F' in l and '003F' in l and '7F79' in l:
-        for j in range(i+1,i+4):
+        for j in range(i+1,min(i+8,len(dis))):
             m=re.match(r'([0-9A-F]{4}) op 25: 1:7F79 0:([0-9A-F]{4})',dis[j])
             if m: cands.append((int(m.group(1),16),int(m.group(2),16)))
 for at,n in cands:
