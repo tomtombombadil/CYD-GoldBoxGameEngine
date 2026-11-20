@@ -1672,6 +1672,14 @@ int main(int argc, char** argv)
             if (b(a) == 0x0B && b(a + 1) == 0 && b(a + 3) == 0 && b(a + 5) == 0 && b(a + 4) >= 1 && b(a + 4) <= 12)
                 printf("  LOAD MONSTER at %04X: id %u, %u copies, icon %u\n", a, b(a + 2), b(a + 4), b(a + 6));
     }
+    // POKE=addr=value,...: script memory words (hex address, decimal value) before the moves - a
+    // map's own state the TELE alone doesn't set (Secret's mines: 4C6B, which of a level's two halves)
+    for (const char* q = getenv("POKE"); q && *q;) {
+        unsigned a, v;
+        if (sscanf(q, "%x=%u", &a, &v) == 2) play::vm->set((uint16_t)a, (uint16_t)v);
+        q = strchr(q, ',');
+        if (q) ++q;
+    }
     if (getenv("PEEK")) for (const char* q = getenv("PEEK"); q && *q;) {      // PEEK=addr,addr: script memory words
         const unsigned a = (unsigned)strtol(q, nullptr, 16);
         printf("  PEEK %04X = %04X\n", a, play::vm->get((uint16_t)a));
@@ -2608,6 +2616,13 @@ int main(int argc, char** argv)
             face = dir;
         }
         printf("  MAPPATH %d,%d -> %d,%d: %s\n", sx, sy, tx, ty, from3[goal] < 0 ? "no way" : path.c_str());
+    }
+    // PEEKEND=addr,addr: the words after the moves
+    for (const char* q = getenv("PEEKEND"); q && *q;) {
+        const unsigned a = (unsigned)strtol(q, nullptr, 16);
+        printf("  PEEKEND %04X = %04X\n", a, play::vm->get((uint16_t)a));
+        q = strchr(q, ',');
+        if (q) ++q;
     }
     if (getenv("SAVENOW")) {
         // SAVENOW=slot: saved as it stands, without the camp (a save for the original to load)

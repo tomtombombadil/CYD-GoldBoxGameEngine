@@ -1,0 +1,23 @@
+#!/bin/bash
+# sellplain.sh <slot>: every unknown item identified (loot.py IDALL), then every unreadied item still with a plain
+# name (no "+", no "of", not a missile, scroll, potion or other kept kind) sold at the Merchant cheat - the packs
+# kept light (Secret, 2026-11-20: full packs left the sanctum's treasure behind)
+P=/tmp/claude-0/splay; S=$1
+IDALL=1 python3 $P/bin/loot.py $S 0,1,2,3,4,5 > /dev/null
+TAILN=0 $P/bin/p.sh '' SAVE=$S ITEMDUMP=1 > /dev/null
+L=$(python3 - "$P/run.log" <<'PY'
+import re,sys
+m=-1; cnt={}
+for l in open(sys.argv[1]):
+    if l.startswith('  member '): m=int(l.split()[1]); continue
+    if m<0 or not l.startswith('    '): continue
+    if l.startswith('    *'): continue
+    n=l.strip()
+    if '+' in n or ' of ' in n or n.startswith(('Wand','Ring','Bracers','Cloak','Necklace','Gauntlets','Boots','Girdle','Potion','Scroll','Mage Scroll','Cleric Scroll','Staff Sling','Composite')): continue
+    if re.search(r'Arrows|Quarrels|Darts|Bolts|Sling', n): continue
+    cnt[(m,n)]=cnt.get((m,n),0)+1
+print(','.join(f'{m}:{n}:{c}' for (m,n),c in cnt.items()))
+PY
+)
+echo "selling: $L"
+[ -n "$L" ] && SELLN="$L" python3 $P/bin/loot.py $S 0,1,2,3,4,5 | tail -3
