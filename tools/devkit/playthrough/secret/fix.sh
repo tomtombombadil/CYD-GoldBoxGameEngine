@@ -17,6 +17,9 @@ while read -r i hp mx; do
   n=$(( (mx - hp) / 14 + 1 )); [ $n -gt 6 ] && n=6
   for k in $(seq $n); do T="$T%$i/Hvvvv/H/E"; done
 done < <(grep -E "^  [0-7]: " $P/run.log | head -8 | sed -E 's/^  ([0-7]): .* HP ([0-9-]+)\/([0-9]+).*/\1 \2 \3/')
+# (Secret, 2026-11-20: a feebleminded Bran went unnoticed - Heal at the Healer for everyone after a fight:
+# it takes blindness, the diseases and feeblemind away, whatever the hit points; HEALALL=0 leaves it out)
+if [ "${HEALALL:-1}" = 1 ]; then n=$(grep -cE "^  [0-7]: " $P/run.log); for i in $(seq 0 $((n - 1))); do T="$T%$i/Hvvvvv/H/E"; done; fi
 T="$T/E"
 # (MEM="m:picks m:picks": the casters' Memorize picks in the camp before the rest)
 for g in $MEM; do T="$T%${g%%:*}/E/M/M${g#*:}/E/E/Y/E/E"; done
