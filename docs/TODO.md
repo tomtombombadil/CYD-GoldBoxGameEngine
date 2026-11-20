@@ -488,10 +488,12 @@ the Project as claude/TODO.md.
       2026-11-19: through Yulash, the Pit, Zhentil Keep, the Burial Glen and the Myth Drannor
       ruins to Tyranthraxus's door in the Grand Ruined Temple.
       Open questions found on the way:
-  - [ ] Tom: the final battle (28 margoyles, Tyranthraxus, 8 high priests; the party on the
-        top wall with margoyles adjacent) lost 20 times with the kit's tactics (Speed, Haste,
-        Invisibility potions, the Wand of Fireballs aimed clear of the party). Options: more
-        seeds; Modify the casters' hit points higher; a hand-played fight; or your own advice.
+  - [x] The final battle - WON 2026-11-19 (Tom: cheat - the save given the walkthrough's items,
+        stats and spells; then "Kill the priests first": both casters' wands at the high
+        priests). The ending (PROGRAM 8) played through to "You have won!" and the party menu.
+        Curse's play-through is complete.
+  - [ ] The Scroll of Prot. Paralyzation read outside a fight gives no effect (the spell row's
+        effect is 0 in the engine's table) - DOSBox: what does the original's do?
   - [ ] A Shadowdale save came back in Curse's script 81 with town 1 - a dead end there (no
         Journey list, no Inn: towns 0-4 are script 80's); not reproduced. If seen again: the
         steps that made it.
