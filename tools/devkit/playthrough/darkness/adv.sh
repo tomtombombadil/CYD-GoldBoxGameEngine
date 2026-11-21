@@ -13,9 +13,10 @@ for i in $(seq 1 ${ITER:-30}); do
   elif echo "$st" | grep -q "screen 5 .*Take"; then T="$(python3 $P/bin/takeall.py $S "$T" "" 2>/dev/null)/E"
   elif echo "$st" | grep -q "screen 5 \|screen 25 "; then T="$T/E"
   elif echo "$st" | grep -q "Aim Use"; then :
+  elif [ -n "$PICK" ] && w=$(echo "$st" | sed -E 's/.*menu \[[^|]*\|([^]]*)\].*/\1/') && k=$(for c in $(echo "$PICK" | tr ',' ' '); do echo "$w" | grep -qw "$c" && { echo "$c"; break; }; done) && [ -n "$k" ]; then T="$T/${k:0:1}"
   else break; fi
 done
 grep -E "TEXT|JOURNAL|won:|lost" $P/run.log | tail -${TXTN:-10} | cut -c1-120
 echo "$st" | cut -c1-110
-echo "$st" | grep -q "|Move Area" && { TAILN=0 $P/bin/p.sh "$T" SAVE=$S SAVENOW=$S $EXTRA > /dev/null; grep "saved now" $P/run.log; }
+echo "$st" | grep -q "|Move Area\||Move Encamp" && { TAILN=0 $P/bin/p.sh "$T" SAVE=$S SAVENOW=$S $EXTRA > /dev/null; grep "saved now" $P/run.log; }
 echo "$T" > $P/tt.txt
