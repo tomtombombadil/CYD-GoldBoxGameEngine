@@ -917,6 +917,102 @@ void hall()
     expect(P, w, checks > 0 && fails == f0, "%d wrong", fails - f0);
 }
 
+// The Cheats' Disable Race Level Limits (part "racecap"; Tom, 2026-11-21: "test the actual use ... characters
+// at, near, or past the level limit ... turn it on, level up and then turn the cheat back off ... across the
+// games"). Every race x class x Strength / Intelligence 16, 17, 18 of the game, a single-class character with
+// experience for everything, trained a level at a time by the hall's own choice (create::train_pick):
+//   the human's last level = the game's; the race's last level with the limits on = its cap;
+//   C1 near (cap - 1), limits on: trains          C2 at the cap, limits on: no training, not "ready" (magenta)
+//   C3 at the cap, cheat on: trains, "ready"      C4 cheat on: on to the human's last level and no further
+//   C5 PAST the cap (every level up to the game's last), the cheat off again: no training, not ready, the
+//      level and the experience untouched         C6 cheat on again there: trains on
+// RACECAPLIST=1 prints each limited combination.
+namespace rc {
+int climb(party::Character& c, int k, int from, int stop_at = 99)
+{
+    int lv = from;
+    for (int guard = 0; guard < 60 && lv < stop_at; ++guard) {
+        c.rec[0x109 + k] = static_cast<uint8_t>(lv);
+        put32(c.rec, 0x127, 60000000u);
+        uint32_t keep = 0;
+        const int mask = create::train_pick(c, m->tables, &keep);
+        if (!(mask & m->tables.u8(static_cast<uint16_t>(m->tables.lay.class_masks + k)))) break;
+        ++lv;
+    }
+    c.rec[0x109 + k] = static_cast<uint8_t>(lv);
+    return lv;
+}
+bool trains(party::Character& c, int k, int lv)
+{
+    c.rec[0x109 + k] = static_cast<uint8_t>(lv);
+    put32(c.rec, 0x127, 60000000u);
+    uint32_t keep = 0;
+    return (create::train_pick(c, m->tables, &keep) & m->tables.u8(static_cast<uint16_t>(m->tables.lay.class_masks + k))) != 0;
+}
+bool ready(party::Character& c, int k, int lv)
+{
+    c.rec[0x109 + k] = static_cast<uint8_t>(lv);
+    put32(c.rec, 0x127, 60000000u);
+    return (create::ready_classes(c, m->tables) >> k & 1) != 0;
+}
+}
+void racecap()
+{
+    int checks = 0, combos = 0;
+    const int f0 = fails;
+    static party::Character c;
+    const bool list = getenv("RACECAPLIST") != nullptr;
+    const int races = krynn() ? 7 : 8;
+    for (int k = 0; k < classes::kClasses; ++k) {
+        if (k == 1 || (k == 7 && !krynn())) continue;
+        for (int st = 16; st <= 18; ++st) {
+            // the game's last level of the class: a human's
+            fresh(c, k, st);
+            variant(c, 0);
+            create::set_race_limits(true);
+            const int top = rc::climb(c, k, 1);
+            if (top < 2) continue;
+            for (int r = 0; r < races; ++r) {
+                fresh(c, k, st);
+                variant(c, 0);
+                if (krynn()) c.ext[party::kExtRace] = static_cast<uint8_t>(r);
+                else c.rec[0x74] = static_cast<uint8_t>(r);
+                create::set_race_limits(true);
+                const int cap = rc::climb(c, k, 1);
+                if (cap >= top) continue;               // (this race is not limited in this class here)
+                ++combos;
+                if (list) printf("    race %d class %d stat %d: its limit %d, the game's last level %d\n", r, k, st, cap, top);
+                char tag[60];
+                snprintf(tag, sizeof tag, "race %d stat %d cap %d top %d", r, st, cap, top);
+                ++checks;
+                if (cap > 1 && !rc::trains(c, k, cap - 1)) bad("C1 a level under the limit: trains", k, cap - 1, "%s", tag);
+                ++checks;
+                if (rc::trains(c, k, cap) || rc::ready(c, k, cap)) bad("C2 at the limit, limits on: no training, not ready", k, cap, "%s", tag);
+                create::set_race_limits(false);
+                ++checks;
+                if (!rc::trains(c, k, cap) || !rc::ready(c, k, cap)) bad("C3 at the limit, the cheat on: trains, ready", k, cap, "%s", tag);
+                ++checks;
+                const int got = rc::climb(c, k, cap);
+                if (got != top) bad("C4 the cheat on: up to the game's last level, no further", k, got, "%s", tag);
+                for (int lv = cap + 1; lv <= top; ++lv) {
+                    create::set_race_limits(true);
+                    ++checks;
+                    if (rc::trains(c, k, lv) || rc::ready(c, k, lv)) bad("C5 past the limit, the cheat off again: no training, not ready", k, lv, "%s", tag);
+                    ++checks;
+                    if (c.level(k) != lv || c.exp() != 60000000u) bad("C5 the level and the experience untouched", k, lv, "%s: level %d", tag, c.level(k));
+                    create::set_race_limits(false);
+                    ++checks;
+                    if (lv < top && !rc::trains(c, k, lv)) bad("C6 the cheat on again: trains on", k, lv, "%s", tag);
+                }
+            }
+        }
+    }
+    create::set_race_limits(true);
+    char w[160];
+    snprintf(w, sizeof w, "racecap: %d limited race / class / score combinations, %d checks (C1 - C6)", combos, checks);
+    expect(P, w, fails == f0, "%d wrong", fails - f0);
+}
+
 void maxhp()
 {
     int checks = 0;
@@ -998,6 +1094,7 @@ void run()
     if (!only || strstr(only, "values")) values();
     if (!only || strstr(only, "multi")) multi();
     if (!only || strstr(only, "hall")) hall();
+    if (!only || strstr(only, "racecap")) racecap();
     if (!only || strstr(only, "maxhp")) maxhp();
 }
 

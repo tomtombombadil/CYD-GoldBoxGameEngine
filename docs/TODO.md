@@ -14,6 +14,23 @@
       The playsim after (TRAINTEST=3 TRAINKEEP=1 - new: on the experience they have): 5/9/12 -> 6/10/12 ->
       7/11/12, 500,000 kept, a spell learned each time, then "Not Enough Experience"; the Companion's name
       magenta before, cyan after. behave levels: Curse, Darkness, Treasures 11 passed (the others have no oracle).
+- [x] v0.211.14 (the PortMaster session, 2026-11-21 - Tom: "test the actual use of the new level-cap cheat ...
+      at, near, or past the level limit ... turn it on, level up and then turn the cheat back off ... across the
+      games"). New check `behave levels` part `racecap` (C1 - C6; every race x class x Strength / Intelligence
+      16 / 17 / 18, the hall's own choice a level at a time). It found two faults, both fixed:
+      (1) **past its limit with the cheat off again, a character trained on** in PoolRad, Curse, Secret,
+      Darkness, Gateway, Treasures - their limits are the originals' "level == limit" tests (nobody is past it
+      there), so one level over and no limit held. Now "at or past" (`race_limited`, `gw_race_limited`); the
+      limits' own values unchanged. (An over-limit character from a hacked save is stopped too, where the
+      original would train it on - ours, SPEC 12 to note.) (2) **the Dark Queen: the cheat let a knight of the
+      Crown pass its order's 18** (to 40). Now the cheat reads the Krynn games' race x class tables as a human
+      (row 6) - Death Knights the same - so only the race's part goes.
+      After: PoolRad 15 limited combinations / 150 checks, Curse 26 / 488, Secret 36 / 1,023, Darkness 30 /
+      3,114, Death Knights 87 / 2,742, the Dark Queen 90 / 8,478, Gateway 16 / 157, Treasures 30 / 3,114 - 0
+      wrong. **Champions: no race limits found at all** (0 combinations: `race_limited` goes by the record's
+      race, which a Krynn character doesn't use, and Champions has no table) - is that the original's? To
+      check against CHAMP's training routine. Restoration's own limits (`restore_limited`) still "==": a
+      drained over-limit character - not looked at.
 - [x] v0.211.13 (the PortMaster session, 2026-11-21 - Tom: "I want to add a cheat. 'Disable Race Level Limits'"):
       `CYD_NO_RACE_LIMITS`, `Options::no_race_limits`, `create::set_race_limits`; the boards' Cheats page key "No
       Race Limits" and its settings byte (**the boards' key is compiled by CI only - not seen on a board or in

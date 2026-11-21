@@ -92,25 +92,34 @@ bool race_limited(const party::Character& c, int cls, int lvl, bool pool = false
         const int r = c.race();
         if ((r == 1 && lvl >= 8) || ((r == 2 || r == 3) && lvl >= 7)) return true;
     }
+    // (The originals test "level == limit": nobody is past it there. Here the
+    // Cheats' Disable Race Level Limits can put a character past its limit,
+    // and with the cheat off again it must stay stopped - so "at or past",
+    // Tom, 2026-11-21. The limits themselves are the originals'.)
+    int cap = 0;                                // (0: none)
     switch (c.race()) {
     case 1:                                     // dwarf
-        return cls == Fighter && (lvl == 9 || (lvl == 8 && str == 17) || (lvl == 7 && str < 17));
+        if (cls == Fighter) cap = str < 17 ? 7 : str == 17 ? 8 : 9;
+        break;
     case 2:                                     // elf
-        if (cls == Fighter) return lvl == 7 || (lvl == 6 && str == 17) || (lvl == 5 && str < 17);
-        if (cls == MagicUser) return lvl == 11 || (lvl == 9 && intel < 17) || (lvl == 10 && intel == 17);
-        return false;
+        if (cls == Fighter) cap = str < 17 ? 5 : str == 17 ? 6 : 7;
+        if (cls == MagicUser) cap = intel < 17 ? 9 : intel == 17 ? 10 : 11;
+        break;
     case 3:                                     // gnome
-        return cls == Fighter && (lvl == 6 || (lvl == 5 && str < 18));
+        if (cls == Fighter) cap = str < 18 ? 5 : 6;
+        break;
     case 4:                                     // half-elf
-        if (cls == Cleric) return lvl == 5;
-        if (cls == Fighter || cls == Ranger) return lvl == 8 || (lvl == 7 && str == 17) || (lvl == 6 && str < 17);
-        if (cls == MagicUser) return lvl == 8 || (lvl == 7 && intel == 17) || (lvl == 6 && intel < 17);
-        return false;
+        if (cls == Cleric) cap = 5;
+        if (cls == Fighter || cls == Ranger) cap = str < 17 ? 6 : str == 17 ? 7 : 8;
+        if (cls == MagicUser) cap = intel < 17 ? 6 : intel == 17 ? 7 : 8;
+        break;
     case 5:                                     // halfling
-        return cls == Fighter && (lvl == 6 || (lvl == 5 && str == 17) || (lvl == 4 && str < 17));
+        if (cls == Fighter) cap = str < 17 ? 4 : str == 17 ? 5 : 6;
+        break;
     default:
-        return false;
+        break;
     }
+    return cap && lvl >= cap;
 }
 
 } // namespace
@@ -129,16 +138,19 @@ bool gw_race_limited(const party::Character& c, int cls, int lvl)
 {
     if (!g_race_limits) return false;
     const int str = c.stat(0);                  // (record 0x11, as the program reads it)
+    int cap = 0;                                // (at or past, as race_limited)
     switch (c.race()) {
-    case 1: return cls == Fighter && ((lvl == 8 && str == 17) || (lvl == 7 && str < 17));
-    case 2: return cls == Fighter && (lvl == 7 || (lvl == 6 && str == 17) || (lvl == 5 && str < 17));
-    case 3: return cls == Fighter && (lvl == 6 || (lvl == 5 && str < 18));
+    case 1: if (cls == Fighter && str <= 17) cap = str < 17 ? 7 : 8; break;
+    case 2: if (cls == Fighter) cap = str < 17 ? 5 : str == 17 ? 6 : 7; break;
+    case 3: if (cls == Fighter) cap = str < 18 ? 5 : 6; break;
     case 4:
-        if (cls == Cleric) return lvl == 5;
-        return cls == Fighter && (lvl == 8 || (lvl == 7 && str == 17) || (lvl == 6 && str < 17));
-    case 5: return cls == Fighter && (lvl == 6 || (lvl == 5 && str == 17) || (lvl == 4 && str < 17));
-    default: return false;
+        if (cls == Cleric) cap = 5;
+        if (cls == Fighter) cap = str < 17 ? 6 : str == 17 ? 7 : 8;
+        break;
+    case 5: if (cls == Fighter) cap = str < 17 ? 4 : str == 17 ? 5 : 6; break;
+    default: break;
     }
+    return cap && lvl >= cap;
 }
 
 // Training stops for class `cls` at `lvl`: its last level (Gateway: its
@@ -147,19 +159,14 @@ bool gw_race_limited(const party::Character& c, int cls, int lvl)
 // race's limit
 static bool train_limited(const party::Character& c, const classes::Tables& t, int cls, int lvl)
 {
-    if (!g_race_limits) {
-        // (what is no race's limit stays: the Dark Queen's knightly orders, Gateway's last levels)
-        if (t.lay.queen && cls == classes::Monk) {
-            const int o = c.ext[party::kExtKnight];
-            if (o == 3) return lvl >= 40;
-            if (o == 2 || o == 4) return lvl >= 18;
-        }
-        return t.lay.level_caps && !t.lay.dkk && !t.lay.queen && lvl >= t.u8(static_cast<uint16_t>(t.lay.level_caps + cls));
-    }
+    // (the Cheats' Disable Race Level Limits: in the Krynn games' race x class
+    // tables the character counts as a human, row 6 - what is no race's limit
+    // stays: the class's last level, the Dark Queen's knightly orders)
+    const int krace = g_race_limits ? c.ext[party::kExtRace] : 6;
     // (Death Knights, its training ovl 0x61 +0x447E: its race x class table -
     // training goes on while the limit is above the level)
     if (t.lay.dkk && t.lay.race_caps)
-        return t.u8(static_cast<uint16_t>(t.lay.race_caps + (c.ext[party::kExtRace] & 7) * 8 + cls)) <= lvl;
+        return t.u8(static_cast<uint16_t>(t.lay.race_caps + (krace & 7) * 8 + cls)) <= lvl;
     if (t.lay.queen) {
         // (the Dark Queen's training, ovl 5 +0x5052: a knight of the Rose 40,
         // of the Sword (and an order 4) 18, else its race x class table)
@@ -168,9 +175,10 @@ static bool train_limited(const party::Character& c, const classes::Tables& t, i
             if (o == 3) return lvl >= 40;
             if (o == 2 || o == 4) return lvl >= 18;
         }
-        return lvl >= t.u8(static_cast<uint16_t>(t.lay.q_caps + (c.ext[party::kExtRace] % 7) * 8 + cls));
+        return lvl >= t.u8(static_cast<uint16_t>(t.lay.q_caps + (krace % 7) * 8 + cls));
     }
     if (t.lay.level_caps && lvl >= t.u8(static_cast<uint16_t>(t.lay.level_caps + cls))) return true;
+    if (!g_race_limits) return false;
     return race_limited(c, cls, lvl, t.lay.pool, t.lay.secret, t.lay.dk);
 }
 
