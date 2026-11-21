@@ -27,9 +27,7 @@
       (row 6) - Death Knights the same - so only the race's part goes.
       After: PoolRad 15 limited combinations / 150 checks, Curse 26 / 488, Secret 36 / 1,023, Darkness 30 /
       3,114, Death Knights 87 / 2,742, the Dark Queen 90 / 8,478, Gateway 16 / 157, Treasures 30 / 3,114 - 0
-      wrong. **Champions: no race limits found at all** (0 combinations: `race_limited` goes by the record's
-      race, which a Krynn character doesn't use, and Champions has no table) - is that the original's? To
-      check against CHAMP's training routine. Restoration's own limits (`restore_limited`) still "==": a
+      wrong; Champions 19 / 193 (its limits are Curse's, by the record's race). Restoration's own limits (`restore_limited`) still "==": a
       drained over-limit character - not looked at.
 - [x] v0.211.13 (the PortMaster session, 2026-11-21 - Tom: "I want to add a cheat. 'Disable Race Level Limits'"):
       `CYD_NO_RACE_LIMITS`, `Options::no_race_limits`, `create::set_race_limits`; the boards' Cheats page key "No

@@ -975,8 +975,10 @@ void racecap()
             for (int r = 0; r < races; ++r) {
                 fresh(c, k, st);
                 variant(c, 0);
-                if (krynn()) c.ext[party::kExtRace] = static_cast<uint8_t>(r);
-                else c.rec[0x74] = static_cast<uint8_t>(r);
+                if (krynn()) {                          // (its own race number, and the record's from it - as a loaded character)
+                    c.ext[party::kExtRace] = static_cast<uint8_t>(r);
+                    c.rec[0x74] = party::race_from_krynn(static_cast<uint8_t>(r));
+                } else c.rec[0x74] = static_cast<uint8_t>(r);
                 create::set_race_limits(true);
                 const int cap = rc::climb(c, k, 1);
                 if (cap >= top) continue;               // (this race is not limited in this class here)
