@@ -12,6 +12,14 @@
       disassembled - its only PROGRAMs are 3 and 0; after Eldamar's gem the game goes on, as the guides
       say) - no `won` entry needed. Checked by hand there: the riddles (typed answer, any case; a wrong
       one to the Well), the Brass Key only with the Amulet (4C53), the staff chain (4C84 = FF, Derf).
+      2026-11-21: the drider base (Sir Deric's three answers, joins / leaves at Stiffbeard, the elf's
+      talisman and the shimmering walls, the golem's "DREADLORD", journals 3 / 23 / 58 / 70, a drider
+      fight), the keys (Silver after the pyrohydras, Gold after the purple worms, NACACIA), the frost
+      giants' gate, Oswulf's spirit (journal 56, his weapons; no staff = pushed back), the castle gate
+      and its three key doors (each opens to a different metal's key - the original's puzzle). Open:
+      the Dreadlord fight never won on Quick (10 storm giants' bolts + 6 Banite priests wipe even a
+      255-HP party; QASPELLS=1 casters too) - by the rules, not a fault; the after-fight path checked
+      by its flags.
 
 - [x] v0.211.1 (the PortMaster session; Tom, 2026-11-18: Treasures' first fight - black floor, a few wall pieces): since
       v0.203.12 (Gateway's maze fights, 2026-11-17) the fight's view-limits block stood between the indoor builder and its
