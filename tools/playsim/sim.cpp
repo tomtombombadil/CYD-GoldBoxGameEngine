@@ -1807,18 +1807,18 @@ int main(int argc, char** argv)
         if (q) ++q;
     }
     if (getenv("AGEUP")) play::host->age_party(atoi(getenv("AGEUP")));
+    if (getenv("QASPELLS")) {
+        // QASPELLS=1: the Quick tab's Spells ticked for the player's own characters (the
+        // originals' Magic On) - a Quick fight's casters cast (with RUNAT or the moves' fights)
+        play::quick_begin();
+        for (int r = 0; r < play::qa_rows; ++r)
+            if (!play::quick_npc(r) && !(play::quick_get(r) & quickacts::kSpells)) play::quick_toggle(r, 2);
+        printf("  Quick Spells ticked: %d rows\n", play::qa_rows);
+    }
     if (getenv("RUNAT")) {
         // Run the script from an address (e.g. a shop), then BUY=n,n,...
         // buys those goods for character 0, READY=i readies their item i
         unsigned a; sscanf(getenv("RUNAT"), "%x", &a);
-        if (getenv("QASPELLS")) {
-            // QASPELLS=1: the Quick tab's Spells ticked for the player's own characters (the
-            // originals' Magic On) - a Quick fight's casters cast
-            play::quick_begin();
-            for (int r = 0; r < play::qa_rows; ++r)
-                if (!play::quick_npc(r) && !(play::quick_get(r) & quickacts::kSpells)) play::quick_toggle(r, 2);
-            printf("  Quick Spells ticked: %d rows\n", play::qa_rows);
-        }
         // (SETVAR without AREA: here; RUNSET=addr=value,... here either way -
         // after the block's start cleared its variables)
         const char* runset = getenv("RUNSET") ? getenv("RUNSET") : !getenv("AREA") ? getenv("SETVAR") : nullptr;

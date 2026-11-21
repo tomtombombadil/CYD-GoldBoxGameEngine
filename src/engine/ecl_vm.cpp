@@ -307,6 +307,9 @@ uint16_t Vm::dk_addr(uint16_t a)
     case 0x4BFC: return 0x12;           // game speed
     case 0x4CF4: return 0x27;           // difficulty (1-5)
     case 0x7EC9: return 0x03;           // the step blocked
+    case 0x7ED5: return 0x21;           // the step goes off the map's edge (block +0x20: Darkness
+                                        // GAME.OVR 0xD597-0xD612, Treasures 0xE89D - 0 each step,
+                                        // 1 past an edge; Phlan's step script swaps its two maps by it)
     case 0x7ECA: return 0x19;           // Search / Look
     case 0x7ECB: return 0x2E;           // surprise
     case 0x7EC6: return 0x1B;           // the monsters' morale (its fight's morale, GAME.OVR 0xAD85)

@@ -9,7 +9,7 @@
       put right (a dim word's light-grey box is its highlight - Save Slot Info's empty slots; a spell list scrolled
       a line under the box): all nine games 0 failures, seed 11, 5000 actions, NFIGHT=60 - N7 with them. The
       playsim's ITEMDUMP=2 shows an item name's three words; a fight's placing is logged.
-- [x] v0.211.6 (the PortMaster session, 2026-11-20): (1) **Treasures / Darkness: a fight on open ground starts 2
+- [x] v0.211.8 (the PortMaster session, 2026-11-20): (1) **Treasures / Darkness: a fight on open ground starts 2
       map squares apart** (was: the foes among the party). The cause: the originals' sight routine (Treasures
       GAME.OVR 0x77AF, Darkness 0x69BA) - where the place has no 3D view, and on Treasures' overland (game byte
       0x3F = 1), it answers 2 AND sets the encounter's range (game byte 0x37) to 2, after SETUP MONSTER stored the
@@ -57,6 +57,23 @@
       on; Knock 0x1F): "Locked. Bash Pick Exit" there, Bash opened it (the alarm), Pick by a thief. Every game checked
       (tools/devkit/doors): Curse, PoolRad, Champions, Gateway had theirs; Darkness has locked sides but no such words
       in its program; Knights / Treasures no locked sides; Queen's HLIB maps not scanned.
+- [x] v0.211.7 (the Darkness play-through, 2026-11-21, the Silver Blades cave's Worldstone): **Darkness's fights
+      left the scripts' compare flags as the compare before them** - its fight end sets "=" (or "<>" by its byte
+      0x7FF5) at DS 0xB01E (GAME.OVR 0x596E - the same routine as Treasures' 0x6644, done in v0.208.4 for Treasures
+      alone), so every "COMBAT, IF <>" took a win for a flight: the Worldstone, the Tyrant's Flame, Lindenwood,
+      the Vaasans' breach - none of their texts and flags after the fight. Now Darkness too (only these two
+      programs have that routine - checked by its bytes in all nine). Checked: playsim - the four items, Vala's
+      four-item speech, the Vaasan breach won (spells ticked), the cave's flags 01AB 0x80 / 019E bit 4.
+      Also (the kit): playsim QASPELLS works for the moves' fights too, not only RUNAT.
+- [x] v0.211.6 (the Darkness play-through, 2026-11-21, Phlan's Traitor's Gate): **Darkness's / Treasures' scripts
+      never heard that a step went off the map's edge** - their game block's +0x20 (script word 0x21; GAME.OVR
+      Darkness 0xD597-0xD612, Treasures 0xE89D: 0 each step, 1 when the step leaves the 16 x 16 map) was Curse's
+      0x7ED5 in the engine with no Darkness place, so it read 0. Phlan's step script swaps its two maps by it
+      (map 16 / 17): the party wrapped round map 16 and could never reach Kuto's Gate (Sasha, the start of the
+      game). 15 of Darkness's blocks test it (Phlan, Zhentil Keep, the farmhouse, the steading, the fortress, the
+      Red Tower, Myth Drannor, the drow, Kalistes' web ...). Now dk_addr 0x7ED5 -> 0x21. Checked: playsim, Traitor's
+      Gate to map 17, a save there loads map 17, Kuto's Gate -> Sasha -> Bane -> Limbo. Treasures' scripts not
+      walked yet.
 - [ ] Secret play-through (Tom, 2026-11-19; the Project's claude/playthrough_secret.md): New Verdigris, the Well,
       the Ruins' dragons and bier, the Black Circle HQ under way; then the Temple of Tyr, the mines, dungeon,
       crevasses, castle, Eldamar. Secret has NO ending program (2026-11-20: every ECL1-3 block
@@ -212,7 +229,7 @@ the Project as claude/TODO.md.
       taken for a flight: the skeleton's fight came again at each visit and Geildarr was never met. Now
       `Vm::fight_flags` at end_fight (variant.tr). Read from the code, played in the playsim: the skeleton,
       "Thanks ...", Geildarr's guards, Milzorr's congratulations, journal 11 and 10. Not run in DOSBox.
-- [ ] **The same in the other games?** (2026-11-17) Does each original's fight end set the compare flags, and
+- [ ] **The same in the other games?** (2026-11-17; Darkness done v0.211.7 - its routine is Treasures', byte for byte) Does each original's fight end set the compare flags, and
       do its scripts test them straight after COMBAT? Looked at: Treasures only. To do: Darkness, Death
       Knights, the Dark Queen (the same program family), then Gateway / Champions / Secret / Curse / PoolRad
       - find each one's IF handler's flag bytes and who writes them; scan every script for COMBAT followed
