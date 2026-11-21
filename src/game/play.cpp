@@ -13514,6 +13514,7 @@ __attribute__((noinline)) void load_party_text(dax::ByteSource& exe, const exepa
         // vs Giants" - DOSBox; secret_facts_2.md 25)
         names->stored_names = false;
         names->plural_first = pi.words_far;         // (Dark Queen's rule)
+        names->plural_before_of = d->prof->variant.tr;
         d->facts.arrow = pi.arrow;
         d->facts.quarrel = pi.quarrel;
         memcpy(d->facts.elf_bonus, pi.elf_bonus, sizeof d->facts.elf_bonus);
@@ -20622,6 +20623,11 @@ bool back(pic::Canvas& c)
         return true;
     }
     if (screen == Screen::Shop) {           // a shop, a temple, the treasure: leaving it (its questions)
+        // (a menu under it with an Exit word of its own - a treasure's "Take: Money Items Exit": that word,
+        // one step back. Until v0.211.5 Back left the whole treasure from there, and the next Back answered
+        // "There is still treasure left" with No - the PortMaster port's B, its hand_test 2026-11-20)
+        int ex = 0, ey = 0;
+        if (menu.prompt[0] && exit_point(&ex, &ey)) return false;
         leave_shop(c);
         return true;
     }

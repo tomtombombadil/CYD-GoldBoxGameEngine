@@ -5858,6 +5858,7 @@ void fight_start(pic::Canvas& c)
         const int fd = d->gs.dir & 6;
         b.flee_dir = (fd - ((fd + 2) % 4) / 2 + 8) & 7;
     } else {
+        plat::log("[fight] placed: facing %d, %d squares apart\n", d->gs.dir & 6, vm->fight_distance());
         combat::place(b, fg->t, d->gs.dir & 6, vm->fight_distance(), b.indoors ? solid_side : nullptr, nullptr,
                       darkness_files() ? vm->fight_sides() : 0);
         // (the DAX games, a run's way from the party's facing as PoolRad's:

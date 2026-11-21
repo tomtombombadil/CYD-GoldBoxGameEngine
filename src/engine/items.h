@@ -84,6 +84,7 @@ public:
     // Dark Queen: the "s" on the first word printed ("2 Javelins +2" -
     // DOSBox), whatever the words
     bool plural_first = false;
+    bool plural_before_of = false;      // (Treasures: the s never on an "of ..." word)
     int flask() const { return plural_.flask; }      // the flask of oil's item type
     // The flask of oil a throw burns (Flasks of Oil): profile items.oil, else flask
     void set_oil(int t) { oil_ = static_cast<uint8_t>(t); }

@@ -41,11 +41,15 @@ bool lit_cell(int col, int row)
 {
     if (col < 0 || col >= 40 || row < 0 || row >= 25) return false;
     int white = 0, edge = 0;
+    // (a dim word's box is light grey - Save Slot Info's empty slot, Tom 2026-11-17: the menu line's
+    // chosen word then; until v0.211.5 the check called it unlit - N1 / N3 / N5 at "Save Which Game")
+    const int ms = play::menu.selected;
+    const uint8_t paper = row >= 23 && ms >= 0 && ms < 32 && (play::menu.dim >> ms & 1) ? 7 : 15;
     for (int j = 0; j < 8; ++j)
         for (int i = 0; i < 8; ++i) {
             const uint8_t v = C.get(col * 8 + i, row * 8 + j);
-            if (v != 0 && v != 15) return false;
-            if (v == 15) {
+            if (v != 0 && v != paper) return false;
+            if (v == paper) {
                 ++white;
                 if (j == 0 || j == 7 || i == 0 || i == 7) ++edge;
             }
@@ -697,6 +701,7 @@ void probe()
         const int before = pixels && !by_member ? (lit_row >= 0 ? lit_row : lit_any) : by_member ? pt->selected : 0;
         const Screen s0 = screen;
         const int idx0 = plist.index, top0 = plist.top;
+        const int sl_sel0 = sl.sel, sl_top0 = sl.top;
         const bool moved_key = nav(Nav::Down, C);
         if (!d) return;
         if (screen != s0) {
@@ -710,7 +715,9 @@ void probe()
         else after = list_state() == st0 ? 0 : 1;
         if (listy && !moved_key) fail("N4", "Down did nothing on a list");
         else if (listy && moved_key && after == before && (by_member || lit_row >= 0) &&
-                 !(plist_screen() && plist.index != idx0 && plist.top != top0)) {
+                 !(plist_screen() && plist.index != idx0 && plist.top != top0) &&
+                 // (a spell list scrolled a line under the box at its window's foot - Darkness's Memorize list)
+                 !(screen == Screen::SpellList && sl.sel != sl_sel0 && sl.top != sl_top0)) {
             // (a list scrolled under a fixed box - its top one on, the cursor too - is a move)
             snprintf(t, sizeof t, "Down left the lit line where it was (row %d, list %d of %d top %d, spells %d)", before, plist.index, plist.n, plist.top, sl.sel);
             fail("N4", t);

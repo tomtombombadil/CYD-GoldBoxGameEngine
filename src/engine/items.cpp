@@ -78,24 +78,29 @@ void Names::name(const Item& it, char* out, size_t cap, bool all_words) const
     if (it.word(3) && !(hide & 1)) shown |= 4;
     const int t = it.type();
     const bool missile = t == plural_.arrow || t == plural_.quarrel || t == plural_.dart;
-    bool plural = false;
+    // Which word takes the plural's s (0: none)
+    int s_at = 0;
+    if (it.count() >= 2)
+        for (int i = 3; i >= 1 && !s_at; --i) {
+            if (!(shown & (1 << (i - 1)))) continue;
+            if (plural_first || (1 << (i - 1)) == shown || (i == 1 && shown > 4 && t != plural_.flask) ||
+                (i == 2 && !(shown & 1)) || (i == 3 && t == plural_.flask) ||
+                (missile && it.word(3) != plural_.keep1 && it.word(3) != plural_.keep2))
+                s_at = i;
+        }
+    // (Treasures: an "X of Y" name takes it on X - the original's "9 Lucky Papers of Leilon", DOSBox
+    // 2026-11-20; ours read "9 lucky paper of Leilons". Words 3 'lucky paper', 2 'of', 1 'Leilon')
+    if (s_at == 1 && plural_before_of && (shown & 6) == 6) {
+        const char* w = word(it.word(2));
+        if ((w[0] == 'o' || w[0] == 'O') && (w[1] == 'f' || w[1] == 'F') && (w[2] == 0 || w[2] == ' ')) s_at = 3;
+    }
     bool first = true;
     for (int i = 3; i >= 1; --i) {
         if (!(shown & (1 << (i - 1)))) continue;
         if (!first) add(" ");
         first = false;
         add(word(it.word(i)));
-        if (it.count() < 2 || plural) continue;
-        if (plural_first) {
-            add("s");
-            plural = true;
-            continue;
-        }
-        if ((1 << (i - 1)) == shown || (i == 1 && shown > 4 && t != plural_.flask) || (i == 2 && !(shown & 1)) ||
-            (i == 3 && t == plural_.flask) || (missile && it.word(3) != plural_.keep1 && it.word(3) != plural_.keep2)) {
-            add("s");
-            plural = true;
-        }
+        if (i == s_at) add("s");
     }
     // No trailing space (the games trim it)
     while (o > 0 && out[o - 1] == ' ') out[--o] = 0;
