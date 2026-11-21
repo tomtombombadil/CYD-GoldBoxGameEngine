@@ -2467,6 +2467,10 @@ Stop Vm::step()
             h_.party_killed();
             return Stop::Running;
         }
+        if (v == 2 && set_.program_quit) {                  // quit to DOS (Darkness's ending)
+            stop_script();
+            return wait_for(Wait::Quit);
+        }
         if (v == 8) {                                       // the game won: the ending
             if (set_.program_ends) stop_script();           // (Pool's script goes on after it)
             return wait_for(Wait::Won);

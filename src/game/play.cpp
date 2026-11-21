@@ -14850,6 +14850,10 @@ void begin_wait(pic::Canvas& c)
     case ecl::Wait::Finale:             // the Dark Queen's PROGRAM 1: its ending
         qf_start(c);
         break;
+    case ecl::Wait::Quit:               // Darkness's PROGRAM 2: the game ends (the original quits to DOS)
+        waiting = false;
+        exit_wanted = true;
+        break;
     case ecl::Wait::Key:                // "press <enter>/<return> to continue"
         journal_ready();                // (Darkness: JOURNAL n's sentence waits for a key)
         if (gateway() && *vm->prompt()) {

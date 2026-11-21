@@ -1,5 +1,12 @@
 # Open tasks (Tom and Claude)
 
+- [x] v0.211.16 (the Darkness play-through, 2026-11-21 - played to the end): **the game never ended** - after
+      Gothmenes, the fine ship's farewell ("Do you really want to leave us?" Yes, the ending's pages) ran PROGRAM 2,
+      which the engine passed over, and the party stood in Phlan again. Darkness's PROGRAM 2 is "quit to DOS"
+      (GAME.OVR 0x2165; Treasures' handler the same): the Play Test now ends there, as Exit to DOS (OpSet
+      `program_quit`, Wait::Quit). Only Darkness's ending uses it (opscan over PoolRad, Curse, Darkness, Gateway).
+      Host test both ways; the playsim's ending reaches it. The play-through's log: the Project's
+      claude/playthrough_darkness.md.
 - [x] v0.211.15 (the Darkness play-through, 2026-11-21; from the original's code): **training past 255 hit points
       wrapped round** - Elminster's hall left Kestrel with 3 and Selene with 0. Darkness's level-up (GAME.OVR
       0x270DD) adds the gain to the byte as it is and sets the hit points to 0 when more damage was taken than the
