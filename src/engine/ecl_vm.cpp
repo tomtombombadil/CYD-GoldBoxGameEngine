@@ -2016,6 +2016,13 @@ Stop Vm::step()
             // word 0x7EC8 before the treasure - none here; START ovr6
             // +0x11AC; DOSBox: Ohlo's reward)
             if (set_.pool_map) set(0x7EC8, 0);
+            if (set_.treasure_flags) {
+                // (the fight's end routine: "=" unless a member is running)
+                bool ran = false;
+                for (int i = 0; party_ && i < party_->count; ++i)
+                    if (party_->m[i].rec[0x195] == party::Running) ran = true;
+                fight_flags(!ran);
+            }
             return wait_for(Wait::Treasure);
         }
         // (Pool: after a fight the encounter's picture is no longer up - the

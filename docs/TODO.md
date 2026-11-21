@@ -14,6 +14,14 @@
       The playsim after (TRAINTEST=3 TRAINKEEP=1 - new: on the experience they have): 5/9/12 -> 6/10/12 ->
       7/11/12, 500,000 kept, a spell learned each time, then "Not Enough Experience"; the Companion's name
       magenta before, cyan after. behave levels: Curse, Darkness, Treasures 11 passed (the others have no oracle).
+- [x] v0.211.12 (the Darkness play-through, 2026-11-21; from the original's code): **a COMBAT with no monsters (the
+      treasure only) left the compare flags as they were** - in Darkness and Treasures that path runs the fight's
+      end routine too (Darkness GAME.OVR 0x1443 -> overlay 0x4F entry 1 = 0x5968; Treasures 0x18EA -> 0x6636): the
+      six flags cleared, then "=" ("<>" when a member is running). Kalistes' testing grounds (block 81): the drow
+      ambush "... EASILY DISPATCHES THEM", then "COMBAT, IF <>, GOTO back" took the stale "<>" of the skill roll,
+      moved the party back and asked again at every step - the way to the tests was shut. Now
+      `OpSet::treasure_flags` (Darkness, Treasures; not Knights / Queen - not looked at). Played in the playsim:
+      the ambush once, the tests, the Ward, Kalistes, the ring back to Limbo (journal 82). Host tests pass.
 - [x] v0.211.11 (the PortMaster session, 2026-11-20 - Tom: "fix the 'Still open' issues"): **Game Fix "Training
       Every Class" (`kFixTrainAll`; Curse, Gateway; on by default; the LAST fix - the settings keep a bit a fix)**:
       a multi-class trains every ready class and the experience is cut as Darkness cuts it (never under what a

@@ -13,7 +13,7 @@ for i in $(seq 1 ${ITER:-30}); do
   elif echo "$st" | grep -q "screen 5 .*Take"; then T="$(python3 $P/bin/takeall.py $S "$T" "" 2>/dev/null)/E"
   elif echo "$st" | grep -q "screen 24 .*wait 11 "; then T="$T."
   elif echo "$st" | grep -q "screen 5 \|screen 25 "; then T="$T/E"
-  elif echo "$st" | grep -q "Aim Use"; then :
+  elif echo "$st" | grep -q "|Move Aim\|Aim Use"; then :
   elif [ -n "$PICK" ] && w=$(echo "$st" | sed -E 's/.*menu \[[^|]*\|([^]]*)\].*/\1/') && k=$(for c in $(echo "$PICK" | tr ',' ' '); do echo "$w" | grep -qw "$c" && { echo "$c"; break; }; done) && [ -n "$k" ]; then T="$T/${k:0:1}"
   else break; fi
 done

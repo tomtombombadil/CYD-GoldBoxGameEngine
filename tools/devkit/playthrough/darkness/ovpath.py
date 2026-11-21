@@ -14,7 +14,7 @@ while q:
     if c==(tx,ty): break
     for d,(dx,dy) in enumerate(D):
         n=(c[0]+dx,c[1]+dy)
-        if 0<=n[0]<38 and 0<=n[1]<15 and n not in prev and ((g[n[1]][n[0]] not in bl and not 10<=g[n[1]][n[0]]<=30) or n==(tx,ty)):
+        if 0<=n[0]<38 and 0<=n[1]<15 and n not in prev and ((g[n[1]][n[0]] not in bl and not 10<=g[n[1]][n[0]]<=int(os.environ.get("OVPLACEMAX","30"))) or n==(tx,ty)):
             prev[n]=(c,d); q.append(n)
 if (tx,ty) not in prev: print('no way'); sys.exit(1)
 steps=[]; c=(tx,ty)

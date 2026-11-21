@@ -187,6 +187,13 @@ struct OpSet {
     // 0x32 not 0) - Darkness GAME.OVR 0x22AC, Treasures 0x29F0 (Elminster's
     // gate, block 18, destroys the party's magic items by it)
     bool     destroy_magic = false;
+    // Darkness / Treasures: COMBAT with no monsters (the treasure only) runs
+    // the fight's end routine too, which clears the compare flags and sets
+    // "=" ("<>" when a member is running) - Darkness GAME.OVR 0x1443 ->
+    // overlay 0x4F entry 1 = 0x5968, Treasures 0x18EA -> 0x6636. Their
+    // scripts go "COMBAT, IF <>, GOTO back" after a treasure-only COMBAT too
+    // (Darkness block 81's drow ambush: "... EASILY DISPATCHES THEM")
+    bool     treasure_flags = false;
     bool     xp_number = false;
     // Gateway: CALL 0x80F trades the selected member's coins up
     // (rules::trade_up - before its scripts take a price in platinum)
