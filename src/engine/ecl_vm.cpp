@@ -8,6 +8,9 @@
 #include <cstring>
 
 namespace ecl {
+#ifdef CYD_TEST_HOOKS
+void (*g_insn_hook)(unsigned at, int op, unsigned a, unsigned b) = nullptr;
+#endif
 
 namespace {
 
@@ -1675,6 +1678,10 @@ Stop Vm::step()
         return Stop::Running;
     };
 
+#ifdef CYD_TEST_HOOKS
+    const unsigned insn_at = static_cast<unsigned>(pc_ + kBase);
+    if (g_insn_hook && op_ != 0x03) g_insn_hook(insn_at, op_, 0, 0);
+#endif
     if (set_.byte_map) {
         Stop r = Stop::Running;
         if (dk_step(r)) return r;
@@ -1706,6 +1713,9 @@ Stop Vm::step()
             flags_[5] = c >= 0;
         } else {
             compare(value(o[0]), value(o[1]));
+#ifdef CYD_TEST_HOOKS
+            if (g_insn_hook) g_insn_hook(insn_at, 3, value(o[0]), value(o[1]));
+#endif
         }
         return Stop::Running;
     case 0x04:

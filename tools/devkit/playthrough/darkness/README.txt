@@ -23,3 +23,8 @@ New / changed here:
   gostepy.sh <slot> <x,y> [answer]  gostep.sh with the questions met on the way answered (WAYANS, default Y)
   AUTOTAKE (playsim) takes TOKENS typed once at each treasure menu - "/T/I/T/T/T..." in Darkness (the selected
                           member takes the lit lines); fight.sh passes them, adv.sh needs them in EXTRA
+  upstair.sh <slot>       the Red Tower: every stair side (wall type 2 - table 989F) reached is tried, the first
+                          "THE PATH GOES UP" taken (WANT=DOWN the other way); up = facing west, down = east/north
+  MAPWRAP=1 (playsim, GOENV for gostep): the path finders step off an edge and in at the other (the tower's
+                          floors share one map and wrap); DISASMNOW=1 disassembles a block before it hands back
+                          (message blocks 76 / 77 / 84 / 85); ECLTRACE=1 (CYD_TEST_HOOKS) every instruction

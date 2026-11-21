@@ -38,6 +38,11 @@
 #include "party.h"
 
 namespace ecl {
+#ifdef CYD_TEST_HOOKS
+// (tests: told of every instruction as it runs - address, opcode, the first two operands' values; the
+// playsim's ECLTRACE=1)
+extern void (*g_insn_hook)(unsigned at, int op, unsigned a, unsigned b);
+#endif
 
 constexpr uint32_t kCodeSize = 0x1E00;
 constexpr int kMaxStrings = 16;
