@@ -28,3 +28,5 @@ New / changed here:
   MAPWRAP=1 (playsim, GOENV for gostep): the path finders step off an edge and in at the other (the tower's
                           floors share one map and wrap); DISASMNOW=1 disassembles a block before it hands back
                           (message blocks 76 / 77 / 84 / 85); ECLTRACE=1 (CYD_TEST_HOOKS) every instruction
+  stepwalk.sh <slot> <x,y> [answer]  one step at a time, MAPPATH again after each (Moander's heart pushes the
+                          party along its arteries at every beat)
