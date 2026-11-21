@@ -7380,7 +7380,10 @@ Outcome finish(Battle& b, const Monster* monsters)
         const Fighter& f = b.f[i];
         const int s = f.status();
         if (s == party::Running) fled = true;
-        if ((s == party::Running || s == party::Animated || s == party::Okay) && f.rec[kControl] < 0x80) killed = false;
+        // (a survivor is on the party's side: a charmed member standing alone
+        // doesn't save it - coab CleanupPlayersStateAfterCombat's combat_team
+        // test; Darkness GAME.OVR 0x4D45-0x4D7C, record 0x1EF hostile)
+        if ((s == party::Running || s == party::Animated || s == party::Okay) && f.rec[kControl] < 0x80 && !f.team()) killed = false;
         if (s == party::Okay || s == party::Animated) won = true;
     }
     if (won) fled = false;

@@ -7,6 +7,7 @@ for s in "" 2 3; do $P/bin/bk.sh load $S ${B}_pre > /dev/null
   PTIME=2400 TAILN=0 $P/bin/p.sh "$T" SAVE=$S FIGHT=1 AUTOTAKE=1 ${s:+SEED=$s} SAVENOW=$S > /dev/null
   r=$(grep "fight over" $P/run.log | tail -1)
   echo "  fight (seed '$s'): ${r:0:90}"
-  if echo "$r" | grep -q "result 0"; then grep "saved now" $P/run.log; $P/bin/bk.sh save $S $B > /dev/null; exit 0; fi
+  # (won = the engine's "[fight] won" line: "result" is Curse's word 0x7EC7, always 0 in Darkness)
+  if grep -q "^\[fight\] won" $P/run.log; then grep "saved now" $P/run.log; $P/bin/bk.sh save $S $B > /dev/null; exit 0; fi
 done
 echo "LOST every seed"; $P/bin/bk.sh load $S ${B}_pre > /dev/null; exit 1

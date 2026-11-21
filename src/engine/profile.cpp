@@ -1751,6 +1751,7 @@ constexpr ecl::OpSet kDarknessEcl = [] {
     s.files_look = true;
     s.byte_map = true;
     s.vault_word = 0x31;            // (COMBAT with no monsters: game byte 0x31 the vault)
+    s.destroy_magic = true;         // (0x40: type & 0x7F, 0x80 = magic only - GAME.OVR 0x22AC)
     return s;
 }();
 
@@ -1776,6 +1777,7 @@ constexpr uint32_t kQueenPartyMenu[] = {
 // in ECL.GLB; the program's own buffer not found yet)
 constexpr ecl::OpSet kQueenEcl = [] {
     ecl::OpSet s = kDarknessEcl;
+    s.destroy_magic = false;        // (no such test in DQK.EXE)
     s.code_size = 12000;
     s.no_prefix = true;
     s.krynn_race = true;
@@ -2086,6 +2088,7 @@ constexpr TitleStep kDeathKnightsTitle[] = {
 
 constexpr ecl::OpSet kDeathKnightsEcl = [] {
     ecl::OpSet s = kDarknessEcl;
+    s.destroy_magic = false;        // (its 0x40 handler has no such test)
     s.sizes[0x21] = 3;
     s.sizes[0x37] = 3;
     s.load_pieces = 0x37;
