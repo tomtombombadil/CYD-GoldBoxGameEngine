@@ -2475,7 +2475,12 @@ int main(int argc, char** argv)
             for (int k = 0; k < ch.n_items; ++k) {
                 char in[48];
                 play::names->name(items::Item{ch.items[k]}, in, sizeof in);
-                printf("    %c %s\n", ch.items[k][0x34] ? '*' : ' ', in);
+                const items::Item it{ch.items[k]};
+                if (atoi(getenv("ITEMDUMP")) > 1)     // ITEMDUMP=2: the name's three words too
+                    printf("    %c %s   [type %d: 3 '%s' 2 '%s' 1 '%s' hidden %d]\n", ch.items[k][0x34] ? '*' : ' ', in, it.type(),
+                           play::names->word(it.word(3)), play::names->word(it.word(2)), play::names->word(it.word(1)), it.hidden());
+                else
+                    printf("    %c %s\n", ch.items[k][0x34] ? '*' : ' ', in);
             }
         }
     if (getenv("RECSET"))               // RECSET=m:off=v,...: party member m's record bytes (hex) before SAVESLOT

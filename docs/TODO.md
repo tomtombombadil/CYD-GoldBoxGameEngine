@@ -1,5 +1,25 @@
 # Open tasks (Tom and Claude)
 
+- [x] v0.211.5 (the PortMaster session, 2026-11-20 - Tom: "fix the faults you found during testing"): (1) **Back
+      inside a treasure's "Take: Money Items Exit" left the whole treasure**, and the next Back answered "There is
+      still treasure left" with No - the treasure gone (play::back, Screen::Shop: a prompted menu's own Exit word
+      now; found by the port's hand_test in PoolRad and Secret, seen again through the port's buttons after the
+      fix). (2) **Treasures: "9 lucky paper of Leilons"** - the original reads "9 Lucky Papers of Leilon" (DOSBox):
+      an "X of Y" name takes the plural on X there (`Names::plural_before_of`). (3) navcheck's own two false alarms
+      put right (a dim word's light-grey box is its highlight - Save Slot Info's empty slots; a spell list scrolled
+      a line under the box): all nine games 0 failures, seed 11, 5000 actions, NFIGHT=60 - N7 with them. The
+      playsim's ITEMDUMP=2 shows an item name's three words; a fight's placing is logged.
+- [ ] **Treasures, an overland fight's starting distance - NOT fixed, the cause not found.** Seen clean in DOSBox
+      (2026-11-20, the same save, party facing east, no stray keys): the party's formation is ours square for
+      square, but the nearest foe is at Range 15 from the member ours has it next to - twelve squares further,
+      two map squares in the placing's 6-a-square. The script (51, 98F4) sets SETUP MONSTER's distance 0, the
+      original's SETUP (GAME.OVR 0x6A0) and placing (0xDEB9 / 0xDCCB / 0xD898, game byte 0x36) read as ours do -
+      so where its 2 comes from is open. Not it: script word 0x2B = 12 (set before each encounter roll - the
+      camp's, 0x12B99). To do: the original's sight routine (0x58:0x3E) and what COMBAT (0x1968) does on the
+      overland; Darkness's outdoor fights against the original too.
+- [ ] Treasures: the Leilon potion of the guides not found among the loot; Aim's Next in the original went to a
+      foe first where ours goes to the nearest fighter of either side - compare.
+
 - [x] v0.211.4 (Tom, 2026-11-20, Gateway's first fight on the PortMaster port): **a fight's Speed menu.** (1) After
       Faster the highlight went back to the first word - Slower in Gateway's order - so the next press undid it: the
       prompt's number ("GameSpeed (4) :") made each speed a new menu to the kept-place rule. A prompt's numbers no
