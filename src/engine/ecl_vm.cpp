@@ -2547,11 +2547,15 @@ Stop Vm::step()
             return Stop::Running;
         }
         if (!need(1)) return Stop::Error;
-        const int type = value(o[0]) & 0xFF;
+        int type = value(o[0]) & 0xFF;
+        // (Darkness / Treasures: 0x80 = only the magic ones - the plus byte
+        // 0x32 not 0; GAME.OVR 0x22AC)
+        const bool magic_only = set_.destroy_magic && (type & 0x80);
+        if (set_.destroy_magic) type &= 0x7F;
         for (int i = 0; party_ && i < party_->count; ++i) {
             party::Character& c = party_->m[i];
             for (int k = 0; k < c.n_items;) {
-                if (c.items[k][0x2E] != type) {
+                if (c.items[k][0x2E] != type || (magic_only && !c.items[k][0x32])) {
                     ++k;
                     continue;
                 }

@@ -182,6 +182,11 @@ struct OpSet {
     // DESTROY takes the first such item only; its 0x41 award tells the
     // amount (kWXpPoints)
     bool     item_words = false;
+    // Darkness / Treasures: DESTROY ITEMS (0x40) takes the type from the
+    // operand's low 7 bits, and with 0x80 only the magic ones (plus byte
+    // 0x32 not 0) - Darkness GAME.OVR 0x22AC, Treasures 0x29F0 (Elminster's
+    // gate, block 18, destroys the party's magic items by it)
+    bool     destroy_magic = false;
     bool     xp_number = false;
     // Gateway: CALL 0x80F trades the selected member's coins up
     // (rules::trade_up - before its scripts take a price in platinum)

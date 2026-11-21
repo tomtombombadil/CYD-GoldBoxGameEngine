@@ -1,5 +1,19 @@
 # Open tasks (Tom and Claude)
 
+- [x] v0.211.9 (the Darkness play-through, 2026-11-21; each from the original's code): (1) **Elminster's gate
+      destroyed no items** - block 18's loop at its gate runs DESTROY ITEMS (0x40) with type | 0x80 for every type
+      but five; in Darkness and Treasures the handler takes type = v & 0x7F and with 0x80 only the magic ones (plus
+      byte 0x32 not 0; readied ones put away first - GAME.OVR 0x22AC / 0x29F0). The engine compared the whole byte,
+      so nothing matched. Now `OpSet::destroy_magic` (Darkness, Treasures; not Knights / Queen - their handlers have
+      no such test). Checked in the playsim: every magic item but the spared types gone at the gate, the plain ones
+      and Elminster's vault kept. (2) **A party with only charmed members standing was a win** - the fight's end
+      took any okay non-NPC member as a survivor; the originals require the party's side too (coab
+      CleanupPlayersStateAfterCombat's combat_team; Darkness GAME.OVR 0x4D45-0x4D7C, record 0x1EF) - every game.
+      Seen at Thorne's dragons (block 34, 0x8FDF): the engine went on as won, the script set the won flag. Now the
+      party is destroyed there. Fightfuzz Curse / Darkness / PoolRad (seed 41) clean, host tests. Also: Darkness's
+      unconscious / dying members count as alive only when game byte 0x1C is set (the demo's block 4 alone sets
+      it - the engine's demo rule already). tools/devkit/src/opscan.cpp: every use of an opcode in a game's ECL
+      files (the game's own OpSet).
 - [x] v0.211.5 (the PortMaster session, 2026-11-20 - Tom: "fix the faults you found during testing"): (1) **Back
       inside a treasure's "Take: Money Items Exit" left the whole treasure**, and the next Back answered "There is
       still treasure left" with No - the treasure gone (play::back, Screen::Shop: a prompted menu's own Exit word
@@ -57,6 +71,10 @@
       on; Knock 0x1F): "Locked. Bash Pick Exit" there, Bash opened it (the alarm), Pick by a thief. Every game checked
       (tools/devkit/doors): Curse, PoolRad, Champions, Gateway had theirs; Darkness has locked sides but no such words
       in its program; Knights / Treasures no locked sides; Queen's HLIB maps not scanned.
+- [ ] Darkness, the Temple of Tyr's basement (block 54, 0x941B, the fire elementals for the Spirit Flame): the fight
+      ended by the 15-round rule with no blow struck - the party and the three elementals placed on the two sides
+      of the field's wall line and neither reached the other (playsim, two seeds). Compare the field and placement
+      with the original in DOSBox (does the original place them across a wall too?).
 - [x] v0.211.7 (the Darkness play-through, 2026-11-21, the Silver Blades cave's Worldstone): **Darkness's fights
       left the scripts' compare flags as the compare before them** - its fight end sets "=" (or "<>" by its byte
       0x7FF5) at DS 0xB01E (GAME.OVR 0x596E - the same routine as Treasures' 0x6644, done in v0.208.4 for Treasures

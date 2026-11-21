@@ -2062,6 +2062,15 @@ int main(int argc, char** argv)
     const char* yes_skip_from = nullptr;    // (#NAME;yes~no~: the no part skipped when found)
     const char* yes_skip_to = nullptr;
     for (const char* m = moves; *m || auto_next(m); tp_note(m), ++m) {
+        if (getenv("WINFIGHT") && play::fg && play::screen == play::Screen::Fight) {
+            // WINFIGHT=1: a play-through's cheat - every foe down whenever a fight is up (replays too;
+            // the fight's rules are the rule checks' business; the script's after-fight part runs)
+            for (int i = 0; i < play::fg->b.n; ++i) {
+                combat::Fighter& f = play::fg->b.f[i];
+                if (!f.size || !f.team()) continue;
+                f.rec[0x1A4] = 0; f.rec[0x195] = 6; f.rec[0x196] = 0;
+            }
+        }
         if (*m == '~') {
             if (m == yes_skip_from) { m = yes_skip_to; yes_skip_from = nullptr; }
             continue;
