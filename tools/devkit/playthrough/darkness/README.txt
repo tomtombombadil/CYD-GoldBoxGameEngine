@@ -17,3 +17,6 @@ New / changed here:
                           decimal in the scripts (code - 10 = the ON GOTO's entry): 13 = 0x0D the steading
   adv.sh PICK="Word,..."  a menu answered by the first of these words it shows; fights: auto tokens (/Q each fighter),
                           QASPELLS=1 (EXTRA) so the casters cast; fix.sh = the Healer cheat's Heal for everyone
+  playsim WINFIGHT=1 (EXTRA for adv.sh): every foe down whenever a fight is up - for a story fight the party can't
+                          win on Quick (the aerie's eight dragons with their fear): the after-fight script runs; the
+                          fight's own rules are the rule checks' (fight_check / fuzz / matrix), not this walk's

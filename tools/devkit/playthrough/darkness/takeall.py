@@ -12,6 +12,7 @@ def run(t):
 left = None
 for m in range(8):
     U = T + '%%%d/T' % m
+    if 'Money Items' in run(U): U += '/I'
     for k in range(40):
         log = run(U + '/T')
         got = re.findall(r'\[play\] take (ok|refused), left (\d+)', log)
