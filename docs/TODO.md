@@ -1,5 +1,24 @@
 # Open tasks (Tom and Claude)
 
+- [x] v0.211.10 (the PortMaster session, 2026-11-20 - Tom, Darkness, the Steam release's save B: Oratisi, an elf
+      fighter / magic-user / thief 5 / 9 / 12 with 500,000 experience, trained twice came out 7 / 9 / 12 with
+      125,000): **a training hall trained ONE class of a multi-class and cut the experience - in every game but
+      PoolRad and the Dark Queen.** That is Curse's routine (and Gateway's: "mov [bp-0xA],al" - the class needing
+      the most takes the ready classes' place). Secret, Champions, Death Knights, Darkness and Treasures OR that
+      class into the ready ones ("or al,[bp-0xA]"; Secret after GAME.OVR 0x21FF4, Champions 0x24F71, Death
+      Knights 0x196EA, Darkness 0x18B11, Treasures after 0x1DEDC): **every ready class trains, a level each** -
+      now so (`create::train_pick`). And Darkness / Treasures keep the experience unless it also passes what
+      every class held needs for its next level (0x189BA, an inner loop the others lack) - Oratisi keeps 500,000.
+      DOSBox, the original Darkness, the same save, twice: "will become: a level 6 Fighter and a level 10
+      Magic-User", then 7 and 11, experience 500,000 both times, then not enough; hit points +5 +5 and +3 +5.
+      The playsim after (TRAINTEST=3 TRAINKEEP=1 - new: on the experience they have): 5/9/12 -> 6/10/12 ->
+      7/11/12, 500,000 kept, a spell learned each time, then "Not Enough Experience"; the Companion's name
+      magenta before, cyan after. behave levels: Curse, Darkness, Treasures 11 passed (the others have no oracle).
+- [ ] From it: (1) Curse's and Gateway's one class a training with the experience cut is the originals' - a Game
+      Fix (every ready class, nothing lost) by Tom's standing answer: to do. (2) The hit points a training of two
+      classes gives came out +3 every time in the playsim (8 seeds) where the original gave 3 and 5 - is the
+      playsim's SEED reaching the Trainer's dice, or is the gain fixed? (3) No check trains a multi-class with
+      two classes ready in behave levels - add one (per game: which classes rise, the experience kept).
 - [x] v0.211.9 (the Darkness play-through, 2026-11-21; each from the original's code): (1) **Elminster's gate
       destroyed no items** - block 18's loop at its gate runs DESTROY ITEMS (0x40) with type | 0x80 for every type
       but five; in Darkness and Treasures the handler takes type = v & 0x7F and with 0x80 only the magic ones (plus
