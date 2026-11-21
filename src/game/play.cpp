@@ -12433,7 +12433,7 @@ void alter_tap(int x, int y, pic::Canvas& c)
 // 1000 gp.", "We don't train that class here", "Not Enough Experience"),
 // then "NAME will become:" (row 4, column 4) / "    a level 6 Fighter"
 // (row 5, column 6) and "Do you wish to train? Yes No": "Congratulations...",
-// 1000 gp, one level (one class: the one needing the most experience),
+// 1000 gp, one level (Curse / Gateway one class: the one needing the most experience; the others every ready class),
 // hit points; experience past the level after the next is lost (one under
 // it kept - create::train_pick). (A magic-user's new spell: with the spells.)
 

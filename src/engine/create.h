@@ -175,12 +175,14 @@ int ready_classes(const party::Character& c, const classes::Tables& t);
 // fighters only but the half-elf cleric at 5; by the Strength in use) - the
 // party list's "may train" colour and the classes' own training
 bool gw_race_limited(const party::Character& c, int cls, int lvl);
-// A training hall's choice (the original's train_player, not silent): of
+// A training hall's choice (the original's train_player, not silent). Curse
+// and Gateway: of
 // the classes ready, the one whose experience figure is the largest - the
 // original compares them all at the level of the LAST class held - (all of
 // them when none has a figure there); and the experience the character
 // keeps: one under the figure for the level after the next when they have
-// that much already (AD&D: one level at a time). The class mask (0: none
+// that much already (AD&D: one level at a time). The other games: every
+// ready class, a level each. The class mask (0: none
 // ready); *exp_after: the experience to keep.
 int train_pick(const party::Character& c, const classes::Tables& t, uint32_t* exp_after);
 // Trains the classes in mask one level up: class bonuses, hit points

@@ -1337,7 +1337,13 @@ int train_pick(const party::Character& c, const classes::Tables& t, uint32_t* ex
         const int32_t need = need_at(k, lv);
         if (need <= 0 || static_cast<uint32_t>(need) > xp) continue;
         ready |= t.u8(static_cast<uint16_t>(t.lay.class_masks + k));
-        const int32_t after = need_at(k, lv + 1);
+        int32_t after = need_at(k, lv + 1);
+        // (Darkness GAME.OVR 0x189BA, Treasures the same: no less than what
+        // any class held needs for ITS next level - a class still short of
+        // its level is not cut off from it)
+        if (t.lay.dk)
+            for (int j = 0; j < 7; ++j)
+                if (c.level(j) > 0 && need_at(j, c.level(j)) > after) after = need_at(j, c.level(j));
         if (after > 0 && xp >= static_cast<uint32_t>(after) && after > keep) keep = after - 1;
     }
     if (t.lay.queen && ready) {
@@ -1385,7 +1391,14 @@ int train_pick(const party::Character& c, const classes::Tables& t, uint32_t* ex
             }
         }
     if (pick >= 0) {
-        ready = t.u8(static_cast<uint16_t>(t.lay.class_masks + pick));
+        // Curse (GAME.OVR, "mov [bp-0xA],al") and Gateway ("mov [bp-0xB],al")
+        // train this class ALONE; Secret, Champions, Death Knights, Darkness
+        // and Treasures OR its mask into the ready ones ("or al,[bp-0xA]":
+        // Secret after its 0x21FF4, Champions 0x24F71, Death Knights 0x196EA,
+        // Darkness 0x18B11, Treasures after 0x1DEDC) - every ready class
+        // trains, a level each (DOSBox, Darkness: "will become: a level 6
+        // Fighter and a level 10 Magic-User", the experience kept)
+        if (!t.lay.secret && !t.lay.krynn) ready = t.u8(static_cast<uint16_t>(t.lay.class_masks + pick));
         const int32_t after = need_at(pick, last + 1);
         if (after > 0 && xp >= static_cast<uint32_t>(after) && after > keep) keep = after - 1;
     }

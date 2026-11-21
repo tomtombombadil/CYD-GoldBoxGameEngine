@@ -1529,7 +1529,7 @@ int main(int argc, char** argv)
         }
         shot("cheat");
     }
-    if (getenv("TRAINTEST")) {      // TRAINTEST=n: the Cheats tab's Trainer - each member given the experience
+    if (getenv("TRAINTEST")) {      // TRAINTEST=n: the Cheats tab's Trainer (TRAINKEEP=1: on the experience they have) - each member given the experience
         // for its next level, trained n times (gold, levels, hit points printed); MAXHP=1 the Max Hit
         // Points cheat; MODTEST=1 Modify on each member (hit points and stats pushed up / down, then Exit)
         if (getenv("MAXHP")) { play::Options o = play::opts; o.max_hp = true; play::set_options(o); }
@@ -1565,7 +1565,10 @@ int main(int argc, char** argv)
                         const uint32_t e = (uint32_t)play::trainer->tables.exp_needed(k, ch.level(k), &ch);
                         if (e > need && e < 0x7FFFFFF) need = e;
                     }
-                if (ch.exp() < need) for (int b = 0; b < 4; ++b) ch.rec[0x127 + b] = (uint8_t)(need >> (8 * b));
+                if (!getenv("TRAINKEEP") && ch.exp() < need) for (int b = 0; b < 4; ++b) ch.rec[0x127 + b] = (uint8_t)(need >> (8 * b));
+                printf("  exp before %u ready %02X needs", (unsigned)ch.exp(), play::trainer ? create::ready_classes(ch, play::trainer->tables) : 0);
+                for (int k = 0; play::trainer && k < classes::kClasses; ++k) if (ch.level(k) > 0) printf(" c%d L%d:%d,%d", k, ch.level(k), (int)play::trainer->tables.exp_needed(k, ch.level(k), &ch), (int)play::trainer->tables.exp_needed(k, ch.level(k) + 1, &ch));
+                printf("\n");
                 const int hp0 = ch.hp_max(), hr0 = ch.rec[0x12C];
                 const uint32_t g0 = rules::gold_worth(ch, play::pool_files());
                 int lv0[classes::kClasses];
@@ -1579,7 +1582,7 @@ int main(int argc, char** argv)
                 if (asked) play::yes_no_key('Y', C);
                 const bool learning = play::screen == play::Screen::SpellList;
                 if (learning) { play::sl.sel = 0; play::learn_tap('L', C); }
-                printf("  %-15s con %2d:", nm, ch.rec[0x11 + 2 * (4)]);
+                printf("  %-15s exp %u ready %02X con %2d:", nm, (unsigned)ch.exp(), play::trainer ? create::ready_classes(ch, play::trainer->tables) : 0, ch.rec[0x11 + 2 * (4)]);
                 for (int k = 0; k < classes::kClasses; ++k)
                     if (ch.level(k) > 0) printf(" c%d %d->%d", k, lv0[k], ch.level(k));
                 printf("  hp max %d->%d (+%d) rolled %d->%d gold %u->%u%s%s [%s]\n", hp0, ch.hp_max(), ch.hp_max() - hp0,
