@@ -2117,6 +2117,13 @@ int main(int argc, char** argv)
         if (*m == '`') { g_quiet = !g_quiet; continue; }
         if (*m == '\'' && getenv("RESEED")) {    // (' : the dice from here on as SEED=RESEED - a later fight tried on other rolls)
             play::rng = create::Dice(static_cast<uint32_t>(strtoul(getenv("RESEED"), nullptr, 10))); continue; }
+        if (*m == '=' && play::input() != play::Input::None) {
+            // "=TEXT;": typed at a script's question (INPUT STRING / NUMBER) - MANUAL runs wait there
+            for (++m; *m && *m != ';'; ++m) play::input_key(*m, C);
+            play::input_key('\n', C);
+            if (!*m) break;
+            continue;
+        }
         if (*m == '#' && m[1]) {
             // "#NAME;": in a fight's aim, the Next word until the aimed fighter's name starts with NAME
             // (a play-through's "focus on that one": the board's own Next / Target words)
