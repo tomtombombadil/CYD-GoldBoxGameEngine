@@ -34,6 +34,15 @@
       on; Knock 0x1F): "Locked. Bash Pick Exit" there, Bash opened it (the alarm), Pick by a thief. Every game checked
       (tools/devkit/doors): Curse, PoolRad, Champions, Gateway had theirs; Darkness has locked sides but no such words
       in its program; Knights / Treasures no locked sides; Queen's HLIB maps not scanned.
+- [x] v0.211.5 (the Darkness play-through, 2026-11-21, Phlan's Traitor's Gate): **Darkness's / Treasures' scripts
+      never heard that a step went off the map's edge** - their game block's +0x20 (script word 0x21; GAME.OVR
+      Darkness 0xD597-0xD612, Treasures 0xE89D: 0 each step, 1 when the step leaves the 16 x 16 map) was Curse's
+      0x7ED5 in the engine with no Darkness place, so it read 0. Phlan's step script swaps its two maps by it
+      (map 16 / 17): the party wrapped round map 16 and could never reach Kuto's Gate (Sasha, the start of the
+      game). 15 of Darkness's blocks test it (Phlan, Zhentil Keep, the farmhouse, the steading, the fortress, the
+      Red Tower, Myth Drannor, the drow, Kalistes' web ...). Now dk_addr 0x7ED5 -> 0x21. Checked: playsim, Traitor's
+      Gate to map 17, a save there loads map 17, Kuto's Gate -> Sasha -> Bane -> Limbo. Treasures' scripts not
+      walked yet.
 - [ ] Secret play-through (Tom, 2026-11-19; the Project's claude/playthrough_secret.md): New Verdigris, the Well,
       the Ruins' dragons and bier, the Black Circle HQ under way; then the Temple of Tyr, the mines, dungeon,
       crevasses, castle, Eldamar. Secret has NO ending program (2026-11-20: every ECL1-3 block
