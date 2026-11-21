@@ -4744,8 +4744,17 @@ void start_aim(pic::Canvas& c)
     const int i = fg->cur;
     fg->n_cand = 0;
     int dist[combat::kMaxFighters];
+    // (Darkness-type games, a weapon's aim: the fighter itself, then the foes
+    // it can attack from here, nearest first - never its own side. DOSBox,
+    // Treasures, a sling: Next went self, foes at 12 13 14 15 16, self ...;
+    // none in reach: every foe - Manual's own choice stays)
+    const bool foes_only = d->prof->fight.words[profile::kAimDk] && !fg->spell;
+    bool in_reach = false;
+    for (int k = 0; foes_only && k < b.n && !in_reach; ++k)
+        in_reach = k != i && b.f[k].team() != b.f[i].team() && can_target(k, nullptr);
     for (int k = 0; k < b.n; ++k) {
         if (!b.f[k].up() || !b.f[k].size) continue;
+        if (foes_only && k != i && (b.f[k].team() == b.f[i].team() || (in_reach && !can_target(k, nullptr)))) continue;
         int sq = 0;
         combat::range(b, fg->t, i, k, true, &sq);
         // in order of distance
@@ -5858,8 +5867,9 @@ void fight_start(pic::Canvas& c)
         const int fd = d->gs.dir & 6;
         b.flee_dir = (fd - ((fd + 2) % 4) / 2 + 8) & 7;
     } else {
-        plat::log("[fight] placed: facing %d, %d squares apart\n", d->gs.dir & 6, vm->fight_distance());
-        combat::place(b, fg->t, d->gs.dir & 6, vm->fight_distance(), b.indoors ? solid_side : nullptr, nullptr,
+        const int apart = vm->fight_distance();
+        plat::log("[fight] placed: facing %d, %d squares apart\n", d->gs.dir & 6, apart);
+        combat::place(b, fg->t, d->gs.dir & 6, apart, b.indoors ? solid_side : nullptr, nullptr,
                       darkness_files() ? vm->fight_sides() : 0);
         // (the DAX games, a run's way from the party's facing as PoolRad's:
         // Champions GAME.OVR 0xCFC4 [0x6D87] - round 11; Curse 0xC54F

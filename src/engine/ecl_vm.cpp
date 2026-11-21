@@ -33,8 +33,18 @@ uint32_t Vm::game_delay() const
     return static_cast<uint32_t>(speed) * (set_.pool_map ? 225 : 100);
 }
 
+// Darkness / Treasures (GAME.OVR 0x69BA / 0x77AF): where the place has no 3D
+// view - and on Treasures' overland (game byte 0x3F = 1) - the party sees 2
+// squares AND the encounter's own range becomes 2, whatever the script gave
+bool Vm::open_ground() const
+{
+    if (!set_.byte_map || set_.curse_bytes || set_.no_prefix) return false;   // (not Death Knights, not the Dark Queen: unread)
+    return s_.area1[0x21] == 0 || (set_.tr_ops && s_.area1[0x3F] == 1);
+}
+
 int Vm::sight() const
 {
+    if (open_ground()) return 2;
     if (!get(0x4BE6)) return 2;
     int x = s_.x, y = s_.y, n = 0;
     while (n < 2 && h_.wall_type(x, y, s_.dir) == 0) {
@@ -1311,6 +1321,10 @@ bool Vm::dk_step(Stop& r)
         enc_.max = value(o[1]) & 0xFF;
         enc_.pic = static_cast<uint8_t>(value(o[2]));
         enc_.sides = static_cast<uint8_t>(value(o[3]));
+        // (the original's sight routine sets the range itself on open ground,
+        // after SETUP read the script's - so a range of 0 there is 2: DOSBox,
+        // Treasures' overland "ENEMIES ATTACK!", the foes 12 squares off)
+        if (open_ground()) enc_.max = 2;
         enc_.distance = sight();
         if (enc_.distance > enc_.max) enc_.distance = enc_.max;
         if (show_encounter()) {
