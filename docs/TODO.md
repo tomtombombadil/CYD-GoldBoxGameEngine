@@ -54,7 +54,7 @@
       on; Knock 0x1F): "Locked. Bash Pick Exit" there, Bash opened it (the alarm), Pick by a thief. Every game checked
       (tools/devkit/doors): Curse, PoolRad, Champions, Gateway had theirs; Darkness has locked sides but no such words
       in its program; Knights / Treasures no locked sides; Queen's HLIB maps not scanned.
-- [x] v0.211.5 (the Darkness play-through, 2026-11-21, Phlan's Traitor's Gate): **Darkness's / Treasures' scripts
+- [x] v0.211.6 (the Darkness play-through, 2026-11-21, Phlan's Traitor's Gate): **Darkness's / Treasures' scripts
       never heard that a step went off the map's edge** - their game block's +0x20 (script word 0x21; GAME.OVR
       Darkness 0xD597-0xD612, Treasures 0xE89D: 0 each step, 1 when the step leaves the 16 x 16 map) was Curse's
       0x7ED5 in the engine with no Darkness place, so it read 0. Phlan's step script swaps its two maps by it
