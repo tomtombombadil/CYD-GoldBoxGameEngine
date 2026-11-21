@@ -5,6 +5,7 @@
 // on every settled screen showing a menu line or a list, the board's own
 // way in (play::nav, nav_point, tap_highlight / tap) is checked against the
 // rules of CLAUDE.md ("Cursor keys", "Menu highlight", "Tap highlight"):
+//   N7 a fight waiting at a menu shows its words (never an empty line)
 //   N1 a menu's highlighted word is a white box (black on colour 15) over
 //      the whole word, and only that word is lit
 //   N2 a list (two or more lines a tap acts on - tap_target) has exactly
@@ -602,6 +603,13 @@ void probe()
     ++screens[(int)screen];
     sigs.insert(sig());
     char t[200];
+    // N7: a fight waiting at one of its menus shows that menu's words (v0.211.4: Speed's Exit left an
+    // empty line in the games whose fight menu has Speed itself - Tom, Gateway on the PortMaster port)
+    if (screen == Screen::Fight && fg &&
+        (fg->st == FSt::Menu || fg->st == FSt::DoneMenu || fg->st == FSt::Speed || fg->st == FSt::AllyAsk ||
+         fg->st == FSt::FleeAsk || fg->st == FSt::AbortAsk || fg->st == FSt::ContinueAsk) &&
+        (!menu_on || menu.count == 0))
+        fail("N7", "a fight menu with no words");
     // N1: the menu's word
     if (has_menu && !pixels && (menu.selected < 0 || menu.selected >= menu.count)) fail("N1", "no word highlighted");
     if (has_menu && pixels) {

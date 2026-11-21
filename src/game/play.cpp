@@ -1881,10 +1881,25 @@ int   hl_hold_at = 0;               // ... and that place (till the player moves
 int hl_sig()
 {
     uint32_t v = static_cast<uint32_t>(menu.count);
-    for (const char* p = menu.prompt; *p; ++p) v = v * 31u + static_cast<uint8_t>(*p);
+    // (a number in the prompt is not part of what the menu is: "GameSpeed (5) :" and "(4)" are one menu.
+    // Until v0.211.4 each Faster made it a new menu, back on its first word - Slower in Gateway's order,
+    // so the next press undid it: Tom, 2026-11-20)
+    for (const char* p = menu.prompt; *p; ++p)
+        if (*p < '0' || *p > '9') v = v * 31u + static_cast<uint8_t>(*p);
     for (int k = 0; k < menu.count; ++k) v = v * 31u + static_cast<uint8_t>(text::key(menu, k));
     return static_cast<int>(v & 0x7FFFFFFF);
 }
+// The menu's prompt alone (its numbers left out), 0: none - a menu whose words change while it stays
+// the same menu (Aim's Target comes and goes, Speed's Faster at the fastest)
+int hl_prompt_sig()
+{
+    uint32_t v = 0;
+    for (const char* p = menu.prompt; *p; ++p)
+        if (*p != ' ' && (*p < '0' || *p > '9')) v = v * 31u + static_cast<uint8_t>(*p);
+    return static_cast<int>(v & 0x7FFFFFFF);
+}
+int  hl_last_prompt = 0;            // the last pick: its menu's prompt ...
+char hl_last_key = 0;               // ... and the word's key
 // Whether menu word k is Exit
 bool is_exit_word(int k)
 {
@@ -1922,6 +1937,8 @@ void hl_remember(int at)
     hl_mem[slot].sig = s;
     hl_mem[slot].at = static_cast<int8_t>(is_exit_word(at) ? 0 : at);
     hl_after_pick = true;
+    hl_last_prompt = hl_prompt_sig();
+    hl_last_key = is_exit_word(at) ? 0 : text::key(menu, at);
 #else
     (void)at;
 #endif
@@ -1956,6 +1973,7 @@ void hl_apply()
 #if CYD_MENU_HIGHLIGHT
     const int s = hl_sig();
     if (s != hl_shown_sig || hl_after_pick) {
+        const bool picked = hl_after_pick;
         hl_shown_sig = s;
         hl_after_pick = false;
         hl_hold_sig = -1;
@@ -1964,6 +1982,16 @@ void hl_apply()
                 hl_hold_sig = s;
                 hl_hold_at = m.at;
             }
+        // (the same menu with other words - its prompt the same, a word come or gone: the word picked
+        // last keeps the highlight, before any place kept for these words from an earlier time. Aim's Prev
+        // stayed Prev only while Target didn't come or go; v0.211.4)
+        if (picked && hl_last_key && hl_last_prompt && hl_last_prompt == hl_prompt_sig())
+            for (int k = 0; k < menu.count; ++k)
+                if (text::key(menu, k) == hl_last_key) {
+                    hl_hold_sig = s;
+                    hl_hold_at = k;
+                    break;
+                }
     }
     if (hl_hold_sig == s) menu.selected = hl_hold_at;
 #endif
@@ -2185,7 +2213,10 @@ void idle_menu(pic::Canvas& c)
         static char prompt3d[32];
         prompt3d[0] = 0;
         if (moving) ow(d->prof->variant.move_prompt, prompt3d, sizeof prompt3d);
-        text::build(menu, prompt3d, moving ? "Exit" : "Move Area Cast View Encamp Search Look");
+        // (Treasures' overland - game byte 0x3F: no Area, its map is the view. DOSBox, the PortMaster
+        // session 2026-11-20: "Move Cast View Encamp Search Look")
+        const bool tr_ov = d->prof->variant.tr && d->gs.area1[0x3F];
+        text::build(menu, prompt3d, moving ? "Exit" : tr_ov ? "Move Cast View Encamp Search Look" : "Move Area Cast View Encamp Search Look");
         menu.selected = 0;
         if (!moving && kept_hl()) {
             // (Darkness's exploring routine, GAME.OVR 0xD78B: its place from the
@@ -14151,6 +14182,13 @@ struct Host : ecl::Host {
             // Treasures' overland (game byte 0x3F): the look is its map
             // picture, OVER.DAX (o144+0xA70)
             d->tr_over = static_cast<uint8_t>(look);
+            // (the save keeps it where a town's first wall slot goes - byte 0x407: the original loads
+            // OVER.DAX's block of that number. Until v0.211.3 a save made on the overland still held the
+            // last town's blocks: loaded, the engine drew a 3D view in the map's place, and the original
+            // stopped at "No #13 in OVER.DAX" - DOSBox, the PortMaster session's Treasures play-through)
+            d->save.look = static_cast<uint16_t>(look & 0xFF);
+            d->save.look_slot = 0;
+            plat::log("[play] overland map %d (look)\n", look);
             if (screen == Screen::Game && bigpic < 0) {
                 anim_stop();
                 pic_shown = false;
@@ -14191,6 +14229,11 @@ struct Host : ecl::Host {
     {
         if (d->gs.area1[0x3F]) {
             if (block >= 0) d->tr_over = static_cast<uint8_t>(block);     // (the overland's map: o144+0x1511)
+            if (block >= 0) {
+                d->save.look = static_cast<uint16_t>(block & 0xFF);
+                d->save.look_slot = 0;
+            }
+            if (block >= 0) plat::log("[play] overland map %d (slot %d)\n", block, slot);
             return;
         }
         view3d::World& wd = d->world;
@@ -14207,6 +14250,7 @@ struct Host : ecl::Host {
     void slots_done() override
     {
         view3d::World& wd = d->world;
+        if (d->gs.area1[0x3F]) return;      // (the overland: no wall slots - the save keeps its map's number, load_slot / load_look)
         view3d::tr_pool_reset(wd);
         plat::File f;
         bool ok = true;
@@ -15457,7 +15501,17 @@ void begin_adventuring()
             // (Treasures: its map and the three slots' blocks - the save's
             // bytes 0x407-0x409, ovl 0x7C +0x2877)
             host->load_map(vm->get(0x4BC5) & 0xFF);
-            const int blk[3] = {d->save.look & 0xFF, d->save.look >> 8, d->save.look_slot & 0xFF};
+            int blk[3] = {d->save.look & 0xFF, d->save.look >> 8, d->save.look_slot & 0xFF};
+            if (d->gs.area1[0x3F]) {
+                // (the overland: byte 0x407 is its OVER.DAX map. A save of ours made there before
+                // v0.211.3 holds the last town's wall blocks instead: the map's own number then - the
+                // overland script's look is its map's number)
+                plat::File f;
+                const bool has = blk[0] && open_dax("OVER.DAX", f) && d->idx.find(static_cast<uint8_t>(blk[0]));
+                f.close();
+                if (!has) blk[0] = vm->get(0x4BC5) & 0xFF;
+                blk[1] = blk[2] = 0;
+            }
             for (int s2 = 0; s2 < 3; ++s2) host->load_slot(s2, blk[s2] ? blk[s2] : -1);
             host->slots_done();
         } else if (dungeon && hl()) {
@@ -19354,7 +19408,7 @@ bool act(Act a, pic::Canvas& c)
     case Act::StepLeft:   step((g.dir + 6) & 7); return true;     // Tom: the same checks as a step that way
     case Act::StepRight:  step((g.dir + 2) & 7); return true;
     case Act::Area:
-        if (vm->get(0x4BFB) == 0) area_view = !area_view;
+        if (vm->get(0x4BFB) == 0 && !(d->prof->variant.tr && d->gs.area1[0x3F])) area_view = !area_view;     // (Treasures' overland has no Area)
         pic_shown = false;
         break;
     case Act::Look: {

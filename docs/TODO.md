@@ -1,5 +1,33 @@
 # Open tasks (Tom and Claude)
 
+- [x] v0.211.4 (Tom, 2026-11-20, Gateway's first fight on the PortMaster port): **a fight's Speed menu.** (1) After
+      Faster the highlight went back to the first word - Slower in Gateway's order - so the next press undid it: the
+      prompt's number ("GameSpeed (4) :") made each speed a new menu to the kept-place rule. A prompt's numbers no
+      longer count (hl_sig), and a menu shown again under the same prompt with a word come or gone keeps the word
+      picked last (Aim's Prev while Target comes and goes). (2) Speed's Exit built the Done menu, which the games
+      with Speed on the fight menu itself don't have (Darkness, Gateway, Treasures, Krynn): an empty menu line
+      until a cursor key. Now back to the fight menu there (speed_exit). navcheck has rule N7 for it (a fight
+      waiting at a menu with no words): the old build fails it in Darkness, the new passes Curse, Darkness,
+      Gateway, Treasures (seed 11, 5000 actions, NFIGHT=60). **Companion** (Tom, 2026-11-20): a class that can
+      train magenta (was yellow), the member's name magenta too (the chosen one stays white).
+- [ ] navcheck, found while checking the above and there before it (the build before fails the same): Curse's and
+      Darkness's "Save Which Game" - N1 / N3 / N5 (the word moved to isn't lit; Select not on the highlight) - and
+      Darkness's "Choose Spell" N4 (Down leaves the lit line). To look at: the check against Save Slot Info's
+      screen, or a real fault. navcheck not yet run on PoolRad, Secret, Champions, Knights, Queen for N7.
+
+- [x] v0.211.3 (the PortMaster session's Treasures play-through, 2026-11-20; each checked against the original in
+      DOSBox): **Treasures' overland.** (1) A save made on the overland kept the last town's wall blocks where the
+      original keeps the overland map's number (save byte 0x407): loaded, the engine drew a 3D view with a noise
+      floor in the map's place and Area showed wall lines; the ORIGINAL stopped at "No #13 in OVER.DAX" on such a
+      save. Now the map's number is kept (load_look / load_slot), and an old save of ours is mended as it loads (the
+      map's own number when OVER.DAX has no such block) - the original loads the new save and shows the same map.
+      (2) Overland fights were built from the 3D map (its walls are the rivers) and drawn with WILDCOM's pictures:
+      every square a river bank. Now outdoors, as the original (grass, rocks, bushes, trees). (3) The overland's menu
+      had Area; the original's is "Move Cast View Encamp Search Look".
+- [ ] Treasures, open from the same play-through: an overland fight's starting distance (the original showed a foe
+      at Range 21 - after stray keys, so not a clean reading; ours start next to the party); the Leilon potion the
+      guides speak of was not among the loot taken (AUTOLOOT) - which fight drops it?
+
 - [x] v0.211.2 (the Secret play-through, 2026-11-20, the Black Circle HQ's door at 8,7): **Secret's locked doors
       stopped the party without a word** - its profile had no door words (the menu's words empty = the originals'
       no-choice case), so Bash / Pick / Knock were never offered. Now its GAME.OVR's "Bash" ... "Locked. " (0x19C6E

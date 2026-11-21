@@ -505,7 +505,8 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   kept, nothing drawn inside a fight's work. Monsters' records go before
   a fight's results: panel_dot skips them once `ml` is gone.
   Party view's classes (Tom, 2026-11-14): a class with the experience for
-  its next level yellow - its name and level only ("Fighter 2/Magic-User
+  its next level magenta (Tom, 2026-11-20: as the games' party list - was yellow; the member's name
+  magenta too unless it is the chosen one, white) - its name and level only ("Fighter 2/Magic-User
   1/Thief 2": only "Magic-User 1"; short "M1"), `PanelMember::ready`
   (`create::ready_classes`; play.cpp `ready_bits`, cached per member).
 - Show Rolls (Tom, 2026-10-31; `CYD_COMBAT_ROLLS`, on by default): fight

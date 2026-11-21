@@ -2016,11 +2016,16 @@ int main(int argc, char** argv)
             static int last_n = -1, tries = 0;
             const int n = play::ground->n, i = play::plist.index;
             const items::Item it{play::ground->item[n - 1 - i]};
-            const bool magic = it.plus() != 0 || it.r[0x3C] || it.r[0x3D] || it.r[0x3E];
+            bool magic = it.plus() != 0 || it.r[0x3C] || it.r[0x3D] || it.r[0x3E];
             if (n != last_n) { last_n = n; tries = 0; }
+            char nm[48];
+            play::names->name(it, nm, sizeof nm);
+            // (a ring / wand / potion ... is never plain, whatever its record's plus says: Treasures'
+            // Ring of Cold Resistance was left behind by the test above - the PortMaster session, 2026-11-20)
+            for (const char* w : {"Ring", "Wand", "Potion", "Scroll", "Bracers", "Cloak", "Necklace", "Gauntlets", "Boots",
+                                  "Girdle", "Helm", "Rod", "rod", "Staff", "Dust", "Stone", "Gem", "Jewel", "Amulet", "Robe"})
+                if (strstr(nm, w)) magic = true;
             if (magic && tries < 1) {
-                char nm[48];
-                play::names->name(it, nm, sizeof nm);
                 printf("  LOOT take: %s (plus %d, %02X %02X %02X)\n", nm, it.plus(), it.r[0x3C], it.r[0x3D], it.r[0x3E]);
                 ++tries;
                 t = "/T";
@@ -2177,9 +2182,9 @@ int main(int argc, char** argv)
             continue;
         }
         if (*m == '?') {                // "?": the screen, the menu line, what the script waits for
-            printf("  ? screen %d menu [%s|%s] wait %d text [%s] selected %d\n", (int)play::screen, play::menu.prompt,
+            printf("  ? screen %d menu [%s|%s] wait %d text [%s] selected %d word %d\n", (int)play::screen, play::menu.prompt,
                    play::menu.s, (int)play::vm->wait(), play::vm->wait() == ecl::Wait::Print ? play::vm->text() : "",
-                   play::pt ? play::pt->selected : -1);
+                   play::pt ? play::pt->selected : -1, play::menu.selected);      // (word: the menu's highlighted word)
             if (play::fg && play::fg->cur >= 0 && play::fg->cur < play::fg->b.n &&
                 (play::screen == play::Screen::Fight || play::screen == play::Screen::SpellList ||
                  play::screen == play::Screen::Items)) {     // (a fight: whose turn; its records freed after it)
