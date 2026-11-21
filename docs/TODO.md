@@ -54,6 +54,14 @@
       on; Knock 0x1F): "Locked. Bash Pick Exit" there, Bash opened it (the alarm), Pick by a thief. Every game checked
       (tools/devkit/doors): Curse, PoolRad, Champions, Gateway had theirs; Darkness has locked sides but no such words
       in its program; Knights / Treasures no locked sides; Queen's HLIB maps not scanned.
+- [x] v0.211.7 (the Darkness play-through, 2026-11-21, the Silver Blades cave's Worldstone): **Darkness's fights
+      left the scripts' compare flags as the compare before them** - its fight end sets "=" (or "<>" by its byte
+      0x7FF5) at DS 0xB01E (GAME.OVR 0x596E - the same routine as Treasures' 0x6644, done in v0.208.4 for Treasures
+      alone), so every "COMBAT, IF <>" took a win for a flight: the Worldstone, the Tyrant's Flame, Lindenwood,
+      the Vaasans' breach - none of their texts and flags after the fight. Now Darkness too (only these two
+      programs have that routine - checked by its bytes in all nine). Checked: playsim - the four items, Vala's
+      four-item speech, the Vaasan breach won (spells ticked), the cave's flags 01AB 0x80 / 019E bit 4.
+      Also (the kit): playsim QASPELLS works for the moves' fights too, not only RUNAT.
 - [x] v0.211.6 (the Darkness play-through, 2026-11-21, Phlan's Traitor's Gate): **Darkness's / Treasures' scripts
       never heard that a step went off the map's edge** - their game block's +0x20 (script word 0x21; GAME.OVR
       Darkness 0xD597-0xD612, Treasures 0xE89D: 0 each step, 1 when the step leaves the 16 x 16 map) was Curse's
@@ -218,7 +226,7 @@ the Project as claude/TODO.md.
       taken for a flight: the skeleton's fight came again at each visit and Geildarr was never met. Now
       `Vm::fight_flags` at end_fight (variant.tr). Read from the code, played in the playsim: the skeleton,
       "Thanks ...", Geildarr's guards, Milzorr's congratulations, journal 11 and 10. Not run in DOSBox.
-- [ ] **The same in the other games?** (2026-11-17) Does each original's fight end set the compare flags, and
+- [ ] **The same in the other games?** (2026-11-17; Darkness done v0.211.7 - its routine is Treasures', byte for byte) Does each original's fight end set the compare flags, and
       do its scripts test them straight after COMBAT? Looked at: Treasures only. To do: Darkness, Death
       Knights, the Dark Queen (the same program family), then Gateway / Champions / Secret / Curse / PoolRad
       - find each one's IF handler's flag bytes and who writes them; scan every script for COMBAT followed

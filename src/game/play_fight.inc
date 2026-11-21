@@ -6194,8 +6194,12 @@ void end_fight(pic::Canvas& c)
         r = won ? combat::Won : ran ? combat::Fled : combat::Lost;
         plat::log("[fight] the arena: %s\n", won ? "won" : ran ? "fled" : "lost");
     }
-    if (d->prof->variant.tr) {
-        // Treasures: the fight's end sets the script's compare flags - "=" unless
+    if (d->prof->variant.tr || (darkness_files() && !dkk() && !hl())) {
+        // Treasures and Darkness (the same routine: Darkness GAME.OVR 0x596E - flags DS
+        // 0xB01E, byte 0x7FF5 - Treasures 0x6644; found 2026-11-21, the Silver Blades
+        // cave's Worldstone: "COMBAT, IF <>" took every win for a flight, so the
+        // Worldstone's texts and flag never came):
+        // the fight's end sets the script's compare flags - "=" unless
         // a member of the party ran from it, then "<>" (GAME.OVR 0x5884: any
         // member's status 3 -> byte 0x72AB; 0x6645 / 0x6684 / 0x670A). Its
         // scripts test them straight after COMBAT: Llorkh's dungeon, the giant
