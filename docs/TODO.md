@@ -14,11 +14,15 @@
       The playsim after (TRAINTEST=3 TRAINKEEP=1 - new: on the experience they have): 5/9/12 -> 6/10/12 ->
       7/11/12, 500,000 kept, a spell learned each time, then "Not Enough Experience"; the Companion's name
       magenta before, cyan after. behave levels: Curse, Darkness, Treasures 11 passed (the others have no oracle).
-- [ ] From it: (1) Curse's and Gateway's one class a training with the experience cut is the originals' - a Game
-      Fix (every ready class, nothing lost) by Tom's standing answer: to do. (2) The hit points a training of two
-      classes gives came out +3 every time in the playsim (8 seeds) where the original gave 3 and 5 - is the
-      playsim's SEED reaching the Trainer's dice, or is the gain fixed? (3) No check trains a multi-class with
-      two classes ready in behave levels - add one (per game: which classes rise, the experience kept).
+- [x] v0.211.11 (the PortMaster session, 2026-11-20 - Tom: "fix the 'Still open' issues"): **Game Fix "Training
+      Every Class" (`kFixTrainAll`; Curse, Gateway; on by default; the LAST fix - the settings keep a bit a fix)**:
+      a multi-class trains every ready class and the experience is cut as Darkness cuts it (never under what a
+      class held needs next). Off: the originals' one class and its cut. Check: behave levels' new part `hall`
+      (H1 the classes, H2 the experience kept; fixes on and off) - all nine games 8 of 8; it fails in Curse /
+      Gateway with the fix held off (FIXOFF). The host test's Curse case both ways. The training's hit points
+      "+3 every time" in the playsim: the Trainer's dice are seeded from the clock, which the playsim holds
+      still - the test's, not the engine's ((best of two d10 + best of two d4 + 4) / 3 with the 1E rule: 2 - 6).
+- [ ] SPEC 12 wants a line for Training Every Class (SPEC 6 has it); the CYD Project copy of SPEC / TODO: the CYD session syncs.
 - [x] v0.211.9 (the Darkness play-through, 2026-11-21; each from the original's code): (1) **Elminster's gate
       destroyed no items** - block 18's loop at its gate runs DESTROY ITEMS (0x40) with type | 0x80 for every type
       but five; in Darkness and Treasures the handler takes type = v & 0x7F and with 0x80 only the magic ones (plus

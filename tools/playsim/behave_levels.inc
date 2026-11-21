@@ -872,6 +872,51 @@ void multi()
 // one gains with every hit point die forced to its top face (the die hook;
 // the cheat's run has every other face 1, so only Dice::max can raise them)
 int hp_top(int n) { return m && m->dice.hp ? n - 1 : 0; }
+// The hall's choice (part "hall"; 2026-11-20, Tom's Oratisi): a fighter / thief with the experience for a level
+// in both classes. Curse and Gateway train one class (their programs: the pick takes the ready ones' place) -
+// with Game Fixes' Training Every Class both; every other game both, always (their programs OR the pick in).
+// H1 which classes; H2 with far more experience, what is kept is never less than a held class needs next
+void hall()
+{
+    int checks = 0;
+    const int f0 = fails;
+    static party::Character c;
+    const std::string g = game_name();
+    const bool one_game = g == "curse" || g == "gateway";
+    const bool fixes0 = rules::all_fixes();
+    const int mf = m->tables.u8(static_cast<uint16_t>(m->tables.lay.class_masks + 2)),
+              mt = m->tables.u8(static_cast<uint16_t>(m->tables.lay.class_masks + 6));
+    for (int fx = 0; fx < 2; ++fx) {
+        rules::set_all(fx == 1);
+        for (int big = 0; big < 2; ++big) {
+            fresh(c, 2);
+            variant(c, 0);
+            c.rec[0x109 + 2] = 2;
+            c.rec[0x109 + 6] = 2;
+            const int32_t nf = m->tables.exp_needed(2, 2, &c), nt = m->tables.exp_needed(6, 2, &c);
+            const int32_t top = nf > nt ? nf : nt;
+            const uint32_t xp = big ? static_cast<uint32_t>(m->tables.exp_needed(2, 6, &c)) + 5 : static_cast<uint32_t>(top);
+            put32(c.rec, 0x127, xp);
+            uint32_t keep = 0;
+            const int got = create::train_pick(c, m->tables, &keep);
+            const bool both = (got & mf) && (got & mt);
+            const bool want_both = !one_game || fx == 1;
+            ++checks;
+            if (both != want_both)
+                bad(big ? "H1 the hall's classes (much experience)" : "H1 the hall's classes", 2, 2, "mask %02X: %s, wanted %s", got,
+                    both ? "both" : "one", want_both ? "both" : "one");
+            ++checks;
+            if (!big && keep != xp) bad("H2 experience just enough for both: kept", 2, 2, "%u of %u", (unsigned)keep, (unsigned)xp);
+            if (big && want_both && keep < static_cast<uint32_t>(top))
+                bad("H2 much experience: no less kept than a class held needs", 2, 2, "%u, a class needs %d", (unsigned)keep, top);
+        }
+    }
+    rules::set_all(fixes0);
+    char w[120];
+    snprintf(w, sizeof w, "hall: %d checks (H1 the classes trained, H2 the experience kept)", checks);
+    expect(P, w, checks > 0 && fails == f0, "%d wrong", fails - f0);
+}
+
 void maxhp()
 {
     int checks = 0;
@@ -952,6 +997,7 @@ void run()
     if (!only || strstr(only, "camp")) camp();
     if (!only || strstr(only, "values")) values();
     if (!only || strstr(only, "multi")) multi();
+    if (!only || strstr(only, "hall")) hall();
     if (!only || strstr(only, "maxhp")) maxhp();
 }
 

@@ -369,6 +369,8 @@ enum Fix : uint8_t {
     kFixQItemDmg,       // Dawnshine's Damage: the item effect's damage counts
     kFixQSaves18,       // Saves Past 18th Level keep improving
     kFixQWis13,         // Wisdom 13: the multi-class cleric rule fires
+    // (added at the end: the settings keep a bit a fix)
+    kFixTrainAll,       // Training Every Class: a multi-class trains each ready class, no experience another class needs lost (Curse, Gateway)
     kFixCount
 };
 static_assert(kFixCount <= 64, "the fixes' bits");

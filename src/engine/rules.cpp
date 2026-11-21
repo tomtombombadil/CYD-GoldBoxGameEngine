@@ -1676,6 +1676,10 @@ const FixInfo kFixes[kFixCount] = {
      "every save is made."},
     {kFixQWis13, "Wisdom 13", kQueen,
      "A multi-class cleric needs Wisdom 13, and creation gives it. The original's rule never fires."},
+    {kFixTrainAll, "Training Every Class", kCurse | kGate,
+     "A multi-class character with the experience for a level in two classes gains both at one training, and "
+     "keeps the experience its other classes still need. The originals train one class a visit and cut the "
+     "experience, so the level waiting in the other class could be lost."}
 };
 
 const AdndInfo kAdnd[kAdndCount] = {

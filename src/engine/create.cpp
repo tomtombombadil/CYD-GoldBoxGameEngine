@@ -1341,7 +1341,8 @@ int train_pick(const party::Character& c, const classes::Tables& t, uint32_t* ex
         // (Darkness GAME.OVR 0x189BA, Treasures the same: no less than what
         // any class held needs for ITS next level - a class still short of
         // its level is not cut off from it)
-        if (t.lay.dk)
+        // (Curse / Gateway with Training Every Class: the same)
+        if (t.lay.dk || (!t.lay.pool && !t.lay.queen && !t.lay.secret && !t.lay.krynn && rules::fix(rules::kFixTrainAll)))
             for (int j = 0; j < 7; ++j)
                 if (c.level(j) > 0 && need_at(j, c.level(j)) > after) after = need_at(j, c.level(j));
         if (after > 0 && xp >= static_cast<uint32_t>(after) && after > keep) keep = after - 1;
@@ -1398,7 +1399,10 @@ int train_pick(const party::Character& c, const classes::Tables& t, uint32_t* ex
         // Darkness 0x18B11, Treasures after 0x1DEDC) - every ready class
         // trains, a level each (DOSBox, Darkness: "will become: a level 6
         // Fighter and a level 10 Magic-User", the experience kept)
-        if (!t.lay.secret && !t.lay.krynn) ready = t.u8(static_cast<uint16_t>(t.lay.class_masks + pick));
+        // (their mistake - the level waiting in the other class is lost with
+        // the experience: Game Fixes' Training Every Class trains them all)
+        if (!t.lay.secret && !t.lay.krynn && !rules::fix(rules::kFixTrainAll))
+            ready = t.u8(static_cast<uint16_t>(t.lay.class_masks + pick));
         const int32_t after = need_at(pick, last + 1);
         if (after > 0 && xp >= static_cast<uint32_t>(after) && after > keep) keep = after - 1;
     }

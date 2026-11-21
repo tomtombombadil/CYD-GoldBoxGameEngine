@@ -5989,7 +5989,11 @@ static void test_class_rules()
     // figures at the last class's level (2): magic-user 5000 over fighter 4000
     c.rec[0x109 + classes::MagicUser] = 2;
     xp(10000);
+    // (Curse's own - Game Fixes' Training Every Class off; on: both classes)
+    rules::set_fixes_off(1ull << rules::kFixTrainAll);
     CHECK(create::train_pick(c, t, &keep) == 1 << classes::MagicUser && keep == 9999);
+    rules::set_fixes_off(0);
+    CHECK(create::train_pick(c, t, &keep) == (1 << classes::MagicUser | 1 << classes::Fighter) && keep >= 5000);
     // Levels lost (0xE7, hit points 0xE8): a level trained makes one up
     c = party::Character{};
     c.rec[0x74] = 7;
