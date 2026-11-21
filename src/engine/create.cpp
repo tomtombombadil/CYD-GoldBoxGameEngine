@@ -115,12 +115,19 @@ bool race_limited(const party::Character& c, int cls, int lvl, bool pool = false
 
 } // namespace
 
+// The Cheats' Disable Race Level Limits (Tom, 2026-11-21; CYD_NO_RACE_LIMITS):
+// off, no race stops a class's levels - the game's own last levels stay
+static bool g_race_limits = true;
+void set_race_limits(bool on) { g_race_limits = on; }
+bool race_limits() { return g_race_limits; }
+
 // Gateway's party list (its "may train" colour, GAME.OVR overlay 0x3EB10
 // +0x382E): by the Strength in use, fighters only but the half-elf cleric
 // (5) - with its classes' last levels (DS 0x1498: cleric / magic-user 6,
 // ranger 7, the rest 8)
 bool gw_race_limited(const party::Character& c, int cls, int lvl)
 {
+    if (!g_race_limits) return false;
     const int str = c.stat(0);                  // (record 0x11, as the program reads it)
     switch (c.race()) {
     case 1: return cls == Fighter && ((lvl == 8 && str == 17) || (lvl == 7 && str < 17));
@@ -140,6 +147,15 @@ bool gw_race_limited(const party::Character& c, int cls, int lvl)
 // race's limit
 static bool train_limited(const party::Character& c, const classes::Tables& t, int cls, int lvl)
 {
+    if (!g_race_limits) {
+        // (what is no race's limit stays: the Dark Queen's knightly orders, Gateway's last levels)
+        if (t.lay.queen && cls == classes::Monk) {
+            const int o = c.ext[party::kExtKnight];
+            if (o == 3) return lvl >= 40;
+            if (o == 2 || o == 4) return lvl >= 18;
+        }
+        return t.lay.level_caps && !t.lay.dkk && !t.lay.queen && lvl >= t.u8(static_cast<uint16_t>(t.lay.level_caps + cls));
+    }
     // (Death Knights, its training ovl 0x61 +0x447E: its race x class table -
     // training goes on while the limit is above the level)
     if (t.lay.dkk && t.lay.race_caps)

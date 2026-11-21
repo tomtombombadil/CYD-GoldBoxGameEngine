@@ -49,6 +49,8 @@ struct Settings {
     uint8_t saved_max_hp = 0, saved_game_font = 0, saved_large_icons = 0;
     uint8_t comforts_off3 = 0;    // more comforts switched off (kOff3*; 0 in older files = all on)
     uint8_t saved_comforts_off3 = 0;
+    uint8_t no_race_limits = 0;   // the Disable Race Level Limits cheat (CYD_NO_RACE_LIMITS; Tom, 2026-11-21): off unless turned on
+    uint8_t saved_no_race_limits = 0;
 };
 
 // The Volume key (Tom, 2026-10-24): 0-100% in 5% steps, kept in the 0-255

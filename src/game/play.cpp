@@ -18096,6 +18096,7 @@ uint32_t ready_key(const party::Character& ch)
     mix(ch.rec + 0x109, 16);
     mix(ch.rec + 0x127, 4);
     mix(ch.ext, static_cast<int>(sizeof ch.ext));
+    if (!create::race_limits()) h = (h ^ 0x52u) * 16777619u;     // (the Cheats' Disable Race Level Limits: another answer)
     return h | 1u;                      // (0: not worked out)
 }
 
@@ -18609,6 +18610,7 @@ int font_wanted()
 void set_options(const Options& o)
 {
     opts = o;
+    create::set_race_limits(!(CYD_NO_RACE_LIMITS && opts.no_race_limits));
     if (!d) return;
     // The items the originals got wrong: as now wanted, the party's too (mid-game)
     items::set_flame_fix(&d->prof->items.flame, CYD_ADND_RULES && (opts.adnd & rules::kAdndItems));

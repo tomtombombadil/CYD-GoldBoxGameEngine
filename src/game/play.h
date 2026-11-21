@@ -170,6 +170,7 @@ struct Options {
     bool coin_exchange = true;    // Coin Exchange (an Enhancement - rules::kEnhCoins)
     bool oil_burns = true;        // Flasks of Oil burn (an Enhancement - rules::kEnhOil)
     bool max_hp = false;          // hit dice at their highest (training, creation) - a cheat the player opts into (CYD_MAX_HP)
+    bool no_race_limits = false;  // Disable Race Level Limits - a cheat the player opts into (CYD_NO_RACE_LIMITS)
     uint8_t font = 0;             // the game's text (CYD_CLEAR_FONT): 0 its own (the default), 1 the engine's
                                   // Clear font, 2 the player's Pools of Darkness font (set_darkness_dir),
                                   // 3 Clear Caps (the Clear capitals only)

@@ -2930,6 +2930,9 @@ a PC, PortMaster handhelds):
     unchanged. Settings key **Cheats Tab**
     (on by default; off hides the tab). Where: play.cpp (cheat_*),
     viewer.cpp (the tab), engine/ecl.* (find_shops).
+  - `CYD_NO_RACE_LIMITS` (Tom, 2026-11-21): **Disable Race Level Limits**, a cheat the
+    player opts into (off by default; the Cheats page's "No Race Limits" key): no race
+    stops a class's levels; the games' own last levels stay.
   - `CYD_MAX_HP` (Tom, 2026-11-06): **Max Hit Points**, a cheat the
     player opts into - the Settings key (with its help) and the same
     switch on the Cheats tab (both show and change `Settings::max_hp`; OFF

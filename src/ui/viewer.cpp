@@ -3292,7 +3292,7 @@ void tap_sounds(const ui::Tap& t)
 // One set for all games (settings.h comforts_off), on the one Settings
 // screen (below); a comfort compiled out (app/features.h) isn't listed.
 enum Comfort { kCFont, kCGallery, kCBigIcon, kCMoreGuys, kCPortrait, kCRolls, kCCampFix, kCCompanion, kCMaxHp, kCQuick,
-               kCJoin, kCSaveInfo, kCKeepMem, kCCoins, kCOil, kCAddInfo, kComforts };
+               kCJoin, kCSaveInfo, kCKeepMem, kCCoins, kCOil, kCAddInfo, kCNoRaceLimits, kComforts };
 
 bool comfort_built(int c)
 {
@@ -3306,6 +3306,7 @@ bool comfort_built(int c)
     case kCCampFix: return CYD_CAMP_FIX;
     case kCCompanion: return CYD_COMPANION_VIEWS;
     case kCMaxHp: return CYD_MAX_HP;
+    case kCNoRaceLimits: return CYD_NO_RACE_LIMITS;
     case kCQuick: return CYD_QUICK_ACTIONS;
     case kCJoin: return CYD_AUTO_JOIN;
     case kCSaveInfo: return CYD_SAVE_INFO;
@@ -3340,6 +3341,7 @@ bool comfort_on(int c)
     if (c == kCBigIcon) return ui::large() || (CYD_BIG_ICON_PREVIEW && cfg->large_icons != 0);   // (320x240: off unless chosen - it covers the editor)
     if (!comfort_built(c)) return false;
     if (c == kCFont) return cfg->game_font != kFontGame;                   // (the game's own unless chosen - Tom)
+    if (c == kCNoRaceLimits) return cfg->no_race_limits != 0;                // (a cheat: off unless chosen - Tom)
     if (c == kCMaxHp) return cfg->max_hp != 0;                             // (a cheat: off unless chosen - Tom)
     return !(comforts_off() & comfort_bit(c));
 }
@@ -3362,6 +3364,7 @@ void apply_options()
     o.camp_fix = comfort_on(kCCampFix);
     o.cheats = CYD_CHEATS;                      // (the Cheats page is always there - Tom)
     o.max_hp = comfort_on(kCMaxHp);
+    o.no_race_limits = comfort_on(kCNoRaceLimits);
     o.quick_acts = comfort_on(kCQuick);
     o.read_time = CYD_READ_TIME;                // (Tom, 2026-11-17: no switch - always)
     o.auto_join = comfort_on(kCJoin);
@@ -3407,7 +3410,7 @@ const char* const kComfortNames[kComforts] = {"Game Font",       "Icon Gallery",
                                               "Icon Portrait",   "Show Rolls",      "Camp Fix",       "Companion Views",
                                               "Max Hit Points",  "Quick Actions",   "Auto Join Items", "Savegame Info",
                                               "Keep Memorizing", "Coin Exchange",   "Flasks of Oil",
-                                              "Character Info"};
+                                              "Character Info",  "No Race Limits"};
 
 // What each option does (sentence case; Tom, v0.84.0)
 const char* comfort_help_text(int c)
@@ -3467,6 +3470,10 @@ const char* comfort_help_text(int c)
                "save - when it was saved (on a device with a clock), where the party is, each member's "
                "levels, hit points and state - and the Companion's Party view shows that party. Off: as "
                "the original.";
+    case kCNoRaceLimits:
+        return "A cheat: no race stops a class's levels - an elf fighter trains past level 7, a new character "
+               "starts at the levels its experience gives. Each game's own last level of a class stays. Off "
+               "(the default): the games' limits by race, Strength and Intelligence.";
     case kCMaxHp:
         return "A cheat: a new character's hit points and each level gained by training (a training hall "
                "or the Cheats tab's Trainer) get the most their hit dice can give - 10 a fighter, 8 a "
@@ -3619,6 +3626,8 @@ void toggle_comfort(int c)
         cfg->game_font = next == kFontDarkness && !darkness_dir(dd, sizeof dd) ? kFontGame : next;
     } else if (c == kCMaxHp) {
         cfg->max_hp = !cfg->max_hp;
+    } else if (c == kCNoRaceLimits) {
+        cfg->no_race_limits = !cfg->no_race_limits;
     } else {
         set_comforts_off(comforts_off() ^ comfort_bit(c));
     }
@@ -3654,6 +3663,7 @@ void toggle_original()
         cfg->saved_rules_off2 = cfg->rules_off2;
         memcpy(cfg->saved_fixes_off, cfg->fixes_off, sizeof cfg->fixes_off);
         cfg->saved_max_hp = cfg->max_hp;
+        cfg->saved_no_race_limits = cfg->no_race_limits;
         cfg->saved_game_font = cfg->game_font;
         cfg->saved_large_icons = cfg->large_icons;
         uint32_t all = 0;
@@ -3662,6 +3672,7 @@ void toggle_original()
         settings_set_rules_off(*cfg, rules::kAdndAll);
         settings_set_fixes_off(cfg->fixes_off, ~0ull);
         cfg->max_hp = 0;
+        cfg->no_race_limits = 0;
         cfg->game_font = kFontGame;
         cfg->large_icons = 0;
         cfg->original = 1;
@@ -3673,6 +3684,7 @@ void toggle_original()
         cfg->rules_off2 = cfg->saved_rules_off2;
         memcpy(cfg->fixes_off, cfg->saved_fixes_off, sizeof cfg->fixes_off);
         cfg->max_hp = cfg->saved_max_hp;
+        cfg->no_race_limits = cfg->saved_no_race_limits;
         cfg->game_font = cfg->saved_game_font;
         cfg->large_icons = cfg->saved_large_icons;
         cfg->original = 0;
@@ -3705,7 +3717,7 @@ constexpr CheatKey kCheatKeys[kCheatOpen] = {
     {"Sanctuary", "Rest never interrupted"},
     {"Trainer", "Every class, free"},
 };
-int cheat_keys() { return CYD_MAX_HP ? kCheatOpen + 1 : kCheatOpen; }
+int cheat_keys() { return kCheatOpen + (CYD_MAX_HP ? 1 : 0) + (CYD_NO_RACE_LIMITS ? 1 : 0); }
 ui::Rect cheat_key(int i)
 {
     const ui::Rect a = journal_area();
@@ -3737,6 +3749,11 @@ void draw_cheats()
         ui::key2(cheat_key(game ? kCheatOpen : 0), "Max Hit Points", on ? "On: level-ups" : "Off",
                  on ? ui::KeyStyle::Lit : ui::KeyStyle::Normal);
     }
+    if (CYD_NO_RACE_LIMITS) {           // (Tom, 2026-11-21: Disable Race Level Limits)
+        const bool on = comfort_on(kCNoRaceLimits);
+        ui::key2(cheat_key((game ? kCheatOpen : 0) + (CYD_MAX_HP ? 1 : 0)), "No Race Limits", on ? "On: levels" : "Off",
+                 on ? ui::KeyStyle::Lit : ui::KeyStyle::Normal);
+    }
 }
 void tap_cheats(const ui::Tap& t)
 {
@@ -3746,6 +3763,11 @@ void tap_cheats(const ui::Tap& t)
     }
     if (CYD_MAX_HP && cheat_key(in_game_menu() ? kCheatOpen : 0).contains(t.x, t.y)) {
         toggle_comfort(kCMaxHp);            // (the Settings key's switch)
+        dirty = true;
+        return;
+    }
+    if (CYD_NO_RACE_LIMITS && cheat_key((in_game_menu() ? kCheatOpen : 0) + (CYD_MAX_HP ? 1 : 0)).contains(t.x, t.y)) {
+        toggle_comfort(kCNoRaceLimits);
         dirty = true;
         return;
     }

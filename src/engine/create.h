@@ -175,6 +175,11 @@ int ready_classes(const party::Character& c, const classes::Tables& t);
 // fighters only but the half-elf cleric at 5; by the Strength in use) - the
 // party list's "may train" colour and the classes' own training
 bool gw_race_limited(const party::Character& c, int cls, int lvl);
+// The Cheats' Disable Race Level Limits (Tom, 2026-11-21): false - no race
+// stops a class's levels (training, a new character's starting levels, the
+// "may train" colour); the game's own last level of a class stays
+void set_race_limits(bool on);
+bool race_limits();
 // A training hall's choice (the original's train_player, not silent). Curse
 // and Gateway: of
 // the classes ready, the one whose experience figure is the largest - the

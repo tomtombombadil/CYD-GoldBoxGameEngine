@@ -14,6 +14,16 @@
       The playsim after (TRAINTEST=3 TRAINKEEP=1 - new: on the experience they have): 5/9/12 -> 6/10/12 ->
       7/11/12, 500,000 kept, a spell learned each time, then "Not Enough Experience"; the Companion's name
       magenta before, cyan after. behave levels: Curse, Darkness, Treasures 11 passed (the others have no oracle).
+- [x] v0.211.13 (the PortMaster session, 2026-11-21 - Tom: "I want to add a cheat. 'Disable Race Level Limits'"):
+      `CYD_NO_RACE_LIMITS`, `Options::no_race_limits`, `create::set_race_limits`; the boards' Cheats page key "No
+      Race Limits" and its settings byte (**the boards' key is compiled by CI only - not seen on a board or in
+      QEMU: Tom / the CYD session to look**). Before it Tom's question - a new Darkness elf fighter / magic-user /
+      thief's levels change with each reroll: the originals' (DOSBox, nine rolls: fighter 5 / 6 / 7 by Strength
+      under 17 / 17 / 18, magic-user 9 / 10 by Intelligence under 17 / 17). Checked: the playsim, Darkness, the
+      Steam save's Oratisi (Strength 18, Intelligence 18, 500,000) trained on - without the cheat 7 / 11 / 12 and
+      "Not Enough Experience", with it (NORACE=1, new) fighter 8 then 9, then not enough (10 needs 500,001).
+      Not checked: the other eight games with the cheat on (the same routine; Death Knights' and the Dark
+      Queen's race tables skipped by the same test); a new character's levels with it on.
 - [x] v0.211.12 (the Darkness play-through, 2026-11-21; from the original's code): **a COMBAT with no monsters (the
       treasure only) left the compare flags as they were** - in Darkness and Treasures that path runs the fight's
       end routine too (Darkness GAME.OVR 0x1443 -> overlay 0x4F entry 1 = 0x5968; Treasures 0x18EA -> 0x6636): the

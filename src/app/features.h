@@ -234,6 +234,19 @@
 #define CYD_MAX_HP 1
 #endif
 
+// Disable Race Level Limits (Tom, 2026-11-21: "I want to add a cheat ...
+// which disables the limits on class level because of race"): a cheat, OFF
+// by default (Options::no_race_limits; the Cheats page's key). On: no race
+// stops a class's levels - an elf fighter trains past 7, a new Darkness
+// character starts at the levels its experience gives; each game's own last
+// level of a class stays, and the Dark Queen's knightly orders'. Nothing in
+// the save files but the levels reached. 0: no such switch. Where:
+// engine/create.* (set_race_limits, train_limited, gw_race_limited),
+// play.cpp (set_options), viewer.cpp (the key).
+#ifndef CYD_NO_RACE_LIMITS
+#define CYD_NO_RACE_LIMITS 1
+#endif
+
 // Quick Actions (Tom, 2026-11-09): what each party member may do when
 // Quick (or, for an NPC, the computer) plays it in a fight - the Game
 // menu's Quick tab, in the ENGINE's look on the whole screen under the tab

@@ -530,6 +530,11 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   open, restored on leaving and in its saves), free (`train_free`),
   otherwise the game's training; Modify Character for anyone there
   (`can_modify` skipped, the game's bounds kept); Begin goes back.
+  **Disable Race Level Limits** (Tom, 2026-11-21, from the PortMaster session; `CYD_NO_RACE_LIMITS`,
+  `Settings::no_race_limits`, `Options::no_race_limits`, OFF by default; the Cheats page's "No Race Limits"
+  key): no race stops a class's levels (`create::set_race_limits` - training, a new character's starting
+  levels, the "may train" colour); each game's own last level of a class and the Dark Queen's knightly orders
+  stay. Not in Original Games (off there, the player's choice kept).
   **Max Hit Points** (`CYD_MAX_HP`, `Settings::max_hp`, OFF by default):
   a Settings key and the same switch on the Cheats tab; training's hit
   dice at their highest (`create::Dice::max`), the rest of the game's sum

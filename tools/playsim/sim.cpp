@@ -953,6 +953,7 @@ int main(int argc, char** argv)
     if (getenv("CREATE")) {
         // CREATE=race,sex,class,alignment (list positions), NAME=...; MAXHP=1 the Max Hit Points cheat
         if (getenv("MAXHP")) { play::Options o = play::opts; o.max_hp = true; play::set_options(o); }
+        if (getenv("NORACE")) { play::Options o = play::opts; o.no_race_limits = true; play::set_options(o); }   // (the Cheats' Disable Race Level Limits)
         auto tap_word = [](char k) { for (int i = 0; i < play::menu.count; ++i) if (text::key(play::menu, i) == k) { int cx, cy; text::item_cell(play::menu, i, &cx, &cy); play::tap(cx * 8 + 2, cy * 8 + 2, C); return true; } return false; };
         pm_tap_line('C');
         const char* q = getenv("CREATE");
@@ -1533,6 +1534,7 @@ int main(int argc, char** argv)
         // for its next level, trained n times (gold, levels, hit points printed); MAXHP=1 the Max Hit
         // Points cheat; MODTEST=1 Modify on each member (hit points and stats pushed up / down, then Exit)
         if (getenv("MAXHP")) { play::Options o = play::opts; o.max_hp = true; play::set_options(o); }
+        if (getenv("NORACE")) { play::Options o = play::opts; o.no_race_limits = true; play::set_options(o); }   // (the Cheats' Disable Race Level Limits)
         bool ok = play::cheat_open(3, C);
         if (!ok && getenv("TRAINFORCE")) {      // (TRAINFORCE=1: opened wherever the start stopped - a script's wait)
             play::waiting = false;
