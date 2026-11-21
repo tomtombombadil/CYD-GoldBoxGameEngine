@@ -20,3 +20,6 @@ New / changed here:
   playsim WINFIGHT=1 (EXTRA for adv.sh): every foe down whenever a fight is up - for a story fight the party can't
                           win on Quick (the aerie's eight dragons with their fear): the after-fight script runs; the
                           fight's own rules are the rule checks' (fight_check / fuzz / matrix), not this walk's
+  gostepy.sh <slot> <x,y> [answer]  gostep.sh with the questions met on the way answered (WAYANS, default Y)
+  AUTOTAKE (playsim) takes TOKENS typed once at each treasure menu - "/T/I/T/T/T..." in Darkness (the selected
+                          member takes the lit lines); fight.sh passes them, adv.sh needs them in EXTRA

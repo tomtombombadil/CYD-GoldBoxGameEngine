@@ -5584,6 +5584,33 @@ static void test_dk_tables()
     CHECK(t.exp_needed(classes::Fighter, 40) == -1);
     CHECK(t.slots_at(classes::MagicUser, 20, 8) == 7 && t.slots_at(classes::MagicUser, 35, 1) == 10);
     CHECK(t.spell_class(120) == 2 && t.spell_level(120) == 8 && t.spell_class(126) == 0 && t.spell_level(126) == 9);
+    {
+        // Training's hit points (GAME.OVR 0x270DD): the byte wraps past 255 and
+        // the hit points go to 0 when more damage was taken than the new
+        // maximum - Game Fixes' Hit Points Past 255 stops the maximum at 255
+        create::Facts hf{};
+        create::Dice hd(7);
+        auto fighter = [](int max, int now) {
+            party::Character h;
+            h.rec[0x74] = 7;
+            h.rec[0x109 + classes::Fighter] = 30;
+            h.rec[0x78] = static_cast<uint8_t>(max);
+            h.rec[0x1A4] = static_cast<uint8_t>(now);
+            return h;
+        };
+        // (a level's gain here: 1 - no hit dice in the test's facts)
+        party::Character h = fighter(255, 250);
+        create::train_classes(h, t, hf, hd, 1 << classes::Fighter, false);
+        CHECK(h.hp_max() == 255 && h.hp() == 250);
+        rules::set_fixes_off(1ull << rules::kFixHp255);
+        h = fighter(255, 255);
+        create::train_classes(h, t, hf, hd, 1 << classes::Fighter, false);
+        CHECK(h.hp_max() == 0 && h.hp() == 0);
+        h = fighter(255, 200);
+        create::train_classes(h, t, hf, hd, 1 << classes::Fighter, false);
+        CHECK(h.hp_max() == 0 && h.hp() == 0);
+        rules::set_fixes_off(0);
+    }
     party::Character c;
     c.rec[0x10E] = 20;                  // magic-user 20 (levels at 0x109 + class)
     c.rec[0x12] = c.rec[0x13] = 18;     // Int 18

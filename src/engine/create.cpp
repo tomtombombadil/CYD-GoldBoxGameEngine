@@ -287,8 +287,13 @@ void secret_hp(party::Character& c, const classes::Tables& t, const Facts& f, Di
     // AD&D's at least 1 a level with the rules fixes)
     if (rules::fix(rules::kFixHpLevel) && inc + cp < 1) cp = 1 - inc;
     const int lost = (r[kHpMax] - r[kHp]) & 0xFF;
-    r[kHpMax] = static_cast<uint8_t>(r[kHpMax] + inc + cp);
-    r[kHp] = static_cast<uint8_t>(r[kHpMax] - lost);
+    // Darkness (GAME.OVR 0x270DD): the gain added to the byte as it is - past
+    // 255 it wraps round - and the hit points now 0 when the damage taken is
+    // more than the new maximum. Game Fixes: the maximum stops at 255
+    int top = r[kHpMax] + inc + cp;
+    if (t.lay.dk && top > 255 && rules::fix(rules::kFixHp255)) top = 255;
+    r[kHpMax] = static_cast<uint8_t>(top);
+    r[kHp] = t.lay.dk && lost > r[kHpMax] ? 0 : static_cast<uint8_t>(r[kHpMax] - lost);
 }
 void set_stat(party::Character& c, int i, int v)
 {
@@ -868,7 +873,8 @@ void multi_gain(party::Character& c, const classes::Tables& t, const Facts& f, D
     const int up = multi_hp(c, t, f, d, mask, held, &dice);
     const int lost = (r[kHpMax] - r[kHp]) & 0xFF;
     r[kHpRolled] = static_cast<uint8_t>(r[kHpRolled] + dice);
-    r[kHpMax] = static_cast<uint8_t>(r[kHpMax] + up);
+    // (our rule, so never past the byte: the maximum stops at 255)
+    r[kHpMax] = static_cast<uint8_t>(r[kHpMax] + up > 255 ? 255 : r[kHpMax] + up);
     r[kHp] = static_cast<uint8_t>(lost > r[kHpMax] ? 0 : r[kHpMax] - lost);
 }
 
