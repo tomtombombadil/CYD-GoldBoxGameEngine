@@ -30,3 +30,12 @@ New / changed here:
                           (message blocks 76 / 77 / 84 / 85); ECLTRACE=1 (CYD_TEST_HOOKS) every instruction
   stepwalk.sh <slot> <x,y> [answer]  one step at a time, MAPPATH again after each (Moander's heart pushes the
                           party along its arteries at every beat)
+
+Moander's heart (2026-11-21): buy1.sh <slot> <m> <page> <line> - one Merchant-cheat purchase (from the pool);
+several in one visit: "%m/B" + "/N" x page + "v" x line + "/B./E" each, after a first "/P" (Pool), ending
+"/S/E" (Share - pooled coins left on the counter are lost, as the original's question says). rdy.sh RDYKEEP=
+(regex: the kinds left as they are - default arrows, darts, potions ...). sellplain.sh: never sells an item
+still unidentified (ITEMDUMP=2's hidden) - it sold Shal's vorpal sword as a plain long sword. trade.sh /
+loot.py as the Secret kit's. adv.sh PICK=Try,Feed,Keep answers a script's word menu (the fake Tanetal, the
+Mouth). The heart's events run on ARRIVAL (entry 1) - where its one-way flows made stepwalk circle, the
+playsim's TELE=x,y,d (d 0-7, 2 = east) put the party beside the square and one real step entered it.
