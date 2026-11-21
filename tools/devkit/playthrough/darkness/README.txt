@@ -11,3 +11,9 @@ New / changed here:
                           (match with MAPFLAGS=1's codes)
   ovgrid.py / ovpath.py   the overland (block 17): its code grid (rows at 99B0, 38 x 15) and the 8-way walk to x,y
                           ("/M", R / L = 45 degrees, F); codes 3 (snow) and 4 (water) avoided
+  gostep.sh <slot> <x,y> [answer] [first tokens]  walk beside x,y (goto.sh, MAPLOCKED / MAPSECRET), face it, step in, adv.sh
+  ovgo.sh <slot> <x,y> [answer]  the overland walk, re-planned after each stop (answer N: places on the way left alone;
+                          a place is two squares - step onto its other square with Y to enter). The place codes are
+                          decimal in the scripts (code - 10 = the ON GOTO's entry): 13 = 0x0D the steading
+  adv.sh PICK="Word,..."  a menu answered by the first of these words it shows; fights: auto tokens (/Q each fighter),
+                          QASPELLS=1 (EXTRA) so the casters cast; fix.sh = the Healer cheat's Heal for everyone
