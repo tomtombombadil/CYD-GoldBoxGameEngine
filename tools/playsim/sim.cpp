@@ -1731,6 +1731,15 @@ int main(int argc, char** argv)
             printf("  %s\n  %s\n", top.c_str(), mid.c_str());
         }
     }
+    if (getenv("MAPTYPES")) {           // MAPTYPES=d: each square's wall type on side d (0 N, 2 E, 4 S, 6 W)
+        const int dd = atoi(getenv("MAPTYPES"));
+        printf("  MAPTYPES side %d\n", dd);
+        for (int y = 0; y < play::d->map.h; ++y) {
+            printf("  %2d:", y);
+            for (int x = 0; x < play::d->map.w; ++x) printf(" %2X", geo::wall(play::d->map, x, y, dd));
+            printf("\n");
+        }
+    }
     if (getenv("TELE")) { int x, y, dd; sscanf(getenv("TELE"), "%d,%d,%d", &x, &y, &dd); play::d->gs.x = x; play::d->gs.y = y; play::d->gs.dir = dd; play::after_move_redraw(); }
     if (getenv("TELE0")) { int x, y, dd; sscanf(getenv("TELE0"), "%d,%d,%d", &x, &y, &dd); play::d->gs.x = x; play::d->gs.y = y; play::d->gs.dir = dd; play::after_move_redraw(); }
     // SETEXP=m:exp,...: member m's experience (the Companion's ready classes)
@@ -2059,7 +2068,9 @@ int main(int argc, char** argv)
     const char* yes_skip_from = nullptr;    // (#NAME;yes~no~: the no part skipped when found)
     const char* yes_skip_to = nullptr;
     for (const char* m = moves; *m || auto_next(m); tp_note(m), ++m) {
-        if (getenv("WINFIGHT") && play::fg && play::screen == play::Screen::Fight) {
+        if (getenv("WINFIGHT") && play::fg && play::screen == play::Screen::Fight && play::ml &&
+            play::fg->st != play::FSt::Results && play::fg->st != play::FSt::Destroyed && play::fg->st != play::FSt::NpcShare) {
+            // (not once the fight's results are up: its monsters' records are gone)
             // WINFIGHT=1: a play-through's cheat - every foe down whenever a fight is up (replays too;
             // the fight's rules are the rule checks' business; the script's after-fight part runs)
             for (int i = 0; i < play::fg->b.n; ++i) {
@@ -2593,6 +2604,31 @@ int main(int argc, char** argv)
             kk = key(p.a, p.x, p.y);
         }
         printf("  OVPATH %d:%d,%d -> %d:%d,%d: %s\n", sa, sx, sy, ta, tx, ty, from[goal] < 0 ? "no way" : path.c_str());
+    }
+    if (getenv("MAPREACH") && play::d->map.loaded) {
+        // MAPREACH=1: every square the party can walk to from where it stands (MAPPATH's rules - one-way sides
+        // count; MAPLOCKED / MAPSECRET as there), with each square's event number (flags & 0x7F) when not 0
+        const geo::Map& mp = play::d->map;
+        bool seen[16 * 16] = {};
+        std::vector<int> q{play::d->gs.y * 16 + play::d->gs.x};
+        seen[q[0]] = true;
+        for (size_t k = 0; k < q.size(); ++k)
+            for (int dir = 0; dir < 8; dir += 2) {
+                int x = q[k] % 16, y = q[k] / 16;
+                const int ox = x, oy = y;
+                const int pg = geo::passage(mp, x, y, dir);
+                if ((pg != 1 && !(pg == 2 && getenv("MAPLOCKED")) && !(pg >= 3 && getenv("MAPSECRET"))) || !geo::step(mp, x, y, dir)) continue;
+                if (abs(x - ox) + abs(y - oy) != 1 || seen[y * 16 + x]) continue;
+                seen[y * 16 + x] = true;
+                q.push_back(y * 16 + x);
+            }
+        printf("  MAPREACH %zu squares:", q.size());
+        for (int kk : q)
+            if (geo::flags(mp, kk % 16, kk / 16) & 0x7F) printf(" %d,%d=%X", kk % 16, kk / 16, geo::flags(mp, kk % 16, kk / 16) & 0x7F);
+        printf("\n  not reached:");
+        for (int kk = 0; kk < 256; ++kk)
+            if (!seen[kk]) printf(" %d,%d=%X", kk % 16, kk / 16, geo::flags(mp, kk % 16, kk / 16) & 0x7F);
+        printf("\n");
     }
     if (getenv("MAPPATH") && play::d->map.loaded) {
         // MAPPATH=x,y: the shortest walk in the 3D map from where the party
