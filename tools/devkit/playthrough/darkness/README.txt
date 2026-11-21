@@ -39,3 +39,6 @@ still unidentified (ITEMDUMP=2's hidden) - it sold Shal's vorpal sword as a plai
 loot.py as the Secret kit's. adv.sh PICK=Try,Feed,Keep answers a script's word menu (the fake Tanetal, the
 Mouth). The heart's events run on ARRIVAL (entry 1) - where its one-way flows made stepwalk circle, the
 playsim's TELE=x,y,d (d 0-7, 2 = east) put the party beside the square and one real step entered it.
+regear.sh <slot>: the party's standard gear bought again at the Merchant cheat and readied - for the gates
+that take the party's magic items (Moander, the way back to the Realms, Bane's land) when nothing was stored.
+A member whose pack is full (16 items - a fight's loot) gets nothing: sell first (sellplain / SELLN).
