@@ -9,17 +9,20 @@
       put right (a dim word's light-grey box is its highlight - Save Slot Info's empty slots; a spell list scrolled
       a line under the box): all nine games 0 failures, seed 11, 5000 actions, NFIGHT=60 - N7 with them. The
       playsim's ITEMDUMP=2 shows an item name's three words; a fight's placing is logged.
-- [ ] **Treasures, an overland fight's starting distance - NOT fixed, the cause not found.** Seen clean in DOSBox
-      (2026-11-20, the same save, party facing east, no stray keys): the party's formation is ours square for
-      square, but the nearest foe is at Range 15 from the member ours has it next to - twelve squares further,
-      two map squares in the placing's 6-a-square. The script (51, 98F4) sets SETUP MONSTER's distance 0, the
-      original's SETUP (GAME.OVR 0x6A0) and placing (0xDEB9 / 0xDCCB / 0xD898, game byte 0x36) read as ours do -
-      so where its 2 comes from is open. Not it: script word 0x2B = 12 (set before each encounter roll - the
-      camp's, 0x12B99). To do: the original's sight routine (0x58:0x3E) and what COMBAT (0x1968) does on the
-      overland; Darkness's outdoor fights against the original too.
-- [ ] Treasures: the Leilon potion of the guides not found among the loot; Aim's Next in the original went to a
-      foe first where ours goes to the nearest fighter of either side - compare.
-
+- [x] v0.211.6 (the PortMaster session, 2026-11-20): (1) **Treasures / Darkness: a fight on open ground starts 2
+      map squares apart** (was: the foes among the party). The cause: the originals' sight routine (Treasures
+      GAME.OVR 0x77AF, Darkness 0x69BA) - where the place has no 3D view, and on Treasures' overland (game byte
+      0x3F = 1), it answers 2 AND sets the encounter's range (game byte 0x37) to 2, after SETUP MONSTER stored the
+      script's - so the script's range 0 never counts there (`Vm::open_ground`). Seen in DOSBox (Treasures'
+      overland, "ENEMIES ATTACK!": nearest foe at Range 12) and in the playsim after (the foes off the first
+      screen, nearest 13). Death Knights and the Dark Queen: their routines not read - unchanged. (2) **Aim's Next /
+      Prev in the Darkness-type games, a weapon's**: the fighter itself, then the foes it can attack, nearest
+      first - never its own side (DOSBox, Treasures, a sling: self, foes at 12 13 14 15 16, self; ours went to
+      the ally beside it). None in reach: every foe (our choice - the original not seen there). Checked: navcheck
+      and fightfuzz, Darkness and Treasures, 0 problems; host tests.
+- [ ] Treasures: the Leilon potion of the guides not found among the loot. The overland fight's nearest foe is at
+      Range 13 in ours where the original showed 12 (other monsters, two squares wide - not compared like for
+      like). Darkness's outdoor fights: look at one beside the original.
 - [x] v0.211.4 (Tom, 2026-11-20, Gateway's first fight on the PortMaster port): **a fight's Speed menu.** (1) After
       Faster the highlight went back to the first word - Slower in Gateway's order - so the next press undid it: the
       prompt's number ("GameSpeed (4) :") made each speed a new menu to the kept-place rule. A prompt's numbers no

@@ -338,6 +338,7 @@ private:
     Stop wait_for(Wait w);
     void add_string(const char* src, size_t n, bool packed);
     // Encounters (SETUP MONSTER, APPROACH, ENCOUNTER MENU)
+    bool open_ground() const;           // (Darkness / Treasures: no 3D view here, or Treasures' overland)
     int  sight() const;                 // squares the party can see ahead (0-2)
     bool show_encounter();              // true: the picture is due after a short pause
     void reset_encounter();
