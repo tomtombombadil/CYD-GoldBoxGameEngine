@@ -20,3 +20,25 @@ New / changed here:
   playsim WINFIGHT=1 (EXTRA for adv.sh): every foe down whenever a fight is up - for a story fight the party can't
                           win on Quick (the aerie's eight dragons with their fear): the after-fight script runs; the
                           fight's own rules are the rule checks' (fight_check / fuzz / matrix), not this walk's
+  gostepy.sh <slot> <x,y> [answer]  gostep.sh with the questions met on the way answered (WAYANS, default Y)
+  AUTOTAKE (playsim) takes TOKENS typed once at each treasure menu - "/T/I/T/T/T..." in Darkness (the selected
+                          member takes the lit lines); fight.sh passes them, adv.sh needs them in EXTRA
+  upstair.sh <slot>       the Red Tower: every stair side (wall type 2 - table 989F) reached is tried, the first
+                          "THE PATH GOES UP" taken (WANT=DOWN the other way); up = facing west, down = east/north
+  MAPWRAP=1 (playsim, GOENV for gostep): the path finders step off an edge and in at the other (the tower's
+                          floors share one map and wrap); DISASMNOW=1 disassembles a block before it hands back
+                          (message blocks 76 / 77 / 84 / 85); ECLTRACE=1 (CYD_TEST_HOOKS) every instruction
+  stepwalk.sh <slot> <x,y> [answer]  one step at a time, MAPPATH again after each (Moander's heart pushes the
+                          party along its arteries at every beat)
+
+Moander's heart (2026-11-21): buy1.sh <slot> <m> <page> <line> - one Merchant-cheat purchase (from the pool);
+several in one visit: "%m/B" + "/N" x page + "v" x line + "/B./E" each, after a first "/P" (Pool), ending
+"/S/E" (Share - pooled coins left on the counter are lost, as the original's question says). rdy.sh RDYKEEP=
+(regex: the kinds left as they are - default arrows, darts, potions ...). sellplain.sh: never sells an item
+still unidentified (ITEMDUMP=2's hidden) - it sold Shal's vorpal sword as a plain long sword. trade.sh /
+loot.py as the Secret kit's. adv.sh PICK=Try,Feed,Keep answers a script's word menu (the fake Tanetal, the
+Mouth). The heart's events run on ARRIVAL (entry 1) - where its one-way flows made stepwalk circle, the
+playsim's TELE=x,y,d (d 0-7, 2 = east) put the party beside the square and one real step entered it.
+regear.sh <slot>: the party's standard gear bought again at the Merchant cheat and readied - for the gates
+that take the party's magic items (Moander, the way back to the Realms, Bane's land) when nothing was stored.
+A member whose pack is full (16 items - a fight's loot) gets nothing: sell first (sellplain / SELLN).

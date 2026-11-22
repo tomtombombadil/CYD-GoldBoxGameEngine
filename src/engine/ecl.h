@@ -68,6 +68,9 @@ struct OpSet {
     // goes on after it (Pool); 3 kills the party (Curse; Pool's program
     // does nothing for it - its handler knows 0, 8 and 9 only)
     bool program_ends = true, program_kills = true;
+    // PROGRAM 2: quit to DOS (Darkness GAME.OVR 0x2165, Treasures ov43+0x24BE -
+    // the game's last words: the fine ship's farewell); other games: nothing
+    bool program_quit = false;
     // PROGRAM 9: the camp, then EXIT (Darkness); the Dark Queen's script goes
     // on after the camp (its inn: the city's menu again - DOSBox)
     bool camp_resumes = false;

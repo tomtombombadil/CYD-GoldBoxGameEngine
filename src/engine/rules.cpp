@@ -1679,7 +1679,10 @@ const FixInfo kFixes[kFixCount] = {
     {kFixTrainAll, "Training Every Class", kCurse | kGate,
      "A multi-class character with the experience for a level in two classes gains both at one training, and "
      "keeps the experience its other classes still need. The originals train one class a visit and cut the "
-     "experience, so the level waiting in the other class could be lost."}
+     "experience, so the level waiting in the other class could be lost."},
+    {kFixHp255, "Hit Points Past 255", kDark | kTreas,
+     "A level's hit points stop at 255. The original adds them to a byte that wraps round: a character near "
+     "255 who trains may come back with a handful of hit points, or none."}
 };
 
 const AdndInfo kAdnd[kAdndCount] = {

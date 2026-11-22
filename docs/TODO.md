@@ -1,5 +1,19 @@
 # Open tasks (Tom and Claude)
 
+- [x] v0.211.16 (the Darkness play-through, 2026-11-21 - played to the end): **the game never ended** - after
+      Gothmenes, the fine ship's farewell ("Do you really want to leave us?" Yes, the ending's pages) ran PROGRAM 2,
+      which the engine passed over, and the party stood in Phlan again. Darkness's PROGRAM 2 is "quit to DOS"
+      (GAME.OVR 0x2165; Treasures' handler the same): the Play Test now ends there, as Exit to DOS (OpSet
+      `program_quit`, Wait::Quit). Only Darkness's ending uses it (opscan over PoolRad, Curse, Darkness, Gateway).
+      Host test both ways; the playsim's ending reaches it. The play-through's log: the Project's
+      claude/playthrough_darkness.md.
+- [x] v0.211.15 (the Darkness play-through, 2026-11-21; from the original's code): **training past 255 hit points
+      wrapped round** - Elminster's hall left Kestrel with 3 and Selene with 0. Darkness's level-up (GAME.OVR
+      0x270DD) adds the gain to the byte as it is and sets the hit points to 0 when more damage was taken than the
+      new maximum: the engine now does the same (it wrapped the current hit points too), and a new Game Fix,
+      **Hit Points Past 255** (Darkness, Treasures; on by default), stops the maximum at 255. The AD&D 1E
+      Multi-Class Hit Points rule (ours) never goes past 255. Host test both ways; replayed in the playsim
+      (six trainings, everyone 251-254 of 255).
 - [x] v0.211.10 (the PortMaster session, 2026-11-20 - Tom, Darkness, the Steam release's save B: Oratisi, an elf
       fighter / magic-user / thief 5 / 9 / 12 with 500,000 experience, trained twice came out 7 / 9 / 12 with
       125,000): **a training hall trained ONE class of a multi-class and cut the experience - in every game but

@@ -38,6 +38,11 @@
 #include "party.h"
 
 namespace ecl {
+#ifdef CYD_TEST_HOOKS
+// (tests: told of every instruction as it runs - address, opcode, the first two operands' values; the
+// playsim's ECLTRACE=1)
+extern void (*g_insn_hook)(unsigned at, int op, unsigned a, unsigned b);
+#endif
 
 constexpr uint32_t kCodeSize = 0x1E00;
 constexpr int kMaxStrings = 16;
@@ -97,6 +102,7 @@ enum class Wait : uint8_t {
     Luck,         // Treasures' PROGRAM 3: a LUCK.DAX text (news / the crown's end), page by page; resume() after
     ShipRest,     // Treasures' PROGRAM 4: the party heals itself on the way (Fix, then a rest); resume() after
     Finale,       // the Dark Queen's PROGRAM 1: its ending's picture show (its song started); resume() after
+    Quit,         // PROGRAM 2 with program_quit: the game ends (the original quits to DOS; the script has ended)
 };
 
 enum class Stop : uint8_t { Running, Waiting, Stopped, NewScript, Error };

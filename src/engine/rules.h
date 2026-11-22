@@ -371,6 +371,7 @@ enum Fix : uint8_t {
     kFixQWis13,         // Wisdom 13: the multi-class cleric rule fires
     // (added at the end: the settings keep a bit a fix)
     kFixTrainAll,       // Training Every Class: a multi-class trains each ready class, no experience another class needs lost (Curse, Gateway)
+    kFixHp255,          // Hit Points Past 255: training's maximum stops at 255 (Darkness, Treasures)
     kFixCount
 };
 static_assert(kFixCount <= 64, "the fixes' bits");

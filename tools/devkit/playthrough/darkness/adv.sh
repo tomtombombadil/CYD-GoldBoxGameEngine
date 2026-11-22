@@ -2,7 +2,9 @@
 # adv.sh <slot> x <tokens> [Y|N]: Darkness kit - the playsim's own auto tokens (AUTOTOK: texts, pauses, fights on
 # Quick - "/Q" at each fighter's menu, "Continue Battle" No) from <tokens>; Yes / No answered <answer>, a treasure
 # taken (takeall.py); saved at the Move menu (env EXTRA for every run). Prints the texts and journal entries.
-P=/tmp/claude-0/dplay; S=$1; T="$3"; Q=${4:-Y}
+P=/tmp/claude-0/dplay
+# (a fight's treasure taken by the selected member unless EXTRA says otherwise - AUTOTAKE takes tokens)
+case "$EXTRA" in *AUTOTAKE=*) ;; *) EXTRA="$EXTRA AUTOTAKE=/T/I$(printf "/T%.0s" $(seq 1 30))";; esac; S=$1; T="$3"; Q=${4:-Y}
 [ -z "$T" ] && T="."
 for i in $(seq 1 ${ITER:-30}); do
   PTIME=${PTIME:-2400} AT=1000 TN=0 $P/bin/auto.sh "$T" SAVE=$S ALLTEXT=1 $EXTRA > /dev/null

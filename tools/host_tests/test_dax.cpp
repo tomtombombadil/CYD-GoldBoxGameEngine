@@ -2993,6 +2993,35 @@ static void test_ecl_party()
     CHECK(r == ecl::Stop::Waiting && qvm.wait() == ecl::Wait::Finale && host.song == 8);
     r = qvm.resume();
     CHECK(qvm.get(0x4C07) == 9);
+    // Darkness's PROGRAM 2 (program_quit): the game ends - quit to DOS, the
+    // script over; without program_quit (Curse's set) it does nothing
+    Bytes c5;
+    for (int i = 0; i < 5; ++i) { c5.push_back(0); op_addr(c5, 0); }
+    const size_t f5 = c5.size();
+    c5.push_back(0x38); op_imm(c5, 2);
+    c5.push_back(0x09); op_imm(c5, 9); op_addr(c5, 0x4C07);
+    c5.push_back(0x00);
+    for (int i = 0; i < 5; ++i) {
+        c5[1 + i * 4] = 1;
+        c5[2 + i * 4] = static_cast<uint8_t>((kBase + f5) & 0xFF);
+        c5[3 + i * 4] = static_cast<uint8_t>((kBase + f5) >> 8);
+    }
+    memcpy(gs.code, c5.data(), c5.size());
+    gs.code_len = static_cast<uint32_t>(c5.size());
+    static ecl::OpSet quit_set;
+    quit_set = *pr->ecl_ops;
+    quit_set.program_quit = true;
+    static ecl::Vm xvm(gs, host, quit_set);
+    xvm.set(0x4C07, 0);
+    CHECK(xvm.init_script());
+    r = xvm.run(xvm.entry(4));
+    CHECK(r == ecl::Stop::Waiting && xvm.wait() == ecl::Wait::Quit);
+    r = xvm.resume();
+    CHECK(r == ecl::Stop::Stopped && xvm.get(0x4C07) != 9);
+    vm.set(0x4C07, 0);
+    CHECK(vm.init_script());
+    r = vm.run(vm.entry(4));
+    CHECK(r == ecl::Stop::Stopped && vm.get(0x4C07) == 9);
 }
 
 // The original's ways (coab's facts / the listing): RETURN with nothing to
@@ -5584,6 +5613,33 @@ static void test_dk_tables()
     CHECK(t.exp_needed(classes::Fighter, 40) == -1);
     CHECK(t.slots_at(classes::MagicUser, 20, 8) == 7 && t.slots_at(classes::MagicUser, 35, 1) == 10);
     CHECK(t.spell_class(120) == 2 && t.spell_level(120) == 8 && t.spell_class(126) == 0 && t.spell_level(126) == 9);
+    {
+        // Training's hit points (GAME.OVR 0x270DD): the byte wraps past 255 and
+        // the hit points go to 0 when more damage was taken than the new
+        // maximum - Game Fixes' Hit Points Past 255 stops the maximum at 255
+        create::Facts hf{};
+        create::Dice hd(7);
+        auto fighter = [](int max, int now) {
+            party::Character h;
+            h.rec[0x74] = 7;
+            h.rec[0x109 + classes::Fighter] = 30;
+            h.rec[0x78] = static_cast<uint8_t>(max);
+            h.rec[0x1A4] = static_cast<uint8_t>(now);
+            return h;
+        };
+        // (a level's gain here: 1 - no hit dice in the test's facts)
+        party::Character h = fighter(255, 250);
+        create::train_classes(h, t, hf, hd, 1 << classes::Fighter, false);
+        CHECK(h.hp_max() == 255 && h.hp() == 250);
+        rules::set_fixes_off(1ull << rules::kFixHp255);
+        h = fighter(255, 255);
+        create::train_classes(h, t, hf, hd, 1 << classes::Fighter, false);
+        CHECK(h.hp_max() == 0 && h.hp() == 0);
+        h = fighter(255, 200);
+        create::train_classes(h, t, hf, hd, 1 << classes::Fighter, false);
+        CHECK(h.hp_max() == 0 && h.hp() == 0);
+        rules::set_fixes_off(0);
+    }
     party::Character c;
     c.rec[0x10E] = 20;                  // magic-user 20 (levels at 0x109 + class)
     c.rec[0x12] = c.rec[0x13] = 18;     // Int 18

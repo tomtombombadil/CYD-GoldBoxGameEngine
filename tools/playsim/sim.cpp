@@ -783,6 +783,12 @@ static const char* tp_text()
 
 int main(int argc, char** argv)
 {
+#ifdef CYD_TEST_HOOKS
+    // ECLTRACE=1: every instruction's address and opcode on stdout (COMPAREs with their two values)
+    if (getenv("ECLTRACE")) ecl::g_insn_hook = [](unsigned at, int op, unsigned a, unsigned b) {
+        if (op == 3) printf("  [ecl] %04X COMPARE %u %u\n", at, a, b); else printf("  [ecl] %04X op %02X\n", at, op); };
+#endif
+
     setvbuf(stdout, nullptr, _IOLBF, 0);       // (lines out at once: a hang or a crash keeps them)
     play::load_begins = getenv("LOADBEGINS") != nullptr;   // (Pool's load straight into the game: LOADBEGINS=1)
     if (getenv("NOFIXES")) rules::set_all(false);    // NOFIXES=1: Game Fixes off (the originals' ways)
@@ -1504,9 +1510,12 @@ int main(int argc, char** argv)
             }
         play::host->load_script(play::d->gs.script, play::d->gs.code, &play::d->gs.code_len);
         play::vm->init_script();
+        // (DISASMNOW=1: the block as loaded, before its first entry runs - a block that hands straight back,
+        // as Darkness's message blocks 76 / 77 / 84 / 85, is shown itself)
+        if (getenv("DISASM") && getenv("DISASMNOW")) disasm();
         play::run_entry(4, play::Then::NewFirst);
     }
-    if (getenv("DISASM") && getenv("AREA")) disasm();
+    if (getenv("DISASM") && getenv("AREA") && !getenv("DISASMNOW")) disasm();
     if (getenv("CHOICES")) for (const char* q = getenv("CHOICES"); *q; ++q) if (*q >= '0' && *q <= '9') choices.push_back(*q - '0');
     settle(0, getenv("MS") ? atoi(getenv("MS")) : 60000);
     if (getenv("CHEATHURT"))        // CHEATHURT=1: everyone at 1 hit point first (the Healer's / Sanctuary's checks)
@@ -2631,7 +2640,8 @@ int main(int argc, char** argv)
                 const int ox = x, oy = y;
                 const int pg = geo::passage(mp, x, y, dir);
                 if ((pg != 1 && !(pg == 2 && getenv("MAPLOCKED")) && !(pg >= 3 && getenv("MAPSECRET"))) || !geo::step(mp, x, y, dir)) continue;
-                if (abs(x - ox) + abs(y - oy) != 1 || seen[y * 16 + x]) continue;
+                // (MAPWRAP=1: a step off an edge comes in at the other - the Red Tower's floors; the scripts decide)
+                if ((abs(x - ox) + abs(y - oy) != 1 && !getenv("MAPWRAP")) || seen[y * 16 + x]) continue;
                 seen[y * 16 + x] = true;
                 q.push_back(y * 16 + x);
             }
@@ -2672,7 +2682,7 @@ int main(int argc, char** argv)
                 // (MAPLOCKED=1: locked doors passable too - the party bashes / picks them)
                 const int pg = geo::passage(mp, x, y, dir);
                 if ((pg != 1 && !(pg == 2 && getenv("MAPLOCKED")) && !(pg >= 3 && getenv("MAPSECRET"))) || !geo::step(mp, x, y, dir)) continue;   // (MAPSECRET=1: the other passages too - secret doors)
-                if (abs(x - ox) + abs(y - oy) != 1) continue;       // (no wrapping: the edges are the scripts')
+                if (abs(x - ox) + abs(y - oy) != 1 && !getenv("MAPWRAP")) continue;   // (no wrapping unless MAPWRAP=1: the edges are the scripts')
                 const int kk = y * 16 + x;
                 if (from3[kk] >= 0 || (avoid3[kk] && kk != goal)) continue;
                 from3[kk] = static_cast<int>(k) * 8 + dir;
