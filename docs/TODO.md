@@ -9,6 +9,16 @@
       frame pixel for pixel, 181 of 185 VGA captures among the player's states within 70 ms (the rest: half-drawn
       DOSBox captures), the EGA dissolve's order, the fades' waits (713 / 942 / 485 ms vs 718 / 955 / 490).
       Tools: tools/devkit/vace (vace_run, vace_cmp.py); host test test_vace; the playsim's Movie screen (MOVIEKEY).
+- [ ] Champions play-through (2026-11-22; the Project's claude/playthrough_champions.md): GOG save A's party in a
+      new game; Throtl, its temple and catacombs, Gargath, Sir Dargaard's tomb, the Ogre Base, Jelek, the third
+      outpost and Neraka done (Sir Karl's memorial, the Sanction orders); next Sanction. Open: Throtl's 2,6 / 4,0 / 5,1 (Strangbourn, the plate-mail soldier, the
+      arrows) gave nothing when walked onto - the guide's squares or a facing?
+- [x] v0.212.2 (the Champions play-through, 2026-11-22): **Sir Dargaard's Test of Fear refused a knight** - its script asks field 0xCD (Champions' GAME.OVR switch: the knight's level, record 0x100) and the engine (Secret's switch) gave 0; `Vm::get` answers it from the record's knight level. Checked: the three rings of fire, "YOU HAVE CONQUERED THE TEST OF FEAR".
+- [x] v0.212.1 (the Champions play-through, 2026-11-22): **the Cheats tab never opened at Champions' / Death
+      Knights' outposts** - their menus run in the overland's mode (area word 0x4BE6 = 0), so kr_overland() held and
+      cheat_menu_place() refused them; a script's menu there now counts as a menu town (as Curse's, v0.204.0) -
+      the Trainer, Merchant, Healer and Sanctuary open at "WHERE DO YOU WISH TO GO?" and leave it as it was
+      (playsim, Champions save B at the first outpost: Trainer to level 5, Merchant).
 - [ ] Darkness's intro movie (VACE INTRO, before the titles): the same player would play INTRO.ACF / INTRO.BMA -
       for Tom: wanted? (The engine starts at the titles, as since v0.141.0.)
 - [x] 2026-11-22 (no engine fault): the Temple of Tyr's fire elementals - see the entry below; MAPLINK / MAPDOORS.
@@ -176,7 +186,10 @@
       Red Tower, Myth Drannor, the drow, Kalistes' web ...). Now dk_addr 0x7ED5 -> 0x21. Checked: playsim, Traitor's
       Gate to map 17, a save there loads map 17, Kuto's Gate -> Sasha -> Bane -> Limbo. Treasures' scripts not
       walked yet.
-- [ ] Secret play-through (Tom, 2026-11-19; the Project's claude/playthrough_secret.md): New Verdigris, the Well,
+- [x] Secret play-through (Tom, 2026-11-19; COMPLETE 2026-11-22: the Dreadlord won (WINFIGHT) -> Vala's "still feels
+      cold" -> the hidden chamber at 1,2 walked to (its secret door found, Explore room) -> the medusae / golems
+      (WINFIGHT) -> the gem shattered, the spirits, "A GATE BEGINS TO GLOW" -> the gate at 0,0 (Yes) to the portals
+      (block 33) - the end the guides give; no engine fault; the Project's claude/playthrough_secret.md): New Verdigris, the Well,
       the Ruins' dragons and bier, the Black Circle HQ under way; then the Temple of Tyr, the mines, dungeon,
       crevasses, castle, Eldamar. Secret has NO ending program (2026-11-20: every ECL1-3 block
       disassembled - its only PROGRAMs are 3 and 0; after Eldamar's gem the game goes on, as the guides

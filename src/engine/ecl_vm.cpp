@@ -577,6 +577,14 @@ uint16_t Vm::get(uint16_t a) const
         }
         const uint16_t off = krynn_coin_code(static_cast<uint16_t>(a - 0x7C00));
         coins_touch(a, false);
+        // Champions' field switch (GAME.OVR 0x93DE): code 0xCD is the knight's level (record 0x100 - its levels
+        // from 0xF9, the knight last; the engine's 0x109 + 7). Sir Dargaard's tomb asks it ("ONLY A KNIGHT CAN
+        // PASS THE TESTS", ECL2 block 67) - Secret's switch has no such code
+        if (set_.krynn_coins && off == 0xCD) {
+            const uint8_t* r = sel_rec();
+            if (!r && party_ && party_->sel()) r = party_->sel()->rec;
+            if (r) return r[0x109 + 7];
+        }
         if (const uint8_t* mr = sel_rec()) {
             // a loaded monster LOAD CHARACTER chose (its place: after the party)
             const int at = (party_ ? party_->count : 0) + sel_mon_;

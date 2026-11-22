@@ -2046,7 +2046,8 @@ int main(int argc, char** argv)
             if (dir < 0) { t = "{"; maze_blocked = true; }      // (blocked: the move ended, then Guard)
             else { maze_tok[1] = static_cast<char>('0' + dir); t = maze_tok; }
         } else if (maze_walk) { t = has('M') && !maze_blocked ? "/M" : "/G"; maze_blocked = false; }    // (no moves left: Guard - not Quick, the walk goes on next round)
-        else if (scr == 24) t = has('Q') ? "/Q" : has('Y') && has('N') && getenv("AUTOFIGHT") ? "/N" : ".";   // ("Continue Battle": No)
+        else if (scr == 24) t = has('A') && has('S') && has('E') && !has('M') ? "/A" : has('Q') ? "/Q" : has('Y') && has('N') && getenv("AUTOFIGHT") ? "/N" :
+                                     has('D') && has('M') ? "/D" : ".";   // (Champions: no Quick - Done, then its Guard Delay Quit Auto's Auto)   // ("Continue Battle": No)
         else if (scr == 5 && has('T') && has('V') && getenv("AUTOTAKE") && !auto_take) {
             // (the taker: of the first six, the one with the fewest items, then the lightest - a full or
             // OverLoaded member is refused every Take; TAKER=n names one)
@@ -2675,6 +2676,15 @@ int main(int argc, char** argv)
         printf("  MAPREACH %zu squares:", q.size());
         for (int kk : q)
             if (geo::flags(mp, kk % 16, kk / 16) & 0x7F) printf(" %d,%d=%X", kk % 16, kk / 16, geo::flags(mp, kk % 16, kk / 16) & 0x7F);
+        // (the reached squares whose outer side on the map's edge is open - where a script's step off the
+        // edge may lead on: Champions' catacombs, as "x,y:dir")
+        printf("\n  MAPREACH edges:");
+        for (int kk : q)
+            for (int dir = 0; dir < 8; dir += 2) {
+                const int x = kk % 16, y = kk / 16;
+                const bool edge = (dir == 0 && y == 0) || (dir == 2 && x == 15) || (dir == 4 && y == 15) || (dir == 6 && x == 0);
+                if (edge && geo::passage(mp, x, y, dir) == 1) printf(" %d,%d:%c", x, y, "N?E?S?W"[dir]);
+            }
         printf("\n  not reached:");
         for (int kk = 0; kk < 256; ++kk)
             if (!seen[kk]) printf(" %d,%d=%X", kk % 16, kk / 16, geo::flags(mp, kk % 16, kk / 16) & 0x7F);
