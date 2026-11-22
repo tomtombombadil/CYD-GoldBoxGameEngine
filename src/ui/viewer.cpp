@@ -2789,11 +2789,17 @@ ui::Rect walk_key(int k)
 constexpr int kCompCell = 9, kCompMapY = 30, kCompPlayMapY = 2;   // (the Walk Test's map under its two lines)
 
 // The map's one legend line (Tom, 2026-11-10 / 14): the colours' words in their colours
-void draw_map_legend(lgfx::LovyanGFX& g, int x, int y)
+void draw_map_legend(lgfx::LovyanGFX& g, int x, int y, bool places = false)
 {
     g.setFont(&fonts::Font0);
     g.setTextDatum(lgfx::textdatum_t::top_left);
     // (Tom, 2026-11-14: the words alone, in their colours)
+    if (places) {
+        // (PoolRad's wilderness: no doors there - its places instead)
+        g.setTextColor(style::kPlace);
+        g.drawString("Place", x, y);
+        return;
+    }
     g.setTextColor(style::kWarn);
     g.drawString("Locked", x, y);
     g.setTextColor(style::kCyan);
@@ -2809,9 +2815,20 @@ struct MapSource {
     int (*dir)();
     void (*describe)(char*, char*, int);
     bool teleport;      // a tap on a square moves the party there (Walk Test)
+    bool (*place)(int, int);    // a place on that square (null: none)
 };
-const MapSource kWalkMap{walk::map, walk::pos_x, walk::pos_y, walk::dir, walk::describe, true};
-const MapSource kPlayMap{play::map, play::pos_x, play::pos_y, play::dir, play::describe, false};
+const MapSource kWalkMap{walk::map, walk::pos_x, walk::pos_y, walk::dir, walk::describe, true, nullptr};
+const MapSource kPlayMap{play::map, play::pos_x, play::pos_y, play::dir, play::describe, false, play::map_place};
+
+// Any place on the map now shown (the legend's "Place")
+bool map_has_places(const MapSource& ms)
+{
+    if (!ms.place) return false;
+    for (int y = 0; y < geo::kSize; ++y)
+        for (int x = 0; x < geo::kSize; ++x)
+            if (ms.place(x, y)) return true;
+    return false;
+}
 
 // 320x240's Play Test row: the movement keys while the party can walk, the
 // cursor keys otherwise; row_flip: Cursor / Move swapped them by hand
@@ -2866,7 +2883,7 @@ void draw_companion(const MapSource& ms = kWalkMap)
     draw_map_grid(g, *m, ms, comp_map_x(), my, cell);
     const int ly = my + cell * geo::kSize + 3;
     if (ms.teleport) ui::text(x0 + 6, ly, "Tap a square to go there", style::kTextMuted, ui::Font::Small);
-    else draw_map_legend(g, x0 + 6, ly);
+    else draw_map_legend(g, x0 + 6, ly, map_has_places(ms));
     redraw_side_keys();
 }
 
@@ -2942,6 +2959,15 @@ void draw_map_grid(lgfx::LovyanGFX& g, const geo::Map& map, const MapSource& ms,
                     else clip_fill(lx - 1, ly + 1, 3, cell - 1, col);
                 }
             }
+    // The places (PoolRad's wilderness): a square in the middle of theirs
+    if (ms.place) {
+        const int ps = cell / 2 > 2 ? cell / 2 : 2;
+        for (int y = 0; y < geo::kSize; ++y)
+            for (int x = 0; x < geo::kSize; ++x)
+                if (ms.place(x, y))
+                    g.fillRect(mx + x * cell + (cell - ps + 1) / 2, my + y * cell + (cell - ps + 1) / 2, ps, ps,
+                               style::kPlace);
+    }
     // The party: a triangle pointing the way it faces
     const int cx = mx + ms.x() * cell + cell / 2, cy = my + ms.y() * cell + cell / 2;
     const int r = cell / 2 - 1;
@@ -2970,13 +2996,14 @@ void draw_map_page()
     const geo::Map* m = kPlayMap.map();
     if (m) {
         draw_map_grid(g, *m, kPlayMap, mx, my, cell);
-        draw_map_legend(g, 2, my + cell * geo::kSize + 2);
+        draw_map_legend(g, 2, my + cell * geo::kSize + 2, map_has_places(kPlayMap));
     } else {
         wrap_text(4, 4, side - 8, "No map here.", ui::Font::Normal, style::kText, true);
     }
     if (comp_on()) map_page_party(side, pic::kScreenW - side);
 }
 
+play::MoveKeys pad_look = play::MoveKeys::Turns;   // (the movement keys as last drawn)
 void draw_walk_keys(const char* side_label, const char* area_label, bool cursor)
 {
     side_keys[0] = area_label;
@@ -3000,12 +3027,23 @@ void draw_walk_keys(const char* side_label, const char* area_label, bool cursor)
         for (int k = kWD0; k <= kWD7; ++k) ui::key_compass(walk_key(k), k - kWD0);
         ui::key_small(walk_key(kWFSel), "Select");
     } else if (row != Row::Cursor || ui::large()) {
-        ui::key_arrow(walk_key(kWTurnL), ui::Arrow::TurnLeft);
+        // (an overland's keys as they act there - Tom, 2026-11-22: PoolRad's turn keys greyed, Turn
+        // Around a down arrow; Champions' / the Dark Queen's turn keys their diagonal steps)
+        pad_look = play::move_keys();
+        if (pad_look == play::MoveKeys::Turns) {
+            ui::key_arrow(walk_key(kWTurnL), ui::Arrow::TurnLeft);
+            ui::key_arrow(walk_key(kWTurnR), ui::Arrow::TurnRight);
+        } else if (pad_look == play::MoveKeys::Steps4) {
+            ui::key_arrow(walk_key(kWTurnL), ui::Arrow::TurnLeft, ui::KeyStyle::Dim);
+            ui::key_arrow(walk_key(kWTurnR), ui::Arrow::TurnRight, ui::KeyStyle::Dim);
+        } else {
+            ui::key_compass(walk_key(kWTurnL), 7);
+            ui::key_compass(walk_key(kWTurnR), 1);
+        }
         ui::key_arrow(walk_key(kWStepL), ui::Arrow::Left);
         ui::key_arrow(walk_key(kWFwd), ui::Arrow::Forward);
         ui::key_arrow(walk_key(kWStepR), ui::Arrow::Right);
-        ui::key_arrow(walk_key(kWTurnR), ui::Arrow::TurnRight);
-        ui::key_arrow(walk_key(kWAround), ui::Arrow::TurnAround);
+        ui::key_arrow(walk_key(kWAround), pad_look == play::MoveKeys::Turns ? ui::Arrow::TurnAround : ui::Arrow::Back);
     }
     if (cursor && (ui::large() || row == Row::Cursor) && row != Row::Fight) {
         ui::key_small(walk_key(kWUp), "Up");
@@ -5965,7 +6003,7 @@ void strip_update()
     if (m) {
         const int mx = 1 + (w - kCompCell * geo::kSize - 1) / 2;
         draw_map_grid(*sp, *m, kPlayMap, mx, kStripLowY, kCompCell);
-        draw_map_legend(*sp, 1 + 5, kStripLowY + kCompCell * geo::kSize + 4);
+        draw_map_legend(*sp, 1 + 5, kStripLowY + kCompCell * geo::kSize + 4, map_has_places(kPlayMap));
     }
     ui::gfx().strip_show(0, kStripLowY, sp->width(), kStripLowH);
 }
@@ -6062,6 +6100,23 @@ void comp_press_light()
     press_panel_lit = true;
 }
 
+// A fight swaps colours 0 and 8 (the field's black shows dark grey);
+// Gateway's shows 8 black. Applied over the EGA palette - again whenever
+// that palette is put back (draw_play: the game screen after the Game
+// menu - Tom, 2026-11-22: PoolRad's wilderness field came back black)
+int fight_colours = 0;
+void fight_colours_apply()
+{
+    if (fight_colours == 1) {
+        frame::set_palette(0, pic::kEga[8]);
+        frame::set_palette(8, pic::kEga[0]);
+    } else if (fight_colours == 2) {
+        frame::set_palette(8, pic::kEga[0]);
+    } else if (fight_colours == 3) {
+        frame::set_palette(8, pic::kEga[1]);
+    }
+}
+
 void present_play()
 {
     // A VGA game in 256 colours: its palette changed - the whole screen again
@@ -6070,20 +6125,10 @@ void present_play()
         big_force = true;
         if (comp_view == companion::View::Party) comp_force = true;     // (the icons' colours)
     }
-    // A fight swaps colours 0 and 8 (the field's black shows dark grey);
-    // Gateway's shows 8 black
-    static int fight_colours = 0;
     if (play::fight_colours() != fight_colours) {
         fight_colours = play::fight_colours();
         frame::set_ega_palette();
-        if (fight_colours == 1) {
-            frame::set_palette(0, pic::kEga[8]);
-            frame::set_palette(8, pic::kEga[0]);
-        } else if (fight_colours == 2) {
-            frame::set_palette(8, pic::kEga[0]);
-        } else if (fight_colours == 3) {
-            frame::set_palette(8, pic::kEga[1]);
-        }
+        fight_colours_apply();
         frame::present();
         big_force = true;
         if (comp_view == companion::View::Party) comp_force = true;
@@ -6127,6 +6172,9 @@ void present_play()
     } else if (play::fight_pad() != pad_fight) {
         draw_walk_keys("Look", "Game", true);        // the fight's pad comes and goes
     }
+    // (onto / off an overland: the movement keys as they act there)
+    if (play::move_keys() != pad_look && !play::fight_pad() && (ui::large() || row == Row::Move))
+        draw_walk_keys("Look", "Game", true);
     comp_update(big);
     strip_update();
 }
@@ -6145,6 +6193,8 @@ void draw_play()
     frame::set_ega_palette();
     play::draw(frame::canvas());
     play_palette(true);                  // (a VGA game in 256 colours: its palette)
+    fight_colours = play::fight_colours();
+    fight_colours_apply();               // (a fight's field colours over it, as present_play puts them)
     ui::clear();
     frame::present();
     int y0, y1;

@@ -2671,6 +2671,31 @@ int main(int argc, char** argv)
         }
         printf("  OVPATH %d:%d,%d -> %d:%d,%d: %s\n", sa, sx, sy, ta, tx, ty, from[goal] < 0 ? "no way" : path.c_str());
     }
+    if (getenv("MAPASCII")) {
+        // MAPASCII=1: the Companion's map as play::map() gives it (walls: | and -, places: P, the party: @
+        // facing ^ > v <) - PoolRad's wilderness its travel map (2026-11-22)
+        const geo::Map* m = play::map();
+        if (!m) printf("  MAPASCII: no map\n");
+        else {
+            printf("  MAPASCII at %d,%d dir %d (game %d,%d) map %p\n", play::pos_x(), play::pos_y(), play::dir(), play::vm ? play::vm->get(0x4BC3) & 0xFF : -1, play::vm ? play::vm->get(0x4BC4) & 0xFF : -1, (const void*)m);
+            for (int y = 0; y < geo::kSize; ++y) {
+                std::string top = "  ", mid = "  ";
+                for (int x = 0; x < geo::kSize; ++x) {
+                    top += "+";
+                    top += geo::wall(*m, x, y, 0) || (y > 0 && geo::wall(*m, x, y - 1, 4)) ? "--" : "  ";
+                    mid += geo::wall(*m, x, y, 6) || (x > 0 && geo::wall(*m, x - 1, y, 2)) ? "|" : " ";
+                    const bool party = x == play::pos_x() && y == play::pos_y();
+                    const char* f[4] = {"@^", "@>", "@v", "@<"};
+                    mid += party ? f[(play::dir() / 2) & 3] : play::map_place(x, y) ? "P " : "  ";
+                }
+                mid += geo::wall(*m, 15, y, 2) ? "|" : " ";
+                printf("%s+\n%s\n", top.c_str(), mid.c_str());
+            }
+            std::string bot = "  ";
+            for (int x = 0; x < geo::kSize; ++x) bot += geo::wall(*m, x, 15, 4) ? "+--" : "+  ";
+            printf("%s+\n", bot.c_str());
+        }
+    }
     if (getenv("MAPREACH") && play::d->map.loaded) {
         // MAPREACH=1: every square the party can walk to from where it stands (MAPPATH's rules - one-way sides
         // count; MAPLOCKED / MAPSECRET as there), with each square's event number (flags & 0x7F) when not 0

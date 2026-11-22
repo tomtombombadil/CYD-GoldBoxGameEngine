@@ -530,6 +530,10 @@ void key_arrow(const Rect& r, Arrow a, KeyStyle s)
         g->fillTriangle(cx, cy - sz, cx - hh, cy - sz + hh, cx + hh, cy - sz + hh, col);
         g->fillRect(cx - t / 2, cy - sz + hh, t, sz * 2 - hh, col);
         break;
+    case Arrow::Back:       // (Forward upside down: a step south on an overland)
+        g->fillTriangle(cx, cy + sz, cx - hh, cy + sz - hh, cx + hh, cy + sz - hh, col);
+        g->fillRect(cx - t / 2, cy - sz, t, sz * 2 - hh, col);
+        break;
     case Arrow::Left:
         g->fillTriangle(cx - sz, cy, cx - sz + hh, cy - hh, cx - sz + hh, cy + hh, col);
         g->fillRect(cx - sz + hh, cy - t / 2, sz * 2 - hh, t, col);

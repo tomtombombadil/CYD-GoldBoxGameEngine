@@ -281,6 +281,19 @@ struct ShopFinds {
     uint8_t shop_head = 0xFF, temple_head = 0xFF;
     bool    shop_pic_normal = false;
 };
+// A wilderness script's special squares (PoolRad's areas 25-27, their
+// after-move entry - poolrad_overland_facts.md 7.2): a loop over `rows`
+// rows - GET TABLE count_tab[i] (the squares in row i), GET TABLE
+// y_tab[i] compared with the party's y (0x4BC4), then GET TABLE x_tab[k]
+// over that row's squares compared with its x (0x4BC3). The tables are the
+// script's own memory (read them as GET TABLE does: get(table + index)).
+// rows 0: none found. code = the block without its header (as decode()).
+struct PlaceTables {
+    int      rows = 0;
+    uint16_t count_tab = 0, y_tab = 0, x_tab = 0;
+};
+PlaceTables find_places(const uint8_t* code, uint32_t len, const OpSet& set);
+
 // shop_op: the game's 0x3C is SHOP n (its goods the program's lists)
 void find_shops(const uint8_t* block, uint32_t len, const OpSet& set, ShopFinds& out, bool shop_op = false);
 

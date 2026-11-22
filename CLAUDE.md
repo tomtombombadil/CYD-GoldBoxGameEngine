@@ -367,7 +367,10 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   plays - then RST only, INT never driven, the I2S closed while it switches
   (v0.210.6, `lrck_switch`: the synced chip drives INT and the music was
   static; RST only made taps less sensitive); touches in the bars
-  dropped. Serial on UART0 (CH340C: `ARDUINO_USB_CDC_ON_BOOT=0`). Sound
+  dropped. Its settings, display fixes and touch calibration live on the card
+  (`/GOLDBOX/_CYD/*.bin`, `BOARD_STORAGE_ON_CARD`, hal/storage's storage_open): a
+  write to the internal flash cuts the PSRAM off and the panel's picture jumps
+  (v0.213.3, Tom) - never write the flash while it shows. Serial on UART0 (CH340C: `ARDUINO_USB_CDC_ON_BOOT=0`). Sound
   `BOARD_AUDIO_I2S` (no codec, clocks kept on as the S3 codec's). The SD
   card on SPI (FSPI, `BOARD_SD_SPI_PORT` - no VSPI on the S3). QEMU:
   `qemus3_50` (`run_qemu.py --s3 --env qemus3_50`) checks every 2x copy.
@@ -504,6 +507,10 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   _page.ppm beside each snapshot); data via `play::panel_*` - no memory
   kept, nothing drawn inside a fight's work. Monsters' records go before
   a fight's results: panel_dot skips them once `ml` is gone.
+  The map on an overland (Tom, 2026-11-22; SPEC 4): its travel-ability - a wall wherever a step is refused, the
+  arrow at the party's square, the places the scripts know (orange) - PoolRad's wilderness first (v0.213.0:
+  `play::map()` / `map_place`, `overland::step_refused`, `ecl::find_places`), the marker overlands next after Tom
+  has tried it; zoom / panning if it's too small. Never the last 3D map there.
   Party view's classes (Tom, 2026-11-14): a class with the experience for
   its next level magenta (Tom, 2026-11-20: as the games' party list - was yellow; the member's name
   magenta too unless it is the chosen one, white) - its name and level only ("Fighter 2/Magic-User

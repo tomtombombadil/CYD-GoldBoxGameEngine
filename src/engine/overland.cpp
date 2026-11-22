@@ -87,14 +87,47 @@ Step step(const Data& d, const Facts& f, int area, int* x, int* y, int dir, bool
     if (nx > 15) nx = 15;
     if (ny < 0) ny = 0;
     if (ny > kH - 1) ny = kH - 1;
-    const int col = column(d, area, nx);
-    const uint8_t t = col < kW ? d.map[ny * kW + col] : 0;
-    for (int k = 0; k < f.n_blocked; ++k)
-        if (t >= f.blocked[k * 2] && t <= f.blocked[k * 2 + 1]) return Step::Blocked;
-    if (!healed && ((t >= f.river[0] && t <= f.river[1]) || t == f.river_also)) return Step::River;
+    const Step s = onto(d, f, column(d, area, nx), ny, healed);
+    if (s != Step::Moved) return s;
     *x = nx;
     *y = ny;
     return Step::Moved;
+}
+
+Step onto(const Data& d, const Facts& f, int col, int row, bool healed)
+{
+    // (step()'s own reading: a column past the map's right edge is byte 0)
+    if (row < 0 || row >= kH || col < 0) return Step::Blocked;
+    const uint8_t t = col < kW ? d.map[row * kW + col] : 0;
+    for (int k = 0; k < f.n_blocked; ++k)
+        if (t >= f.blocked[k * 2] && t <= f.blocked[k * 2 + 1]) return Step::Blocked;
+    if (!healed && ((t >= f.river[0] && t <= f.river[1]) || t == f.river_also)) return Step::River;
+    return Step::Moved;
+}
+
+bool step_refused(const Data& d, const Facts& f, int area, int x, int y, int dir, bool healed)
+{
+    switch (dir & 7) {
+    case 0:
+        if (y <= 2) return true;
+        break;
+    case 6:
+        if (x <= 2) {
+            if (area == 0) return true;
+            return false;                          // (the seam: into the area before)
+        }
+        break;
+    case 2:
+        if (x >= 15) {
+            if (area == 2) return true;
+            return false;                          // (the seam: into the next area)
+        }
+        break;
+    default:
+        break;
+    }
+    int nx = x, ny = y;
+    return step(d, f, area, &nx, &ny, dir & 7, healed) != Step::Moved;
 }
 
 } // namespace overland

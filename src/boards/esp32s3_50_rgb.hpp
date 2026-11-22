@@ -67,6 +67,7 @@
 #define BOARD_PIN_I2C_SDA       19
 #define BOARD_PIN_I2C_SCL       20
 #define BOARD_SIDE_STRIP        1    // the Companion Strip (Settings): strip(), strip_set(), strip_show()
+#define BOARD_STORAGE_ON_CARD   1    // settings / display fixes / calibration on the card: a flash write stalls the RGB panel (hal/storage.h)
 
 namespace board5 {
 

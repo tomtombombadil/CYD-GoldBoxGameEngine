@@ -2273,6 +2273,31 @@ static void test_ecl()
     const ecl::MapLoad none = ecl::find_map_load(quiet_only.data(), static_cast<uint32_t>(quiet_only.size()), set);
     CHECK(!none.has_geo() && !none.has_walls());
 
+    // The Companion's wilderness places (ecl::find_places): the after-move
+    // loop - a bound, GET TABLE count / y with y compared to 0x4BC4, then
+    // GET TABLE x with x compared to 0x4BC3; a loop over 0x4BC4 alone isn't
+    {
+        Bytes c;
+        auto cmp_imm = [&](uint16_t a, int v) { c.push_back(0x03); op_addr(c, a); op_imm(c, v); };
+        auto cmp = [&](uint16_t a, uint16_t b) { c.push_back(0x03); op_addr(c, a); op_addr(c, b); };
+        auto get = [&](uint16_t t, uint16_t i, uint16_t to) { c.push_back(0x2A); op_addr(c, t); op_addr(c, i); op_addr(c, to); };
+        get(0x9719, 0x7F79, 0x7F7A); cmp(0x7F7A, 0x035F);             // (the step entry's own lookup)
+        cmp_imm(0x4CB3, 0xFE);
+        cmp_imm(0x7F79, 9);
+        get(0x9761, 0x7F79, 0x7F7B); get(0x974A, 0x7F79, 0x7F7A); cmp(0x7F7A, 0x4BC4);
+        cmp(0x7F7C, 0x7F7B);
+        get(0x9753, 0x7F7C, 0x7F7D); cmp(0x7F7D, 0x4BC3);
+        c.push_back(0x00);
+        const ecl::PlaceTables pt = ecl::find_places(c.data(), static_cast<uint32_t>(c.size()), set);
+        CHECK(pt.rows == 9 && pt.count_tab == 0x9761 && pt.y_tab == 0x974A && pt.x_tab == 0x9753);
+        Bytes c2;
+        c.swap(c2);
+        cmp_imm(0x7F79, 9);
+        get(0x9761, 0x7F79, 0x7F7B); get(0x974A, 0x7F79, 0x7F7A); cmp(0x7F7A, 0x4BC4);
+        c.push_back(0x00);
+        CHECK(ecl::find_places(c.data(), static_cast<uint32_t>(c.size()), set).rows == 0);   // (no x table)
+    }
+
     // The Cheats tab's Merchant (ecl::find_shops): a shop's TREASURE with the
     // shop word set before its COMBAT (either order), its price factor; a
     // treasure after a fight isn't a shop's
@@ -8367,6 +8392,20 @@ static void test_overland()
     CHECK(overland::step(d, f, 1, &x, &y, 2, true) == overland::Step::Moved && x == 7);
     x = 15; y = 10;
     CHECK(overland::step(d, f, 0, &x, &y, 2, false) == overland::Step::Moved && x == 15);   // (clamped: still a step)
+    // The Companion's travel map (onto, step_refused): the squares as step()
+    // takes them, the scripts' edges, the seams open
+    CHECK(overland::onto(d, f, 5, 10, false) == overland::Step::Moved);
+    CHECK(overland::onto(d, f, 5, 35, false) == overland::Step::Blocked);
+    CHECK(overland::onto(d, f, 20, 10, false) == overland::Step::River && overland::onto(d, f, 20, 10, true) == overland::Step::Moved);
+    CHECK(overland::onto(d, f, 5, 36, false) == overland::Step::Blocked && overland::onto(d, f, -1, 3, false) == overland::Step::Blocked);
+    CHECK(overland::step_refused(d, f, 0, 5, 2, 0, false));          // (no step north from row 2)
+    CHECK(!overland::step_refused(d, f, 0, 5, 3, 0, false));
+    CHECK(overland::step_refused(d, f, 0, 2, 10, 6, false));         // (the first area's west edge)
+    CHECK(!overland::step_refused(d, f, 1, 2, 10, 6, false));        // (a seam: into the area before)
+    CHECK(!overland::step_refused(d, f, 0, 15, 10, 2, false));       // (a seam: into the next area)
+    CHECK(overland::step_refused(d, f, 2, 15, 10, 2, false));        // (the last area's east edge)
+    CHECK(overland::step_refused(d, f, 0, 5, 34, 4, false));         // (the sea)
+    CHECK(overland::step_refused(d, f, 1, 6, 10, 2, false) && !overland::step_refused(d, f, 1, 6, 10, 2, true));
 }
 
 static void test_monster_fx()

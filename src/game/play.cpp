@@ -70,6 +70,20 @@ enum class Then : uint8_t {
 
 struct Host;
 
+// The Companion's map of PoolRad's wilderness (Tom, 2026-11-22): a 16 x 16
+// window of the area the party is in as a wall map - a wall wherever a step
+// is refused (the sea and coast, the stinking river until the land is
+// healed, the scripts' edges) - and the scripts' own special squares (the
+// places); on the heap only while the party is out there
+struct OvCompanion {
+    geo::Map maps[2];                           // (rebuilt into the other one: a new pointer tells the panels)
+    int cur = 0;
+    int area = -1, y0 = -1, script = -1;
+    bool healed = false;
+    ecl::PlaceTables pt;
+    uint8_t place[geo::kSize * 36] = {};      // (local x + y * 16: the area's whole height)
+};
+
 // The Play Test's state. The two biggest parts (the 3D view's tiles,
 // ~13 KB, and the script memory, ~13 KB) are blocks of their own: the
 // heap is in pieces and no one piece has room for all of it (v0.21.1)
@@ -83,6 +97,7 @@ struct Data {
     {
         delete hl_col;
         delete ov;
+        delete ovc;
         delete anim_idx;
         free(tr_frame);
         free(tr_pieces);
@@ -136,6 +151,7 @@ struct Data {
 
     // Pool's wilderness map (read from the program when first shown), the rider's gallop
     overland::Data* ov = nullptr;
+    OvCompanion* ovc = nullptr;
     uint8_t        gallop = 0;
     // Pool's view modes: the wilderness screen drawn by the menu / the view
     // mode before the last new block (DS 0x49F9 > 1), the block's own (0x49FA > 1)
@@ -19925,6 +19941,15 @@ bool walking()
            (vm->get(0x4BE6) != 0 || pool_overland() || gw_wild() || q_overland() || (moving && marker_overland()));
 }
 
+MoveKeys move_keys()
+{
+    // (act()'s overland branches: what each key does there)
+    if (!d || !vm || screen == Screen::Fight) return MoveKeys::Turns;
+    if (kr_overland() || q_overland()) return MoveKeys::Steps6;
+    if (pool_overland()) return MoveKeys::Steps4;
+    return MoveKeys::Turns;
+}
+
 void set_present_now(void (*fn)()) { g_present_now = fn; }
 
 bool walk_pending()
@@ -21148,14 +21173,104 @@ void text_line(pic::Canvas& c, const char* s, int n, int x, int y, int scale)
 
 // (none on the Dark Queen's overland: its GEO map 2 is a 10 x 10 stand-in)
 // (while Save Slot Info shows a slot's save: that save's map and place - or no map)
+// PoolRad's wilderness as the Companion's map (null: not out there, or its
+// facts not read). The window: 16 rows of the area's 36, the party's row
+// in its middle where it can be
+const OvCompanion* ov_companion()
+{
+    if (!d || !vm || !pool_overland() || !ov_load()) {
+        if (d && d->ovc) {
+            delete d->ovc;
+            d->ovc = nullptr;
+        }
+        return nullptr;
+    }
+    if (!d->ovc) {
+        d->ovc = new (std::nothrow) OvCompanion;
+        if (!d->ovc) return nullptr;
+    }
+    OvCompanion& o = *d->ovc;
+    const overland::Facts& of = *d->prof->overland;
+    const int area = ov_area(), py = vm->get(0x4BC4) & 0xFF;
+    // The window (16 of the area's 36 rows) stays while the party walks inside it - the arrow moves, as
+    // on a 3D map - and centres again when it comes within 3 rows of an edge (Tom, 2026-11-22: the
+    // arrow stood still going north / south while the window followed every step)
+    int y0 = o.y0;
+    if (o.area != area || y0 < 0 || py < y0 + 3 || py > y0 + geo::kSize - 4) y0 = py - geo::kSize / 2;
+    y0 = y0 < 0 ? 0 : y0 > overland::kH - geo::kSize ? overland::kH - geo::kSize : y0;
+    const bool healed = vm->get(of.healed) != 0;
+    if (o.script != d->gs.script) {
+        // The places: the area script's special squares, read as its own GET TABLEs read them
+        o.script = d->gs.script;
+        o.pt = d->prof->ecl_ops ? ecl::find_places(ecl::code_of(d->gs), d->gs.code_len, *d->prof->ecl_ops)
+                                : ecl::PlaceTables{};
+        memset(o.place, 0, sizeof o.place);
+        for (int i = 0, k = 0; i < o.pt.rows; ++i) {
+            const int n = vm->get(static_cast<uint16_t>(o.pt.count_tab + i)) & 0xFF;
+            const int y = vm->get(static_cast<uint16_t>(o.pt.y_tab + i)) & 0xFF;
+            for (int j = 0; j < n && k < 255; ++j, ++k) {
+                const int x = vm->get(static_cast<uint16_t>(o.pt.x_tab + k)) & 0xFF;
+                if (x < geo::kSize && y < overland::kH) o.place[x + y * geo::kSize] = 1;
+            }
+        }
+        o.area = -1;                                // (the walls again)
+    }
+    if (o.area == area && o.y0 == y0 && o.healed == healed && o.maps[o.cur].loaded) return &o;
+    o.area = area;
+    o.y0 = y0;
+    o.healed = healed;
+    o.cur ^= 1;
+    geo::Map& m = o.maps[o.cur];
+    memset(m.plane, 0, sizeof m.plane);
+    m.w = m.h = geo::kSize;
+    m.wraps = false;
+    for (int y = 0; y < geo::kSize; ++y)
+        for (int x = 0; x < geo::kSize; ++x) {
+            const int ay = y0 + y;
+            // (columns 0 and 1 are never stood on: the areas start at x 2)
+            if (x < 2 || overland::onto(*d->ov, of, overland::column(*d->ov, area, x), ay, healed) != overland::Step::Moved)
+                continue;
+            uint8_t n = 0, e = 0, so = 0, w = 0;
+            if (overland::step_refused(*d->ov, of, area, x, ay, 0, healed)) n = 1;
+            if (overland::step_refused(*d->ov, of, area, x, ay, 2, healed)) e = 1;
+            if (overland::step_refused(*d->ov, of, area, x, ay, 4, healed)) so = 1;
+            if (overland::step_refused(*d->ov, of, area, x, ay, 6, healed)) w = 1;
+            const int i = x + y * geo::kSize;
+            m.plane[0][i] = static_cast<uint8_t>(n << 4 | e);
+            m.plane[1][i] = static_cast<uint8_t>(so << 4 | w);
+        }
+    m.loaded = true;
+    return &o;
+}
+
 const geo::Map* map()
 {
     if (peek_on()) return peek->map_ok ? &peek->map : nullptr;
+    if (const OvCompanion* o = ov_companion()) return &o->maps[o->cur];
+    if (d && pool_overland()) return nullptr;       // (its facts unread: no map rather than the last 3D one)
     return d && d->map.loaded && !q_overland() ? &d->map : nullptr;
 }
-int pos_x() { return peek_on() && peek->x >= 0 ? peek->x : d ? d->gs.x : 0; }
-int pos_y() { return peek_on() && peek->y >= 0 ? peek->y : d ? d->gs.y : 0; }
+int pos_x()
+{
+    if (peek_on() && peek->x >= 0) return peek->x;
+    if (d && pool_overland() && ov_companion()) return vm->get(0x4BC3) & 0xFF;
+    return d ? d->gs.x : 0;
+}
+int pos_y()
+{
+    if (peek_on() && peek->y >= 0) return peek->y;
+    if (d && pool_overland()) {
+        if (const OvCompanion* o = ov_companion()) return (vm->get(0x4BC4) & 0xFF) - o->y0;   // (the window as map() gives it)
+    }
+    return d ? d->gs.y : 0;
+}
 int dir() { return peek_on() ? peek->dir : d ? d->gs.dir : 0; }
+bool map_place(int x, int y)
+{
+    if (peek_on() || !d || !d->ovc || !pool_overland()) return false;
+    const int ay = d->ovc->y0 + y;
+    return x >= 0 && x < geo::kSize && ay >= 0 && ay < overland::kH && d->ovc->place[x + ay * geo::kSize];
+}
 
 void describe(char* line1, char* line2, int cap)
 {

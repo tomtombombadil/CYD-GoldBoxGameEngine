@@ -105,6 +105,9 @@ The games draw a 320x200 screen. The canvas is presented:
   VIEW ENCAMP ...") = pressing its key; a line in a list = choosing it (and
   Enter); a square on the combat map = stepping / aiming toward it; "press
   any key" prompts = tap the game screen.
+- **The movement keys on an overland** (Tom, 2026-11-22, v0.214.0; `play::move_keys`): drawn as they act -
+    PoolRad's wilderness: the turn keys greyed, Turn Around a down arrow; Champions' / Death Knights' / the Dark
+    Queen's: the turn keys diagonal arrows (north-west / north-east), Turn Around a down arrow; elsewhere as in 3D.
 - **Keys only for what isn't on screen**, changing with what the game does:
   - 320x240 (Walk Test): one row of 8 square keys (~37x34) under the game.
     Exploring: Side-step Left, Turn Left, Forward, Turn Right, Side-step
@@ -162,6 +165,28 @@ The games draw a 320x200 screen. The canvas is presented:
     script / map lines) drawn over the game screen until the next tap; the
     game waits meanwhile. Look is on the game's menu line there. The Walk
     Test keeps its row of 8 (no cursor keys).
+  - **The map on PoolRad's wilderness** (Tom, 2026-11-22, v0.213.0: "a
+    representation of the travel-ability of the overland map ... the
+    arrow where the party is and the barriers to their travel ... markers
+    at the coordinates where the party can leave"; it showed the last 3D
+    map before): `play::map()` gives a 16 x 16 window of the area the
+    party is in (local x 0-15; 16 of its 36 rows - the window holds
+    while the party walks inside it, so the arrow moves, and centres on
+    it again when it comes within 3 rows of an edge, v0.213.1; each
+    rebuild a new map pointer so every panel redraws), a wall on each side
+    of a land square that a step can't cross - the sea, coast and lakes
+    (the program's blocked bytes), the stinking river until the land is
+    healed, the scripts' edges (no step north from row 2, west from x 2
+    in area 25, east from x 15 in area 27; the seams are open)
+    (`overland::onto` / `step_refused` - the step rule the engine moves
+    by); `play::map_place(x, y)`: the area script's own special squares
+    (towns' edges, camps, caves, boats - `ecl::find_places` finds its
+    after-move loop, the tables read as its GET TABLEs read them), drawn as
+    orange squares (`style::kPlace`), the legend "Place". Built on the heap
+    (about 1.6 KB) only while the party is out there. Not yet: zoom /
+    panning controls (Tom: if it's too small); the other games' overlands
+    (Champions, Death Knights, Darkness, the Dark Queen - their scripts'
+    blocking; Curse's travel map) still show the last 3D map.
   - **Right Hand / Left Hand** (Tom, 2026-11-06; Settings key, a board
     setting like Rotate 180, not in As Original; Settings `left_hand`,
     viewer.cpp `walk_key`): the keys move so the tapping hand covers less

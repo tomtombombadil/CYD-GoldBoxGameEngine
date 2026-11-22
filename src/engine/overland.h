@@ -78,5 +78,18 @@ uint8_t healed_colour(const Data& d, const Facts& f, int frame, uint8_t colour);
 // them back: the river not passable yet)
 enum class Step : uint8_t { Moved, Blocked, River };
 Step step(const Data& d, const Facts& f, int area, int* x, int* y, int dir, bool healed);
+// What a step ONTO global square (col, row) meets - the program's test of
+// step(): Moved (land), Blocked (sea, coast, lake), River (the stinking
+// river, not passable yet); off the map: Blocked
+Step onto(const Data& d, const Facts& f, int col, int row, bool healed);
+
+// The Companion's map of a wilderness area (Tom, 2026-11-22: "a
+// representation of the travel-ability of the overland map"): the scripts'
+// edges (poolrad_overland_facts.md 7.1) - no step north from row 2 or less,
+// none west from x 2 or less in the first area, none east from x 15 or more
+// in the last; the seams between the areas are crossings, not edges.
+// True when a step from local (x, y) of `area` (0-2) towards dir (0 N, 2 E,
+// 4 S, 6 W) is refused there - by an edge, or by the square it goes onto.
+bool step_refused(const Data& d, const Facts& f, int area, int x, int y, int dir, bool healed);
 
 } // namespace overland
