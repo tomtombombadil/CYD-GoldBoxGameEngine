@@ -254,6 +254,10 @@ const geo::Map* map();
 int pos_x();
 int pos_y();
 int dir();
+// A place on the map's square (x, y): PoolRad's wilderness - where its
+// scripts have something at that square (a town's edge, a camp, a cave ...);
+// false elsewhere
+bool map_place(int x, int y);
 void describe(char* line1, char* line2, int cap);
 
 // ---- The Companion panel's Party and Battle views (CYD_COMPANION_VIEWS;

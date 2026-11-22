@@ -25,6 +25,7 @@ constexpr uint16_t kGold       = rgb(232, 184, 64);
 constexpr uint16_t kWarn       = rgb(220, 90, 70);
 constexpr uint16_t kHeader     = rgb(16, 24, 56);
 constexpr uint16_t kParty      = rgb(40, 255, 40);     // the map's party arrow (Tom: bright green)
+constexpr uint16_t kPlace      = rgb(255, 140, 0);     // the map's places (PoolRad's wilderness: towns, camps, caves - Tom, 2026-11-22)
 constexpr uint16_t kCyan       = rgb(85, 255, 255);    // EGA light cyan: the party's names, the map's secret doors (Tom)
 
 } // namespace style

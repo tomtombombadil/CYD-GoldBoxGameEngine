@@ -274,3 +274,55 @@ void find_shops(const uint8_t* block, uint32_t len, const OpSet& set, ShopFinds&
 }
 
 } // namespace ecl
+
+namespace ecl {
+
+PlaceTables find_places(const uint8_t* code, uint32_t len, const OpSet& set)
+{
+    constexpr uint8_t kCompare = 0x03, kGetTable = 0x2A;
+    constexpr uint16_t kX = 0x4BC3, kY = 0x4BC4;
+    PlaceTables out;
+    // The last GET TABLEs (table, index, result) and the last compare of an
+    // address with a plain number (the loop's bound)
+    struct Get {
+        uint16_t table = 0, index = 0, dest = 0;
+    } last[2];
+    uint16_t bound_var = 0, y_index = 0, y_dest = 0;
+    int bound = 0;
+    auto is_addr = [](const Operand& o) { return o.code == 1 || o.code == 3; };
+    Insn in;
+    for (uint32_t at = 0; at < len && decode(code, len, at, set, in); at = in.next) {
+        if (in.next <= at) break;
+        if (in.op == kGetTable && in.count >= 3 && in.ops[0].immediate() == false && is_addr(in.ops[1]) &&
+            is_addr(in.ops[2])) {
+            last[0] = last[1];
+            last[1] = Get{in.ops[0].word(), in.ops[1].word(), in.ops[2].word()};
+            continue;
+        }
+        if (in.op != kCompare || in.count < 2) continue;
+        const Operand &a = in.ops[0], &b = in.ops[1];
+        if (is_addr(a) && (b.code == 0 || b.code == 2)) {
+            bound_var = a.word();
+            bound = b.code == 0 ? b.low : b.word();
+            continue;
+        }
+        if (!is_addr(a) || !is_addr(b)) continue;
+        if (!out.y_tab && b.word() == kY && a.word() == last[1].dest && last[1].index == bound_var &&
+            last[0].index == bound_var && bound > 0 && bound <= 64) {
+            out.y_tab = last[1].table;
+            out.count_tab = last[0].table;
+            y_index = last[1].index;
+            y_dest = last[1].dest;
+            out.rows = bound;
+            continue;
+        }
+        if (out.y_tab && !out.x_tab && b.word() == kX && a.word() == last[1].dest && last[1].index != y_index &&
+            last[1].dest != y_dest) {
+            out.x_tab = last[1].table;
+            return out;
+        }
+    }
+    return PlaceTables{};
+}
+
+} // namespace ecl

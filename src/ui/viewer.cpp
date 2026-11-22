@@ -2789,11 +2789,17 @@ ui::Rect walk_key(int k)
 constexpr int kCompCell = 9, kCompMapY = 30, kCompPlayMapY = 2;   // (the Walk Test's map under its two lines)
 
 // The map's one legend line (Tom, 2026-11-10 / 14): the colours' words in their colours
-void draw_map_legend(lgfx::LovyanGFX& g, int x, int y)
+void draw_map_legend(lgfx::LovyanGFX& g, int x, int y, bool places = false)
 {
     g.setFont(&fonts::Font0);
     g.setTextDatum(lgfx::textdatum_t::top_left);
     // (Tom, 2026-11-14: the words alone, in their colours)
+    if (places) {
+        // (PoolRad's wilderness: no doors there - its places instead)
+        g.setTextColor(style::kPlace);
+        g.drawString("Place", x, y);
+        return;
+    }
     g.setTextColor(style::kWarn);
     g.drawString("Locked", x, y);
     g.setTextColor(style::kCyan);
@@ -2809,9 +2815,20 @@ struct MapSource {
     int (*dir)();
     void (*describe)(char*, char*, int);
     bool teleport;      // a tap on a square moves the party there (Walk Test)
+    bool (*place)(int, int);    // a place on that square (null: none)
 };
-const MapSource kWalkMap{walk::map, walk::pos_x, walk::pos_y, walk::dir, walk::describe, true};
-const MapSource kPlayMap{play::map, play::pos_x, play::pos_y, play::dir, play::describe, false};
+const MapSource kWalkMap{walk::map, walk::pos_x, walk::pos_y, walk::dir, walk::describe, true, nullptr};
+const MapSource kPlayMap{play::map, play::pos_x, play::pos_y, play::dir, play::describe, false, play::map_place};
+
+// Any place on the map now shown (the legend's "Place")
+bool map_has_places(const MapSource& ms)
+{
+    if (!ms.place) return false;
+    for (int y = 0; y < geo::kSize; ++y)
+        for (int x = 0; x < geo::kSize; ++x)
+            if (ms.place(x, y)) return true;
+    return false;
+}
 
 // 320x240's Play Test row: the movement keys while the party can walk, the
 // cursor keys otherwise; row_flip: Cursor / Move swapped them by hand
@@ -2866,7 +2883,7 @@ void draw_companion(const MapSource& ms = kWalkMap)
     draw_map_grid(g, *m, ms, comp_map_x(), my, cell);
     const int ly = my + cell * geo::kSize + 3;
     if (ms.teleport) ui::text(x0 + 6, ly, "Tap a square to go there", style::kTextMuted, ui::Font::Small);
-    else draw_map_legend(g, x0 + 6, ly);
+    else draw_map_legend(g, x0 + 6, ly, map_has_places(ms));
     redraw_side_keys();
 }
 
@@ -2942,6 +2959,15 @@ void draw_map_grid(lgfx::LovyanGFX& g, const geo::Map& map, const MapSource& ms,
                     else clip_fill(lx - 1, ly + 1, 3, cell - 1, col);
                 }
             }
+    // The places (PoolRad's wilderness): a square in the middle of theirs
+    if (ms.place) {
+        const int ps = cell / 2 > 2 ? cell / 2 : 2;
+        for (int y = 0; y < geo::kSize; ++y)
+            for (int x = 0; x < geo::kSize; ++x)
+                if (ms.place(x, y))
+                    g.fillRect(mx + x * cell + (cell - ps + 1) / 2, my + y * cell + (cell - ps + 1) / 2, ps, ps,
+                               style::kPlace);
+    }
     // The party: a triangle pointing the way it faces
     const int cx = mx + ms.x() * cell + cell / 2, cy = my + ms.y() * cell + cell / 2;
     const int r = cell / 2 - 1;
@@ -2970,7 +2996,7 @@ void draw_map_page()
     const geo::Map* m = kPlayMap.map();
     if (m) {
         draw_map_grid(g, *m, kPlayMap, mx, my, cell);
-        draw_map_legend(g, 2, my + cell * geo::kSize + 2);
+        draw_map_legend(g, 2, my + cell * geo::kSize + 2, map_has_places(kPlayMap));
     } else {
         wrap_text(4, 4, side - 8, "No map here.", ui::Font::Normal, style::kText, true);
     }
@@ -5965,7 +5991,7 @@ void strip_update()
     if (m) {
         const int mx = 1 + (w - kCompCell * geo::kSize - 1) / 2;
         draw_map_grid(*sp, *m, kPlayMap, mx, kStripLowY, kCompCell);
-        draw_map_legend(*sp, 1 + 5, kStripLowY + kCompCell * geo::kSize + 4);
+        draw_map_legend(*sp, 1 + 5, kStripLowY + kCompCell * geo::kSize + 4, map_has_places(kPlayMap));
     }
     ui::gfx().strip_show(0, kStripLowY, sp->width(), kStripLowH);
 }
