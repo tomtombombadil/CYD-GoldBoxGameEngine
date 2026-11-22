@@ -57,3 +57,14 @@ key first ("./L...").
   (table 0x142 + pier = 9). Mintarn's own ships go to Neverwinter and Orlumbor at 0600.
 - An event that ends by moving the party (Mintarn's Tyrant) - tourx walks back to its goal square after.
 - Menus a walk must answer: Investigate, Hack, Climb, CAME (to help), ACCEPT (her), Cross.
+
+2026-11-22 (Mintarn's ship, Orlumbor, the crystals):
+- The crystals: script byte 0x3C = the bits won (1 Zhentil red, 2 Hosttower green, 4 Kraken blue), 0x3E =
+  the kind that fell first in the last alliance fight. Quick always fells a Hosttower mage first. The
+  sim's FELL=k (0 / 1 / 2) strikes the first villain of that kind down through combat::damage, so the
+  wanted crystal is the one won - PEEKEND=003C to see what is held before choosing.
+- tourx's healing after fights RESTS: the hour moves. For a 0600 ship: rest by the Sanctuary to hour 5 on
+  the square next to the dock, save, then step by hand. Mintarn: 7,1 north to 7,0. Orlumbor: 13,11 entered
+  facing EAST (from 12,11). Fares 80-175 pp.
+- Orlumbor's fights by flag: 7A ogres 5,11; 7C the rope webs 1,3; 7B the holes 3,0; 7E the rubble 7,14;
+  7F the secret temple of Talos 10,15 (the alliance fight; then Wrighttson at 11,3).
