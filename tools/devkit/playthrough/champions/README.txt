@@ -33,3 +33,11 @@ line stays empty): adv.sh picks the first line starting with a PICK word, else L
 spell ids work (01 Bless, 03 CLW, 0C Enlarge, 0F Magic Missile, 13 Shield, 15 Sleep, 17 Hold Person, 18 Resist
 Fire, 22 Stinking Cloud, 2F Fireball) - without it the casters have nothing memorized and Auto only swings.
 go2.sh: a story fight lost on Auto (the party menu) is played once more with WINFIGHT ("LOST on Auto").
+sellplain.sh (2026-11-22): gear.txt guards one copy of each name for its own member (readied, or one left
+unreadied by Quick) - every other copy is sold. Before, any name in gear.txt was never sold, so the third outpost's
+guards' plate and swords filled every pack and Jadefang's 16 items (the Mace of Disruption) were left behind.
+Champions' last levels are its own experience rows (-1 past them): ranger 7, cleric 8, magic-user 8 - training
+stops there with "Not Enough Experience", not a race limit.
+The overland's places (script 16, tables at 8E72 / 8E7E, 4BC3 / 4BC4 the marker): Throtl 2,1, outpost 1 1,3,
+outpost 2 13,5, Gargath 14,3, Jelek 12,7, Neraka 17,8, the tomb 11,3, the Ogre Base 16,3, Sanction 10,13, Kernen
+31,3, outpost 3 15,11. Overland steps: F north, B south, R north-east, L north-west.

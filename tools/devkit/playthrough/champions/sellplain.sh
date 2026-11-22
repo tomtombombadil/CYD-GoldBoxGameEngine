@@ -8,7 +8,19 @@ TAILN=0 $P/bin/p.sh '' SAVE=$S ITEMDUMP=2 > /dev/null
 L=$(python3 - "$P/run.log" <<'PY'
 import re,sys,os
 m=-1; cnt={}
-for l in open(sys.argv[1]):
+# (gear.txt's names guard one copy each, for its own member only - one readied, or one unreadied when a fight's
+# Quick left it off; every other copy is sold: 2026-11-22, the guards' plate and swords filled every pack and
+# Jadefang's treasure was left behind)
+gear={}
+if os.path.exists('/tmp/claude-0/chplay/gear.txt'):
+    for g in open('/tmp/claude-0/chplay/gear.txt').read().strip().split(';'):
+        k,v=g.split(':',1); gear[int(k)]=v.split(',')
+lines=open(sys.argv[1]).read().split('\n'); held={}
+for l in lines:
+    if l.startswith('  member '): m=int(l.split()[1]); continue
+    if m>=0 and l.startswith('    *'): held[(m,re.sub(r'\s+\[type.*','',l[5:]).strip())]=1
+m=-1
+for l in lines:
     if l.startswith('  member '): m=int(l.split()[1]); continue
     if m<0 or not l.startswith('    '): continue
     if l.startswith('    *'): continue
@@ -16,7 +28,7 @@ for l in open(sys.argv[1]):
     n=re.sub(r'\s+\[type.*','',l).strip()
     if '+' in n or ' of ' in n or n.startswith(('Wand','Ring of','Bracers','Cloak','Necklace','Gauntlets','Boots','Girdle','Potion','Scroll','Mage Scroll','Cleric Scroll','Staff Sling','Composite')): continue
     if re.search(r'Arrows|Quarrels|Darts|Bolts|Sling', n): continue
-    if os.path.exists('/tmp/claude-0/chplay/gear.txt') and any(n in g.split(',') for g in open('/tmp/claude-0/chplay/gear.txt').read().strip().split(';') for g in [g.split(':',1)[-1]]): continue   # (the gear the party readies - never sold: a fight's Quick leaves it unreadied)
+    if n in gear.get(m,[]) and (m,n) not in held: held[(m,n)]=1; continue   # (its own gear, unreadied by a fight's Quick: kept once)
     cnt[(m,n)]=cnt.get((m,n),0)+1
 print(','.join(f'{m}:{n}:{c}' for (m,n),c in cnt.items()))
 PY
