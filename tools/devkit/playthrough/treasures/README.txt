@@ -33,3 +33,13 @@ key first ("./L...").
   square, then step by hand. A map changes when the party steps ONTO an edge row (54;1,1 north -> 52;12,14).
 - The sim's NORACE=1 holds in any run (Disable Race Level Limits), LOOTLOG=1 names what AUTOLOOT leaves.
 - A fight lost leaves the slot saved with 0 characters: bk.sh save before every place.
+
+2026-11-22 (Longsaddle, the Tower of Twilight):
+- auto.sh: a fight lost (more "a fight:" than "[fight] won" lines) is played again on SEED 1..12; the seed
+  that won is kept in seed.txt for the replays (p.sh reads it) until the next SAVENOW.
+- A slot copied with bk.sh to ANOTHER letter still reads the first letter's character files (the .PTY names
+  them): trials on H use J's characters as they are now. Test on J and restore, or expect that.
+- Selling puts the coins on the seller: Pool + Share ('"1/P/S/E') after every loot.py run, or the seller is
+  OverLoaded again and the next gift / treasure is refused (Malchor's ring and wand were, once).
+- A script's gift is a treasure screen (op 27 + 23): AUTOLOOT takes it like a fight's.
+- Lucky papers fill item slots: keep them on a member who is not the taker.

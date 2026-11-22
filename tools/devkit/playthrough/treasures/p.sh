@@ -3,6 +3,8 @@
 P=/tmp/claude-0/tplay/card
 [ -z "${MEMSET+x}" ] && [ -f /tmp/claude-0/tplay/memset.txt ] && export MEMSET=$(cat /tmp/claude-0/tplay/memset.txt)   # (the casters spells, MEMSET= empty: none)
 cd $P && rm -f out/*.ppm
+SD=/tmp/claude-0/tplay/seed.txt; [ -z "${SEED+x}" ] && [ -f $SD ] && export SEED=$(cat $SD)   # (a fight won on another seed: its replays use it, until the save)
 env GAME=${GAMEN:-9} MANUAL=1 HEARD=1 "${@:2}" timeout ${PTIME:-900} ${SIM:-/tmp/claude-0/ag7/bin/splay} $P/TREASURE "$1?" > /tmp/claude-0/tplay/run.log 2>&1
 grep -E "^  \? screen|^   now|MENU prompt|TEXT|LIST" /tmp/claude-0/tplay/run.log | tail -${TAILN:-6} | cut -c1-220
 f=$(ls $P/out/*.ppm 2>/dev/null | sort -V | tail -1); [ -n "$f" ] && convert $f -scale 200% /tmp/claude-0/tplay/last.png
+case " $* " in *" SAVENOW="*) rm -f $SD;; esac
