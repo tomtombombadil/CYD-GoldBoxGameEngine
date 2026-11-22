@@ -23,3 +23,7 @@ darts readied (they took the weapon hand), and sellplain.sh never sells a name i
 Strongsword's plate and sword, Molly's hoopak). The Merchant cheat's first goods page is 22 lines (buyn PS=22).
 A lost fight ends at the party menu (screen 1 with the fight's menu still shown) - the story fights the party
 can't win on Auto: EXTRA="QASPELLS=1 WINFIGHT=1" for that event only.
+Champions' Hoopak (ITEMS type 67) has flags 0x10 alone - a thrown weapon: thrown in a fight it lands in the
+treasure (combat_rules_facts: thrown weapons to the pile) and goes to whoever takes the loot - so the kender
+carries a long sword and shield in gear.txt. The catacombs (script 34) are sections joined by script steps
+at the map's edges (15,0 east -> 0,1): MAPREACH per section, then the edge step.
