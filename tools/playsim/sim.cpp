@@ -2663,6 +2663,15 @@ int main(int argc, char** argv)
         printf("  MAPREACH %zu squares:", q.size());
         for (int kk : q)
             if (geo::flags(mp, kk % 16, kk / 16) & 0x7F) printf(" %d,%d=%X", kk % 16, kk / 16, geo::flags(mp, kk % 16, kk / 16) & 0x7F);
+        // (the reached squares whose outer side on the map's edge is open - where a script's step off the
+        // edge may lead on: Champions' catacombs, as "x,y:dir")
+        printf("\n  MAPREACH edges:");
+        for (int kk : q)
+            for (int dir = 0; dir < 8; dir += 2) {
+                const int x = kk % 16, y = kk / 16;
+                const bool edge = (dir == 0 && y == 0) || (dir == 2 && x == 15) || (dir == 4 && y == 15) || (dir == 6 && x == 0);
+                if (edge && geo::passage(mp, x, y, dir) == 1) printf(" %d,%d:%c", x, y, "N?E?S?W"[dir]);
+            }
         printf("\n  not reached:");
         for (int kk = 0; kk < 256; ++kk)
             if (!seen[kk]) printf(" %d,%d=%X", kk % 16, kk / 16, geo::flags(mp, kk % 16, kk / 16) & 0x7F);
