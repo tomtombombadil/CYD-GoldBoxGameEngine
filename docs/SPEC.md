@@ -3402,6 +3402,15 @@ the game's Settings (As Original: all of them).
   type at least four times as often solid as open on that map - to be a
   secret door (the 3D view shows a plain wall there). Most maps have a
   handful; it's a guess from the data, not the games' own notion.
+  v0.214.1 (Tom, 2026-11-22: the kobold caves' marks were wrong): whether
+  such a side lets the party through is up to its square's step script
+  (the caves refuse their 13 while the kobolds hold the exits - 4C8D; the
+  Sorcerer's island its 19; 1:18 / 5:3's let it through - all as the
+  original in DOSBox), so the map marks the S only once the party has
+  walked through that side (`play::map_walked`, the sides kept while the
+  same map is loaded - a load or another map starts them afresh); until
+  then it is drawn as a wall. `geo::plain_walls` (the engine's, for the
+  port's map too). The Walk Test still marks every one.
 - **Secret's outdoor fights** (v0.210.0): Secret has no terrain table
   (our facts); the engine read its flags from leftover memory, so its
   outdoor fields varied with what was there before (found by the toggle

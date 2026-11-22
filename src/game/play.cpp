@@ -129,6 +129,11 @@ struct Data {
     bool           view_icon = false, view_action = false;
     view3d::World& world;
     geo::Map       map;
+    // The map's sides the party has walked through (a bit a side, 4 a square: N E S W) - a plain-looking wall
+    // it crossed is a secret door on the Companion map (Tom, 2026-11-22: the kobold caves' rock sides the
+    // scripts refuse were marked); kept for one map (walked_map), cleared when another is loaded
+    uint8_t        walked[geo::kMaxSquares / 2] = {};
+    int            walked_map = -1;
     ecl::GameState& gs;
     dax::Index     idx;
     uint8_t        sky[16] = {};
@@ -984,6 +989,7 @@ bool load_font_file(const char* name, dax::Index& idx, font::Font& out)
 }
 
 bool menu_on = false;            // the menu line shows `menu` (for the tap highlight)
+void walked_for(int key);           // (below: the map's walked sides kept or cleared)
 #include "play_queen.inc"
 
 // GAME.OVR's words, and the program's (Pool keeps a few in START.EXE: the
@@ -1185,10 +1191,31 @@ void gw_way_ahead()
 // wilderness the side's door state alone (its plane 0 holds tiles, not walls)
 // The party's step on the map (wrapped on the DAX games' 16 x 16 maps; a
 // map that doesn't wrap keeps the party at its edge)
+// (a map loaded: the walked sides kept only when it is the same map again - area x 256 + block)
+void walked_for(int key)
+{
+    if (key == d->walked_map) return;
+    d->walked_map = key;
+    memset(d->walked, 0, sizeof d->walked);
+}
+// A side the party went through: noted on both squares it joins
+void walked_note(int x, int y, int dir, int nx, int ny)
+{
+    const int w = d->map.w ? d->map.w : geo::kSize;
+    auto mark = [&](int sx, int sy, int sd) {
+        const int i = sy * w + sx;
+        if (sx < 0 || sy < 0 || i < 0 || i >= geo::kMaxSquares) return;
+        d->walked[i / 2] |= static_cast<uint8_t>(1u << ((i & 1) * 4 + ((sd & 6) >> 1)));
+    };
+    mark(x, y, dir);
+    if (nx != x || ny != y) mark(nx, ny, (dir + 4) & 7);
+}
 void step_party(int dir)
 {
     int x = d->gs.x, y = d->gs.y;
+    const int ox = x, oy = y;
     geo::step(d->map, x, y, dir);
+    if (d->map.loaded && geo::wall(d->map, ox, oy, dir)) walked_note(ox, oy, dir, x, y);
     d->gs.x = static_cast<uint8_t>(x);
     d->gs.y = static_cast<uint8_t>(y);
 }
@@ -14261,6 +14288,7 @@ struct Host : ecl::Host {
         char name[24];
         plat::File f;
         d->map.loaded = false;
+        walked_for(d->gs.game_area * 256 + geo_block);
         if (open_area_dax("GEO", geo_block, f, name, sizeof name)) {
             plat::FileSource src(f);
             geo::load(src, d->idx, static_cast<uint8_t>(geo_block), d->map);
@@ -21265,6 +21293,15 @@ int pos_y()
     return d ? d->gs.y : 0;
 }
 int dir() { return peek_on() ? peek->dir : d ? d->gs.dir : 0; }
+bool map_walked(int x, int y, int dir)
+{
+    // (the 3D map only: not a save's map shown meanwhile, not an overland's)
+    if (peek_on() || !d || !d->map.loaded || pool_overland() || map() != &d->map) return false;
+    const int w = d->map.w ? d->map.w : geo::kSize;
+    const int i = y * w + x;
+    if (x < 0 || y < 0 || x >= w || i >= geo::kMaxSquares) return false;
+    return d->walked[i / 2] >> ((i & 1) * 4 + ((dir & 6) >> 1)) & 1;
+}
 bool map_place(int x, int y)
 {
     if (peek_on() || !d || !d->ovc || !pool_overland()) return false;

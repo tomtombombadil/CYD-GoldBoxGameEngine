@@ -1769,6 +1769,20 @@ int main(int argc, char** argv)
             printf("\n");
         }
     }
+    if (getenv("MAPSIDES")) {
+        // MAPSIDES=1: each square's four sides as wall type . door (N E S W), for checking the map's door / secret marks
+        const geo::Map& mp = play::d->map;
+        printf("  MAPSIDES block %d (n e s w: type.door)\n", play::d->gs.script);
+        for (int y = 0; y < mp.h; ++y) {
+            printf("  %2d:", y);
+            for (int x = 0; x < mp.w; ++x) {
+                printf(" ");
+                for (int dd = 0; dd < 8; dd += 2) printf("%X%d", geo::wall(mp, x, y, dd), geo::door(mp, x, y, dd));
+                printf("/%02X", geo::flags(mp, x, y));
+            }
+            printf("\n");
+        }
+    }
     if (getenv("TELE")) { int x, y, dd; sscanf(getenv("TELE"), "%d,%d,%d", &x, &y, &dd); play::d->gs.x = x; play::d->gs.y = y; play::d->gs.dir = dd; play::after_move_redraw(); }
     if (getenv("TELE0")) { int x, y, dd; sscanf(getenv("TELE0"), "%d,%d,%d", &x, &y, &dd); play::d->gs.x = x; play::d->gs.y = y; play::d->gs.dir = dd; play::after_move_redraw(); }
     // SETEXP=m:exp,...: member m's experience (the Companion's ready classes)
@@ -2661,6 +2675,17 @@ int main(int argc, char** argv)
         const geo::Map* m = play::map();
         if (!m) printf("  MAPASCII: no map\n");
         else {
+            {
+                // (the secret doors the Companion map marks: plain-wall sides the party has walked through)
+                const uint16_t plain = geo::plain_walls(*m);
+                printf("  MAPASCII secret doors:");
+                for (int y = 0; y < geo::kSize; ++y)
+                    for (int x = 0; x < geo::kSize; ++x)
+                        for (int dd = 0; dd < 8; dd += 2)
+                            if (geo::door(*m, x, y, dd) == 1 && (plain >> geo::wall(*m, x, y, dd) & 1) && play::map_walked(x, y, dd))
+                                printf(" %d,%d%c", x, y, "NESW"[dd / 2]);
+                printf("\n");
+            }
             printf("  MAPASCII at %d,%d dir %d (game %d,%d) map %p\n", play::pos_x(), play::pos_y(), play::dir(), play::vm ? play::vm->get(0x4BC3) & 0xFF : -1, play::vm ? play::vm->get(0x4BC4) & 0xFF : -1, (const void*)m);
             for (int y = 0; y < geo::kSize; ++y) {
                 std::string top = "  ", mid = "  ";

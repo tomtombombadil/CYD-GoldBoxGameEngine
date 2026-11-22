@@ -266,6 +266,12 @@ int dir();
 // scripts have something at that square (a town's edge, a camp, a cave ...);
 // false elsewhere
 bool map_place(int x, int y);
+// The party has walked through that side of the 3D map play::map() gives
+// (this visit's record, kept while the same map is loaded): a passable side
+// drawn as the area's plain wall is shown as a secret door only once crossed
+// - each square's script decides whether such a side lets the party through,
+// so the map alone can't tell (Tom, 2026-11-22: the kobold caves)
+bool map_walked(int x, int y, int dir);
 void describe(char* line1, char* line2, int cap);
 
 // ---- The Companion panel's Party and Battle views (CYD_COMPANION_VIEWS;
