@@ -4423,6 +4423,9 @@ void sell_dk(int i, pic::Canvas& c)
     const int price = rules::sell_value(it, d->facts);
     const bool one = items::Item{it}.count() < 2;
     char nm[48], t[120], a[40], b[40];
+#ifdef CYD_TEST_HOOKS
+    plat::log("[play] sell offer %d\n", price);
+#endif
     item_name(i, nm, sizeof nm);
     if (strlen(nm) + 1 < sizeof nm) strcat(nm, " ");
     if (price > 0) {
