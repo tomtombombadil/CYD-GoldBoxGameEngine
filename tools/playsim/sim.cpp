@@ -2046,7 +2046,7 @@ int main(int argc, char** argv)
             if (dir < 0) { t = "{"; maze_blocked = true; }      // (blocked: the move ended, then Guard)
             else { maze_tok[1] = static_cast<char>('0' + dir); t = maze_tok; }
         } else if (maze_walk) { t = has('M') && !maze_blocked ? "/M" : "/G"; maze_blocked = false; }    // (no moves left: Guard - not Quick, the walk goes on next round)
-        else if (scr == 24) t = has('A') && has('S') && has('E') && !has('M') ? "/A" : has('Q') ? "/Q" : has('Y') && has('N') && getenv("AUTOFIGHT") ? "/N" :
+        else if (scr == 24) t = has('A') && has('S') && has('E') && !has('M') && !has('Q') ? "/A" : has('Q') ? "/Q" : has('Y') && has('N') && getenv("AUTOFIGHT") ? "/N" :
                                      has('D') && has('M') ? "/D" : ".";   // (Champions: no Quick - Done, then its Guard Delay Quit Auto's Auto)   // ("Continue Battle": No)
         else if (scr == 5 && has('T') && has('V') && getenv("AUTOTAKE") && !auto_take) {
             // (the taker: of the first six, the one with the fewest items, then the lightest - a full or
