@@ -38,9 +38,9 @@ void apply(LGFX& gfx)
 
 void save()
 {
-    if (!storage_begin()) return;
+    // (storage_open picks the place; no place: nothing saved)
     PrefsFile f{kMagic, current.invert, current.swap_rb, {0, 0}};
-    File file = LittleFS.open(kPath, "w");
+    File file = storage_open(kPath, "w");
     if (!file) return;
     file.write(reinterpret_cast<const uint8_t*>(&f), sizeof(f));
     file.close();
@@ -52,8 +52,8 @@ void panel_prefs_begin(LGFX& gfx)
 {
     base_rgb_order = gfx.getPanel()->config().rgb_order;
 
-    if (storage_begin() && LittleFS.exists(kPath)) {
-        File file = LittleFS.open(kPath, "r");
+    if (storage_exists(kPath)) {
+        File file = storage_open(kPath, "r");
         PrefsFile f{};
         if (file && file.read(reinterpret_cast<uint8_t*>(&f), sizeof(f)) == sizeof(f)
             && f.magic == kMagic) {

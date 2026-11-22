@@ -367,7 +367,10 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   plays - then RST only, INT never driven, the I2S closed while it switches
   (v0.210.6, `lrck_switch`: the synced chip drives INT and the music was
   static; RST only made taps less sensitive); touches in the bars
-  dropped. Serial on UART0 (CH340C: `ARDUINO_USB_CDC_ON_BOOT=0`). Sound
+  dropped. Its settings, display fixes and touch calibration live on the card
+  (`/GOLDBOX/_CYD/*.bin`, `BOARD_STORAGE_ON_CARD`, hal/storage's storage_open): a
+  write to the internal flash cuts the PSRAM off and the panel's picture jumps
+  (v0.213.3, Tom) - never write the flash while it shows. Serial on UART0 (CH340C: `ARDUINO_USB_CDC_ON_BOOT=0`). Sound
   `BOARD_AUDIO_I2S` (no codec, clocks kept on as the S3 codec's). The SD
   card on SPI (FSPI, `BOARD_SD_SPI_PORT` - no VSPI on the S3). QEMU:
   `qemus3_50` (`run_qemu.py --s3 --env qemus3_50`) checks every 2x copy.

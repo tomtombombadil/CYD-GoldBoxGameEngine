@@ -30,8 +30,8 @@ Settings settings_load()
 {
     Settings s;
     s.flipped = BOARD_FLIPPED_DEFAULT;
-    if (!storage_begin() || !LittleFS.exists(kPath)) return s;
-    File f = LittleFS.open(kPath, "r");
+    if (!storage_exists(kPath)) return s;
+    File f = storage_open(kPath, "r");
     uint8_t d[4 + kSize2] = {};
     const int n = f ? f.read(d, sizeof d) : 0;
     f.close();
@@ -68,11 +68,11 @@ Settings settings_load()
 
 void settings_save(const Settings& s)
 {
-    if (!storage_begin()) return;
+    // (storage_open picks the place; no place: nothing saved)
     uint8_t d[4 + kSize2] = {};
     memcpy(d, &kMagic2, 4);
     memcpy(d + 4, &s, sizeof s);
-    File f = LittleFS.open(kPath, "w");
+    File f = storage_open(kPath, "w");
     if (!f) return;
     f.write(d, sizeof d);
     f.close();

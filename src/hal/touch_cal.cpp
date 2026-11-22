@@ -30,8 +30,8 @@ uint32_t board_hash()
 
 bool load(uint16_t out[8])
 {
-    if (!storage_begin() || !LittleFS.exists(kCalPath)) return false;
-    File f = LittleFS.open(kCalPath, "r");
+    if (!storage_exists(kCalPath)) return false;
+    File f = storage_open(kCalPath, "r");
     if (!f) return false;
     CalFile c{};
     const bool ok = f.read(reinterpret_cast<uint8_t*>(&c), sizeof(c)) == sizeof(c)
@@ -43,10 +43,10 @@ bool load(uint16_t out[8])
 
 void save(const uint16_t params[8])
 {
-    if (!storage_begin()) return;
+    // (storage_open picks the place; no place: nothing saved)
     CalFile c{kMagic, board_hash(), {}};
     memcpy(c.params, params, sizeof(c.params));
-    File f = LittleFS.open(kCalPath, "w");
+    File f = storage_open(kCalPath, "w");
     if (!f) { Serial.println("[touch_cal] could not write calibration"); return; }
     f.write(reinterpret_cast<const uint8_t*>(&c), sizeof(c));
     f.close();

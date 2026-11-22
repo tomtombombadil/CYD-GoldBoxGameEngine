@@ -13,6 +13,11 @@
       new game; Throtl, its temple and catacombs, Gargath, Sir Dargaard's tomb, the Ogre Base, Jelek, the third
       outpost and Neraka done (Sir Karl's memorial, the Sanction orders); next Sanction. Open: Throtl's 2,6 / 4,0 / 5,1 (Strangbourn, the plate-mail soldier, the
       arrows) gave nothing when walked onto - the guide's squares or a facing?
+- [ ] v0.213.3 **Tom: the 5.0\"'s menus no longer jump** (Tom, 2026-11-22: Audio's Volume, Display's, Game Play's
+      and Enhancements' keys - the screen "pulses to the left"): each key saved the settings to the internal flash,
+      and a flash write cuts the PSRAM off - the RGB panel's picture is read from there. The 5.0\" now keeps its
+      settings, display fixes and touch calibration on the card (/GOLDBOX/_CYD/*.bin; the old flash copy read until
+      then - your settings carry over). Built only: QEMU's panel isn't a real RGB bus. Tom: the same keys again.
 - [ ] v0.213.2 **Tom: a fight's field after the Game menu** (Tom, 2026-11-22: PoolRad's wilderness field came back
       black): the game screen drawn again (`draw_play`) put the plain EGA palette back and the fight's colour swap
       (0 / 8, Gateway's 8) was only applied when the fight began - now again on every redraw (viewer.cpp
