@@ -9,6 +9,11 @@
       frame pixel for pixel, 181 of 185 VGA captures among the player's states within 70 ms (the rest: half-drawn
       DOSBox captures), the EGA dissolve's order, the fades' waits (713 / 942 / 485 ms vs 718 / 955 / 490).
       Tools: tools/devkit/vace (vace_run, vace_cmp.py); host test test_vace; the playsim's Movie screen (MOVIEKEY).
+- [x] v0.212.1 (the Champions play-through, 2026-11-22): **the Cheats tab never opened at Champions' / Death
+      Knights' outposts** - their menus run in the overland's mode (area word 0x4BE6 = 0), so kr_overland() held and
+      cheat_menu_place() refused them; a script's menu there now counts as a menu town (as Curse's, v0.204.0) -
+      the Trainer, Merchant, Healer and Sanctuary open at "WHERE DO YOU WISH TO GO?" and leave it as it was
+      (playsim, Champions save B at the first outpost: Trainer to level 5, Merchant).
 - [ ] Darkness's intro movie (VACE INTRO, before the titles): the same player would play INTRO.ACF / INTRO.BMA -
       for Tom: wanted? (The engine starts at the titles, as since v0.141.0.)
 - [x] 2026-11-22 (no engine fault): the Temple of Tyr's fire elementals - see the entry below; MAPLINK / MAPDOORS.

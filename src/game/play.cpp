@@ -17920,9 +17920,11 @@ __attribute__((noinline)) int cheat_scan_scripts(bool goods, int* factor, bool s
 // menu as it was
 bool cheat_menu_place()
 {
+    // (Champions' / Death Knights' outposts are menus in the overland's mode - area word 0x4BE6 = 0, so
+    // kr_overland() holds there: a script's menu over it is a menu town, as Curse's)
     return screen == Screen::Game && waiting && vm && vm->wait() == ecl::Wait::Menu &&
            input_mode == Input::None && !moving && vm->get(0x4BE6) == 0 && !pool_overland() &&
-           !marker_overland() && !gw_wild() && !q_overland();
+           !dk_overland() && !gw_wild() && !q_overland();
 }
 bool cheats_ready_in()
 {
