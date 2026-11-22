@@ -251,6 +251,17 @@ public:
 
     Stop run(uint16_t address);
     Stop resume();
+    // A dry run (the Companion map's secret doors - Tom, 2026-11-22: "check if a wall appears to be a wall but
+    // allows movement through it"): begin_probe saves the scripts' memory and the machine's place; probe runs
+    // a script from `address` with only the instructions that can't reach outside it (jumps, compares,
+    // arithmetic, SAVE, GETTABLE, AND / OR) until it ends - 1: it set the "no move" word 0x7EC9 to 0xFF, 0:
+    // it didn't, -1: it went somewhere a dry run can't follow (a print, a menu, a fight, a character's
+    // record, ...); probe_restore puts memory back as begin_probe found it (call it after each probe),
+    // end_probe the same and lets the saved copy go. Only while no script is running or waiting.
+    bool begin_probe();
+    int  probe(uint16_t address);
+    void probe_restore();
+    void end_probe();
     Stop answer(int value);
     Stop answer_string(const char* text);
     // Pool's main loop start (a load; ovr4 +0x32F8): the redraw to do (DS
@@ -425,6 +436,11 @@ private:
     int      budget_ = 0;           // instructions left before giving up (endless loops)
     uint32_t rng_ = 0x2545F491;
     uint8_t  q_rounds_ = 0;             // (queen_rounds)
+    // (probe: the saved memory and registers; probe_bad_ a write a dry run mustn't make)
+    struct ProbeSave;
+    ProbeSave* probe_ = nullptr;
+    bool probe_bad_ = false;
+    bool probe_safe(uint8_t op) const;
 
     // String operands of the instruction being run
     char     arena_[2048];

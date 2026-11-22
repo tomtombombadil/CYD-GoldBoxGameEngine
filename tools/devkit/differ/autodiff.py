@@ -157,6 +157,11 @@ def run(path, keep=False):
     if sc.get('save'):
         for side in ('dos', 'eng'):
             shutil.copy(sc['save'], w + '/' + side + '/' + g['sub'] + '/' + g['save'] % slot)
+    # ("chars": a folder with the save's own character files - PoolRad's CHRDAT<slot>n.SAV - copied beside it)
+    if sc.get('chars'):
+        for f in os.listdir(sc['chars']):
+            for side in ('dos', 'eng'):
+                shutil.copy(os.path.join(sc['chars'], f), w + '/' + side + '/' + g['sub'] + '/' + f)
     toks = tokens(sc['tokens'])
     # the original
     script = ['wait 2000', 'quiet 1500 30000', 'key enter', 'quiet 1000 20000', 'key enter', 'quiet 1000 20000',

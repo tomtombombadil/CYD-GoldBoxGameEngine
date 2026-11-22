@@ -117,6 +117,23 @@ uint8_t flags(const Map& m, int x, int y)
     return i < 0 ? 0 : m.pl(2)[i];
 }
 
+uint16_t plain_walls(const Map& m)
+{
+    uint16_t solid[16] = {}, open[16] = {};
+    for (int y = 0; y < m.h; ++y)
+        for (int x = 0; x < m.w; ++x)
+            for (int d = 0; d < 8; d += 2) {
+                const int w = wall(m, x, y, d);
+                if (!w) continue;
+                if (door(m, x, y, d) == 0) ++solid[w];
+                else ++open[w];
+            }
+    uint16_t bits = 0;
+    for (int w = 1; w < 16; ++w)
+        if (solid[w] && solid[w] >= open[w] * 4) bits |= static_cast<uint16_t>(1u << w);
+    return bits;
+}
+
 int passage(const Map& m, int x, int y, int dir)
 {
     if (wall(m, x, y, dir) == 0) return 1;

@@ -266,6 +266,15 @@ int dir();
 // scripts have something at that square (a town's edge, a camp, a cave ...);
 // false elsewhere
 bool map_place(int x, int y);
+// The party has walked through that side of the 3D map play::map() gives
+// (this visit's record, kept while the same map is loaded)
+bool map_walked(int x, int y, int dir);
+// That side of the 3D map is a secret door (Tom, 2026-11-22: marked before
+// it's found): a passable side drawn as the area's plain wall whose square's
+// step script, run dry as a step that way (ecl::Vm::probe), doesn't refuse
+// the step - or one the party has walked through. Worked out again after
+// each script's run, when asked while nothing waits.
+bool map_secret(int x, int y, int dir);
 void describe(char* line1, char* line2, int cap);
 
 // ---- The Companion panel's Party and Battle views (CYD_COMPANION_VIEWS;

@@ -424,6 +424,10 @@ uint16_t Vm::dkk_read(uint16_t a, int size) const
 
 void Vm::dkk_write(uint16_t a, uint16_t v, int size)
 {
+    if (probe_ && ((a >= 0x7C00 && a < 0x7EB0) || a == 0x7F12 || a >= 0x8000)) {
+        probe_bad_ = true;              // (a dry run: a character's field, the area, the code)
+        return;
+    }
     if (size == 2 && a >= 0x7C00 && a <= 0x7FFF) {
         // (a character field takes the whole value; the block its bytes)
         const uint16_t off = static_cast<uint16_t>(a - 0x7C00);
@@ -529,6 +533,10 @@ void Vm::dk_write(uint16_t a, uint16_t v, int size)
     }
     const uint8_t b = static_cast<uint8_t>(v);
     if (a == 0) return;
+    if (probe_ && (a > 0x400 || a == 0x3A || a == 0x41)) {
+        probe_bad_ = true;              // (a dry run: a character's record, the code, the frame / season)
+        return;
+    }
     if (a <= 0x400) {
         switch (a) {
         case 0x11:                      // facing (0-3 in 3D, 0-7 outside)
@@ -617,6 +625,16 @@ uint16_t Vm::get(uint16_t a) const
 
 void Vm::set(uint16_t a, uint16_t v)
 {
+    if (probe_) {
+        // (a dry run: only the scripts' own memory - nothing that reaches a character, the map, the walls or
+        // the code)
+        const bool ok = (a >= 0x4B00 && a <= 0x4EFF) || (a >= 0x7A00 && a <= 0x7BFF) ||
+                        (a >= 0x7EB0 && a <= 0x7FFF && a != 0x7F12 && !(a >= 0x7F22 && a <= 0x7F26)) || a == 0x7EC9;
+        if (!set_.byte_map && !ok) {        // (Darkness's family: dk_write / dkk_write guard their own)
+            probe_bad_ = true;
+            return;
+        }
+    }
     if (set_.byte_map) {
         dk_write(set_.curse_bytes ? a : dk_addr(a), v, 1);
         return;
@@ -1118,6 +1136,120 @@ Stop Vm::resume()
     }
     coins_done();
     return new_script_ ? Stop::NewScript : Stop::Stopped;
+}
+
+// ---- the dry run (probe) ----------------------------------------------------------
+
+struct Vm::ProbeSave {
+    uint8_t  area1[sizeof(GameState::area1)], area2[sizeof(GameState::area2)], table[sizeof(GameState::table)];
+    int      x, y, dir;
+    uint8_t  wall_ahead, roof, game_area, script;
+    bool     moved;
+    uint32_t pc;
+    uint32_t stack[32];
+    int      sp, budget;
+    bool     flags[6], stop, new_script;
+    Wait     wait;
+    uint32_t rng;
+    uint16_t sound_kind, coins_seen;
+    uint8_t  view_bytes[2];
+    bool     not_found;
+    char     arena[sizeof(Vm::arena_)];
+    size_t   arena_used;
+    int      n_slots;
+    char*    slot[kMaxStrings];
+};
+
+bool Vm::probe_safe(uint8_t op) const
+{
+    // (both families: GOTO, GOSUB, COMPARE, the arithmetic, RANDOM, SAVE, RETURN, COMPARE AND, the IFs, ON
+    // GOTO / GOSUB, GETTABLE, AND, OR, SAVE TABLE; EXIT / RETURN with nothing to return to / Darkness's END
+    // are the end, handled by probe)
+    switch (op) {
+    case 0x01: case 0x02: case 0x03: case 0x04: case 0x05: case 0x06: case 0x07: case 0x08: case 0x09:
+    case 0x13: case 0x14: case 0x16: case 0x17: case 0x18: case 0x19: case 0x1A: case 0x1B:
+    case 0x25: case 0x26: case 0x2A: case 0x2F: case 0x30: case 0x35:
+        return true;
+    }
+    return false;
+}
+
+bool Vm::begin_probe()
+{
+    if (probe_ || wait_ != Wait::None) return false;
+    probe_ = new (std::nothrow) ProbeSave;
+    if (!probe_) return false;
+    ProbeSave& p = *probe_;
+    memcpy(p.area1, s_.area1, sizeof p.area1);
+    memcpy(p.area2, s_.area2, sizeof p.area2);
+    memcpy(p.table, s_.table, sizeof p.table);
+    p.x = s_.x; p.y = s_.y; p.dir = s_.dir;
+    p.wall_ahead = s_.wall_ahead; p.roof = s_.roof; p.game_area = s_.game_area; p.script = s_.script;
+    p.moved = s_.moved;
+    p.pc = pc_;
+    memcpy(p.stack, stack_, sizeof p.stack);
+    p.sp = sp_; p.budget = budget_;
+    memcpy(p.flags, flags_, sizeof p.flags);
+    p.stop = stop_; p.new_script = new_script_; p.wait = wait_;
+    p.rng = rng_; p.sound_kind = sound_kind_; p.coins_seen = coins_seen_;
+    memcpy(p.view_bytes, view_bytes_, sizeof p.view_bytes);
+    p.not_found = not_found_;
+    memcpy(p.arena, arena_, sizeof p.arena);
+    p.arena_used = arena_used_; p.n_slots = n_slots_;
+    memcpy(p.slot, slot_, sizeof p.slot);
+    return true;
+}
+
+void Vm::probe_restore()
+{
+    if (!probe_) return;
+    const ProbeSave& p = *probe_;
+    memcpy(s_.area1, p.area1, sizeof p.area1);
+    memcpy(s_.area2, p.area2, sizeof p.area2);
+    memcpy(s_.table, p.table, sizeof p.table);
+    s_.x = p.x; s_.y = p.y; s_.dir = p.dir;
+    s_.wall_ahead = p.wall_ahead; s_.roof = p.roof; s_.game_area = p.game_area; s_.script = p.script;
+    s_.moved = p.moved;
+    pc_ = p.pc;
+    memcpy(stack_, p.stack, sizeof p.stack);
+    sp_ = p.sp; budget_ = p.budget;
+    memcpy(flags_, p.flags, sizeof p.flags);
+    stop_ = p.stop; new_script_ = p.new_script; wait_ = p.wait;
+    rng_ = p.rng; sound_kind_ = p.sound_kind; coins_seen_ = p.coins_seen;
+    memcpy(view_bytes_, p.view_bytes, sizeof p.view_bytes);
+    not_found_ = p.not_found;
+    memcpy(arena_, p.arena, sizeof arena_);
+    arena_used_ = p.arena_used; n_slots_ = p.n_slots;
+    memcpy(slot_, p.slot, sizeof slot_);
+    probe_bad_ = false;
+}
+
+void Vm::end_probe()
+{
+    if (!probe_) return;
+    probe_restore();
+    delete probe_;
+    probe_ = nullptr;
+}
+
+int Vm::probe(uint16_t address)
+{
+    if (!probe_ || address < kBase) return -1;
+    pc_ = address - kBase;
+    sp_ = 0;
+    stop_ = false;
+    probe_bad_ = false;
+    for (int n = 0; n < 2000; ++n) {
+        if (pc_ >= s_.code_len) return -1;
+        const uint8_t op = code_of(s_)[pc_];
+        // (the end: EXIT, a RETURN with nothing to return to, Darkness's END)
+        if (op == 0x00 || (op == 0x13 && sp_ == 0) || (set_.byte_map && op == 0x23))
+            return (get(0x7EC9) & 0xFF) == 0xFF ? 1 : 0;
+        if (!probe_safe(op)) return -1;
+        const Stop r = step();
+        if (probe_bad_ || r != Stop::Running) return -1;
+    }
+    return -1;                                       // (it never ended)
 }
 
 Stop Vm::answer(int v)

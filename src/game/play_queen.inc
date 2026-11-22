@@ -233,6 +233,7 @@ __attribute__((noinline)) bool q_load_script(int id, uint8_t* code, uint32_t* le
 // GEO.GLB's map `id`
 __attribute__((noinline)) void q_load_map(int id)
 {
+    walked_for(0x10000 + id);
     plat::File f;
     geo::release(d->map);
     if (open_hl("GEO.GLB", f)) {

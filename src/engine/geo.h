@@ -83,6 +83,11 @@ uint8_t flags(const Map& m, int x, int y);
 // 0 solid, 1 open, 2 locked, 3 barred: what stepping out of (x, y) towards
 // dir meets (1 where there is no wall).
 int passage(const Map& m, int x, int y, int dir);
+// The wall types that look like the area's ordinary walls on this map: mostly
+// solid sides (a bit a type, 1 << type). A passable side of one looks like a
+// wall in the 3D view - a secret door if a step goes through (the square's
+// script decides that; the Companion map marks it once the party has crossed)
+uint16_t plain_walls(const Map& m);
 
 // The square a step from (x, y) towards dir comes to (wrapped on a map
 // that wraps); false when it leaves a map that doesn't (x, y kept)

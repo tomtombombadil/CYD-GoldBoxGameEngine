@@ -2816,9 +2816,12 @@ struct MapSource {
     void (*describe)(char*, char*, int);
     bool teleport;      // a tap on a square moves the party there (Walk Test)
     bool (*place)(int, int);    // a place on that square (null: none)
+    bool (*walked)(int, int, int);  // that side is a secret door (play::map_secret; null: none)
 };
-const MapSource kWalkMap{walk::map, walk::pos_x, walk::pos_y, walk::dir, walk::describe, true, nullptr};
-const MapSource kPlayMap{play::map, play::pos_x, play::pos_y, play::dir, play::describe, false, play::map_place};
+bool walk_any_side(int, int, int) { return true; }    // (the Walk Test: every secret door shown, as before)
+const MapSource kWalkMap{walk::map, walk::pos_x, walk::pos_y, walk::dir, walk::describe, true, nullptr, walk_any_side};
+const MapSource kPlayMap{play::map, play::pos_x, play::pos_y, play::dir, play::describe, false, play::map_place,
+                         play::map_secret};
 
 // Any place on the map now shown (the legend's "Place")
 bool map_has_places(const MapSource& ms)
@@ -2897,30 +2900,11 @@ void draw_companion(const MapSource& ms = kWalkMap)
 // The secret door's S (5 x 7; the wall line through its middle)
 constexpr uint8_t kSecretS[7] = {0x0E, 0x11, 0x10, 0x0E, 0x01, 0x11, 0x0E};
 
-// The wall types that look like the area's ordinary walls: mostly solid
-// sides on this map (a passable side of one is a secret door)
-uint16_t plain_walls(const geo::Map& m)
-{
-    uint16_t solid[16] = {}, open[16] = {};
-    for (int y = 0; y < geo::kSize; ++y)
-        for (int x = 0; x < geo::kSize; ++x)
-            for (int d = 0; d < 8; d += 2) {
-                const int w = geo::wall(m, x, y, d);
-                if (!w) continue;
-                if (geo::door(m, x, y, d) == 0) ++solid[w];
-                else ++open[w];
-            }
-    uint16_t bits = 0;
-    for (int w = 1; w < 16; ++w)
-        if (solid[w] && solid[w] >= open[w] * 4) bits |= 1u << w;
-    return bits;
-}
-
 void draw_map_grid(lgfx::LovyanGFX& g, const geo::Map& map, const MapSource& ms, int mx, int my, int cell)
 {
     const geo::Map* m = &map;
     const int span = cell * geo::kSize + 1;
-    const uint16_t plain = plain_walls(map);
+    const uint16_t plain = geo::plain_walls(map);
     g.fillRect(mx, my, span, span, style::kBackground);
     auto clip_fill = [&](int rx, int ry, int rw, int rh, uint16_t col) {
         if (rx < mx) { rw -= mx - rx; rx = mx; }
@@ -2945,6 +2929,9 @@ void draw_map_grid(lgfx::LovyanGFX& g, const geo::Map& map, const MapSource& ms,
                     else g.drawFastVLine(lx, ly, cell + 1, style::kText);
                     if (!door) continue;
                     if (door == 1 && (plain >> w & 1)) {
+                        // Drawn as the area's wall: a secret door only where the square's step script lets
+                        // the party through (play::map_secret - the kobold caves' rock, Tom 2026-11-22)
+                        if (!ms.walked || !ms.walked(x, y, d)) continue;
                         // A secret door: the S across the middle of the line
                         const int ox = across ? lx + cell / 2 - 2 : lx - 2;
                         const int oy = across ? ly - 3 : ly + cell / 2 - 3;
