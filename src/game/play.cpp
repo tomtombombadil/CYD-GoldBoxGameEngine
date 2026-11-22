@@ -134,6 +134,10 @@ struct Data {
     // scripts refuse were marked); kept for one map (walked_map), cleared when another is loaded
     uint8_t        walked[geo::kMaxSquares / 2] = {};
     int            walked_map = -1;
+    // The secret doors as the step scripts' dry runs found them (a bit a side as walked; secret_at: the
+    // map_epoch they were worked out at, -1 none)
+    uint8_t        secret[geo::kMaxSquares / 2] = {};
+    int            secret_at = -1;
     ecl::GameState& gs;
     dax::Index     idx;
     uint8_t        sky[16] = {};
@@ -1192,8 +1196,12 @@ void gw_way_ahead()
 // The party's step on the map (wrapped on the DAX games' 16 x 16 maps; a
 // map that doesn't wrap keeps the party at its edge)
 // (a map loaded: the walked sides kept only when it is the same map again - area x 256 + block)
+// (the map's state moved on: a map loaded, a script's run - the secret doors worked out again when next
+// asked)
+int map_epoch = 0;
 void walked_for(int key)
 {
+    ++map_epoch;
     if (key == d->walked_map) return;
     d->walked_map = key;
     memset(d->walked, 0, sizeof d->walked);
@@ -15376,6 +15384,7 @@ void door_choice(char k)
 
 void handle(ecl::Stop r)
 {
+    ++map_epoch;                         // (a script ran: the secret doors worked out again)
     pic::Canvas& c = *cv;
     cursor_hide();
     if (r == ecl::Stop::Waiting) {
@@ -21293,6 +21302,64 @@ int pos_y()
     return d ? d->gs.y : 0;
 }
 int dir() { return peek_on() ? peek->dir : d ? d->gs.dir : 0; }
+
+// The secret doors of the 3D map: each passable side of the area's plain wall whose square's step script,
+// run dry as a step that way would run it, doesn't refuse the step (0x7EC9 = 0xFF) - Tom, 2026-11-22: the
+// kobold caves' rock sides the script refuses aren't secret doors. A dry run that can't be followed (the
+// script prints, asks, fights ...) counts as a door - the map's own word. Done while nothing waits.
+__attribute__((noinline)) void secrets_work_out()
+{
+    memset(d->secret, 0, sizeof d->secret);
+    d->secret_at = map_epoch;
+    const geo::Map& m = d->map;
+    const uint16_t plain = geo::plain_walls(m);
+    const uint16_t at = vm->entry(0);
+    if (!plain) return;
+    ecl::GameState& g = d->gs;
+    const bool probing = at >= 0x8000 && vm->begin_probe();
+    int n_ref = 0, n_open = 0, n_unk = 0;
+    for (int y = 0; y < m.h; ++y)
+        for (int x = 0; x < m.w; ++x)
+            for (int dir = 0; dir < 8; dir += 2) {
+                if (geo::door(m, x, y, dir) != 1 || !(plain >> geo::wall(m, x, y, dir) & 1)) continue;
+                int r = -1;
+                if (probing) {
+                    // (the square as a step from it that way sees it - step())
+                    g.x = x;
+                    g.y = y;
+                    g.dir = dir;
+                    g.wall_ahead = static_cast<uint8_t>(geo::wall(m, x, y, dir));
+                    g.roof = geo::flags(m, x, y);
+                    const int nx = x + geo::dx(dir), ny = y + geo::dy(dir);
+                    vm->set(0x7ED5, nx < 0 || nx >= m.w || ny < 0 || ny >= m.h ? 1 : 0);
+                    vm->set(0x7EC9, 0);
+                    gw_way_ahead();
+                    r = vm->probe(at);
+                    vm->probe_restore();
+                }
+                if (r == 1) { ++n_ref; continue; }
+                (r == 0 ? n_open : n_unk)++;
+                const int i = y * m.w + x;
+                d->secret[i / 2] |= static_cast<uint8_t>(1u << ((i & 1) * 4 + (dir >> 1)));
+            }
+    if (probing) vm->end_probe();
+    plat::log("[play] secret doors: %d (refused by the step script %d, unfollowed %d)\n", n_open + n_unk, n_ref, n_unk);
+}
+
+// A side of the 3D map shown as a secret door
+bool map_secret(int x, int y, int dir)
+{
+    if (peek_on() || !d || !vm || !d->map.loaded || pool_overland() || map() != &d->map) return false;
+    const int w = d->map.w ? d->map.w : geo::kSize;
+    const int i = y * w + x;
+    if (x < 0 || y < 0 || x >= w || i >= geo::kMaxSquares) return false;
+    if (d->walked[i / 2] >> ((i & 1) * 4 + ((dir & 6) >> 1)) & 1) return true;     // (crossed: it is one)
+    if (d->secret_at != map_epoch && screen == Screen::Game && !waiting && then == Then::Idle &&
+        vm->wait() == ecl::Wait::None)
+        secrets_work_out();
+    return d->secret[i / 2] >> ((i & 1) * 4 + ((dir & 6) >> 1)) & 1;
+}
+
 bool map_walked(int x, int y, int dir)
 {
     // (the 3D map only: not a save's map shown meanwhile, not an overland's)

@@ -3402,15 +3402,19 @@ the game's Settings (As Original: all of them).
   type at least four times as often solid as open on that map - to be a
   secret door (the 3D view shows a plain wall there). Most maps have a
   handful; it's a guess from the data, not the games' own notion.
-  v0.214.1 (Tom, 2026-11-22: the kobold caves' marks were wrong): whether
-  such a side lets the party through is up to its square's step script
-  (the caves refuse their 13 while the kobolds hold the exits - 4C8D; the
-  Sorcerer's island its 19; 1:18 / 5:3's let it through - all as the
-  original in DOSBox), so the map marks the S only once the party has
-  walked through that side (`play::map_walked`, the sides kept while the
-  same map is loaded - a load or another map starts them afresh); until
-  then it is drawn as a wall. `geo::plain_walls` (the engine's, for the
-  port's map too). The Walk Test still marks every one.
+  v0.214.2 (Tom, 2026-11-22: the kobold caves' marks were wrong, and
+  marks must show before the party finds them): whether such a side lets
+  the party through is up to its square's step script, so each one's
+  script is run DRY as a step that way would run it (`ecl::Vm::probe` -
+  only jumps, compares, arithmetic, SAVE / GETTABLE / AND / OR; the
+  scripts' memory and the machine put back after each; a print, menu,
+  fight or a character's record ends it as "can't follow"): a side whose
+  script sets 0x7EC9 to 0xFF is drawn as a wall, the rest (and any the
+  party has walked through) get the S (`play::map_secret`, worked out
+  again after every script run while nothing waits). Checked in DOSBox:
+  the caves' 8,4 N refused, 7,3 S / 3,4 E / 4,4 W / 5,1 N walked through
+  (rock in the 3D view - real secret passages), screens identical. The
+  Walk Test still marks every one.
 - **Secret's outdoor fights** (v0.210.0): Secret has no terrain table
   (our facts); the engine read its flags from leftover memory, so its
   outdoor fields varied with what was there before (found by the toggle

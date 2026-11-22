@@ -2816,12 +2816,12 @@ struct MapSource {
     void (*describe)(char*, char*, int);
     bool teleport;      // a tap on a square moves the party there (Walk Test)
     bool (*place)(int, int);    // a place on that square (null: none)
-    bool (*walked)(int, int, int);  // the party went through that side (a secret door shown; null: none)
+    bool (*walked)(int, int, int);  // that side is a secret door (play::map_secret; null: none)
 };
 bool walk_any_side(int, int, int) { return true; }    // (the Walk Test: every secret door shown, as before)
 const MapSource kWalkMap{walk::map, walk::pos_x, walk::pos_y, walk::dir, walk::describe, true, nullptr, walk_any_side};
 const MapSource kPlayMap{play::map, play::pos_x, play::pos_y, play::dir, play::describe, false, play::map_place,
-                         play::map_walked};
+                         play::map_secret};
 
 // Any place on the map now shown (the legend's "Place")
 bool map_has_places(const MapSource& ms)
@@ -2929,8 +2929,8 @@ void draw_map_grid(lgfx::LovyanGFX& g, const geo::Map& map, const MapSource& ms,
                     else g.drawFastVLine(lx, ly, cell + 1, style::kText);
                     if (!door) continue;
                     if (door == 1 && (plain >> w & 1)) {
-                        // Drawn as the area's wall: a plain wall until the party has gone through it
-                        // (its square's script may refuse the step - the kobold caves' rock, Tom 2026-11-22)
+                        // Drawn as the area's wall: a secret door only where the square's step script lets
+                        // the party through (play::map_secret - the kobold caves' rock, Tom 2026-11-22)
                         if (!ms.walked || !ms.walked(x, y, d)) continue;
                         // A secret door: the S across the middle of the line
                         const int ox = across ? lx + cell / 2 - 2 : lx - 2;

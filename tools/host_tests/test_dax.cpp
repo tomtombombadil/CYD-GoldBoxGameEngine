@@ -3145,6 +3145,54 @@ static void test_vm_events_facts()
         vm.run(vm.entry(0));
         CHECK(vm.get(0x7ECB) == 0x33);
     }
+    // The dry run (Vm::probe - the Companion map's secret doors): COMPARE 4C8D, 0; IF =; SAVE 0xFF to 7EC9;
+    // EXIT - refused while 4C8D is 0, passed otherwise, memory as it was after each; a PRINT or a write to a
+    // character's field can't be followed (-1)
+    {
+        auto load = [&](const Bytes& body) {
+            Bytes c;
+            for (int i = 0; i < 5; ++i) { c.push_back(0); op_addr(c, static_cast<uint16_t>(kBase + 20)); }
+            c.insert(c.end(), body.begin(), body.end());
+            gs = ecl::GameState{};
+            memcpy(gs.code, c.data(), c.size());
+            gs.code_len = static_cast<uint32_t>(c.size());
+        };
+        ecl::Vm vm(gs, host, *p->ecl_ops);
+        Bytes b;
+        b.push_back(0x03); op_addr(b, 0x4C8D); op_imm(b, 0);
+        b.push_back(0x16);
+        b.push_back(0x09); op_imm(b, 0xFF); op_addr(b, 0x7EC9);
+        b.push_back(0x00);
+        load(b);
+        CHECK(vm.init_script());
+        vm.set(0x7EC9, 0x12);
+        CHECK(vm.begin_probe());
+        CHECK(vm.probe(vm.entry(0)) == 1);
+        vm.probe_restore();
+        CHECK(vm.get(0x7EC9) == 0x12);
+        vm.set(0x4C8D, 1);
+        CHECK(vm.probe(vm.entry(0)) == 0);
+        vm.probe_restore();
+        CHECK(vm.get(0x4C8D) == 0 && vm.get(0x7EC9) == 0x12);      // (the 4C8D written after begin_probe goes too)
+        vm.end_probe();
+        Bytes q;
+        q.push_back(0x11); q.push_back(0x80); q.push_back(2); q.push_back('H'); q.push_back('I');   // PRINT "HI"
+        q.push_back(0x00);
+        load(q);
+        CHECK(vm.init_script());
+        CHECK(vm.begin_probe());
+        CHECK(vm.probe(vm.entry(0)) == -1);
+        vm.end_probe();
+        Bytes w;
+        w.push_back(0x09); op_imm(w, 5); op_addr(w, 0x7C10);       // SAVE 5 to a character's field
+        w.push_back(0x00);
+        load(w);
+        CHECK(vm.init_script());
+        CHECK(vm.begin_probe());
+        CHECK(vm.probe(vm.entry(0)) == -1);
+        vm.end_probe();
+        CHECK(vm.get(0x7C10) == 0);
+    }
     // ENCOUNTER MENU, every result Combat-or-flee (code 0), the party chooses Flee: 2 when
     // its slowest is as fast as the speed asked (12), else 1
     auto flee = [&](int want) {

@@ -13,14 +13,18 @@
       new game; Throtl, its temple and catacombs, Gargath, Sir Dargaard's tomb, the Ogre Base, Jelek, the third
       outpost and Neraka done (Sir Karl's memorial, the Sanction orders); next Sanction. Open: Throtl's 2,6 / 4,0 / 5,1 (Strangbourn, the plate-mail soldier, the
       arrows) gave nothing when walked onto - the guide's squares or a facing?
-- [ ] v0.214.1 **Tom: secret doors on the Companion map** (Tom, 2026-11-22: the kobold caves' marks weren't secret
-      doors): the map's guess (a passable side of the area's plain wall) is right only where the square's script
-      lets the party through - the caves refuse all 13 (checked: the original in DOSBox at 8,4 N, a step does
-      nothing, as the engine), the Sorcerer's island its 19, others pass (1:18 5,14 N, 5:3). Now an S only once the
-      party has walked through it (kept while on that map); until then a wall. Survey: PoolRad's 23 maps had 58
-      marks (42 on squares with events). For the PortMaster port: its panel.cpp has its own plain_walls - take
-      `geo::plain_walls` and `play::map_walked` when the pin moves. Also seen (not looked into): the caves' wyvern
-      at 15,8 - the engine shows its big picture, DOSBox the 3D view with the sprite.
+- [ ] v0.214.2 **Tom: secret doors on the Companion map** (Tom, 2026-11-22: the kobold caves' marks weren't secret
+      doors; then: "Don't mark secret doors only after they're found"): each passable side drawn as the area's plain
+      wall has its square's step script run dry as a step that way (`ecl::Vm::probe`, the state put back - the
+      playsim's SECRETCHECK: unchanged in all nine games, ASan clean); refused = a wall, else the S, shown in
+      advance. The caves: 13 marks -> 10 (the three north sides at 7,4 / 8,4 / 9,4 refused while the kobolds hold
+      the exits, 4C8D; they open later and are marked then); the 10 left ARE walk-through rock - checked in DOSBox
+      (7,3 S, 3,4 E, 4,4 W, 5,1 N: the party steps through in the original, screens identical; 8,4 N refused in
+      both). PoolRad's other maps: the Sorcerer's island 19 refused, 1 left; 4:10, 5:7 one refused each. For the
+      PortMaster port: `play::map_secret` (and `geo::plain_walls`) in place of its own panel.cpp rule when the pin
+      moves. Also seen (not looked into): the caves' wyvern at 15,8 - the engine shows its big picture, DOSBox the
+      3D view with the sprite. The fight budget check (budgetx.sh) reads ~176 KB in every game, a 64 KB block from a
+      system library among it (the PC build's, not the board's) - the measure needs that left out.
 - [ ] v0.214.0 **Tom: the overland's movement keys** (Tom, 2026-11-22): on PoolRad's wilderness the turn keys
       greyed (they do nothing there) and Turn Around a down arrow (a step south); on Champions' / Death Knights' /
       the Dark Queen's overland the turn keys show their diagonal steps (north-west / north-east) and Turn Around a

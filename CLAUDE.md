@@ -194,9 +194,10 @@ HAL, CI, flasher and UI rules come from there; copy from it freely.
   doors 3 px - v0.84.0 (Tom): a pixel short at each end so the white wall
   line shows there; the party arrow bright green (`style::kParty`);
   secret doors an S on the wall line (no mark in the data: a passable
-  side of a wall type mostly solid on that map, shown once the party has
-  walked through it - its square's script may refuse it, v0.214.1, Tom's
-  kobold caves; SPEC 12); the movement
+  side of a wall type mostly solid on that map whose square's step script,
+  run dry - `ecl::Vm::probe` - doesn't refuse the step: `play::map_secret`,
+  v0.214.2, Tom's kobold caves; marks show BEFORE the party finds them -
+  Tom; SPEC 12); the movement
   keys move the party while the 320x240 Map is up (the map follows).
 - Add Character -> Pool (v0.56.0): lists Pool of Radiance characters from
   Curse's save folder (the original) AND the player's Pool of Radiance

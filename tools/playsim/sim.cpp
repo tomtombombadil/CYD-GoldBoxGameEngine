@@ -2685,6 +2685,31 @@ int main(int argc, char** argv)
         }
         printf("  OVPATH %d:%d,%d -> %d:%d,%d: %s\n", sa, sx, sy, ta, tx, ty, from[goal] < 0 ? "no way" : path.c_str());
     }
+    if (getenv("SECRETCHECK") && play::d && play::d->map.loaded) {
+        // SECRETCHECK=1: the secret doors' dry runs leave the game as it was - the game state's bytes, every
+        // member's record and the party's selection compared before / after (play::map_secret, all sides)
+        ecl::GameState* before = ecl::new_game_state(play::d->gs.code_cap);
+        std::vector<uint8_t> recs;
+        for (int i = 0; i < play::pt->count; ++i) recs.insert(recs.end(), play::pt->m[i].rec, play::pt->m[i].rec + party::kRecordSize);
+        const size_t gsz = offsetof(ecl::GameState, code) + play::d->gs.code_cap;
+        memcpy(before, &play::d->gs, gsz);
+        const int sel = play::pt->selected;
+        int n = 0;
+        for (int y = 0; y < geo::kSize; ++y)
+            for (int x = 0; x < geo::kSize; ++x)
+                for (int dd = 0; dd < 8; dd += 2) n += play::map_secret(x, y, dd);
+        std::vector<uint8_t> recs2;
+        for (int i = 0; i < play::pt->count; ++i) recs2.insert(recs2.end(), play::pt->m[i].rec, play::pt->m[i].rec + party::kRecordSize);
+        const bool same = !memcmp(before, &play::d->gs, gsz) && recs == recs2 && sel == play::pt->selected;
+        printf("  SECRETCHECK %d secret doors, state %s\n", n, same ? "unchanged" : "CHANGED");
+        if (!same)
+            for (size_t i = 0; i < gsz; ++i)
+                if (reinterpret_cast<uint8_t*>(before)[i] != reinterpret_cast<uint8_t*>(&play::d->gs)[i]) {
+                    printf("  SECRETCHECK first changed byte at gs+%zu\n", i);
+                    break;
+                }
+        ecl::free_game_state(before);
+    }
     if (getenv("MAPASCII")) {
         // MAPASCII=1: the Companion's map as play::map() gives it (walls: | and -, places: P, the party: @
         // facing ^ > v <) - PoolRad's wilderness its travel map (2026-11-22)
@@ -2692,13 +2717,13 @@ int main(int argc, char** argv)
         if (!m) printf("  MAPASCII: no map\n");
         else {
             {
-                // (the secret doors the Companion map marks: plain-wall sides the party has walked through)
+                // (the secret doors the Companion map marks: play::map_secret)
                 const uint16_t plain = geo::plain_walls(*m);
                 printf("  MAPASCII secret doors:");
                 for (int y = 0; y < geo::kSize; ++y)
                     for (int x = 0; x < geo::kSize; ++x)
                         for (int dd = 0; dd < 8; dd += 2)
-                            if (geo::door(*m, x, y, dd) == 1 && (plain >> geo::wall(*m, x, y, dd) & 1) && play::map_walked(x, y, dd))
+                            if (geo::door(*m, x, y, dd) == 1 && (plain >> geo::wall(*m, x, y, dd) & 1) && play::map_secret(x, y, dd))
                                 printf(" %d,%d%c", x, y, "NESW"[dd / 2]);
                 printf("\n");
             }
