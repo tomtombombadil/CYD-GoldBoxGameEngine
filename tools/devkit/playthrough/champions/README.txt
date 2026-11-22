@@ -27,3 +27,4 @@ Champions' Hoopak (ITEMS type 67) has flags 0x10 alone - a thrown weapon: thrown
 treasure (combat_rules_facts: thrown weapons to the pile) and goes to whoever takes the loot - so the kender
 carries a long sword and shield in gear.txt. The catacombs (script 34) are sections joined by script steps
 at the map's edges (15,0 east -> 0,1): MAPREACH per section, then the edge step.
+Overland: R / L / F / B step east / west / north / south. AUTOTAKE with %3 (Molly) - the selected member may be overloaded.

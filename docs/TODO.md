@@ -9,6 +9,10 @@
       frame pixel for pixel, 181 of 185 VGA captures among the player's states within 70 ms (the rest: half-drawn
       DOSBox captures), the EGA dissolve's order, the fades' waits (713 / 942 / 485 ms vs 718 / 955 / 490).
       Tools: tools/devkit/vace (vace_run, vace_cmp.py); host test test_vace; the playsim's Movie screen (MOVIEKEY).
+- [ ] Champions play-through (2026-11-22; the Project's claude/playthrough_champions.md): GOG save A's party in a
+      new game; Throtl, its temple and catacombs done (the eggs back, Sir Karl's orders for Gargath / Jelek); next
+      the second outpost, Gargath. Open: Throtl's 2,6 / 4,0 / 5,1 (Strangbourn, the plate-mail soldier, the
+      arrows) gave nothing when walked onto - the guide's squares or a facing?
 - [x] v0.212.1 (the Champions play-through, 2026-11-22): **the Cheats tab never opened at Champions' / Death
       Knights' outposts** - their menus run in the overland's mode (area word 0x4BE6 = 0), so kr_overland() held and
       cheat_menu_place() refused them; a script's menu there now counts as a menu town (as Curse's, v0.204.0) -
