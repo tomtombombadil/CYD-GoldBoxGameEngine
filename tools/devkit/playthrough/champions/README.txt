@@ -18,3 +18,8 @@ Snapshots: p.sh needs card/out; a long fight's snapshots fill the scratch allowa
   The Healer (fix.sh): the temple's own menu first ("/H" opens the list): Heal the 6th line, Raise Dead the 8th.
   sellplain.sh: "Ring of" kept, Ring Mail sold. adv.sh: a one-word "Press <enter>" menu pressed on.
 The playsim's auto tokens: Champions' fight menu has no Quick - Done, then Auto (Guard Delay Quit Auto Speed Exit).
+Lessons (2026-11-22): Quick readies darts / bows and leaves the sword and armour unreadied - rdy.sh no longer keeps
+darts readied (they took the weapon hand), and sellplain.sh never sells a name in gear.txt (it had sold Sir
+Strongsword's plate and sword, Molly's hoopak). The Merchant cheat's first goods page is 22 lines (buyn PS=22).
+A lost fight ends at the party menu (screen 1 with the fight's menu still shown) - the story fights the party
+can't win on Auto: EXTRA="QASPELLS=1 WINFIGHT=1" for that event only.
