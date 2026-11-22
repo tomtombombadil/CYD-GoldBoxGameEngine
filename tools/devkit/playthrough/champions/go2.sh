@@ -3,7 +3,7 @@
 # adv.sh (answer GOANS2, default Y; PICK from the environment), post.sh after a fight; until the square is reached
 P=/tmp/claude-0/chplay; S=$1; G=$2; shift 2
 for k in $(seq 1 ${GON:-10}); do
-  o=$(timeout 2400 $P/bin/goto.sh $S $G MAPLOCKED=1 MAPSECRET=1 "$@" 2>&1)
+  o=$(timeout 2400 $P/bin/goto.sh $S $G MAPLOCKED=1 MAPSECRET=1 ${GOENV} "$@" 2>&1)
   echo "$o" | grep -E "fight on the way|JOURNAL|TEXT" | cut -c1-110
   echo "$o" | grep -q "fight on the way" && $P/bin/post.sh $S > /dev/null
   if echo "$o" | grep -q "not saved: a menu waits"; then
