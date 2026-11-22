@@ -102,6 +102,7 @@ enum class Wait : uint8_t {
     Luck,         // Treasures' PROGRAM 3: a LUCK.DAX text (news / the crown's end), page by page; resume() after
     ShipRest,     // Treasures' PROGRAM 4: the party heals itself on the way (Fix, then a rest); resume() after
     Finale,       // the Dark Queen's PROGRAM 1: its ending's picture show (its song started); resume() after
+    Movie,        // PROGRAM 1 with program_movie: VACE's FINAL movie (vace.h), then resume()
     Quit,         // PROGRAM 2 with program_quit: the game ends (the original quits to DOS; the script has ended)
 };
 

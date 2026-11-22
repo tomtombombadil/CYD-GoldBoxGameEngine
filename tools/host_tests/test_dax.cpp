@@ -51,6 +51,7 @@
 #include "engine/combat.h"
 #include "engine/overland.h"
 #include "engine/quickacts.h"
+#include "engine/vace.h"
 
 static int failures = 0;
 #define CHECK(c) do { if (!(c)) { printf("FAIL %s:%d  %s\n", __FILE__, __LINE__, #c); ++failures; } } while (0)
@@ -3022,6 +3023,24 @@ static void test_ecl_party()
     CHECK(vm.init_script());
     r = vm.run(vm.entry(4));
     CHECK(r == ecl::Stop::Stopped && vm.get(0x4C07) == 9);
+    // Darkness's PROGRAM 1 (program_movie): VACE's FINAL movie, then the
+    // script goes on after it (the original's restart comes back there)
+    c5[f5 + 2] = 1;
+    memcpy(gs.code, c5.data(), c5.size());
+    static ecl::OpSet movie_set;
+    movie_set = *pr->ecl_ops;
+    movie_set.program_movie = true;
+    static ecl::Vm mvm(gs, host, movie_set);
+    mvm.set(0x4C07, 0);
+    CHECK(mvm.init_script());
+    r = mvm.run(mvm.entry(4));
+    CHECK(r == ecl::Stop::Waiting && mvm.wait() == ecl::Wait::Movie && mvm.get(0x4C07) != 9);
+    r = mvm.resume();
+    CHECK(mvm.get(0x4C07) == 9);
+    vm.set(0x4C07, 0);
+    CHECK(vm.init_script());
+    r = vm.run(vm.entry(4));
+    CHECK(r == ecl::Stop::Stopped && vm.get(0x4C07) == 9);      // (Curse's set: PROGRAM 1 does nothing)
 }
 
 // The original's ways (coab's facts / the listing): RETURN with nothing to
@@ -9352,6 +9371,158 @@ static void test_drained()
 // "each a switch"): the tables in their enums' order, names unique and
 // short enough for a key, every entry some game's; each switch off alone
 // turns off itself only; set_all / all_fixes
+// VACE movies (vace.h; claude/vace_facts.md) on synthetic files: an ACF of
+// colours, a rate, frames and a fade; a BMA of two chunks (a full frame,
+// a frame changing a few pixels, an empty one) - the frames' pixels, the
+// steps' times, the EGA pairs, the dissolve's order, a key ending it
+struct VaceScreen : vace::Screen {
+    uint8_t px[320 * 200] = {};
+    uint8_t dac[256][3] = {};
+    int song_n = -1, colours = 0;
+    void put(int x, int y, uint8_t v) override { px[y * 320 + x] = v; }
+    uint8_t get(int x, int y) const override { return px[y * 320 + x]; }
+    void colour(int i, uint8_t r, uint8_t g, uint8_t b) override { dac[i][0] = r; dac[i][1] = g; dac[i][2] = b; ++colours; }
+    void song(int n) override { song_n = n; }
+};
+
+static void acf_rec(Bytes& a, uint8_t type, std::initializer_list<uint8_t> args)
+{
+    a.push_back(static_cast<uint8_t>(2 + args.size()));
+    a.push_back(type);
+    for (uint8_t v : args) a.push_back(v);
+}
+
+// A chunk: its frames' bytes after the header (each starts with w, h)
+static void bma_chunk(Bytes& b, const std::vector<Bytes>& frames)
+{
+    const uint32_t start = static_cast<uint32_t>(b.size());
+    uint32_t size = 6 + 4 * static_cast<uint32_t>(frames.size());
+    for (const Bytes& f : frames) size += static_cast<uint32_t>(f.size());
+    for (int k = 0; k < 4; ++k) b.push_back(static_cast<uint8_t>(size >> (8 * k)));
+    put16(b, static_cast<uint32_t>(frames.size()));
+    uint32_t off = 6 + 4 * static_cast<uint32_t>(frames.size());
+    for (const Bytes& f : frames) {
+        for (int k = 0; k < 4; ++k) b.push_back(static_cast<uint8_t>(off >> (8 * k)));
+        off += static_cast<uint32_t>(f.size());
+    }
+    for (const Bytes& f : frames) b.insert(b.end(), f.begin(), f.end());
+    CHECK(b.size() - start == size);
+}
+
+static void test_vace()
+{
+    // Frame A: every line - x 0, 241 pixels of colour 5 (runs of 128 + 113),
+    // then x 241 (flags 0x81: +256? no - bit 0 clear, last) 79 pixels: a
+    // literal 3, 76 of colour 6
+    Bytes fa;
+    put16(fa, 320);
+    put16(fa, 200);
+    for (int y = 0; y < 200; ++y) {
+        fa.push_back(static_cast<uint8_t>(y));
+        fa.insert(fa.end(), {0, 0, 241, 4, 0xFF, 5, 0xE1, 5});
+        fa.insert(fa.end(), {241, 0x80, 79, 6, 0x04, 7, 8, 9, 0x97, 6});
+    }
+    fa.push_back(0xFF);
+    // Frame B: line 10 only, x 256 + 4 (flags 1 | 0x80), 2 pixels of colour 1
+    Bytes fb;
+    put16(fb, 320);
+    put16(fb, 200);
+    fb.insert(fb.end(), {10, 4, 0x81, 2, 2, 0x03, 1, 0xFF});
+    Bytes fe;
+    put16(fe, 320);
+    put16(fe, 200);
+    fe.push_back(0xFF);
+    Bytes bma;
+    bma_chunk(bma, {fa, fb});
+    bma_chunk(bma, {fe});
+    Bytes acf;
+    acf_rec(acf, 8, {0, 1, '3', 'P', ' ', ' '});        // (the song "P3": high byte first)
+    acf_rec(acf, 9, {});
+    acf_rec(acf, 0, {1, 0});                            // (rate 1: 261 ticks)
+    acf_rec(acf, 2, {63, 5, 0, 0});                     // (colour 5: red 63 - bytes red, index, blue, green)
+    acf_rec(acf, 2, {0, 6, 42, 21});                    // (colour 6: blue 42, green 21)
+    acf_rec(acf, 3, {});
+    acf_rec(acf, 3, {});                                // (a rate-1 step after the first)
+    acf_rec(acf, 0, {16, 0});                           // (rate 16: 16 ticks)
+    acf_rec(acf, 3, {});
+    acf_rec(acf, 0, {1, 0});
+    acf_rec(acf, 11, {});
+    acf_rec(acf, 1, {});
+    dax::MemorySource src(bma.data(), static_cast<uint32_t>(bma.size()));
+    static vace::Player p;
+    static VaceScreen s;
+    CHECK(vace::open(p, acf.data(), static_cast<uint32_t>(acf.size()), src, true, true));
+    CHECK(p.chunks == 2 && p.frames[0] == 2 && p.frames[1] == 1);
+    uint32_t next = 0;
+    CHECK(vace::run(p, 1000, src, s, &next));
+    CHECK(s.song_n == 3);
+    CHECK(s.px[0] == 5 && s.px[240] == 5 && s.px[241] == 7 && s.px[243] == 9 && s.px[244] == 6 && s.px[319 + 199 * 320] == 6);
+    CHECK(s.dac[5][0] == 63 && s.dac[6][1] == 21 && s.dac[6][2] == 42);
+    CHECK(next == 1000 + 3584);                         // (261 x 13.731 ms)
+    CHECK(vace::run(p, next - 1, src, s, &next) && s.px[10 * 320 + 260] == 6);
+    CHECK(vace::run(p, next, src, s, &next) && s.px[10 * 320 + 260] == 1 && s.px[10 * 320 + 261] == 1 && s.px[10 * 320 + 262] == 6);
+    CHECK(next == 4584 + 220);                          // (16 ticks: 219.7 ms)
+    CHECK(vace::run(p, next, src, s, &next));           // (the empty frame: nothing drawn)
+    CHECK(next == 4804 + 3584);                         // (the fade waits a rate-1 step)
+    // The fade: 6 colours on screen (1, 5, 6, 7, 8, 9) - a retrace, then a
+    // retrace before reading each of the 6 (places 0-5: bit 4 clear) - then
+    // 63 steps (colour 5's red to colour 0's 0), a retrace each
+    const uint32_t t0 = next;
+    CHECK(vace::run(p, t0, src, s, &next) && p.fading == 1 && p.n_used == 6 && p.waits0 == 7 && p.steps == 63);
+    CHECK(vace::run(p, t0 + 113, src, s, &next) && s.dac[5][0] == 63);   // (7 retraces, then the step's own)
+    CHECK(vace::run(p, t0 + 115, src, s, &next) && s.dac[5][0] == 62);   // (the first step)
+    CHECK(!vace::run(p, t0 + 2000, src, s, &next));     // (the fade done, the screen cleared, the end)
+    CHECK(s.dac[5][0] == 0 && s.px[0] == 0 && s.px[64000 - 1] == 0 && s.song_n == 0);
+    // No sound: 62 / rate ticks of 54.925 ms, no song
+    CHECK(vace::open(p, acf.data(), static_cast<uint32_t>(acf.size()), src, true, false));
+    s.song_n = -1;
+    CHECK(vace::run(p, 0, src, s, &next) && s.song_n == -1 && next == 62 * 54925 / 1000 + 1);
+    // The clock counts from the movie's start: a board up for days (ms near the wrap) times it the same
+    CHECK(vace::open(p, acf.data(), static_cast<uint32_t>(acf.size()), src, true, true));
+    CHECK(vace::run(p, 0xFFFFF000u, src, s, &next) && next == 0xFFFFF000u + 3584);
+    CHECK(vace::run(p, next, src, s, &next) && next == 0xFFFFF000u + 3584 + 220);
+    // A key: the end, the song stopped
+    vace::stop(p, s);
+    CHECK(!vace::run(p, next, src, s, &next));
+    // EGA: two colours a pixel (x + y even: the lower), the dissolve
+    uint8_t pal[256][3] = {}, pr[256][2];
+    pal[1][0] = 63; pal[1][1] = 63; pal[1][2] = 63;     // (white: 15 / 15)
+    pal[2][0] = 42;                                     // (EGA red 4)
+    pal[3][0] = 21; pal[3][1] = 21; pal[3][2] = 42;     // (8 and 9's average: 8 / 9)
+    vace::ega_pairs(pal, pr);
+    CHECK(pr[0][0] == 0 && pr[0][1] == 0);
+    CHECK(pr[1][0] == 15 && pr[1][1] == 15);
+    CHECK(pr[2][0] == 4 && pr[2][1] == 4);
+    CHECK(pr[3][0] == 8 && pr[3][1] == 9);
+    // The dissolve's register: 2^17 - 1 states, then back to 1; every
+    // pixel of 320 x 200 once (with 0, 0 first)
+    uint32_t st = 1, period = 0;
+    static uint8_t hit[320 * 200];
+    memset(hit, 0, sizeof hit);
+    hit[0] = 1;
+    int pixels = 1;
+    do {
+        st = vace::lfsr_next(st);
+        ++period;
+        const uint32_t x = st >> 8, y = st & 0xFF;
+        if (x < 320 && y < 200 && !hit[y * 320 + x]) { hit[y * 320 + x] = 1; ++pixels; }
+    } while (st != 1 && period < 200000);
+    CHECK(period == 131071 && pixels == 64000);
+    CHECK(vace::open(p, acf.data(), static_cast<uint32_t>(acf.size()), src, false, true));
+    memset(s.px, 0, sizeof s.px);
+    s.colours = 0;
+    CHECK(vace::run(p, 0, src, s, &next));
+    CHECK(s.colours == 0);                              // (EGA: no palette)
+    CHECK(vace::run(p, 3584, src, s, &next) && vace::run(p, 3804, src, s, &next));
+    CHECK(s.px[0] == 4 && s.px[1] == 4);                // (colour 5, red 63: EGA red 4 both - nearer than 12 + 4 with its spread)
+    memset(s.px, 1, sizeof s.px);
+    CHECK(vace::run(p, 3804 + 3584, src, s, &next) && p.fading == 2);
+    int left = 0;
+    for (int i = 0; i < 64000; ++i) left += s.px[i] != 0;
+    CHECK(left == 64000 - 1066 && s.px[0] == 0);        // (the first batch: 64000 / 60 pixels, 0, 0 first)
+    CHECK(!vace::run(p, 3804 + 3584 + 60 * 15, src, s, &next));
+}
+
 static void test_fix_switches()
 {
     for (int k = 0; k < rules::kFixCount; ++k) {
@@ -9392,6 +9563,7 @@ int main()
     if (!rules::test::off_fix && !rules::test::off_adnd && !rules::test::off_enh)   // (it checks the switches themselves)
 #endif
     test_fix_switches();
+    test_vace();
     test_pool_spell_fix();
     test_drained();
     test_rle_known_bytes();

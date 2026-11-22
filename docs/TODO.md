@@ -1,5 +1,17 @@
 # Open tasks (Tom and Claude)
 
+- [x] v0.212.0 (Tom, 2026-11-22: "fix the final cinematic to match the DOSBox behavior"): **Darkness's ending movie** -
+      block 75's PROGRAM 1 now plays VACE's FINAL from the player's FINAL.ACF / FINAL.BMA as VACE.EXE does
+      (`engine/vace.*`, Wait::Movie; facts: the Project's claude/vace_facts.md): Bane's avatar struck down, Phlan
+      restored, Elminster's farewell, with song 3; 256 colours on the S3 / C5 boards, VACE's EGA look (two-colour
+      checkerboards, the dissolve) on the classic ones; a tap ends it; then the screen drawn again and the script on
+      ("AS IF FROM FAR AWAY ..."), as the original's restart. Checked against DOSBox (VGA and EGA, sound on): every
+      frame pixel for pixel, 181 of 185 VGA captures among the player's states within 70 ms (the rest: half-drawn
+      DOSBox captures), the EGA dissolve's order, the fades' waits (713 / 942 / 485 ms vs 718 / 955 / 490).
+      Tools: tools/devkit/vace (vace_run, vace_cmp.py); host test test_vace; the playsim's Movie screen (MOVIEKEY).
+- [ ] Darkness's intro movie (VACE INTRO, before the titles): the same player would play INTRO.ACF / INTRO.BMA -
+      for Tom: wanted? (The engine starts at the titles, as since v0.141.0.)
+- [x] 2026-11-22 (no engine fault): the Temple of Tyr's fire elementals - see the entry below; MAPLINK / MAPDOORS.
 - [x] v0.211.16 (the Darkness play-through, 2026-11-21 - played to the end): **the game never ended** - after
       Gothmenes, the fine ship's farewell ("Do you really want to leave us?" Yes, the ending's pages) ran PROGRAM 2,
       which the engine passed over, and the party stood in Phlan again. Darkness's PROGRAM 2 is "quit to DOS"
@@ -141,10 +153,12 @@
       on; Knock 0x1F): "Locked. Bash Pick Exit" there, Bash opened it (the alarm), Pick by a thief. Every game checked
       (tools/devkit/doors): Curse, PoolRad, Champions, Gateway had theirs; Darkness has locked sides but no such words
       in its program; Knights / Treasures no locked sides; Queen's HLIB maps not scanned.
-- [ ] Darkness, the Temple of Tyr's basement (block 54, 0x941B, the fire elementals for the Spirit Flame): the fight
-      ended by the 15-round rule with no blow struck - the party and the three elementals placed on the two sides
-      of the field's wall line and neither reached the other (playsim, two seeds). Compare the field and placement
-      with the original in DOSBox (does the original place them across a wall too?).
+- [x] 2026-11-22 (no engine fault): Darkness, the Temple of Tyr's basement (block 54, 0x941B, the fire elementals
+      for the Spirit Flame) ended by the 15-round rule with the sides across a wall line - the play-through had run
+      the event by hand (RUNAT) at 7,13, so the fight got 7,13's battlefield: the walk found "no way" to 12,8 (the
+      second basement is reached by the stairs on 0,8's south side, a script's). Walked in properly (0,8 S, Yes,
+      12,8 from the west; also from the south and east, every facing) the fight is won in round 3 (three seeds).
+      Kit: playsim MAPLINK (stairs in MAPPATH), MAPDOORS; README.
 - [x] v0.211.7 (the Darkness play-through, 2026-11-21, the Silver Blades cave's Worldstone): **Darkness's fights
       left the scripts' compare flags as the compare before them** - its fight end sets "=" (or "<>" by its byte
       0x7FF5) at DS 0xB01E (GAME.OVR 0x596E - the same routine as Treasures' 0x6644, done in v0.208.4 for Treasures
