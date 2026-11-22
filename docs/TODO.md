@@ -176,7 +176,10 @@
       Red Tower, Myth Drannor, the drow, Kalistes' web ...). Now dk_addr 0x7ED5 -> 0x21. Checked: playsim, Traitor's
       Gate to map 17, a save there loads map 17, Kuto's Gate -> Sasha -> Bane -> Limbo. Treasures' scripts not
       walked yet.
-- [ ] Secret play-through (Tom, 2026-11-19; the Project's claude/playthrough_secret.md): New Verdigris, the Well,
+- [x] Secret play-through (Tom, 2026-11-19; COMPLETE 2026-11-22: the Dreadlord won (WINFIGHT) -> Vala's "still feels
+      cold" -> the hidden chamber at 1,2 walked to (its secret door found, Explore room) -> the medusae / golems
+      (WINFIGHT) -> the gem shattered, the spirits, "A GATE BEGINS TO GLOW" -> the gate at 0,0 (Yes) to the portals
+      (block 33) - the end the guides give; no engine fault; the Project's claude/playthrough_secret.md): New Verdigris, the Well,
       the Ruins' dragons and bier, the Black Circle HQ under way; then the Temple of Tyr, the mines, dungeon,
       crevasses, castle, Eldamar. Secret has NO ending program (2026-11-20: every ECL1-3 block
       disassembled - its only PROGRAMs are 3 and 0; after Eldamar's gem the game goes on, as the guides
