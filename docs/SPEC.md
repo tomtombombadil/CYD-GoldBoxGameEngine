@@ -167,8 +167,10 @@ The games draw a 320x200 screen. The canvas is presented:
     arrow where the party is and the barriers to their travel ... markers
     at the coordinates where the party can leave"; it showed the last 3D
     map before): `play::map()` gives a 16 x 16 window of the area the
-    party is in (local x 0-15; 16 of its 36 rows, the party's row in the
-    middle where it can be - the window follows it), a wall on each side
+    party is in (local x 0-15; 16 of its 36 rows - the window holds
+    while the party walks inside it, so the arrow moves, and centres on
+    it again when it comes within 3 rows of an edge, v0.213.1; each
+    rebuild a new map pointer so every panel redraws), a wall on each side
     of a land square that a step can't cross - the sea, coast and lakes
     (the program's blocked bytes), the stinking river until the land is
     healed, the scripts' edges (no step north from row 2, west from x 2

@@ -76,7 +76,8 @@ struct Host;
 // healed, the scripts' edges) - and the scripts' own special squares (the
 // places); on the heap only while the party is out there
 struct OvCompanion {
-    geo::Map m;
+    geo::Map maps[2];                           // (rebuilt into the other one: a new pointer tells the panels)
+    int cur = 0;
     int area = -1, y0 = -1, script = -1;
     bool healed = false;
     ecl::PlaceTables pt;
@@ -21182,7 +21183,11 @@ const OvCompanion* ov_companion()
     OvCompanion& o = *d->ovc;
     const overland::Facts& of = *d->prof->overland;
     const int area = ov_area(), py = vm->get(0x4BC4) & 0xFF;
-    int y0 = py - geo::kSize / 2;
+    // The window (16 of the area's 36 rows) stays while the party walks inside it - the arrow moves, as
+    // on a 3D map - and centres again when it comes within 3 rows of an edge (Tom, 2026-11-22: the
+    // arrow stood still going north / south while the window followed every step)
+    int y0 = o.y0;
+    if (o.area != area || y0 < 0 || py < y0 + 3 || py > y0 + geo::kSize - 4) y0 = py - geo::kSize / 2;
     y0 = y0 < 0 ? 0 : y0 > overland::kH - geo::kSize ? overland::kH - geo::kSize : y0;
     const bool healed = vm->get(of.healed) != 0;
     if (o.script != d->gs.script) {
@@ -21201,11 +21206,12 @@ const OvCompanion* ov_companion()
         }
         o.area = -1;                                // (the walls again)
     }
-    if (o.area == area && o.y0 == y0 && o.healed == healed && o.m.loaded) return &o;
+    if (o.area == area && o.y0 == y0 && o.healed == healed && o.maps[o.cur].loaded) return &o;
     o.area = area;
     o.y0 = y0;
     o.healed = healed;
-    geo::Map& m = o.m;
+    o.cur ^= 1;
+    geo::Map& m = o.maps[o.cur];
     memset(m.plane, 0, sizeof m.plane);
     m.w = m.h = geo::kSize;
     m.wraps = false;
@@ -21231,20 +21237,22 @@ const OvCompanion* ov_companion()
 const geo::Map* map()
 {
     if (peek_on()) return peek->map_ok ? &peek->map : nullptr;
-    if (const OvCompanion* o = ov_companion()) return &o->m;
+    if (const OvCompanion* o = ov_companion()) return &o->maps[o->cur];
     if (d && pool_overland()) return nullptr;       // (its facts unread: no map rather than the last 3D one)
     return d && d->map.loaded && !q_overland() ? &d->map : nullptr;
 }
 int pos_x()
 {
     if (peek_on() && peek->x >= 0) return peek->x;
-    if (d && d->ovc && pool_overland()) return vm->get(0x4BC3) & 0xFF;
+    if (d && pool_overland() && ov_companion()) return vm->get(0x4BC3) & 0xFF;
     return d ? d->gs.x : 0;
 }
 int pos_y()
 {
     if (peek_on() && peek->y >= 0) return peek->y;
-    if (d && d->ovc && pool_overland()) return (vm->get(0x4BC4) & 0xFF) - d->ovc->y0;
+    if (d && pool_overland()) {
+        if (const OvCompanion* o = ov_companion()) return (vm->get(0x4BC4) & 0xFF) - o->y0;   // (the window as map() gives it)
+    }
     return d ? d->gs.y : 0;
 }
 int dir() { return peek_on() ? peek->dir : d ? d->gs.dir : 0; }

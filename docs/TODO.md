@@ -16,7 +16,8 @@
 - [ ] v0.213.0 **Tom: try the Companion map on PoolRad's wilderness** (Tom, 2026-11-22: "Build it for PoolRad
       first and I'll test it"; SPEC 4): walk the wilderness - walls where a step is refused (sea, coast, the
       stinking river until the land is healed, the north edge), orange squares where the scripts have a place, the
-      arrow where the party is; the window follows the party up and down (16 of the area's 36 rows). Big enough,
+      arrow where the party is; the window (16 of the area's 36 rows) holds while the party walks in it and centres
+      again 3 rows from an edge (v0.213.1 - Tom: the arrow stood still going north / south). Big enough,
       or zoom / panning controls (Tom's idea)? Then the same for Champions, Death Knights, Darkness, the Dark Queen
       (their overland scripts refuse steps - probe them at the scan) and Curse's travel map.
       Checked: playsim MAPASCII=1 (area 26 save B against its own 5 x 5 view), QEMU 4.0" S3 firmware (load,

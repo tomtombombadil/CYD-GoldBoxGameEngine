@@ -2661,7 +2661,7 @@ int main(int argc, char** argv)
         const geo::Map* m = play::map();
         if (!m) printf("  MAPASCII: no map\n");
         else {
-            printf("  MAPASCII at %d,%d dir %d\n", play::pos_x(), play::pos_y(), play::dir());
+            printf("  MAPASCII at %d,%d dir %d (game %d,%d) map %p\n", play::pos_x(), play::pos_y(), play::dir(), play::vm ? play::vm->get(0x4BC3) & 0xFF : -1, play::vm ? play::vm->get(0x4BC4) & 0xFF : -1, (const void*)m);
             for (int y = 0; y < geo::kSize; ++y) {
                 std::string top = "  ", mid = "  ";
                 for (int x = 0; x < geo::kSize; ++x) {
