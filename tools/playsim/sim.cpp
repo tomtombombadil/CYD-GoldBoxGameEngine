@@ -2136,6 +2136,22 @@ int main(int argc, char** argv)
                 f.rec[0x1A4] = 0; f.rec[0x195] = 6; f.rec[0x196] = 0;
             }
         }
+        if (getenv("FELL") && play::fg && play::screen == play::Screen::Fight && play::ml && play::fg->b.fx &&
+            play::fg->b.crystal_ok && play::fg->b.crystal_who < 0 &&
+            play::fg->st != play::FSt::Results && play::fg->st != play::FSt::Destroyed && play::fg->st != play::FSt::NpcShare) {
+            // FELL=k (Treasures' alliance fights; 0 Zhentil, 1 Hosttower, 2 Kraken): the first villain of
+            // that kind takes a killing blow through combat::damage - a play-through's way to choose which
+            // crystal is won (the choice of target is the fight menus' business, checked elsewhere)
+            const int k = atoi(getenv("FELL")) % 3;
+            const uint8_t aff = play::fg->b.fx->mon.crystal[k];
+            for (int i = 0; aff && i < play::fg->b.n; ++i) {
+                combat::Fighter& f = play::fg->b.f[i];
+                if (!f.size || !f.team() || !f.up() || !f.has(aff)) continue;
+                printf("  FELL: villain kind %d (fighter %d) struck down\n", k, i);
+                combat::damage(play::fg->b, i, 30000);
+                break;
+            }
+        }
         if (*m == '~') {
             if (m == yes_skip_from) { m = yes_skip_to; yes_skip_from = nullptr; }
             continue;
