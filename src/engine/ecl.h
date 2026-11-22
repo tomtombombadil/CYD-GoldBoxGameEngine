@@ -71,6 +71,9 @@ struct OpSet {
     // PROGRAM 2: quit to DOS (Darkness GAME.OVR 0x2165, Treasures ov43+0x24BE -
     // the game's last words: the fine ship's farewell); other games: nothing
     bool program_quit = false;
+    // PROGRAM 1: VACE's FINAL movie (Darkness - CONTROL.EXE runs "vace FINAL" between two runs
+    // of the game, which comes back at the script after it; Wait::Movie)
+    bool program_movie = false;
     // PROGRAM 9: the camp, then EXIT (Darkness); the Dark Queen's script goes
     // on after the camp (its inn: the city's menu again - DOSBox)
     bool camp_resumes = false;

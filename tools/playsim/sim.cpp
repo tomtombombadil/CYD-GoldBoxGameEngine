@@ -376,6 +376,11 @@ static void settle(int choice = 0, int max_ms = 60000)
             if (t % 1000 == 0) shot("finale");
             continue;
         }
+        if (play::screen == play::Screen::Movie) {      // (Darkness's ending movie: a shot a second; MOVIEKEY=ms a tap then)
+            if (t % 1000 == 0) shot("movie");
+            if (getenv("MOVIEKEY") && t == atoi(getenv("MOVIEKEY"))) play::tap(10, 10, C);
+            continue;
+        }
         if (!waiting) return;
         const auto wt = vm->wait();
         // MANUAL=1 (the side-by-side tool): nothing answered - back to the
@@ -1881,7 +1886,7 @@ int main(int argc, char** argv)
         play::then = play::Then::Idle;
         w0 = world_hash();
         play::handle(play::vm->run((uint16_t)a));
-        settle(0, play::screen == play::Screen::Finale ? 45000 : 5000);
+        settle(0, play::screen == play::Screen::Finale || play::screen == play::Screen::Movie ? 45000 : 5000);
         printf("  screen %d, %d goods, menu [%s]\n", (int)play::screen, play::ground->n, play::menu.s);
         if (play::screen == play::Screen::Won) {
             // The game won (RUNAT at a PROGRAM 8): a tap every 2 s, a snapshot before each

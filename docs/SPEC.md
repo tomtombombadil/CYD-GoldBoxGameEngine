@@ -1827,6 +1827,21 @@ the scripts' changed ops, the rule tables, fights, the rest.
   The canvas parks to the card through a 2 KB internal buffer (the S3's
   SD/MMC DMA rule). The Look / Walk tests stay in EGA.
 
+The ending movie (v0.212.0, Tom 2026-11-22: "fix the final cinematic to
+match the DOSBox behavior"): block 75's PROGRAM 1 (OpSet `program_movie`,
+Wait::Movie) plays the player's FINAL.ACF / FINAL.BMA as VACE.EXE does -
+the original saves, exits 0x17, CONTROL.EXE runs "vace FINAL" and the game
+again at the script after it. `engine/vace.*` (facts: the Project's
+claude/vace_facts.md): the ACF's colours, rates, frames, song and fades;
+the BMA's chunks of line-coded frames; the step 261 / rate ticks of 72.82 Hz
+(62 / rate of 18.21 Hz with Game Sound Off); VGA.DRV's fade (a retrace per
+step, the colours on screen) on the 256-colour canvas; on the classic
+boards EGA.DRV's look - each colour a checkerboard of two EGA colours,
+the dissolve in a 17-bit register's order; song 3 (P3.SMS = MUSIC.DAX
+block 3); a tap ends it. Then the game's colours back, the screen drawn
+again, the script on. Checked against VACE in DOSBox frame by frame, VGA
+and EGA (tools/devkit/vace). The intro (INTRO.ACF) is not played yet.
+
 ## 6e. Gateway to the Savage Frontier (Tom, 2026-10-23: started after Darkness)
 
 **Under water** (v0.196.13-16; the Dark Queen has its own, its game byte

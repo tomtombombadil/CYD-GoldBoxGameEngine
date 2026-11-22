@@ -2467,6 +2467,7 @@ Stop Vm::step()
             h_.party_killed();
             return Stop::Running;
         }
+        if (v == 1 && set_.program_movie) return wait_for(Wait::Movie);    // (Darkness's ending movie)
         if (v == 2 && set_.program_quit) {                  // quit to DOS (Darkness's ending)
             stop_script();
             return wait_for(Wait::Quit);

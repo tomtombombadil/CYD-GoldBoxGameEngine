@@ -1754,6 +1754,7 @@ constexpr ecl::OpSet kDarknessEcl = [] {
     s.destroy_magic = true;         // (0x40: type & 0x7F, 0x80 = magic only - GAME.OVR 0x22AC)
     s.treasure_flags = true;        // (COMBAT, no monsters: the fight's end sets the flags - ovr 0x5968)
     s.program_quit = true;          // (PROGRAM 2: quit to DOS - GAME.OVR 0x2165; the fine ship's farewell)
+    s.program_movie = true;         // (PROGRAM 1: VACE's FINAL - GAME.OVR 0x3232 saves, exits 0x17; vace.h)
     return s;
 }();
 
@@ -1782,6 +1783,7 @@ constexpr ecl::OpSet kQueenEcl = [] {
     s.destroy_magic = false;        // (no such test in DQK.EXE)
     s.treasure_flags = false;       // (not looked at in DQK.EXE)
     s.program_quit = false;
+    s.program_movie = false;
     s.code_size = 12000;
     s.no_prefix = true;
     s.krynn_race = true;
@@ -2056,6 +2058,7 @@ constexpr ecl::OpSet kTreasuresEcl = [] {
     s.code_size = ecl::kTreasuresCodeSize;
     s.shops = 16;
     s.tr_ops = true;
+    s.program_movie = false;        // (no VACE files - its CONTROL.EXE names FINAL, no VACE.EXE)
     return s;
 }();
 
@@ -2095,6 +2098,7 @@ constexpr ecl::OpSet kDeathKnightsEcl = [] {
     s.destroy_magic = false;        // (its 0x40 handler has no such test)
     s.treasure_flags = false;       // (not looked at in its GAME.OVR)
     s.program_quit = false;
+    s.program_movie = false;
     s.sizes[0x21] = 3;
     s.sizes[0x37] = 3;
     s.load_pieces = 0x37;

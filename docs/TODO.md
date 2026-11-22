@@ -1,5 +1,17 @@
 # Open tasks (Tom and Claude)
 
+- [x] v0.212.0 (Tom, 2026-11-22: "fix the final cinematic to match the DOSBox behavior"): **Darkness's ending movie** -
+      block 75's PROGRAM 1 now plays VACE's FINAL from the player's FINAL.ACF / FINAL.BMA as VACE.EXE does
+      (`engine/vace.*`, Wait::Movie; facts: the Project's claude/vace_facts.md): Bane's avatar struck down, Phlan
+      restored, Elminster's farewell, with song 3; 256 colours on the S3 / C5 boards, VACE's EGA look (two-colour
+      checkerboards, the dissolve) on the classic ones; a tap ends it; then the screen drawn again and the script on
+      ("AS IF FROM FAR AWAY ..."), as the original's restart. Checked against DOSBox (VGA and EGA, sound on): every
+      frame pixel for pixel, 181 of 185 VGA captures among the player's states within 70 ms (the rest: half-drawn
+      DOSBox captures), the EGA dissolve's order, the fades' waits (713 / 942 / 485 ms vs 718 / 955 / 490).
+      Tools: tools/devkit/vace (vace_run, vace_cmp.py); host test test_vace; the playsim's Movie screen (MOVIEKEY).
+- [ ] Darkness's intro movie (VACE INTRO, before the titles): the same player would play INTRO.ACF / INTRO.BMA -
+      for Tom: wanted? (The engine starts at the titles, as since v0.141.0.)
+- [x] 2026-11-22 (no engine fault): the Temple of Tyr's fire elementals - see the entry below; MAPLINK / MAPDOORS.
 - [x] v0.211.16 (the Darkness play-through, 2026-11-21 - played to the end): **the game never ended** - after
       Gothmenes, the fine ship's farewell ("Do you really want to leave us?" Yes, the ending's pages) ran PROGRAM 2,
       which the engine passed over, and the party stood in Phlan again. Darkness's PROGRAM 2 is "quit to DOS"

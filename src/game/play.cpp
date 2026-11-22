@@ -40,6 +40,7 @@
 #include "engine/hlib.h"
 #include "engine/hlpic.h"
 #include "engine/qview.h"
+#include "engine/vace.h"
 #include "platform/audio.h"
 #include "platform/memlog.h"
 #include "game/music_make.h"
@@ -345,7 +346,7 @@ void vga_send(int first, int n)
 enum class Screen : uint8_t { Game, PartyMenu, LoadWhich, View, Items, Shop, ShopBuy, Camp, SaveWhich, AddFrom,
                                AddList, YesNo, CreatePick, CreateName, TradeWho, Heal, Take, Appraise, Magic,
                                SpellList, Rest, Cast, Effects, Alter, Fight, Loot, Modify, Title, Icon, Won,
-                               Portrait, ViewWho, QForm, QGod, QRolled, QInv, Finale };
+                               Portrait, ViewWho, QForm, QGod, QRolled, QInv, Finale, Movie };
 Screen screen = Screen::Game;
 Screen view_from = Screen::Game;  // where View Character goes back to
 Screen save_from = Screen::PartyMenu;   // where Save Which Game goes back to
@@ -5506,6 +5507,161 @@ void qf_tick(uint32_t now, pic::Canvas& c)
 
 // A key or tap: the wait ends (the original's 0x383CC)
 void qf_key() { qf.until = plat::now_ms(); }
+
+// ---- Darkness's ending movie (its PROGRAM 1 - Wait::Movie): VACE's FINAL
+// (vace.h; the Project's claude/vace_facts.md) - CONTROL.EXE runs "vace
+// FINAL" between two runs of GAME.EXE (the second at the script after
+// PROGRAM 1); here it plays over the game screen, then the screen is drawn
+// again and the script goes on. 256 colours on a VGA canvas, else VACE's
+// EGA look (each colour a checkerboard of two, the dissolve); song P3 =
+// MUSIC.DAX block 3; a key or tap ends it (VACE's key check).
+struct Movie {
+    vace::Player p;
+    uint8_t* acf = nullptr;
+    plat::File bma;
+    plat::FileSource* src = nullptr;
+    pic::Rgb* pal_was = nullptr;        // (VGA: the game's colours, back after)
+    uint32_t next = 0;
+    int y0 = kMovieRows, y1 = -1;       // (rows drawn since the last tick)
+    bool colours = false;
+    static constexpr int kMovieRows = 200;
+};
+Movie* mv = nullptr;
+
+class MovieScreen : public vace::Screen {
+public:
+    explicit MovieScreen(pic::Canvas& c) : c_(c) {}
+    void put(int x, int y, uint8_t v) override
+    {
+        c_.set(x, y, v);
+        if (y < mv->y0) mv->y0 = y;
+        if (y > mv->y1) mv->y1 = y;
+    }
+    uint8_t get(int x, int y) const override { return c_.get(x, y); }
+    void colour(int i, uint8_t r, uint8_t g, uint8_t b) override
+    {
+        if (!vga || i < 0 || i > 255) return;
+        vga->now[i] = pic::Rgb{static_cast<uint8_t>(r << 2 | r >> 4), static_cast<uint8_t>(g << 2 | g >> 4),
+                               static_cast<uint8_t>(b << 2 | b >> 4)};
+        vga->changed = true;
+    }
+    void song(int n) override
+    {
+        if (n) music_start(n);
+        else music_stop();
+    }
+private:
+    pic::Canvas& c_;
+};
+
+void mv_free()
+{
+    if (!mv) return;
+    delete mv->src;
+    if (mv->bma) mv->bma.close();
+    free(mv->acf);
+    free(mv->pal_was);
+    delete mv;
+    mv = nullptr;
+}
+
+// The movie over: the game's colours, its screen drawn again (the restarted
+// game's adventure loop), the script on
+void mv_end(pic::Canvas& c)
+{
+    if (mv && mv->pal_was && vga) {
+        memcpy(vga->now, mv->pal_was, sizeof vga->now);
+        vga->changed = true;
+    }
+    mv_free();
+    memlog::note("movie over");
+    plat::log("[play] the ending movie ended\n");
+    screen = Screen::Game;
+    c.clear(0);
+    bigpic = -1;
+    pic_shown = false;
+    head_shown = body_shown = -1;
+    draw_frame(c);
+    draw_view(c);
+    draw_panel(c);
+    dirty(0, c.h);
+    waiting = false;
+    handle(vm->resume());
+}
+
+void mv_tick(uint32_t now, pic::Canvas& c)
+{
+    if (!mv) return;
+    if (static_cast<int32_t>(now - mv->next) < 0) return;
+    MovieScreen scr(c);
+    const bool on = vace::run(mv->p, now, *mv->src, scr, &mv->next);
+    if (mv->y1 >= mv->y0) dirty(mv->y0, mv->y1 + 1);
+    mv->y0 = Movie::kMovieRows;
+    mv->y1 = -1;
+    if (!on) mv_end(c);
+}
+
+void mv_start(pic::Canvas& c)
+{
+    char name[16];
+    const char* base = "FINAL";
+    mv_free();
+    mv = new (std::nothrow) Movie();
+    plat::File f;
+    bool ok = mv != nullptr;
+    if (ok) {
+        snprintf(name, sizeof name, "%s.ACF", base);
+        ok = open_file(name, f);
+    }
+    uint32_t len = 0;
+    if (ok) {
+        len = static_cast<uint32_t>(f.size());
+        mv->acf = len && len < 65536 ? static_cast<uint8_t*>(malloc(len)) : nullptr;
+        ok = mv->acf && f.read(mv->acf, static_cast<int>(len)) == static_cast<int>(len);
+        f.close();
+    }
+    if (ok) {
+        snprintf(name, sizeof name, "%s.BMA", base);
+        ok = open_file(name, mv->bma);
+    }
+    if (ok) {
+        mv->src = new (std::nothrow) plat::FileSource(mv->bma);
+        ok = mv->src && vace::open(mv->p, mv->acf, len, *mv->src, c.vga && vga != nullptr, snd_mode != 3);
+    }
+    if (!ok) {
+        plat::log("[play] the ending movie (%s.ACF / .BMA) isn't there or doesn't read - the script goes on\n", base);
+        mv_free();
+        waiting = false;
+        handle(vm->resume());
+        return;
+    }
+    if (vga) {
+        mv->pal_was = static_cast<pic::Rgb*>(malloc(sizeof vga->now));
+        if (mv->pal_was) memcpy(mv->pal_was, vga->now, sizeof vga->now);
+    }
+    plat::log("[play] the ending movie: %d sequences, %s\n", mv->p.chunks, mv->p.vga ? "256 colours" : "EGA");
+    memlog::note("movie");
+    anim_stop();
+    cursor_hide();
+    c.clear(0);                         // (VACE's mode set: a black screen)
+    if (vga) {
+        vga->now[0] = pic::Rgb{0, 0, 0};
+        vga->changed = true;
+    }
+    dirty(0, c.h);
+    screen = Screen::Movie;
+    mv->next = plat::now_ms();
+    mv_tick(mv->next, c);
+}
+
+// A key or tap: VACE ends at once
+void mv_key(pic::Canvas& c)
+{
+    if (!mv) return;
+    MovieScreen scr(c);
+    vace::stop(mv->p, scr);
+    mv_end(c);
+}
 
 struct LuckRun {
     bool     on = false, romance = false, prompt = false;
@@ -13228,6 +13384,10 @@ void pm_tap(int x, int y, pic::Canvas& c)
         qf_key();
         return;
     }
+    if (screen == Screen::Movie) {
+        mv_key(c);
+        return;
+    }
     if (screen == Screen::Icon) {
         icon_tap(x, y, c);
         return;
@@ -14849,6 +15009,9 @@ void begin_wait(pic::Canvas& c)
         break;
     case ecl::Wait::Finale:             // the Dark Queen's PROGRAM 1: its ending
         qf_start(c);
+        break;
+    case ecl::Wait::Movie:              // Darkness's PROGRAM 1: VACE's FINAL movie, then on
+        mv_start(c);
         break;
     case ecl::Wait::Quit:               // Darkness's PROGRAM 2: the game ends (the original quits to DOS)
         waiting = false;
@@ -19341,6 +19504,10 @@ bool act(Act a, pic::Canvas& c)
         qf_key();
         return true;
     }
+    if (screen == Screen::Movie) {
+        mv_key(c);
+        return true;
+    }
     if (screen != Screen::Game) return false;
     if (waiting) {
         // Any key goes on, like the games' "press a key": the rest of the
@@ -19656,6 +19823,10 @@ bool nav(Nav n, pic::Canvas& c)
     }
     if (screen == Screen::Finale) {
         qf_key();
+        return true;
+    }
+    if (screen == Screen::Movie) {
+        mv_key(c);
         return true;
     }
     keys_used = true;
@@ -20463,6 +20634,11 @@ void tick_screens(uint32_t now, pic::Canvas& c)
         qf_tick(now, c);
         return;
     }
+    if (screen == Screen::Movie) {
+        cv = &c;
+        mv_tick(now, c);
+        return;
+    }
     if (screen == Screen::Cast) {
         cv = &c;
         cast_tick(now, c);
@@ -20622,6 +20798,10 @@ bool back(pic::Canvas& c)
     }
     if (screen == Screen::Finale) {
         qf_key();
+        return true;
+    }
+    if (screen == Screen::Movie) {
+        mv_key(c);
         return true;
     }
     if (screen == Screen::Icon) {
