@@ -68,3 +68,20 @@ key first ("./L...").
   facing EAST (from 12,11). Fares 80-175 pp.
 - Orlumbor's fights by flag: 7A ogres 5,11; 7C the rope webs 1,3; 7B the holes 3,0; 7E the rubble 7,14;
   7F the secret temple of Talos 10,15 (the alliance fight; then Wrighttson at 11,3).
+
+2026-11-22 (Neverwinter, Farr Windward) - A KIT FAULT THAT COST A STRETCH:
+- After a merge the sim's auto fight pressed Aim whenever a fighter's menu had no Move word (out of
+  moves): every fight stopped in the aim menu, the walk timed out, and the next walk started from the last
+  save with the event's flag already set - the fight and everything after it in its script skipped.
+  Fixed in sim.cpp (a menu with Quick is a fight menu). CHECK AFTER EVERY WALK: each "a fight:" line in
+  the transcript is followed by "[fight] won" before the next "== to" (the awk line below); a walk's time
+  limits (TL, timeout) must be generous - a fight cut short is an event lost.
+    awk '/== to /{if(o)print "UNFINISHED before " NR; o=0} /a fight:/{o=1} /\[fight\] won/{o=0}' transcript.txt
+- Neverwinter (block 28): Nasher's square is 5,7 from the west. First visit: searched, arrested, the
+  prison ship, Farr Windward's cave (journal 33) and town (block 47, journal 45). Second visit: his apology
+  and the ambassadors - Froal behind the Fat Man's Table (8,1 Talk: journal 58; 10,1 a fight; 10,0), Wimeg
+  in the gardens (15,11 15,13 fights; 15,15). Journal 59 is told only if Wimeg is freed BEFORE Froal
+  (script byte 0x1C4). Then Nasher's gift (a rod).
+- Farr Windward: Ougo at 7,13 (ACCEPT), the office 5,8, the branding room 9,4 - then the script runs to
+  Haalbok (journal 38) and Ougo the statue; out by 15,1 (LEAVE), the tunnel to Orlumbor's 0,1, Wrighttson
+  at 11,3 (journal 43).
