@@ -11,3 +11,10 @@ New here:
 The overland (area word 0x4BE6 = 0): the menu is Move / Encamp; View is in the camp (rdy.sh RDYPRE=/E RDYPOST=/E);
 "/M" then R / L (45 degrees) and F (a step). The outposts are menus in that mode ("WHERE DO YOU WISH TO GO?").
 Snapshots: p.sh needs card/out; a long fight's snapshots fill the scratch allowance - keep it emptied.
+  post.sh <slot>          after a fight: gear.txt's gear readied again (Quick readies the bows and leaves the swords
+                          and shields unreadied - sellplain would sell them), plain loot sold, the Healer
+  go2.sh <slot> <x,y>     goto.sh through locked / secret doors, each event on the way played by adv.sh (Y), post.sh
+  tourc.sh <slot> x,y ... go2.sh to each square, a backup after each
+  The Healer (fix.sh): the temple's own menu first ("/H" opens the list): Heal the 6th line, Raise Dead the 8th.
+  sellplain.sh: "Ring of" kept, Ring Mail sold. adv.sh: a one-word "Press <enter>" menu pressed on.
+The playsim's auto tokens: Champions' fight menu has no Quick - Done, then Auto (Guard Delay Quit Auto Speed Exit).
