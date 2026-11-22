@@ -1754,6 +1754,15 @@ int main(int argc, char** argv)
             printf("\n");
         }
     }
+    if (getenv("MAPDOORS")) {           // MAPDOORS=d: each square's door state (0 solid, 1 open, 2 locked, 3) on side d
+        const int dd = atoi(getenv("MAPDOORS"));
+        printf("  MAPDOORS side %d\n", dd);
+        for (int y = 0; y < play::d->map.h; ++y) {
+            printf("  %2d:", y);
+            for (int x = 0; x < play::d->map.w; ++x) printf(" %2X", geo::door(play::d->map, x, y, dd));
+            printf("\n");
+        }
+    }
     if (getenv("TELE")) { int x, y, dd; sscanf(getenv("TELE"), "%d,%d,%d", &x, &y, &dd); play::d->gs.x = x; play::d->gs.y = y; play::d->gs.dir = dd; play::after_move_redraw(); }
     if (getenv("TELE0")) { int x, y, dd; sscanf(getenv("TELE0"), "%d,%d,%d", &x, &y, &dd); play::d->gs.x = x; play::d->gs.y = y; play::d->gs.dir = dd; play::after_move_redraw(); }
     // SETEXP=m:exp,...: member m's experience (the Companion's ready classes)
@@ -2670,11 +2679,32 @@ int main(int argc, char** argv)
             q = strchr(q, ';');
             if (q) ++q;
         }
+        // MAPLINK=x,y,d>x2,y2,d2;...: a script's stairs - a step from x,y facing d answered Yes puts the party
+        // at x2,y2 facing d2 (the Temple of Tyr's basements share one map: 0,8 S > 8,9 E; the walk had
+        // found "no way" and the play-through ran the event by hand where it stood - a wrong battlefield)
+        struct Link { int x, y, d, x2, y2, d2; };
+        std::vector<Link> links;
+        for (const char* q = getenv("MAPLINK"); q && *q;) {
+            Link l;
+            if (sscanf(q, "%d,%d,%d>%d,%d,%d", &l.x, &l.y, &l.d, &l.x2, &l.y2, &l.d2) == 6) links.push_back(l);
+            q = strchr(q, ';');
+            if (q) ++q;
+        }
+        static int link3[16 * 16];     // the link taken into a square (-1: an ordinary step)
+        for (int& v : link3) v = -1;
         const int sx = play::d->gs.x, sy = play::d->gs.y;
         std::vector<int> q{sy * 16 + sx};
         from3[sy * 16 + sx] = 1 << 30;
         const int goal = (ty & 15) * 16 + (tx & 15);
-        for (size_t k = 0; k < q.size() && from3[goal] < 0; ++k)
+        for (size_t k = 0; k < q.size() && from3[goal] < 0; ++k) {
+            for (size_t li = 0; li < links.size(); ++li) {
+                const Link& l = links[li];
+                const int kk = (l.y2 & 15) * 16 + (l.x2 & 15);
+                if (q[k] != (l.y & 15) * 16 + (l.x & 15) || from3[kk] >= 0) continue;
+                from3[kk] = static_cast<int>(k) * 8 + l.d;
+                link3[kk] = static_cast<int>(li);
+                q.push_back(kk);
+            }
             for (int dir = 0; dir < 8; dir += 2) {
                 int x = q[k] % 16, y = q[k] / 16;
                 const int ox = x, oy = y;
@@ -2687,18 +2717,22 @@ int main(int argc, char** argv)
                 from3[kk] = static_cast<int>(k) * 8 + dir;
                 q.push_back(kk);
             }
-        std::vector<int> dirs;
+        }
+        std::vector<int> dirs, via;
         for (int kk = goal; from3[kk] >= 0 && from3[kk] != 1 << 30;) {
             dirs.insert(dirs.begin(), from3[kk] % 8);
+            via.insert(via.begin(), link3[kk]);
             kk = q[from3[kk] / 8];
         }
         std::string path;
         int face = play::d->gs.dir;
-        for (int dir : dirs) {
+        for (size_t i = 0; i < dirs.size(); ++i) {
+            const int dir = dirs[i];
             const int t = ((dir - face) / 2 + 4) % 4;
             path += t == 1 ? "R" : t == 2 ? "B" : t == 3 ? "L" : "";
             path += 'F';
             face = dir;
+            if (via[i] >= 0) { path += "/Y"; face = links[via[i]].d2; }   // (the stairs' question answered)
         }
         printf("  MAPPATH %d,%d -> %d,%d: %s\n", sx, sy, tx, ty, from3[goal] < 0 ? "no way" : path.c_str());
     }

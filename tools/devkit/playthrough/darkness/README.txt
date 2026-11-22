@@ -42,3 +42,12 @@ playsim's TELE=x,y,d (d 0-7, 2 = east) put the party beside the square and one r
 regear.sh <slot>: the party's standard gear bought again at the Merchant cheat and readied - for the gates
 that take the party's magic items (Moander, the way back to the Realms, Bane's land) when nothing was stored.
 A member whose pack is full (16 items - a fight's loot) gets nothing: sell first (sellplain / SELLN).
+
+The Temple of Tyr's basements (2026-11-22): blocks 50 and 54 share map 50 - the first basement is its lower
+left (in at 7,13), the second its lower right, joined by the stairs on 0,8's south side (8,9's north side back;
+script 54 0x8088 - wall type 7, "STAIRS HERE LEAD DOWNWARD"). MAPPATH said "no way" to 12,8 and the play-through
+ran the fire elementals' event by hand at 7,13 (RUNAT): the fight then got 7,13's battlefield - the party and
+the elementals across its wall line, ended by the 15-round rule. Walked in properly (0,8 S, Yes, then to 12,8
+from the west) it is won in three rounds. Never start a fight's event by hand away from its square:
+MAPLINK="x,y,d>x2,y2,d2;..." (playsim, MAPPATH) lets the walk take a script's stairs ("F/Y" in the path), e.g.
+MAPLINK="0,8,4>8,9,4;8,9,0>0,8,2" here; MAPDOORS=d prints each side's door state (MAPTYPES the wall type).

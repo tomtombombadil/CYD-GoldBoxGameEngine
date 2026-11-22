@@ -141,10 +141,12 @@
       on; Knock 0x1F): "Locked. Bash Pick Exit" there, Bash opened it (the alarm), Pick by a thief. Every game checked
       (tools/devkit/doors): Curse, PoolRad, Champions, Gateway had theirs; Darkness has locked sides but no such words
       in its program; Knights / Treasures no locked sides; Queen's HLIB maps not scanned.
-- [ ] Darkness, the Temple of Tyr's basement (block 54, 0x941B, the fire elementals for the Spirit Flame): the fight
-      ended by the 15-round rule with no blow struck - the party and the three elementals placed on the two sides
-      of the field's wall line and neither reached the other (playsim, two seeds). Compare the field and placement
-      with the original in DOSBox (does the original place them across a wall too?).
+- [x] 2026-11-22 (no engine fault): Darkness, the Temple of Tyr's basement (block 54, 0x941B, the fire elementals
+      for the Spirit Flame) ended by the 15-round rule with the sides across a wall line - the play-through had run
+      the event by hand (RUNAT) at 7,13, so the fight got 7,13's battlefield: the walk found "no way" to 12,8 (the
+      second basement is reached by the stairs on 0,8's south side, a script's). Walked in properly (0,8 S, Yes,
+      12,8 from the west; also from the south and east, every facing) the fight is won in round 3 (three seeds).
+      Kit: playsim MAPLINK (stairs in MAPPATH), MAPDOORS; README.
 - [x] v0.211.7 (the Darkness play-through, 2026-11-21, the Silver Blades cave's Worldstone): **Darkness's fights
       left the scripts' compare flags as the compare before them** - its fight end sets "=" (or "<>" by its byte
       0x7FF5) at DS 0xB01E (GAME.OVR 0x596E - the same routine as Treasures' 0x6644, done in v0.208.4 for Treasures
