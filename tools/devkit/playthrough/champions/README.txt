@@ -28,3 +28,8 @@ treasure (combat_rules_facts: thrown weapons to the pile) and goes to whoever ta
 carries a long sword and shield in gear.txt. The catacombs (script 34) are sections joined by script steps
 at the map's edges (15,0 east -> 0,1): MAPREACH per section, then the edge step.
 Overland: R / L / F / B step east / west / north / south. AUTOTAKE with %3 (Molly) - the selected member may be overloaded.
+Champions' "WHAT DO YOU DO?" choices are often a LIST menu (wait 3, "LIST prompt=..." in the log; the bottom
+line stays empty): adv.sh picks the first line starting with a PICK word, else LISTPICK (0). memset.txt: Curse's
+spell ids work (01 Bless, 03 CLW, 0C Enlarge, 0F Magic Missile, 13 Shield, 15 Sleep, 17 Hold Person, 18 Resist
+Fire, 22 Stinking Cloud, 2F Fireball) - without it the casters have nothing memorized and Auto only swings.
+go2.sh: a story fight lost on Auto (the party menu) is played once more with WINFIGHT ("LOST on Auto").

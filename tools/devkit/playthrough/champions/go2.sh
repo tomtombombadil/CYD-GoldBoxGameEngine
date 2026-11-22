@@ -10,6 +10,12 @@ for k in $(seq 1 ${GON:-10}); do
     a=$(TXTN=30 ITER=14 timeout 2400 $P/bin/adv.sh $S x "$(cat $P/tok.txt)" ${GOANS2:-Y} 2>&1)
     echo "$a" | grep -E "TEXT|JOURNAL|fight\]" | cut -c1-110
     echo "$a" | grep -q "fight\]" && $P/bin/post.sh $S > /dev/null
+    if ! echo "$a" | grep -q "saved now" && grep -E "^  \? screen 1 " $P/run.log | tail -1 | grep -q "screen 1 "; then
+      # (the party fell in a story fight on Auto: once more with WINFIGHT - every foe down, the after-fight part runs)
+      echo "  LOST on Auto - WINFIGHT"
+      a=$(EXTRA="$EXTRA WINFIGHT=1" TXTN=30 ITER=14 timeout 2400 $P/bin/adv.sh $S x "$(cat $P/tok.txt)" ${GOANS2:-Y} 2>&1)
+      echo "$a" | grep -E "TEXT|JOURNAL|fight\]" | cut -c1-110
+    fi
     echo "$a" | grep -q "saved now" || { echo "  STOPPED: $(echo "$a" | tail -2 | head -1 | cut -c1-120)"; break; }
     continue
   fi

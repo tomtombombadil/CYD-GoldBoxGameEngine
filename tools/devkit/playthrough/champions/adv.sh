@@ -9,10 +9,16 @@ case "$EXTRA" in *AUTOTAKE=*) ;; *) EXTRA="$EXTRA AUTOTAKE=/T/I$(printf "/T%.0s"
 for i in $(seq 1 ${ITER:-30}); do
   PTIME=${PTIME:-2400} AT=1000 TN=0 $P/bin/auto.sh "$T" SAVE=$S ALLTEXT=1 $EXTRA > /dev/null
   T=$(cat $P/tok.txt); st=$(grep '? screen' $P/run.log | tail -1)
-  if echo "$st" | grep -q "wait 13 \|wait 1 \|Press <enter>"; then T="$T."
+  if echo "$st" | grep -q "wait 13 \|wait 1 \|Press <enter>.*wait 2 "; then T="$T."
   elif echo "$st" | grep -q "Yes No\|No Yes"; then T="$T/$Q"
   elif echo "$st" | grep -q "WHO WILL\|Select\]"; then T="$T%${WHO:-2}/S"
   elif echo "$st" | grep -q "screen 5 .*Take"; then T="$(python3 $P/bin/takeall.py $S "$T" "" 2>/dev/null)/E"
+  elif echo "$st" | grep -q "wait 3 "; then
+    # a list menu (Champions' "WHAT DO YOU DO?" lists): the first PICK word a line starts with, else line LISTPICK (0)
+    l=$(grep "LIST prompt" $P/run.log | tail -1 | grep -o "\[[^]]*\]" | tr -d '[]')
+    k=${LISTPICK:-0}; n=0; found=""
+    for c in $(echo "$PICK" | tr ',' ' '); do n=0; while IFS= read -r line; do echo "$line" | grep -qi "^$c" && { k=$n; found=1; break; }; n=$((n+1)); done <<< "$l"; [ -n "$found" ] && break; done
+    T="$T@$k"
   elif echo "$st" | grep -q "screen 24 .*wait 11 "; then T="$T."
   elif echo "$st" | grep -q "screen 5 \|screen 25 "; then T="$T/E"
   elif echo "$st" | grep -q "|Move Aim\|Aim Use"; then :
