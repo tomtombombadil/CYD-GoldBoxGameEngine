@@ -10,8 +10,8 @@
       DOSBox captures), the EGA dissolve's order, the fades' waits (713 / 942 / 485 ms vs 718 / 955 / 490).
       Tools: tools/devkit/vace (vace_run, vace_cmp.py); host test test_vace; the playsim's Movie screen (MOVIEKEY).
 - [ ] Champions play-through (2026-11-22; the Project's claude/playthrough_champions.md): GOG save A's party in a
-      new game; Throtl, its temple and catacombs done (the eggs back, Sir Karl's orders for Gargath / Jelek); next
-      the second outpost, Gargath. Open: Throtl's 2,6 / 4,0 / 5,1 (Strangbourn, the plate-mail soldier, the
+      new game; Throtl, its temple and catacombs, Gargath, Sir Dargaard's tomb, the Ogre Base, Jelek, the third
+      outpost and Neraka done (Sir Karl's memorial, the Sanction orders); next Sanction. Open: Throtl's 2,6 / 4,0 / 5,1 (Strangbourn, the plate-mail soldier, the
       arrows) gave nothing when walked onto - the guide's squares or a facing?
 - [x] v0.212.2 (the Champions play-through, 2026-11-22): **Sir Dargaard's Test of Fear refused a knight** - its script asks field 0xCD (Champions' GAME.OVR switch: the knight's level, record 0x100) and the engine (Secret's switch) gave 0; `Vm::get` answers it from the record's knight level. Checked: the three rings of fire, "YOU HAVE CONQUERED THE TEST OF FEAR".
 - [x] v0.212.1 (the Champions play-through, 2026-11-22): **the Cheats tab never opened at Champions' / Death
