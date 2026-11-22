@@ -2048,7 +2048,19 @@ int main(int argc, char** argv)
         } else if (maze_walk) { t = has('M') && !maze_blocked ? "/M" : "/G"; maze_blocked = false; }    // (no moves left: Guard - not Quick, the walk goes on next round)
         else if (scr == 24) t = has('A') && has('S') && has('E') && !has('M') ? "/A" : has('Q') ? "/Q" : has('Y') && has('N') && getenv("AUTOFIGHT") ? "/N" :
                                      has('D') && has('M') ? "/D" : ".";   // (Champions: no Quick - Done, then its Guard Delay Quit Auto's Auto)   // ("Continue Battle": No)
-        else if (scr == 5 && has('T') && has('V') && getenv("AUTOTAKE") && !auto_take) { t = getenv("AUTOTAKE"); auto_take = 1; }   // (AUTOTAKE=tokens: once at each treasure menu, e.g. /T/I/T/T/T/T - the selected member takes the items)
+        else if (scr == 5 && has('T') && has('V') && getenv("AUTOTAKE") && !auto_take) {
+            // (the taker: of the first six, the one with the fewest items, then the lightest - a full or
+            // OverLoaded member is refused every Take; TAKER=n names one)
+            static char tk[96];
+            int best = 0;
+            for (int i = 1; i < play::pt->count && i < 6; ++i) {
+                const party::Character& a = play::pt->m[i]; const party::Character& b0 = play::pt->m[best];
+                if (a.hp() > 0 && (a.n_items < b0.n_items || (a.n_items == b0.n_items && a.encumbrance() < b0.encumbrance()))) best = i;
+            }
+            if (getenv("TAKER")) best = atoi(getenv("TAKER"));
+            snprintf(tk, sizeof tk, "%%%d%s", best, getenv("AUTOTAKE"));
+            t = tk; auto_take = 1;
+        }   // (AUTOTAKE=tokens: once at each treasure menu, e.g. /T/I/T/T/T/T - the selected member takes the items)
         else if (scr == 25 && play::screen == play::Screen::Loot && getenv("AUTOLOOT") && play::ground && play::ground->n > 0 && has('T')) {
             // AUTOLOOT=1: down the treasure's list, the magic items taken (a plus or a spell in the
             // record - what a player learns from Detect Magic or the shop's price), the rest left
@@ -2064,6 +2076,7 @@ int main(int argc, char** argv)
             for (const char* w : {"Ring", "Wand", "Potion", "Scroll", "Bracers", "Cloak", "Necklace", "Gauntlets", "Boots",
                                   "Girdle", "Helm", "Rod", "rod", "Staff", "Dust", "Stone", "Gem", "Jewel", "Amulet", "Robe"})
                 if (strstr(nm, w)) magic = true;
+            if (!it.plus() && !it.r[0x3C] && !it.r[0x3D] && !it.r[0x3E] && (!strcmp(nm, "Helm") || !strcmp(nm, "Robe"))) magic = false;   // (plain by name and record: left)
             if (magic && tries < 1) {
                 printf("  LOOT take: %s (plus %d, %02X %02X %02X)\n", nm, it.plus(), it.r[0x3C], it.r[0x3D], it.r[0x3E]);
                 ++tries;

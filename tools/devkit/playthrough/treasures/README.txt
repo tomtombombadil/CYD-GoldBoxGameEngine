@@ -43,3 +43,17 @@ key first ("./L...").
   OverLoaded again and the next gift / treasure is refused (Malchor's ring and wand were, once).
 - A script's gift is a treasure screen (op 27 + 23): AUTOLOOT takes it like a fight's.
 - Lucky papers fill item slots: keep them on a member who is not the taker.
+
+2026-11-22 (the Tower's way out, the smugglers' dock, Mintarn):
+- The sim's AUTOTAKE now picks the taker: of the first six, the fewest items, then the lightest (TAKER=n
+  names one). A plain "Helm" / "Robe" is left (a Helm +2 has its plus in the record).
+- Coins: 600 platinum a member is fine, 1300 made ELWYN refuse a gift. Spend at the Merchant before events.
+- The Tower of Twilight: the island's shore squares bounce ("too deep and cold"), MAPPATH does not know -
+  out by 11,4 12,4 13,4 13,5 13,6 13,7 14,7. Stairs 8,8 -> the alcove 5,7; 9,8 -> 10,8.
+- Ships: Waterdeep's square (55;8,7) is now the smugglers' dock (block 21): TRAVELLING, ACCEPT (20 pp,
+  journal 25); be on a pier (2,10 Mintarn, 2,12 Orlumbor) facing WEST at hour 5 or 6 (script byte 0x08):
+  rest by the Sanctuary cheat next to the pier ('"2/R/H' + '/A' x hours + '/R' + '_' waits + '/E'), a
+  walk across town costs hours. A fight with the night ship's thieves closes that pier for good
+  (table 0x142 + pier = 9). Mintarn's own ships go to Neverwinter and Orlumbor at 0600.
+- An event that ends by moving the party (Mintarn's Tyrant) - tourx walks back to its goal square after.
+- Menus a walk must answer: Investigate, Hack, Climb, CAME (to help), ACCEPT (her), Cross.
