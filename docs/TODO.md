@@ -13,6 +13,7 @@
       new game; Throtl, its temple and catacombs done (the eggs back, Sir Karl's orders for Gargath / Jelek); next
       the second outpost, Gargath. Open: Throtl's 2,6 / 4,0 / 5,1 (Strangbourn, the plate-mail soldier, the
       arrows) gave nothing when walked onto - the guide's squares or a facing?
+- [x] v0.212.2 (the Champions play-through, 2026-11-22): **Sir Dargaard's Test of Fear refused a knight** - its script asks field 0xCD (Champions' GAME.OVR switch: the knight's level, record 0x100) and the engine (Secret's switch) gave 0; `Vm::get` answers it from the record's knight level. Checked: the three rings of fire, "YOU HAVE CONQUERED THE TEST OF FEAR".
 - [x] v0.212.1 (the Champions play-through, 2026-11-22): **the Cheats tab never opened at Champions' / Death
       Knights' outposts** - their menus run in the overland's mode (area word 0x4BE6 = 0), so kr_overland() held and
       cheat_menu_place() refused them; a script's menu there now counts as a menu town (as Curse's, v0.204.0) -
