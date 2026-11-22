@@ -868,6 +868,7 @@ int main(int argc, char** argv)
     // NOROLLS=1: fights without the rolls shown (the CYD_COMBAT_ROLLS comfort off)
     if (getenv("NOROLLS")) { play::Options o = play::opts; o.rolls = false; play::set_options(o); }
     // NOCAMPFIX=1: Pool's camp without Fix (the CYD_CAMP_FIX comfort off - the original's camp menu)
+    if (getenv("NORACE") && !getenv("CREATE") && !getenv("TRAINTEST")) { play::Options o = play::opts; o.no_race_limits = true; play::set_options(o); }   // (any run: the Cheats' Disable Race Level Limits)
     if (getenv("NOCAMPFIX")) { play::Options o = play::opts; o.camp_fix = false; play::set_options(o); }
     // SOUNDTEST=a-b: the game's own effects a to b, one after another, then out
     if (const char* st = getenv("SOUNDTEST")) {
@@ -2066,8 +2067,8 @@ int main(int argc, char** argv)
                 printf("  LOOT take: %s (plus %d, %02X %02X %02X)\n", nm, it.plus(), it.r[0x3C], it.r[0x3D], it.r[0x3E]);
                 ++tries;
                 t = "/T";
-            } else if (i < n - 1) { tries = 0; t = "v"; }
-            else { last_n = -1; t = "/E"; }
+            } else if (i < n - 1) { if (!magic && getenv("LOOTLOG")) printf("  LOOT leave: %s\n", nm); tries = 0; t = "v"; }
+            else { if (!magic && getenv("LOOTLOG")) printf("  LOOT leave: %s\n", nm); last_n = -1; t = "/E"; }
         }
         else if (scr == 5 || scr == 16 || scr == 25) t = has('E') ? "/E" : ".";
         else if (play::screen == play::Screen::Won) t = ".";      // (an ending's pages: a key each)

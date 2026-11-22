@@ -18,3 +18,18 @@ Lessons: the overland is windows of one world (script 51, maps 51-57) - the town
 9B3A / 9B50 / 9B66 (map, x, y), names by the ON GOSUB at 8D8B; edge exits need a step INTO the edge;
 "Bash Pick Dispell" doors held by magic open only to Dispell; a vertical menu after text needs the text's
 key first ("./L...").
+
+2026-11-21 (Daggerford, the Way Inn, the road to Longsaddle):
+- sum.sh <square>: the transcript since the last "== to <square>", each text once.
+- tbuy.sh "m:g,g ...": the Merchant cheat's Buy tokens (GOODSLOG's number, 18 a page). A purchase a run:
+  '"1%m/P' + Buy tokens + '/B/E/E/S/E' - Pool first (an overloaded member can buy nothing), Share before
+  leaving (pooled coins left in a shop are LOST, as the original's).
+- Coins weigh: a party carrying its winnings is OverLoaded, takes no treasure ("take refused") and moves 6 in
+  fights. Spend or share before a town; check "enc" in ITEMDUMP.
+- loot.py reads "[play] sell offer" - Treasures' Sell (the Darkness-type words) now logs it too.
+- ovwalk.sh: an overland fight lost is fought again with another SEED (QASPELLS=1). ovgo.py plans by the
+  squares' flags only - the overland's WALLS block (rivers, mountains): a step refused says why ("The water
+  is too deep!"). Bridges are crossed east-west though MAPPATH calls them closed: walk to the bridge's
+  square, then step by hand. A map changes when the party steps ONTO an edge row (54;1,1 north -> 52;12,14).
+- The sim's NORACE=1 holds in any run (Disable Race Level Limits), LOOTLOG=1 names what AUTOLOOT leaves.
+- A fight lost leaves the slot saved with 0 characters: bk.sh save before every place.
