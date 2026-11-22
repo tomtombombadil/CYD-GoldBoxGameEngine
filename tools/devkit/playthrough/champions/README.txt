@@ -1,0 +1,13 @@
+Champions of Krynn play-through kit (2026-11-22): the Darkness kit (../darkness) with the play folder
+/tmp/claude-0/chplay (card/CHAMPIONS = the GOG copy), playsim GAME=5; saves in CHAMPIONS/SAVE (bk.sh). The rest of
+the Darkness kit is copied to /tmp/claude-0/chplay/bin with the paths changed (sed dplay -> chplay, $P/DARKNESS ->
+$P/CHAMPIONS, GAMEN 4 -> 5). The party: GOG save A's six (Sir Strongsword, Istan, Garin, Molly, Kal, Sirrion) in a
+new game (NEWGAME=1 SAVE=A), saved as B.
+New here:
+  lvl.sh <slot> <xp>      every member given xp (SETEXP) and trained by the Trainer cheat until none may
+  buyn.sh <slot> "m:g ..."  one Merchant-cheat visit: Pool, member m buys goods g (GOODSLOG=1's numbers, 17 a page),
+                          Share at the end
+  drop.sh <slot> "m:Item,...;..."  named items dropped from camp
+The overland (area word 0x4BE6 = 0): the menu is Move / Encamp; View is in the camp (rdy.sh RDYPRE=/E RDYPOST=/E);
+"/M" then R / L (45 degrees) and F (a step). The outposts are menus in that mode ("WHERE DO YOU WISH TO GO?").
+Snapshots: p.sh needs card/out; a long fight's snapshots fill the scratch allowance - keep it emptied.
