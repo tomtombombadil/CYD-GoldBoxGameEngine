@@ -10,7 +10,7 @@ for i in $(seq 1 ${ITER:-30}); do
   PTIME=${PTIME:-2400} AT=1000 TN=0 $P/bin/auto.sh "$T" SAVE=$S ALLTEXT=1 $EXTRA > /dev/null
   T=$(cat $P/tok.txt); st=$(grep '? screen' $P/run.log | tail -1)
   if echo "$st" | grep -q "wait 13 \|wait 1 \|Press <enter>"; then T="$T."
-  elif echo "$st" | grep -q "Yes No"; then T="$T/$Q"
+  elif echo "$st" | grep -q "Yes No\|No Yes"; then T="$T/$Q"
   elif echo "$st" | grep -q "WHO WILL\|Select\]"; then T="$T%${WHO:-2}/S"
   elif echo "$st" | grep -q "screen 5 .*Take"; then T="$(python3 $P/bin/takeall.py $S "$T" "" 2>/dev/null)/E"
   elif echo "$st" | grep -q "screen 24 .*wait 11 "; then T="$T."
