@@ -13,7 +13,7 @@
       new game; Throtl, its temple and catacombs, Gargath, Sir Dargaard's tomb, the Ogre Base, Jelek, the third
       outpost and Neraka done (Sir Karl's memorial, the Sanction orders); next Sanction. Open: Throtl's 2,6 / 4,0 / 5,1 (Strangbourn, the plate-mail soldier, the
       arrows) gave nothing when walked onto - the guide's squares or a facing?
-- [ ] v0.214.2 **Tom: secret doors on the Companion map** (Tom, 2026-11-22: the kobold caves' marks weren't secret
+- [x] v0.214.2 (Tom, 2026-11-22: keep the S on every walk-through wall, option 1) **Tom: secret doors on the Companion map** (Tom, 2026-11-22: the kobold caves' marks weren't secret
       doors; then: "Don't mark secret doors only after they're found"): each passable side drawn as the area's plain
       wall has its square's step script run dry as a step that way (`ecl::Vm::probe`, the state put back - the
       playsim's SECRETCHECK: unchanged in all nine games, ASan clean); refused = a wall, else the S, shown in

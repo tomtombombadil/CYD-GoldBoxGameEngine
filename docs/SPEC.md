@@ -3414,7 +3414,12 @@ the game's Settings (As Original: all of them).
   again after every script run while nothing waits). Checked in DOSBox:
   the caves' 8,4 N refused, 7,3 S / 3,4 E / 4,4 W / 5,1 N walked through
   (rock in the 3D view - real secret passages), screens identical. The
-  Walk Test still marks every one.
+  Walk Test still marks every one. Decided (Tom, 2026-11-22, after
+  gamebanshee's kobold-cave map showed none): the S stays on every side
+  the game lets the party through that looks like wall - the caves'
+  ballista nests (7,3 / 8,3 / 9,3, 3,4 / 3,5, 4,1: "A RUINED BALLISTA
+  LIES HERE."), which the walkthrough draws as solid, and 6,1 S / 5,1 N,
+  which it draws as a wall / a door (all walked through in DOSBox).
 - **Secret's outdoor fights** (v0.210.0): Secret has no terrain table
   (our facts); the engine read its flags from leftover memory, so its
   outdoor fields varied with what was there before (found by the toggle
