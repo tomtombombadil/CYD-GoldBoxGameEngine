@@ -19941,6 +19941,15 @@ bool walking()
            (vm->get(0x4BE6) != 0 || pool_overland() || gw_wild() || q_overland() || (moving && marker_overland()));
 }
 
+MoveKeys move_keys()
+{
+    // (act()'s overland branches: what each key does there)
+    if (!d || !vm || screen == Screen::Fight) return MoveKeys::Turns;
+    if (kr_overland() || q_overland()) return MoveKeys::Steps6;
+    if (pool_overland()) return MoveKeys::Steps4;
+    return MoveKeys::Turns;
+}
+
 void set_present_now(void (*fn)()) { g_present_now = fn; }
 
 bool walk_pending()

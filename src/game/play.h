@@ -100,6 +100,14 @@ bool nav_point(int* x, int* y);
 // moving / aiming by hand); otherwise the cursor keys (320x240's row
 // shows one set or the other - Tom, 2026-10-10)
 bool walking();
+// What the movement keys do where the party stands (Tom, 2026-11-22: the
+// pad drawn so): Turns - turn / step as in a 3D area (Darkness's overland
+// turns too); Steps4 - PoolRad's wilderness: Forward / the side-steps /
+// Turn Around step north / east / west / south, the turn keys nothing;
+// Steps6 - Champions' / the Dark Queen's overland: those four, the turn
+// keys a step north-west / north-east
+enum class MoveKeys : uint8_t { Turns, Steps4, Steps6 };
+MoveKeys move_keys();
 // A step's scripts still running with nothing for the player yet (a script
 // between its waits, an empty PRINTCLEAR being shown): the map over the
 // game screen can stay up while ticks finish it

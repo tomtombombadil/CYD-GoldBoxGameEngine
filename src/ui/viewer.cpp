@@ -3003,6 +3003,7 @@ void draw_map_page()
     if (comp_on()) map_page_party(side, pic::kScreenW - side);
 }
 
+play::MoveKeys pad_look = play::MoveKeys::Turns;   // (the movement keys as last drawn)
 void draw_walk_keys(const char* side_label, const char* area_label, bool cursor)
 {
     side_keys[0] = area_label;
@@ -3026,12 +3027,23 @@ void draw_walk_keys(const char* side_label, const char* area_label, bool cursor)
         for (int k = kWD0; k <= kWD7; ++k) ui::key_compass(walk_key(k), k - kWD0);
         ui::key_small(walk_key(kWFSel), "Select");
     } else if (row != Row::Cursor || ui::large()) {
-        ui::key_arrow(walk_key(kWTurnL), ui::Arrow::TurnLeft);
+        // (an overland's keys as they act there - Tom, 2026-11-22: PoolRad's turn keys greyed, Turn
+        // Around a down arrow; Champions' / the Dark Queen's turn keys their diagonal steps)
+        pad_look = play::move_keys();
+        if (pad_look == play::MoveKeys::Turns) {
+            ui::key_arrow(walk_key(kWTurnL), ui::Arrow::TurnLeft);
+            ui::key_arrow(walk_key(kWTurnR), ui::Arrow::TurnRight);
+        } else if (pad_look == play::MoveKeys::Steps4) {
+            ui::key_arrow(walk_key(kWTurnL), ui::Arrow::TurnLeft, ui::KeyStyle::Dim);
+            ui::key_arrow(walk_key(kWTurnR), ui::Arrow::TurnRight, ui::KeyStyle::Dim);
+        } else {
+            ui::key_compass(walk_key(kWTurnL), 7);
+            ui::key_compass(walk_key(kWTurnR), 1);
+        }
         ui::key_arrow(walk_key(kWStepL), ui::Arrow::Left);
         ui::key_arrow(walk_key(kWFwd), ui::Arrow::Forward);
         ui::key_arrow(walk_key(kWStepR), ui::Arrow::Right);
-        ui::key_arrow(walk_key(kWTurnR), ui::Arrow::TurnRight);
-        ui::key_arrow(walk_key(kWAround), ui::Arrow::TurnAround);
+        ui::key_arrow(walk_key(kWAround), pad_look == play::MoveKeys::Turns ? ui::Arrow::TurnAround : ui::Arrow::Back);
     }
     if (cursor && (ui::large() || row == Row::Cursor) && row != Row::Fight) {
         ui::key_small(walk_key(kWUp), "Up");
@@ -6160,6 +6172,9 @@ void present_play()
     } else if (play::fight_pad() != pad_fight) {
         draw_walk_keys("Look", "Game", true);        // the fight's pad comes and goes
     }
+    // (onto / off an overland: the movement keys as they act there)
+    if (play::move_keys() != pad_look && !play::fight_pad() && (ui::large() || row == Row::Move))
+        draw_walk_keys("Look", "Game", true);
     comp_update(big);
     strip_update();
 }

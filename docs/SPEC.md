@@ -105,6 +105,9 @@ The games draw a 320x200 screen. The canvas is presented:
   VIEW ENCAMP ...") = pressing its key; a line in a list = choosing it (and
   Enter); a square on the combat map = stepping / aiming toward it; "press
   any key" prompts = tap the game screen.
+- **The movement keys on an overland** (Tom, 2026-11-22, v0.214.0; `play::move_keys`): drawn as they act -
+    PoolRad's wilderness: the turn keys greyed, Turn Around a down arrow; Champions' / Death Knights' / the Dark
+    Queen's: the turn keys diagonal arrows (north-west / north-east), Turn Around a down arrow; elsewhere as in 3D.
 - **Keys only for what isn't on screen**, changing with what the game does:
   - 320x240 (Walk Test): one row of 8 square keys (~37x34) under the game.
     Exploring: Side-step Left, Turn Left, Forward, Turn Right, Side-step

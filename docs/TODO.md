@@ -13,6 +13,11 @@
       new game; Throtl, its temple and catacombs, Gargath, Sir Dargaard's tomb, the Ogre Base, Jelek, the third
       outpost and Neraka done (Sir Karl's memorial, the Sanction orders); next Sanction. Open: Throtl's 2,6 / 4,0 / 5,1 (Strangbourn, the plate-mail soldier, the
       arrows) gave nothing when walked onto - the guide's squares or a facing?
+- [ ] v0.214.0 **Tom: the overland's movement keys** (Tom, 2026-11-22): on PoolRad's wilderness the turn keys
+      greyed (they do nothing there) and Turn Around a down arrow (a step south); on Champions' / Death Knights' /
+      the Dark Queen's overland the turn keys show their diagonal steps (north-west / north-east) and Turn Around a
+      down arrow; Darkness's overland turns, so its keys stay. `play::move_keys()` (new in play.h - the PortMaster
+      port can ignore it). Seen: QEMU 4.0" on PoolRad's wilderness; the other boards and games built only.
 - [ ] v0.213.3 **Tom: the 5.0\"'s menus no longer jump** (Tom, 2026-11-22: Audio's Volume, Display's, Game Play's
       and Enhancements' keys - the screen "pulses to the left"): each key saved the settings to the internal flash,
       and a flash write cuts the PSRAM off - the RGB panel's picture is read from there. The 5.0\" now keeps its
