@@ -13,6 +13,12 @@
       new game; Throtl, its temple and catacombs, Gargath, Sir Dargaard's tomb, the Ogre Base, Jelek, the third
       outpost and Neraka done (Sir Karl's memorial, the Sanction orders); next Sanction. Open: Throtl's 2,6 / 4,0 / 5,1 (Strangbourn, the plate-mail soldier, the
       arrows) gave nothing when walked onto - the guide's squares or a facing?
+- [ ] v0.213.2 **Tom: a fight's field after the Game menu** (Tom, 2026-11-22: PoolRad's wilderness field came back
+      black): the game screen drawn again (`draw_play`) put the plain EGA palette back and the fight's colour swap
+      (0 / 8, Gateway's 8) was only applied when the fight began - now again on every redraw (viewer.cpp
+      `fight_colours_apply`; every game's fights, every way back to the game screen). Checked: the board builds;
+      the emulator's random encounter didn't come - try it on the board. The PortMaster port keeps its menu as an
+      overlay (no palette reset): not affected.
 - [ ] v0.213.0 **Tom: try the Companion map on PoolRad's wilderness** (Tom, 2026-11-22: "Build it for PoolRad
       first and I'll test it"; SPEC 4): walk the wilderness - walls where a step is refused (sea, coast, the
       stinking river until the land is healed, the north edge), orange squares where the scripts have a place, the

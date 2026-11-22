@@ -6088,6 +6088,23 @@ void comp_press_light()
     press_panel_lit = true;
 }
 
+// A fight swaps colours 0 and 8 (the field's black shows dark grey);
+// Gateway's shows 8 black. Applied over the EGA palette - again whenever
+// that palette is put back (draw_play: the game screen after the Game
+// menu - Tom, 2026-11-22: PoolRad's wilderness field came back black)
+int fight_colours = 0;
+void fight_colours_apply()
+{
+    if (fight_colours == 1) {
+        frame::set_palette(0, pic::kEga[8]);
+        frame::set_palette(8, pic::kEga[0]);
+    } else if (fight_colours == 2) {
+        frame::set_palette(8, pic::kEga[0]);
+    } else if (fight_colours == 3) {
+        frame::set_palette(8, pic::kEga[1]);
+    }
+}
+
 void present_play()
 {
     // A VGA game in 256 colours: its palette changed - the whole screen again
@@ -6096,20 +6113,10 @@ void present_play()
         big_force = true;
         if (comp_view == companion::View::Party) comp_force = true;     // (the icons' colours)
     }
-    // A fight swaps colours 0 and 8 (the field's black shows dark grey);
-    // Gateway's shows 8 black
-    static int fight_colours = 0;
     if (play::fight_colours() != fight_colours) {
         fight_colours = play::fight_colours();
         frame::set_ega_palette();
-        if (fight_colours == 1) {
-            frame::set_palette(0, pic::kEga[8]);
-            frame::set_palette(8, pic::kEga[0]);
-        } else if (fight_colours == 2) {
-            frame::set_palette(8, pic::kEga[0]);
-        } else if (fight_colours == 3) {
-            frame::set_palette(8, pic::kEga[1]);
-        }
+        fight_colours_apply();
         frame::present();
         big_force = true;
         if (comp_view == companion::View::Party) comp_force = true;
@@ -6171,6 +6178,8 @@ void draw_play()
     frame::set_ega_palette();
     play::draw(frame::canvas());
     play_palette(true);                  // (a VGA game in 256 colours: its palette)
+    fight_colours = play::fight_colours();
+    fight_colours_apply();               // (a fight's field colours over it, as present_play puts them)
     ui::clear();
     frame::present();
     int y0, y1;
