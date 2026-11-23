@@ -17,3 +17,9 @@ Lessons (Gargath outpost):
   relief squares (events 13 / 14: 9,3 then 8,2; a fight on the way) -> commander (the foes have left,
   journal 8) -> Kalaman.
 - Check the story's flags with PEEK= (the save's values) / PEEKEND= (after the tokens).
+- The outpost's exit: the west gate (3,7 / 3,8 facing west - the step script jumps two squares through wall
+  types 5 / 7), then off the map's edge west; answer No to the overland's "enter?" that follows.
+- kovpath.py <x,y>: the overland walk (block 17's code grid in ov17.txt, read by PEEK at 9965 + 38 y; keys F N,
+  R NE, > E, B S, < W, L NW; 0x14 mountains and 0x19 water refused). Kalaman 25,1.
+- Kalaman's bazaar stalls ask "cut through?" - Yes walks through (a vandals line), so walks there answer by the
+  question's text (Yes to cut through, No to peddlers / bars / waiting). The Dream Pavilion is event 0x16 (2,3).
