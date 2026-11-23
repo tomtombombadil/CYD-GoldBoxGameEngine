@@ -85,3 +85,15 @@ key first ("./L...").
 - Farr Windward: Ougo at 7,13 (ACCEPT), the office 5,8, the branding room 9,4 - then the script runs to
   Haalbok (journal 38) and Ougo the statue; out by 15,1 (LEAVE), the tunnel to Orlumbor's 0,1, Wrighttson
   at 11,3 (journal 43).
+
+2026-11-23 (Port Llast, Luskan 1, Yartar, Triboar)
+- Any script of the game disassembled without going there: p.sh "|B" SAVE=J AREA=1 BLOCK=<n> DISASMNOW=1
+  DISASM=8000,FFFF (a loop over 1..60 into dis/<n>.txt; grep "1:012A" finds who writes a script byte).
+- A typed answer: token =TEXT; (or TYPE=text in the env) - Triboar's password door (13,0 facing east).
+- "Enter <town>?" on the overland comes one key after the weather line: |B<step>./Y
+- The tour ship (Port Llast pier 2,8, hour 9-15; tourx's healing rests, so rest to 9 right at the pier).
+- Luskan's Jagaerda needs script bytes 0x127-0x12E all set (0x12A = the Waterbaron, Triboar 1,7).
+- Yartar -> Triboar: leave by Yartar's WEST gate (0,7) onto the bridge 54;5,3; the north gate's side of
+  the river has no way west.
+- rdy.sh makes the readied items EXACTLY the list given - name everything the member should wear.
+- ovwalk.sh saves over the slot after a fight: back the slot up first; it stops at a place's question.
