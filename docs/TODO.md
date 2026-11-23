@@ -349,8 +349,8 @@ the Project as claude/TODO.md.
       highest level, Restoration's exact experience, the Feeblemind cure); (2) needs a per-character record the
       engine keeps beside the saves, by name, as QUICK.TXT (each level's hit points, which class each lost level
       came from, the game time of the drain) with a fallback when it's missing; (3) left out (rising as undead;
-      possibly the 0-level person). Waiting on Tom: go ahead? one switch or two (Level Drain / Restoration)?
-      the 0-level person in or out?
+      possibly the 0-level person). Tom, 2026-11-23: leave out the 1 day / caster level limit, rising as undead,
+      the 0-level person and ageing. Waiting on Tom: one switch or two (Claude recommends one - below)?
 - [ ] **The AD&D 1E books** (Tom uploaded them 2026-11-23: the Project's "1st Edition.zip" - PHB, DMG, Unearthed
       Arcana, Premium Editions; unzip to scratch /tmp/claude-0/books, pdftotext): level drain / Restoration done
       against them (the Project's claude/drain_restore_facts.md, with pages). Claude, next: every AD&D 1E Rules
