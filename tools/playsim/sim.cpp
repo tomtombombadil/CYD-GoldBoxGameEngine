@@ -2585,8 +2585,9 @@ int main(int argc, char** argv)
                 play::names->name(items::Item{ch.items[k]}, in, sizeof in);
                 const items::Item it{ch.items[k]};
                 if (atoi(getenv("ITEMDUMP")) > 1)     // ITEMDUMP=2: the name's three words too
-                    printf("    %c %s   [type %d: 3 '%s' 2 '%s' 1 '%s' hidden %d]\n", ch.items[k][0x34] ? '*' : ' ', in, it.type(),
-                           play::names->word(it.word(3)), play::names->word(it.word(2)), play::names->word(it.word(1)), it.hidden());
+                    printf("    %c %s   [type %d: 3 '%s' 2 '%s' 1 '%s' hidden %d plus %d]\n", ch.items[k][0x34] ? '*' : ' ', in, it.type(),
+                           play::names->word(it.word(3)), play::names->word(it.word(2)), play::names->word(it.word(1)), it.hidden(),
+                           (int)ch.items[k][0x32]);
                 else
                     printf("    %c %s\n", ch.items[k][0x34] ? '*' : ' ', in);
             }

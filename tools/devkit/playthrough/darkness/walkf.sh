@@ -7,7 +7,8 @@ for i in $(seq 1 60); do
   st=$(grep -E "^  \? screen" $P/run.log | tail -1)
   if [ -z "$NOFLEE" ] && echo "$st" | grep -q "Flee"; then T="$T/F,"; echo "  (fled at $(grep '^   now' $P/run.log | tail -1 | cut -c10-16))"; continue; fi
   if echo "$st" | grep -q "Press button"; then T="$T."; continue; fi
-  if echo "$st" | grep -q "Locked"; then T="$T/B,"; continue; fi
+  # (a wizard-locked door - Bash all but hopeless: Knock when someone has it memorized)
+  if echo "$st" | grep -q "Locked"; then if echo "$st" | grep -q "Knock"; then T="$T/K"; else T="$T/B,"; fi; continue; fi
   # (screen 24 under the exploring words: a fight or a script's treasure starting - 2026-11-23, walked on and
   # saved there, Champions' Huerzyd statue treasure was lost)
   if ! echo "$st" | grep -q "Cast View Encamp" || echo "$st" | grep -q "screen 24 "; then echo "STOP: $st"; break; fi

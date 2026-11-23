@@ -41,3 +41,14 @@ stops there with "Not Enough Experience", not a race limit.
 The overland's places (script 16, tables at 8E72 / 8E7E, 4BC3 / 4BC4 the marker): Throtl 2,1, outpost 1 1,3,
 outpost 2 13,5, Gargath 14,3, Jelek 12,7, Neraka 17,8, the tomb 11,3, the Ogre Base 16,3, Sanction 10,13, Kernen
 31,3, outpost 3 15,11. Overland steps: F north, B south, R north-east, L north-west.
+Lessons (2026-11-23): a treasure's money (gems, jewelry, coins) was never taken - adv.sh now passes the playsim's
+AUTOMONEY=1 (Take - Money, each coin line the most there is) before AUTOTAKE's items. walkf.sh (from ../darkness)
+walked on and saved where a script's treasure screen was starting (screen 24 under the exploring words) - Huerzyd's
+statue treasure was lost; it stops there now, and Knocks a wizard-locked door when someone has Knock memorized
+(memset.txt: 1F for Garin and Sirrion - Duerghast's locked rooms). sellplain.sh sold the Footman's Dragonlance (a
+plain-looking name): ITEMDUMP=2 shows each item's plus, and an item with a plus is never sold. The playsim's Auto
+rule took Champions' Done menu's Quit (ends the turn) for Quick after the Treasures kit's change - fights went
+nowhere and were "LOST on Auto"; a Delay word tells that menu apart. Hidden treasure (Huerzyd's bedroom, the book
+room) needs Look on the square (script 0x7ECA = 1). Huerzyd's tunnels: each passage's west end steps on to the next
+section (0,15 W -> 9,14; 0,14 W; 0,13 W -> 7,10); the Ancient Revered One at 4,10, out at 0,10 W into Duerghast's
+basement (15,0).

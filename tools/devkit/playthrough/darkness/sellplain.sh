@@ -13,6 +13,7 @@ for l in open(sys.argv[1]):
     if m<0 or not l.startswith('    '): continue
     if l.startswith('    *'): continue
     if re.search(r'hidden [1-9]', l): continue   # (still unidentified - Shal's vorpal was sold as a plain long sword)
+    if re.search(r'plus [1-9]', l): continue     # (a plus in the record: magic whatever its name - Champions' Dragonlance, 2026-11-23)
     n=re.sub(r'\s+\[type.*','',l).strip()
     if '+' in n or ' of ' in n or n.startswith(('Wand','Ring','Bracers','Cloak','Necklace','Gauntlets','Boots','Girdle','Potion','Scroll','Mage Scroll','Cleric Scroll','Staff Sling','Composite')): continue
     if re.search(r'Arrows|Quarrels|Darts|Bolts|Sling', n): continue
