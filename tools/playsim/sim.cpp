@@ -2065,11 +2065,33 @@ int main(int argc, char** argv)
             else { maze_tok[1] = static_cast<char>('0' + dir); t = maze_tok; }
         } else if (maze_walk) { t = has('M') && !maze_blocked ? "/M" : "/G"; maze_blocked = false; }    // (no moves left: Guard - not Quick, the walk goes on next round)
         else if (scr == 24) t = has('A') && has('S') && has('E') && !has('M') && (!has('Q') || has('D')) ? "/A" : has('Q') ? "/Q" : has('Y') && has('N') && getenv("AUTOFIGHT") ? "/N" :
-                                     has('D') && has('M') ? "/D" : ".";   // (Champions: no Quick - Done, then its Guard Delay Quit Auto's Auto; its Quit (Q) ends the turn - a Delay (D) tells that menu from a menu with Quick)   // ("Continue Battle": No)
+                                     has('D') && (has('M') || (has('V') && has('C'))) ? "/D" : ".";   // (Champions: no Quick - Done, then its Guard Delay Quit Auto's Auto; its Quit (Q) ends the turn - a Delay (D) tells that menu from a menu with Quick)   // ("Continue Battle": No)
         // (AUTOMONEY=1: before AUTOTAKE the treasure's money - gems, jewelry, coins - Take - Money, each line the
         // most there is, by the selected member)
-        else if (scr == 5 && has('T') && has('V') && getenv("AUTOMONEY") && money_left && !auto_money) { t = "/T/M"; auto_money = 1; }
-        else if (scr == 16 && getenv("AUTOMONEY") && auto_money && strstr(play::menu.prompt, "coin")) t = has('S') && money_left ? "/S=65000;" : "/E";
+        else if (scr == 5 && has('T') && has('V') && getenv("AUTOMONEY") && money_left && !auto_money) {
+            // (the lightest member takes it - coins weigh, and a heavy taker was refused the items after)
+            static char tm[16];
+            int best = 0;
+            for (int i = 1; i < play::pt->count && i < 6; ++i)
+                if (play::pt->m[i].hp() > 0 && play::pt->m[i].encumbrance() < play::pt->m[best].encumbrance()) best = i;
+            snprintf(tm, sizeof tm, "%%%d/T/M", best);
+            t = tm; auto_money = 1;
+        }
+        else if (scr == 16 && getenv("AUTOMONEY") && auto_money && strstr(play::menu.prompt, "coin")) {
+            // (a refused amount - Overloaded - leaves the ground's money as it was: smaller amounts, then on)
+            static long last_sum = -1; static int step_ = 0, line_ = 0;
+            static const char* const amounts[] = {"/S=65000;", "/S=2000;", "/S=500;", "/S=100;", "/S=20;"};
+            long sum = 0;
+            for (int m = 0; m < 7; ++m) sum += play::ground->money[m];
+            int kinds = 0;
+            for (int m = 0; m < 7; ++m) kinds += play::ground->money[m] > 0;
+            if (auto_money == 1) { last_sum = -1; step_ = 0; line_ = 0; auto_money = 2; }
+            else if (sum == last_sum && step_ < 5) ++step_;
+            else if (sum != last_sum) step_ = 0;
+            last_sum = sum;
+            if (step_ == 5) { step_ = 0; ++line_; last_sum = -1; t = line_ < kinds ? "v" : "/E"; }   // (the next coin's line)
+            else t = has('S') && money_left ? amounts[step_] : "/E";
+        }
         else if (scr == 5 && has('T') && has('V') && getenv("AUTOTAKE") && !auto_take) {
             // (the taker: of the first six, the one with the fewest items, then the lightest - a full or
             // OverLoaded member is refused every Take; TAKER=n names one)
@@ -2077,7 +2099,10 @@ int main(int argc, char** argv)
             int best = 0;
             for (int i = 1; i < play::pt->count && i < 6; ++i) {
                 const party::Character& a = play::pt->m[i]; const party::Character& b0 = play::pt->m[best];
-                if (a.hp() > 0 && (a.n_items < b0.n_items || (a.n_items == b0.n_items && a.encumbrance() < b0.encumbrance()))) best = i;
+                // (the lightest with room for items: coins weigh - Champions' Sir Lebaum's treasure was refused a
+                // kender carrying the party's steel, 2026-11-23)
+                const bool a_room = a.n_items < 14, b_room = b0.n_items < 14;
+                if (a.hp() > 0 && ((a_room && !b_room) || (a_room == b_room && a.encumbrance() < b0.encumbrance()))) best = i;
             }
             if (getenv("TAKER")) best = atoi(getenv("TAKER"));
             snprintf(tk, sizeof tk, "%%%d%s", best, getenv("AUTOTAKE"));
@@ -2106,6 +2131,9 @@ int main(int argc, char** argv)
             } else if (i < n - 1) { if (!magic && getenv("LOOTLOG")) printf("  LOOT leave: %s\n", nm); tries = 0; t = "v"; }
             else { if (!magic && getenv("LOOTLOG")) printf("  LOOT leave: %s\n", nm); last_n = -1; t = "/E"; }
         }
+        // (items still on the ground after AUTOTAKE's taker was refused: the auto run stops at the treasure menu -
+        // the kit's takeall goes member by member; an Exit here had left Sir Lebaum's treasure, 2026-11-23)
+        else if (scr == 5 && getenv("AUTOTAKE") && auto_take && play::ground && play::ground->n > 0 && has('T') && has('V')) t = nullptr;
         else if (scr == 5 || scr == 16 || scr == 25) t = has('E') ? "/E" : ".";
         else if (play::screen == play::Screen::Won) t = ".";      // (an ending's pages: a key each)
         else if (scr == 11 && getenv("AUTOFIGHT") && has('Y') && has('N')) t = "/N";     // ("There is still treasure left ...": No)

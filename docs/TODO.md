@@ -55,7 +55,7 @@
       TREASURE 0x82 / 0x83 - the guide's random magic items): its own facts now (`kChampionsMake`, profile.cpp, from
       its roller GAME.OVR 0x2817 and create_item 0x2C92B): Secret's shape with its own dice tables, a d10 plus (10:
       +2), the ring's plus rolled with nothing against saves, the ready-made rows at DS 0x0B8A keeping their 1
-      against saves, and the Krynn scrolls (`treasure::KrynnScroll`: a magic-user's by robe - a d2, White / Red -
+      against saves, and the Krynn scrolls (`treasure::KrynnScroll`: a magic-user's by robe - a d2, Red (word 0x78) / White (0x77) -
       or a clerics', d3 spells, each a d4 level then that list's die; DS 0x428A / 0x4262 / 0x423A, 10 a level).
       Host test `test_treasure_champions`; checked in the play-through (Huerzyd's statue, trapped room, bedroom,
       the Ancient Revered One - rings, weapons, darts, scrolls of both robes). Still open: Death Knights, Darkness,

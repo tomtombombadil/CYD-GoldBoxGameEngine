@@ -23,6 +23,9 @@ for i in $(seq 1 ${ITER:-30}); do
     for c in $(echo "$PICK" | tr ',' ' '); do n=0; while IFS= read -r line; do echo "$line" | grep -qi "^$c" && { k=$n; found=1; break; }; n=$((n+1)); done <<< "$l"; [ -n "$found" ] && break; done
     T="$T@$k"
   elif echo "$st" | grep -q "screen 24 .*wait 11 "; then T="$T."
+  # (a script's PROGRAM 9 camp - Tas's "DO YOU REST?": Exit, and the story goes on; 2026-11-23, a save there
+  # left the party at the citadel's default square with the story skipped)
+  elif echo "$st" | grep -q "screen 7 .*wait 14 "; then T="$T/E"
   elif echo "$st" | grep -q "screen 5 \|screen 25 "; then T="$T/E"
   elif echo "$st" | grep -q "|Move Aim\|Aim Use"; then :
   elif [ -n "$PICK" ] && w=$(echo "$st" | sed -E 's/.*menu \[[^|]*\|([^]]*)\].*/\1/') && k=$(for c in $(echo "$PICK" | tr ',' ' '); do echo "$w" | grep -qw "$c" && { echo "$c"; break; }; done) && [ -n "$k" ]; then T="$T/${k:0:1}"
@@ -31,6 +34,6 @@ done
 grep -E "TEXT|JOURNAL|won:|lost" $P/run.log | tail -${TXTN:-10} | cut -c1-120
 echo "$st" | cut -c1-110
 # (left in the camp's menu - a treasure's Exit then an E: out of it, and saved)
-echo "$st" | grep -q "screen 7 menu \[|Save View" && { T="$T/E"; st="  ? screen 0 menu [|Move Area"; }
+[ -z "$NOCAMPEXIT" ] && echo "$st" | grep -q "screen 7 menu \[|Save View" && { T="$T/E"; st="  ? screen 0 menu [|Move Area"; }
 echo "$st" | grep -q "screen 0 menu \[|Move Area\|screen 0 menu \[|Move Encamp" && { TAILN=0 $P/bin/p.sh "$T" SAVE=$S SAVENOW=$S $EXTRA > /dev/null; grep "saved now" $P/run.log; }
 echo "$T" > $P/tt.txt

@@ -92,14 +92,14 @@ struct NameRule {
     uint8_t saves;                          // plus against saves
 };
 // The Krynn games' scrolls (Champions' create_item, GAME.OVR 0x2C92B): a
-// magic-user's scroll by robe (a d2: White, else Red), each robe's own spell
+// magic-user's scroll by robe (a d2: Red - word 0x78, else White - 0x77), each robe's own spell
 // lists, a clerics' scroll - the spells' level by a d4, then that level's
 // die; the hidden bits by robe at the end
 struct KrynnScroll {
     uint8_t  robe_die;                      // 2
     uint8_t  mu_w3[2], mu_w2;               // word 3 by the robe roll (1, 2), word 2
     uint8_t  cleric_w3, cleric_w2;
-    uint8_t  hidden[3];                     // by list: White, Red, clerics'
+    uint8_t  hidden[3];                     // by list: Red, White, clerics'
     uint8_t  levels;                        // the level die
     uint8_t  dice[3][4];                    // [list][level - 1]
     uint16_t lists[3];                      // the lists in the program's data segment (a level's [0] first)
@@ -145,7 +145,7 @@ struct Rows {
     const uint16_t* row(int r) const { return &w[1 + 8 * r]; }
     // Secret: its scrolls' spells (the program's tables, 11 bytes a level:
     // [0] mage's, [1] clerics'; spell = spells[k][level - 1][roll]); the
-    // Krynn games: [0] White, [1] Red, [2] clerics'
+    // Krynn games: [0] Red, [1] White, [2] clerics'
     uint8_t spells[3][7][11] = {};
 };
 

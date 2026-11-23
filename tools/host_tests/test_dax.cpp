@@ -2644,7 +2644,7 @@ static void test_treasure()
 }
 
 // Champions' random treasure (GAME.OVR 0x2817 / 0x2C92B): about half
-// scrolls (45% a magic-user's, White or Red by a d2; 5% clerics'), each spell
+// scrolls (45% a magic-user's, Red or White by a d2; 5% clerics'), each spell
 // from its robe's list for a d4 level; +1 (a d10 of 10: +2); the ring's plus
 // rolled with nothing against saves; potions / the wand / giant strength
 // from the ready-made rows with 1 against saves
