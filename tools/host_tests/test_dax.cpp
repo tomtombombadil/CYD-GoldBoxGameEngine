@@ -2643,6 +2643,82 @@ static void test_treasure()
     CHECK(scrolls > 250 && scrolls < 400 && potions > 25 && potions < 100 && weapons > 500 && bracers > 0);
 }
 
+// Champions' random treasure (GAME.OVR 0x2817 / 0x2C92B): about half
+// scrolls (45% a magic-user's, White or Red by a d2; 5% clerics'), each spell
+// from its robe's list for a d4 level; +1 (a d10 of 10: +2); the ring's plus
+// rolled with nothing against saves; potions / the wand / giant strength
+// from the ready-made rows with 1 against saves
+static void test_treasure_champions()
+{
+    const profile::Profile* pr = profile::first(games::Game::ChampionsOfKrynn);
+    CHECK(pr && pr->random_items && pr->random_items->secret && pr->random_rows == 0x0B8A);
+    if (!pr || !pr->random_items || !pr->random_items->secret) return;
+    const treasure::SecretFacts& s = *pr->random_items->secret;
+    CHECK(s.krynn != nullptr);
+    if (!s.krynn) return;
+    treasure::Rows rows{};
+    for (int r = 0; r < 7; ++r)
+        for (int k = 0; k < 8; ++k) rows.w[1 + 8 * r + k] = static_cast<uint16_t>(r * 10 + k + 1);
+    // made-up lists: list k, level lv, roll j -> 100 k + 10 lv + j (lists 0, 1, 2: 1.., 101.., 201..)
+    for (int k = 0; k < 3; ++k)
+        for (int lv = 0; lv < 4; ++lv)
+            for (int j = 0; j < 11; ++j) rows.spells[k][lv][j] = static_cast<uint8_t>((100 * k + 10 * lv + j) & 0xFF);
+    create::Dice d(11);
+    uint8_t it[items::kRecordSize];
+    int white = 0, red = 0, cleric = 0, twos = 0, rings = 0, rows_made = 0, armour = 0, n = 0;
+    for (int i = 0; i < 4000; ++i, ++n) {
+        treasure::make(it, *pr->random_items, rows, d);
+        const int t = it[0x2E];
+        CHECK(it[0x36] == 0 && it[0x34] == 0);
+        if (t == s.mu_scroll || t == s.cleric_scroll) {
+            const int c = it[0x2F] - s.count_word;
+            CHECK(c >= 1 && c <= 3 && it[0x32] == 1 && (it[0x37] | it[0x38] << 8) == 25);
+            const int list = t == s.cleric_scroll ? 2 : it[0x31] == 0x78 ? 0 : 1;
+            (list == 0 ? white : list == 1 ? red : cleric)++;
+            CHECK(it[0x35] == s.krynn->hidden[list]);
+            CHECK(t == s.cleric_scroll ? it[0x31] == 0x26 && it[0x30] == 0x27 : it[0x30] == 0x28 &&
+                                             (it[0x31] == 0x78 || it[0x31] == 0x77));
+            int value = 0;
+            for (int k = 0; k < c; ++k) {
+                const int sp = it[0x3C + k];
+                const int lv = (sp % 100) / 10 + 1, j = sp % 10;          // (j < 10: the dice are up to 8)
+                CHECK(sp / 100 == list && lv >= 1 && lv <= 4 && j >= 1 && j <= s.krynn->dice[list][lv - 1]);
+                value += 150 * lv;
+            }
+            CHECK((it[0x3A] | it[0x3B] << 8) == value);
+            if (c < 3) CHECK(it[0x3C + c] == 0);
+            continue;
+        }
+        if (t == s.potion || t == s.wand || t == s.giant || (t == s.javelin && it[0x2F] == 61)) {
+            ++rows_made;
+            const int row = it[0x2F] / 10;
+            CHECK(it[0x32] == 1 && it[0x33] == 1);                       // (Champions keeps 1 against saves)
+            CHECK((t == s.potion && (row == 0 || row == 2)) || (t == s.wand && row == 4) ||
+                  (t == s.giant && row == 1) || (t == s.javelin && row == 6));
+            continue;
+        }
+        CHECK(it[0x32] == 1 || it[0x32] == 2 || (t == 0x32 && it[0x32] == 4));
+        if (it[0x32] == 2) ++twos;
+        if (t == 0x3B) {
+            ++rings;
+            CHECK(it[0x31] == 0x2E && it[0x30] == 0x31 && it[0x2F] == 0x6E + it[0x32] && it[0x33] == 0);
+        } else if (t >= 0x1F && t <= 0x24) {
+            ++armour;
+            CHECK(it[0x31] == t && it[0x30] == (t == 0x1F ? 0x30 : 0x2F) && it[0x2F] == 0x6E + it[0x32] &&
+                  it[0x35] == 4);
+        } else if (t == 0x32) {
+            CHECK(it[0x2F] == 0x6B && it[0x30] == 0x5A && (it[0x3A] | it[0x3B] << 8) == 6000);
+        } else {
+            CHECK((t >= 1 && t <= 0x1E) || t == 0x25 || t == 0x46 || t == 0x47);
+            CHECK(it[0x31] == t && it[0x30] == 0x6E + it[0x32] && it[0x33] == 0);
+        }
+        CHECK((it[0x37] | it[0x38] << 8) > 0);
+    }
+    // 45% / 2 each robe, 5% clerics', 5% rings, 10% armour; a tenth of the plus items +2
+    CHECK(white > 700 && white < 1100 && red > 700 && red < 1100 && cleric > 120 && cleric < 300);
+    CHECK(rings > 120 && rings < 300 && armour > 300 && armour < 520 && rows_made > 60 && twos > 50 && twos < 200);
+}
+
 // Pool's random treasure: its kinds (93-98 a d16 of rings, potions,
 // necklaces ...; 99-100 type 0x45), each kind's row by its die, +3 on a 20
 // (bracers AC 2), 3 scroll bands, the javelin of lightning's odd start
@@ -9690,6 +9766,7 @@ int main()
     test_queen_target_hooks();
     test_treasure();
     test_treasure_pool();
+    test_treasure_champions();
     test_sound();
     test_clips();
     test_journal();

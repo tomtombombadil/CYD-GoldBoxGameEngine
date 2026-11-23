@@ -1233,6 +1233,62 @@ constexpr treasure::Facts kSecretRandom = [] {
     return f;
 }();
 
+// Random treasure (Champions; its roller GAME.OVR 0x2817, create_item
+// 0x2C92B): Secret's shape with its own dice tables; the plus a d10 (10:
+// +2), the ring's plus rolled, nothing against saves; the scrolls by robe
+// (KrynnScroll); the ready-made rows (DS 0x0B8A) keep their 1 against saves
+constexpr treasure::RollTable kChampionsRolls[] = {
+    {100, 7, {{20, 0, 1}, {65, 0x27, 0}, {70, 0x28, 0}, {80, 0x25, 0}, {85, 0x3B, 0}, {95, 0, 5}, {100, 0, 6}}},
+    {100, 3, {{10, 0, 2}, {25, 0, 3}, {100, 0, 4}}},
+    {10, 5, {{2, 0x06, 0}, {6, 0x08, 0}, {8, 0x46, 0}, {9, 0x0F, 0}, {10, 0x1D, 0}}},
+    {20, 9, {{3, 0x05, 0}, {5, 0x07, 0}, {8, 0x18, 0}, {10, 0x16, 0}, {12, 0x19, 0}, {14, 0x17, 0}, {16, 0x1C, 0},
+             {18, 0x1D, 0}, {20, 0x1E, 0}}},
+    {4, 2, {{3, 0, 7}, {4, 0, 8}}},
+    {20, 6, {{3, 0x1F, 0}, {11, 0x23, 0}, {16, 0x24, 0}, {17, 0x20, 0}, {18, 0x21, 0}, {20, 0x22, 0}}},
+    {6, 4, {{2, 0x32, 0}, {4, 0x30, 0}, {5, 0x34, 0}, {6, 0x35, 0}}},
+    {20, 6, {{8, 0x12, 0}, {13, 0x11, 0}, {14, 0x0D, 0}, {15, 0x10, 0}, {18, 0x13, 0}, {20, 0x14, 0}}},
+    {8, 6, {{1, 0x01, 0}, {3, 0x04, 0}, {5, 0x08, 0}, {6, 0x0A, 0}, {7, 0x0E, 0}, {8, 0x47, 0}}},
+};
+constexpr treasure::NameRule kChampionsNames[] = {
+    {0x1F, 0, 0x30, 4, 0, 0, 0},                   // Leather Armor +n
+    {0x20, 0, 0x2F, 4, 0, 0, 0}, {0x21, 0, 0x2F, 4, 0, 0, 0}, {0x22, 0, 0x2F, 4, 0, 0, 0},
+    {0x23, 0, 0x2F, 4, 0, 0, 0}, {0x24, 0, 0x2F, 4, 0, 0, 0},   // ... Mail +n
+    {0x32, 0, 0x5A, 6, 4, 0x6B, 0},                // Bracers AC 6 (+4)
+    {0x3B, 0x2E, 0x31, 6, 0, 0, 0},                // Ring of Protection +n (the plus rolled)
+};
+constexpr uint8_t kChampionsWeightType[] = {0x01, 0x11, 0x06, 0x0E, 0x0F, 0x17, 0x19, 0x25, 0x1D, 0x43, 0x09,
+                                            0x08, 0x10, 0x18, 0x46, 0x1F, 0x47, 0x04, 0x32, 0x05, 0x0A, 0x12,
+                                            0x16, 0x07, 0x0D, 0x13, 0x14, 0x20, 0x21, 0x22, 0x23, 0x24, 0x1C,
+                                            0x3B};
+constexpr uint16_t kChampionsWeight[] = {75, 75, 50, 50, 50, 50, 50, 50, 50, 50, 125, 100, 100, 100, 150, 150, 175,
+                                         10, 10, 5, 60, 60, 80, 20, 40, 35, 250, 250, 400, 300, 350, 450, 1, 1};
+static_assert(sizeof kChampionsWeightType == sizeof kChampionsWeight / 2, "weights");
+constexpr uint8_t kChampionsValueType[] = {0x25, 0x1E, 0x20, 0x21, 0x22, 0x23, 0x24, 0x32};
+constexpr uint16_t kChampionsValue[] = {1250, 75, 1500, 1500, 1750, 2000, 2500, 1500};
+constexpr treasure::KrynnScroll kChampionsScroll = {
+    2, {0x78, 0x77}, 0x28, 0x26, 0x27, {0x14, 0x24, 0x00}, 4,
+    {{7, 6, 6, 4}, {8, 3, 6, 7}, {4, 7, 4, 4}},
+    {0x428A, 0x4262, 0x423A}, 10,
+};
+constexpr treasure::SecretFacts kChampionsMake = {
+    kChampionsRolls, sizeof kChampionsRolls / sizeof kChampionsRolls[0],
+    0x01, 0x25, {0x32, 0x46, 0x47, 0x3B},
+    10, {9, 10}, 0x6E,
+    kChampionsNames, sizeof kChampionsNames / sizeof kChampionsNames[0],
+    {kChampionsWeightType, kChampionsWeight, sizeof kChampionsWeightType, 4}, {0x05},
+    {kChampionsValueType, kChampionsValue, sizeof kChampionsValueType, 1000},
+    0x27, 0x28, 3, 0x63, 0, 0, 0, 25, 150, 0, 0, 0, 0,
+    {}, {},
+    0x30, {2, 2, 2, 2, 2, 0, 0, 0}, 0x34, 4, 0x35, 1, 0x07, 6,
+    0, 0, 0, 0,
+    &kChampionsScroll, true,
+};
+constexpr treasure::Facts kChampionsRandom = [] {
+    treasure::Facts f{};
+    f.secret = &kChampionsMake;
+    return f;
+}();
+
 // Random treasure (Pool; poolrad_combat_facts.md 6, its ovr4 / ovr22 code):
 // Curse's types, words, weights and values; 3 scroll bands of its own; a
 // 20 makes +3 (bracers AC 2); 93-98 a d16 of its kinds, 99-100 type 0x45,
@@ -3447,7 +3503,7 @@ const Profile kProfiles[] = {
                 .berserk = 0x6B, .acid_ground = 0x1D, .taunted = 0x5B, .hit_needs_damage = true},
                kChampionsFight, sizeof kChampionsFight / sizeof kChampionsFight[0]},
      .script_words = {0x2D2D, 0x2D3E, 0xAA9C, 0xAAA4, 0xAAB1, 0x35AD},
-     .random_items = &kCurseRandom, .random_rows = 0,
+     .random_items = &kChampionsRandom, .random_rows = 0x0B8A,
      // Its effects: Secret's driver in START.EXE's segment 0x7E8 (the tables
      // at +0x4A8 / +0x550, 21 entries, its byte code to +0x12C1; its Tandy
      // entries 0-11 Secret's own byte for byte); its PlaySound passes its

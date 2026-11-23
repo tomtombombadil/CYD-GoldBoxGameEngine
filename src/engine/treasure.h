@@ -91,6 +91,20 @@ struct NameRule {
     uint8_t w1;                             // word 1 (0: the plus word when w2 isn't it)
     uint8_t saves;                          // plus against saves
 };
+// The Krynn games' scrolls (Champions' create_item, GAME.OVR 0x2C92B): a
+// magic-user's scroll by robe (a d2: White, else Red), each robe's own spell
+// lists, a clerics' scroll - the spells' level by a d4, then that level's
+// die; the hidden bits by robe at the end
+struct KrynnScroll {
+    uint8_t  robe_die;                      // 2
+    uint8_t  mu_w3[2], mu_w2;               // word 3 by the robe roll (1, 2), word 2
+    uint8_t  cleric_w3, cleric_w2;
+    uint8_t  hidden[3];                     // by list: White, Red, clerics'
+    uint8_t  levels;                        // the level die
+    uint8_t  dice[3][4];                    // [list][level - 1]
+    uint16_t lists[3];                      // the lists in the program's data segment (a level's [0] first)
+    uint8_t  stride;
+};
 struct SecretFacts {
     const RollTable* tables;                // [0] the d100 kind
     uint8_t          n_tables;
@@ -115,6 +129,10 @@ struct SecretFacts {
     // and their strides
     uint16_t         mu_spells, cleric_spells;
     uint8_t          mu_stride, cleric_stride;
+    // The Krynn games' scrolls (null: Secret's), and whether a ready-made
+    // row's item keeps its 1 against saves (Secret's: 0)
+    const KrynnScroll* krynn = nullptr;
+    bool               row_saves = false;
 };
 
 // The program's ready-made items as its array of words (w[1 + 8r] the
@@ -126,8 +144,9 @@ struct Rows {
     uint16_t w[kRowWords];
     const uint16_t* row(int r) const { return &w[1 + 8 * r]; }
     // Secret: its scrolls' spells (the program's tables, 11 bytes a level:
-    // [0] mage's, [1] clerics'; spell = spells[k][level - 1][roll])
-    uint8_t spells[2][7][11] = {};
+    // [0] mage's, [1] clerics'; spell = spells[k][level - 1][roll]); the
+    // Krynn games: [0] White, [1] Red, [2] clerics'
+    uint8_t spells[3][7][11] = {};
 };
 
 // One random item into rec (kRecordSize bytes). last: the type rolled

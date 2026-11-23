@@ -14787,7 +14787,13 @@ struct Host : ecl::Host {
                 rows.w[k] = static_cast<uint16_t>(b[0] | b[1] << 8);       // (little-endian, as read)
             }
             // Secret: its scrolls' spells, a level's table at a time
-            if (const treasure::SecretFacts* sf = p->random_items->secret)
+            const treasure::SecretFacts* sf = p->random_items->secret;
+            if (sf && sf->krynn)                       // (the Krynn games: three lists, 4 levels)
+                for (int k = 0; ok && k < 3; ++k)
+                    for (int lv = 0; ok && lv < 4; ++lv)
+                        ok = exepack::read(src, info, p->create.ds_image + sf->krynn->lists[k] + lv * sf->krynn->stride,
+                                           rows.spells[k][lv], sizeof rows.spells[k][lv]) == exepack::Status::Ok;
+            else if (sf)
                 for (int k = 0; ok && k < 2; ++k)
                     for (int lv = 0; ok && lv < 7; ++lv)
                         ok = exepack::read(src, info,
@@ -14801,9 +14807,13 @@ struct Host : ecl::Host {
             return;
         }
         uint8_t last = 0;
-        for (int k = 0; k < n && g.n < items::kMaxGround; ++k)
+        char types[48] = "";
+        for (int k = 0; k < n && g.n < items::kMaxGround; ++k) {
             treasure::make(g.item[g.n++], *p->random_items, rows, rng, &last);
-        plat::log("[play] TREASURE: %d random items (%d on the ground)\n", n, g.n);
+            const size_t l = strlen(types);
+            if (l + 4 < sizeof types) snprintf(types + l, sizeof types - l, " %02X", g.item[g.n - 1][0x2E]);
+        }
+        plat::log("[play] TREASURE: %d random items (%d on the ground; types%s)\n", n, g.n, types);
     }
     void load_monster(int id, int copies, int icon) override { fight_load_monster(id, copies, icon); }
     void clear_monsters() override { fight_clear_monsters(); }

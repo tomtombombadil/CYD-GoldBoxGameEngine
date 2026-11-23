@@ -172,6 +172,34 @@ void secret_create(uint8_t* r, int type, const SecretFacts& s, const Rows& rows,
         set16(r, 0x37, w);
         if (w == s.weight.other || type == s.twenty[0]) r[0x39] = 20;
         set16(r, 0x3A, plus * s.value.of(type));
+    } else if ((type == s.mu_scroll || type == s.cleric_scroll) && s.krynn) {
+        const KrynnScroll& k = *s.krynn;
+        const bool mu = type == s.mu_scroll;
+        const int n = d.roll(s.spells_die, 1);
+        int list = 2;
+        if (mu) {
+            const int robe = d.roll(k.robe_die, 1);
+            list = robe == 1 ? 0 : 1;
+            r[0x31] = k.mu_w3[list];
+            r[0x30] = k.mu_w2;
+        } else {
+            r[0x31] = k.cleric_w3;
+            r[0x30] = k.cleric_w2;
+        }
+        r[0x2F] = static_cast<uint8_t>(s.count_word + n);
+        r[0x32] = 1;
+        set16(r, 0x37, s.scroll_weight);
+        int value = 0;
+        for (int i = 0; i < n; ++i) {
+            const int lv = d.roll(k.levels, 1);
+            const int die = lv <= 4 ? k.dice[list][lv - 1] : 0;
+            const int j = die ? d.roll(die, 1) : 0;
+            r[0x3C + i] = j < 11 && lv <= 7 ? rows.spells[list][lv - 1][j] : 0;
+            value += s.scroll_value * lv;
+        }
+        set16(r, 0x3A, value);
+        r[0x35] = k.hidden[list];
+        return;
     } else if (type == s.mu_scroll || type == s.cleric_scroll) {
         const bool mu = type == s.mu_scroll;
         const int n = d.roll(s.spells_die, 1);
@@ -201,7 +229,7 @@ void secret_create(uint8_t* r, int type, const SecretFacts& s, const Rows& rows,
     }
     if (row >= 0) {
         from_row(r, rows.row(row));
-        r[0x33] = 0;                               // (Secret's: nothing against saves)
+        if (!s.row_saves) r[0x33] = 0;             // (Secret's: nothing against saves)
     }
 }
 

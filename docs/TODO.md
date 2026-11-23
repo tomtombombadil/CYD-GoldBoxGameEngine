@@ -51,16 +51,16 @@
       Checked: playsim MAPASCII=1 (area 26 save B against its own 5 x 5 view), QEMU 4.0" S3 firmware (load,
       three steps east - the arrow and window followed), host tests (find_places, onto / step_refused).
       For the PortMaster port: `play::map_place(x, y)` is new in play.h (its panel can draw the places).
-- [ ] **Champions' random treasure makes nothing** (found 2026-11-22, the play-through: Huerzyd's TREASURE 0x82 -
-      the guide's "two random magic items" - gave only gems / jewelry): its profile has `kCurseRandom` with
-      `random_rows = 0`, and `random_items` returns at 0. Read so far (scratch /tmp/claude-0/chtre): the roller GAME.OVR
-      0x2817 (Secret's shape, Champions' own d100 / d10 / d20 / d4 / d8 / d6 tables), create_item 0x2C92B (plus d10:
-      1-9 +1, 10 +2; Secret's name rules but the ring's plus rolled, saves 0; its own weights / values; magic-user
-      scrolls by robe - d2 White 0x78 / Red 0x77, hidden 0x10 / 0x20, lists DS 0x428A / 0x4262 + 10 a level, cleric
-      DS 0x423A, d3 spells, d4 levels, 150 a level, weight 25; ready rows DS 0xB88 words - potion 0x30 d8 1-5 row 2
-      else 0, wand 0x34 row 4, giant 0x35 row 1, javelin 7 row 6 on a d5 of 5, plus 1 and 1 against saves). Next:
-      SecretFacts with a Krynn scroll part, a host test, Death Knights / Darkness / Treasures / Queen checked too
-      (their random_items nullptr as well).
+- [x] v0.214.3 (the Champions play-through, 2026-11-23): **Champions' random treasure made nothing** (Huerzyd's
+      TREASURE 0x82 / 0x83 - the guide's random magic items): its own facts now (`kChampionsMake`, profile.cpp, from
+      its roller GAME.OVR 0x2817 and create_item 0x2C92B): Secret's shape with its own dice tables, a d10 plus (10:
+      +2), the ring's plus rolled with nothing against saves, the ready-made rows at DS 0x0B8A keeping their 1
+      against saves, and the Krynn scrolls (`treasure::KrynnScroll`: a magic-user's by robe - a d2, White / Red -
+      or a clerics', d3 spells, each a d4 level then that list's die; DS 0x428A / 0x4262 / 0x423A, 10 a level).
+      Host test `test_treasure_champions`; checked in the play-through (Huerzyd's statue, trapped room, bedroom,
+      the Ancient Revered One - rings, weapons, darts, scrolls of both robes). Still open: Death Knights, Darkness,
+      Treasures and the Dark Queen have no random treasure facts (`random_items` null) - read each one's roller
+      when its play-through gets there.
 - [x] v0.212.2 (the Champions play-through, 2026-11-22): **Sir Dargaard's Test of Fear refused a knight** - its script asks field 0xCD (Champions' GAME.OVR switch: the knight's level, record 0x100) and the engine (Secret's switch) gave 0; `Vm::get` answers it from the record's knight level. Checked: the three rings of fire, "YOU HAVE CONQUERED THE TEST OF FEAR".
 - [x] v0.212.1 (the Champions play-through, 2026-11-22): **the Cheats tab never opened at Champions' / Death
       Knights' outposts** - their menus run in the overland's mode (area word 0x4BE6 = 0), so kr_overland() held and

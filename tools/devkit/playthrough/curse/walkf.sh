@@ -8,7 +8,9 @@ for i in $(seq 1 60); do
   if [ -z "$NOFLEE" ] && echo "$st" | grep -q "Flee"; then T="$T/F,"; echo "  (fled at $(grep '^   now' $P/run.log | tail -1 | cut -c10-16))"; continue; fi
   if echo "$st" | grep -q "Press button"; then T="$T."; continue; fi
   if echo "$st" | grep -q "Locked"; then T="$T/B,"; continue; fi
-  if ! echo "$st" | grep -q "Cast View Encamp"; then echo "STOP: $st"; break; fi
+  # (screen 24 under the exploring words: a fight or a script's treasure starting - 2026-11-23, walked on and
+  # saved there, Champions' Huerzyd statue treasure was lost)
+  if ! echo "$st" | grep -q "Cast View Encamp" || echo "$st" | grep -q "screen 24 "; then echo "STOP: $st"; break; fi
   path=$(grep -E "  MAPPATH " $P/run.log | tail -1 | sed 's/.*: //')
   if [ -z "$path" ] || [ "$path" = "no way" ]; then echo "AT GOAL or no way ($path)"; break; fi
   T="$T${path:0:1}"

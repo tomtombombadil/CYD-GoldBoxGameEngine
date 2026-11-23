@@ -1996,6 +1996,10 @@ int main(int argc, char** argv)
         const int scr = (int)play::screen;
         const char* t = nullptr;
         if (scr == 24 || scr == 0) auto_take = 0;
+        static int auto_money = 0;
+        if (scr == 24 || scr == 0) auto_money = 0;
+        bool money_left = false;
+        if (play::ground) for (int m = 0; m < 7; ++m) money_left = money_left || play::ground->money[m] > 0;
         if (scr != 24 && getenv("AUTOHEAL") && play::pt)       // (AUTOHEAL=1: between fights everyone is up at full hit points - a play-through's cheat for places with no camp)
             for (int i = 0; i < play::pt->count; ++i) {
                 auto& r = play::pt->m[i].rec;
@@ -2060,8 +2064,12 @@ int main(int argc, char** argv)
             if (dir < 0) { t = "{"; maze_blocked = true; }      // (blocked: the move ended, then Guard)
             else { maze_tok[1] = static_cast<char>('0' + dir); t = maze_tok; }
         } else if (maze_walk) { t = has('M') && !maze_blocked ? "/M" : "/G"; maze_blocked = false; }    // (no moves left: Guard - not Quick, the walk goes on next round)
-        else if (scr == 24) t = has('A') && has('S') && has('E') && !has('M') && !has('Q') ? "/A" : has('Q') ? "/Q" : has('Y') && has('N') && getenv("AUTOFIGHT") ? "/N" :
-                                     has('D') && has('M') ? "/D" : ".";   // (Champions: no Quick - Done, then its Guard Delay Quit Auto's Auto)   // ("Continue Battle": No)
+        else if (scr == 24) t = has('A') && has('S') && has('E') && !has('M') && (!has('Q') || has('D')) ? "/A" : has('Q') ? "/Q" : has('Y') && has('N') && getenv("AUTOFIGHT") ? "/N" :
+                                     has('D') && has('M') ? "/D" : ".";   // (Champions: no Quick - Done, then its Guard Delay Quit Auto's Auto; its Quit (Q) ends the turn - a Delay (D) tells that menu from a menu with Quick)   // ("Continue Battle": No)
+        // (AUTOMONEY=1: before AUTOTAKE the treasure's money - gems, jewelry, coins - Take - Money, each line the
+        // most there is, by the selected member)
+        else if (scr == 5 && has('T') && has('V') && getenv("AUTOMONEY") && money_left && !auto_money) { t = "/T/M"; auto_money = 1; }
+        else if (scr == 16 && getenv("AUTOMONEY") && auto_money && strstr(play::menu.prompt, "coin")) t = has('S') && money_left ? "/S=65000;" : "/E";
         else if (scr == 5 && has('T') && has('V') && getenv("AUTOTAKE") && !auto_take) {
             // (the taker: of the first six, the one with the fewest items, then the lightest - a full or
             // OverLoaded member is refused every Take; TAKER=n names one)

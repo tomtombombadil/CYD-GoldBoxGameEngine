@@ -5,6 +5,9 @@
 P=/tmp/claude-0/chplay
 # (a fight's treasure taken by the selected member unless EXTRA says otherwise - AUTOTAKE takes tokens)
 case "$EXTRA" in *AUTOTAKE=*) ;; *) EXTRA="$EXTRA AUTOTAKE=/T/I$(printf "/T%.0s" $(seq 1 30))";; esac; S=$1; T="$3"; Q=${4:-Y}
+# (the treasure's money too - gems, jewelry, coins: the playsim's AUTOMONEY; 2026-11-23, every treasure's money had
+# been left behind)
+case "$EXTRA" in *AUTOMONEY=*) ;; *) EXTRA="$EXTRA AUTOMONEY=1";; esac
 [ -z "$T" ] && T="."
 for i in $(seq 1 ${ITER:-30}); do
   PTIME=${PTIME:-2400} AT=1000 TN=0 $P/bin/auto.sh "$T" SAVE=$S ALLTEXT=1 $EXTRA > /dev/null
@@ -27,5 +30,7 @@ for i in $(seq 1 ${ITER:-30}); do
 done
 grep -E "TEXT|JOURNAL|won:|lost" $P/run.log | tail -${TXTN:-10} | cut -c1-120
 echo "$st" | cut -c1-110
+# (left in the camp's menu - a treasure's Exit then an E: out of it, and saved)
+echo "$st" | grep -q "screen 7 menu \[|Save View" && { T="$T/E"; st="  ? screen 0 menu [|Move Area"; }
 echo "$st" | grep -q "screen 0 menu \[|Move Area\|screen 0 menu \[|Move Encamp" && { TAILN=0 $P/bin/p.sh "$T" SAVE=$S SAVENOW=$S $EXTRA > /dev/null; grep "saved now" $P/run.log; }
 echo "$T" > $P/tt.txt
