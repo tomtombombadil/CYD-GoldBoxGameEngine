@@ -3068,7 +3068,9 @@ void drained_member(int who)
     const bool had = mrules != nullptr;
     if (!had && !load_rules(mrules)) return;
     party::Character& ch = pt->m[f.member];
-    classes::class_bonuses(ch, mrules->tables);
+    const uint8_t hd = ch.rec[0xE5];   // (PoolRad's drain: the drained class's level, kept as the
+    classes::class_bonuses(ch, mrules->tables);    // original keeps it - its class values don't raise it
+    if (!combat::g_dk_drain) ch.rec[0xE5] = hd;   // to the highest level)
     if (names) rules::recalc(ch, *names, d->facts);
     if (!had) end_magic();
 }
@@ -3104,7 +3106,7 @@ __attribute__((noinline)) int dk_drain_hook(combat::Battle&, int who, int n)
     }
     int res = 0;
     create::Facts fa{};
-    if (read_hp_facts(fa)) {
+    if (hl() || read_hp_facts(fa)) {    // (the Dark Queen's hit dice are in its tables)
         create::DrainResult r = create::DrainResult::Lives;
         if (f.member >= 0 && f.member < pt->count) {
             r = create::dk_drain(pt->m[f.member], mrules->tables, fa, rng, n);
@@ -5629,7 +5631,7 @@ void fight_start(pic::Canvas& c)
     const combat::MonFx& mf = d->prof->fight.facts.mon;
     if ((mf.drain1 || mf.drain2) && !darkness_files() && load_rules(mrules)) {
         for (int k = 0; k < 8; ++k)
-            for (int l = 2; l < 13; ++l) level_exp[k][l] = mrules->tables.exp_needed(k, l - 1);
+            for (int l = 2; l < 13; ++l) level_exp[k][l] = mrules->tables.drain_exp(k, l);
         end_magic();
     }
     load_fight_words();
@@ -5675,7 +5677,7 @@ void fight_start(pic::Canvas& c)
     fg->arena = b.duel = vm->arena();
     b.tables = &fg->t;
     memcpy(b.level_exp, level_exp, sizeof level_exp);
-    combat::g_dk_drain = darkness_files() ? dk_drain_hook : nullptr;     // (its own drain: facts L1)
+    combat::g_dk_drain = darkness_files() || hl() ? dk_drain_hook : nullptr;     // (its own drain: facts L1; the Dark Queen's its shape)
     b.indoors = vm->get(0x4BE6) != 0;
     // (Pool: the picture before the fight isn't come back to - its treasure's
     // Exit shows the 3D view, DOSBox)

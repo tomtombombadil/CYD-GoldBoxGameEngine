@@ -62,6 +62,25 @@
       ambush: the party trained to 10th by the Trainer first), Vingaard (the dream merchant, Sir Thom's dream), the
       High Clerist's Tower, the Dragon Pit, Vingaard's second trail (10 red doors to 11,15), Kalaman's second visit,
       Cerberus, its graveyard and the crypt under it. Engine faults found: v0.214.4, v0.214.5, v0.214.6, v0.214.7.
+- [x] v0.214.8 (Tom, 2026-11-23: "verify the level drain mechanics ... multiclass characters and human characters
+      that change class ... across the games"): each game's drain routine RUN in Unicorn on 2000 made characters
+      (single, two and three classes, a human with a former class, the Krynn knight; one and two levels; dice high
+      and low) and the engine's drain compared field by field - levels, former / best levels, experience, hit points
+      (most, now, rolled), hit dice, drained counts, the fall (tools/devkit/oracles/emu_far.py, drain_emu.py,
+      drain_queen.py; sweep `behave levels` ONLY=drain with DRAINMAKE / DRAININ / DRAINCHK). All five games with a
+      drain now 0 differ: PoolRad, Darkness, Treasures, Death Knights, the Dark Queen (Curse, Secret, Gateway and
+      Champions have no drain). Fixed: Darkness / Treasures - a second level drained from a character left with none
+      came off the wrong class (the original keeps the first one's class); Death Knights - the hit dice after each
+      level (its class values: the highest level), a level of 0 drained to 255 and its experience read signed, as the
+      original; PoolRad - the drained class picked by its own experience row as the original reads it (0 past a
+      class's last level, not -1: a 10th-level thief beside an 8th-level fighter lost the thief's level), its hit dice
+      kept at the drained class's level (the engine's class values raised them to the highest); the Dark Queen -
+      drained by PoolRad's routine until now (Pool's hit point share, drained counts, death under 2 hit dice): now its
+      own (DQK.EXE 0x4F66D: Darkness's shape in its class order, its experience routine, its hit point routine
+      taking), and its most hit points (Modify's bound too) take the class's own level where a dual-classed human's
+      former level only picks the branch.
+- [ ] PoolRad's `behave pool` ONLY=train: "ready with the experience, the race limits" - 9 of 1098 wrong (first: race
+      2, fighter, Str 16, level 6: not ready) - already so before v0.214.8 (found 2026-11-23); look at it.
 - [x] v0.214.7 (the Death Knights play-through, 2026-11-23): **a level drain killed a knight with no other class**
       (Sir Strongsword, one spectre's touch: "dies from drainning"). Death Knights drained through Darkness's routine,
       which counts classes 0-6 - the knight's levels (class 7) weren't seen, so "no level left" at once; its

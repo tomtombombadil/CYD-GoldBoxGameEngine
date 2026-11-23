@@ -284,6 +284,15 @@ public:
         }
         return i32(static_cast<uint16_t>(lay.class_records + cls * record_size() + (level - 1) * 4));
     }
+    // The experience a level drain reads for `level` (2-12): PoolRad's drain
+    // (GAME.OVR 0x10C5D) reads its table's row as it is - 0 past a class's
+    // last level, not -1 (a thief of 10th drained as a fighter of 8th)
+    int32_t drain_exp(int cls, int level) const
+    {
+        if (lay.pool && !lay.queen && cls < classes() && level >= 2 && level < 14)
+            return i32(static_cast<uint16_t>(lay.class_records + cls * record_size() + (level - 2) * 4));
+        return exp_needed(cls, level - 1);
+    }
     // 0 cleric, 1 druid, 2 magic-user, 3 the items' and monsters' (Pool's numbers moved to these)
     // (Secret's rows start with a byte of their own: Curse's 15 follow; its
     // class codes 0 cleric, 1 druid, 3 magic-user, 4 the items' and monsters')
