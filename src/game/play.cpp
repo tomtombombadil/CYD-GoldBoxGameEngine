@@ -4971,9 +4971,18 @@ bool save_game_now(char slot)
     {
         FileSink sink(f);
         if (dkk()) {
-            // (Death Knights: Curse's .DAT in bytes - the fourth wall set kept)
-            h.wall_block4 = d->save.wall_block4;
-            h.wall_set4 = d->save.wall_set4;
+            // (Death Knights: Curse's .DAT in bytes. Its wall pairs as its own
+            // save writes them after a LOAD PIECES of look L: (L, 0), (L, 1),
+            // then none - DOSBox, the original's save in Gargath (look 1). The
+            // engine's own slots (-1, (L, 1), -1, 0) stopped the original's
+            // load at "LOADING... PLEASE WAIT" for good)
+            const int look = d->save.look ? d->save.look : -1;
+            for (int i = 0; i < 3; ++i) {
+                h.wall_block[i] = static_cast<int16_t>(i < 2 ? look : -1);
+                h.wall_set[i] = static_cast<int16_t>(i < 2 && look >= 0 ? i : -1);
+            }
+            h.wall_block4 = -1;
+            h.wall_set4 = -1;
             ok = savegame::write_dkk(sink, d->gs, h);
         } else if (darkness_files()) {
             // (Darkness: its modes - 4 in 3D, 3 outside; the look kept)
@@ -14287,6 +14296,18 @@ struct Host : ecl::Host {
             free(tmp);
         }
         f.close();
+        if (ok && dkk()) {
+            // (Death Knights: the game area becomes the ECL file the block was
+            // found in - the overland writes 2 to 0x7F12 before NEWECL 36, yet
+            // the original's save made in Gargath reads area 1 there (its
+            // first byte and 0x7F12; DOSBox). An area of 2 in a save sends the
+            // original's load to GEO2: "unable to load geo from load3dMap")
+            const int k = atoi(name + 3);
+            if (k > 0 && vm && k != d->gs.game_area) {
+                d->gs.game_area = static_cast<uint8_t>(k);
+                vm->set(0x7F12, static_cast<uint16_t>(k));
+            }
+        }
         plat::log("[play] script %d of %s: %s\n", block, name, ok ? "loaded" : "missing");
         return ok;
     }
