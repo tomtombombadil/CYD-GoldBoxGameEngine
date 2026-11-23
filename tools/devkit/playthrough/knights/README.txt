@@ -23,3 +23,12 @@ Lessons (Gargath outpost):
   R NE, > E, B S, < W, L NW; 0x14 mountains and 0x19 water refused). Kalaman 25,1.
 - Kalaman's bazaar stalls ask "cut through?" - Yes walks through (a vandals line), so walks there answer by the
   question's text (Yes to cut through, No to peddlers / bars / waiting). The Dream Pavilion is event 0x16 (2,3).
+- walkans.sh <slot> <x,y> [PRE]: a walk answering each question by its text (NOBASE / NOANS: the No patterns),
+  then adv.sh. kovgo.sh <slot> <x,y> [PRE]: the overland walk with encounters fought (Quick, casters' spells).
+- lvl.sh: Death Knights asks "do you wish to train?" in lower case (the grep is case-blind now).
+- Kalaman: the commander's company (15,3) - shut at night; the bazaar's ambush (stall squares by day = the centre
+  event 0xD: "wait here?") was lost on Quick at 6th-9th level - trained to 10th first (lvl.sh 600000), won with
+  QASPELLS. Rest in town: "go to an inn!" - the Sanctuary cheat ('"2/R/H' + '/A' x hours + '/R' + '_' waits + '/E').
+- Vingaard (block 33): the inn is entered across the map's west edge (0,2 west -> 15,2); the dream merchant's
+  shop event 0x22 (8,14); Sir Thom's dream comes by resting in an inn room (12,0) - the pre-camp sets the rest
+  words 1 / 100 (an encounter at once).

@@ -6,7 +6,7 @@ for r in $(seq 1 12); do
   any=0
   for i in 0 1 2 3 4 5; do
     TAILN=0 $P/bin/p.sh "\"3%$i|T" SAVE=$S SETEXP=$i:$X > /dev/null
-    grep -q "Do you wish to train" $P/run.log || continue
+    grep -qi "do you wish to train" $P/run.log || continue
     any=1
     TAILN=0 $P/bin/p.sh "\"3%$i|T/Y/L..|B" SAVE=$S SETEXP=$i:$X SAVENOW=$S > /dev/null
     grep -q "saved now" $P/run.log || { echo "member $i: not saved"; grep -E "^  \? screen" $P/run.log | tail -1; }
