@@ -33,6 +33,7 @@
 #include "engine/png.h"
 #include "inflate_vectors.h"
 #include "engine/layout.h"
+#include "engine/levelbook.h"
 #include "engine/log_pack.h"
 #include "engine/items.h"
 #include "engine/magic.h"
@@ -9735,6 +9736,42 @@ static void test_fix_switches()
     CHECK(rules::all_fixes() && rules::adnd(rules::kAdndAll) == true && rules::fixes_off() == 0);
 }
 
+// The level book (the AD&D 1E drain rule's memory): hit points a level, the
+// drains a name, the latest one that fits taken first, other names untouched
+static std::string g_lb;
+static void test_levelbook()
+{
+    static const levelbook::Store st = {
+        [](size_t* n) { char* b = static_cast<char*>(malloc(g_lb.size() + 1)); memcpy(b, g_lb.c_str(), g_lb.size() + 1); *n = g_lb.size(); return b; },
+        [](const char* t, size_t n) { g_lb.assign(t, n); },
+        [](const char* t, size_t n) { g_lb.append(t, n); }};
+    CHECK(levelbook::hp("ANN", 0, 1) == -1);   // (no book)
+    levelbook::set_store(&st);
+    CHECK(levelbook::hp("ANN", 0, 1) == -1);
+    levelbook::set_hp("ANN", 0, 1, 7);
+    levelbook::set_hp("ANN", 0, 2, 5);
+    levelbook::set_hp("ANN", 0, 2, 9);         // (rewritten, not added)
+    levelbook::set_hp("BOB", 0, 2, 3);
+    CHECK(levelbook::hp("ANN", 0, 1) == 7 && levelbook::hp("ANN", 0, 2) == 9 && levelbook::hp("BOB", 0, 2) == 3);
+    levelbook::Drain d;
+    d.cls = 0; d.level = 2; d.hp = 9;
+    levelbook::push_drain("ANN", d);
+    d.cls = 2; d.level = 5; d.hp = 4; d.former = true;
+    levelbook::push_drain("ANN", d);
+    d.cls = 1; d.level = 3; d.hp = 2; d.former = false;
+    levelbook::push_drain("BOB", d);
+    levelbook::Drain got;
+    CHECK(levelbook::pop_drain("ANN", nullptr, nullptr, &got) && got.cls == 2 && got.level == 5 && got.hp == 4 && got.former);
+    auto only_cls0 = [](const levelbook::Drain& x, void*) { return x.cls == 0; };
+    CHECK(!levelbook::pop_drain("ANN", [](const levelbook::Drain& x, void*) { return x.cls == 7; }, nullptr, &got));
+    CHECK(levelbook::pop_drain("ANN", only_cls0, nullptr, &got) && got.level == 2 && got.hp == 9 && !got.former);
+    CHECK(!levelbook::pop_drain("ANN", nullptr, nullptr, &got));
+    CHECK(levelbook::hp("ANN", 0, 2) == 9);    // (hit point lines stay)
+    levelbook::clear_drains("BOB");
+    CHECK(!levelbook::pop_drain("BOB", nullptr, nullptr, &got) && levelbook::hp("BOB", 0, 2) == 3);
+    levelbook::set_store(nullptr);
+}
+
 int main()
 {
 #ifdef CYD_TEST_HOOKS
@@ -9746,6 +9783,7 @@ int main()
     if (!rules::test::off_fix && !rules::test::off_adnd && !rules::test::off_enh)   // (it checks the switches themselves)
 #endif
     test_fix_switches();
+    test_levelbook();
     test_vace();
     test_pool_spell_fix();
     test_drained();

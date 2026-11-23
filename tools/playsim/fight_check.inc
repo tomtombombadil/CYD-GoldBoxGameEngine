@@ -123,7 +123,7 @@ bool endless_told = false;
 bool was_unharmable = false;          // (R10: a side unharmable at some point this fight)
 unsigned long hp_seen = ~0ul;                 // (R10: the fighters' hit points, the round they last changed)
 int  hp_round = 0;
-long tapq_seen = 0, drain_seen = 0, charm_seen = 0;                           // (R14: taps during pages / the computer's play)
+long tapq_seen = 0, drain_seen = 0, charm_seen = 0, adnd_drain_seen = 0;                           // (R14: taps during pages / the computer's play)
 long qa_seen = 0;                             // (R13: a Quick member's own actions with any switch unticked)
 // R17 / R18 (Tom, 2026-11-11: "statuses ... enabled when they should be ...
 // disabled when they should be ... don't last too long or not long enough"):
@@ -460,6 +460,75 @@ void tick()
             e70[i] = ch.rec[0xE7];
         }
     }
+    // R21 the AD&D 1E Level Drain rule in a real fight (rules::kAdndDrain on;
+    // DMG p.119): each level a party member loses is in the level book (a
+    // drain line: its class, the level it was, its hit points), the level
+    // drained the highest held then (current or a dual-classed human's
+    // former), the hit points taken those the lines say (the member still
+    // standing), experience never up
+    if (play::pt && rules::adnd(rules::kAdndDrain) && levelbook::have_file()) {
+        struct Snap { int lv[16]; int hpmax; int32_t xp; int nd; };
+        static std::vector<Snap> sn;
+        static const void* sn_fight = nullptr;
+        auto drains = [](const party::Character& ch, std::vector<levelbook::Drain>* out) {
+            char nm[24];
+            ch.name(nm, sizeof nm);
+            levelbook::pop_drain(nm, [](const levelbook::Drain& d, void* u) {
+                static_cast<std::vector<levelbook::Drain>*>(u)->push_back(d);
+                return false;
+            }, out, nullptr);
+        };
+        auto snap = [&](const party::Character& ch) {
+            Snap x;
+            for (int c = 0; c < 16; ++c) x.lv[c] = c < 8 ? static_cast<int8_t>(ch.rec[0x109 + c]) : ch.rec[0x111 + c - 8];
+            x.hpmax = ch.rec[0x78];
+            x.xp = static_cast<int32_t>(ch.rec[0x127] | ch.rec[0x128] << 8 | ch.rec[0x129] << 16 | static_cast<uint32_t>(ch.rec[0x12A]) << 24);
+            std::vector<levelbook::Drain> v;
+            drains(ch, &v);
+            x.nd = static_cast<int>(v.size());
+            return x;
+        };
+        if (sn_fight != fg) {
+            sn_fight = fg;
+            sn.clear();
+            for (int i = 0; i < play::pt->count; ++i) sn.push_back(snap(play::pt->m[i]));
+        }
+        for (int i = 0; i < play::pt->count && i < (int)sn.size(); ++i) {
+            const party::Character& ch = play::pt->m[i];
+            Snap now = snap(ch);
+            int fell = 0;
+            for (int c = 0; c < 16; ++c) fell += std::max(0, sn[i].lv[c] - now.lv[c]);
+            if (!fell) { sn[i] = now; continue; }
+            ++adnd_drain_seen;
+            char nm[24];
+            ch.name(nm, sizeof nm);
+            std::vector<levelbook::Drain> v;
+            drains(ch, &v);
+            const int added = static_cast<int>(v.size()) - sn[i].nd;
+            if (added != fell) bad("R21", std::string("levels lost ") + std::to_string(fell) + ", the book's new drains " + std::to_string(added) + ": " + nm);
+            else {
+                int hp = 0;
+                Snap w = sn[i];
+                for (int j = static_cast<int>(v.size()) - added; j < static_cast<int>(v.size()); ++j) {
+                    const levelbook::Drain& d = v[j];
+                    const int slot = d.cls + (d.former ? 8 : 0);
+                    int top = 0;
+                    for (int c = 0; c < 16; ++c) top = std::max(top, w.lv[c]);
+                    if (w.lv[slot] != d.level || d.level < top)
+                        bad("R21", std::string("drained class ") + std::to_string(d.cls) + " level " + std::to_string(d.level) +
+                                       " - not the highest held (" + std::to_string(top) + "): " + nm);
+                    --w.lv[slot];
+                    hp += d.hp;
+                }
+                for (int c = 0; c < 16; ++c)
+                    if (w.lv[c] != now.lv[c] && !(now.lv[c] <= 0 && w.lv[c] <= 0)) bad("R21", std::string("levels after the drain not the book's: ") + nm);
+                if (now.hpmax > 0 && sn[i].hpmax - now.hpmax != hp)
+                    bad("R21", std::string("hit points lost ") + std::to_string(sn[i].hpmax - now.hpmax) + ", the book's " + std::to_string(hp) + ": " + nm);
+                if (now.xp > sn[i].xp) bad("R21", std::string("experience rose in a drain: ") + nm);
+            }
+            sn[i] = now;
+        }
+    }
     // R17 the effects' minutes, round by round (a round = a minute; time 0
     // for ever; at or under 1 it ends at the round's turn - Curse's end,
     // Darkness's / the Dark Queen's start - monster_fx_facts 2.1,
@@ -627,7 +696,7 @@ void tick()
 
 void report()
 {
-    printf("== fight checks: %ld actions, %ld ticks, %ld Quick actions under unticked switches (R13), %ld taps taking Quick back (R14), %ld drains (R15), %ld charms put on (R16); effects (R17) %ld counted down, %ld ran out, %ld put on again, %ld taken by acts; fight ends (R18) %ld kept, %ld taken;", acts, ticks, qa_seen, tapq_seen, drain_seen, charm_seen, fx_count[0], fx_count[1], fx_count[2], fx_count[3], end_kept, end_taken);
+    printf("== fight checks: %ld actions, %ld ticks, %ld Quick actions under unticked switches (R13), %ld taps taking Quick back (R14), %ld drains (R15; by the 1E rule, R21: %ld), %ld charms put on (R16); effects (R17) %ld counted down, %ld ran out, %ld put on again, %ld taken by acts; fight ends (R18) %ld kept, %ld taken;", acts, ticks, qa_seen, tapq_seen, drain_seen, adnd_drain_seen, charm_seen, fx_count[0], fx_count[1], fx_count[2], fx_count[3], end_kept, end_taken);
     if (broken.empty()) printf(" no rule broken\n");
     for (auto& kv : broken) printf(" %s x%d", kv.first.c_str(), kv.second);
     if (!broken.empty()) printf("\n");

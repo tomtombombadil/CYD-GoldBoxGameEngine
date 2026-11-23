@@ -1399,6 +1399,7 @@ void check(const char* in_file, const char* out_file)
 
 void restore_part()
 {
+    rules::set_adnd(static_cast<uint16_t>(rules::adnd_bits() & ~rules::kAdndDrain));   // (the originals' own)
     drn::g_rst = true;
     if (drn::kind() == drn::kNone) {
         printf("  restore: this game has no Restoration routine looked at\n");
@@ -1409,6 +1410,223 @@ void restore_part()
     if (const char* f = getenv("RSTCHK")) drn::check(getenv("RSTIN") ? getenv("RSTIN") : "", f);
     drn::g_rst = false;
 }
+
+// The AD&D 1E Level Drain & Restoration rule (rules::kAdndDrain; Tom,
+// 2026-11-23) against the books themselves (DMG p.119, PHB p.53) - what the
+// rule must do, worked out here from the character before, never from the
+// engine's routine: A1 the highest level drained (former included; a tie:
+// the class whose level needs the most experience), A2 a multi-class's two
+// levels from two classes, A3 experience at most the middle of the level
+// below, A4 the hit points the book holds for that level (else the average a
+// level), A5 Restoration gives the same level and its hit points back,
+// experience at least the level's start, the book's drain gone, A6 the
+// game's own bookkeeping (lost levels / best levels) so the rule off still
+// restores, A7 training writes each level's hit points. The book in memory.
+namespace adnd1e {
+std::string g_book;
+char* st_load(size_t* n)
+{
+    char* b = static_cast<char*>(malloc(g_book.size() + 1));
+    memcpy(b, g_book.c_str(), g_book.size() + 1);
+    *n = g_book.size();
+    return b;
+}
+void st_save(const char* t, size_t n) { g_book.assign(t, n); }
+void st_append(const char* t, size_t n) { g_book.append(t, n); }
+const levelbook::Store kStore = {st_load, st_save, st_append};
+
+int lvl(const party::Character& c, int k, bool former) { return former ? c.rec[0x111 + k] : static_cast<int8_t>(c.rec[0x109 + k]); }
+
+void run()
+{
+    using drn::Kind;
+    drn::g_rst = true;
+    const Kind kd = drn::kind();
+    if (kd == drn::kNone) {
+        drn::g_rst = false;
+        printf("  adnd: no level drain or Restoration in this game\n");
+        return;
+    }
+    const classes::Tables& t = m->tables;
+    const uint16_t keep = rules::adnd_bits();
+    rules::set_adnd(static_cast<uint16_t>(keep | rules::kAdndDrain));
+    levelbook::set_store(&kStore);
+    const bool queen = t.lay.queen;
+    std::map<std::string, int> bad;
+    int cases = 0, two = 0, formers = 0, booked = 0;
+    char why[200] = {};
+    auto fail = [&](const char* rule, const char* fmt, int a, int b) {
+        if (!bad[rule]++) snprintf(why, sizeof why, "%s: %s %d / %d", rule, fmt, a, b);
+    };
+    drn::rnd_state = 99;
+    for (int i = 0; i < 1500; ++i) {
+        static party::Character c, before;
+        const int shape = drn::rnd(kd == drn::kKnights || kd == drn::kQueen ? 5 : kd == drn::kPool ? 3 : 4);
+        drn::make(c, shape, kd);
+        // (a plain character: no drain before; the levels' hit points not
+        // always in the book)
+        c.rec[0xE7] = c.rec[0xE8] = 0;
+        memset(c.ext + party::kExtBestLevels, 0, 7);
+        c.ext[party::kExtDkBestKnight] = 0;
+        memset(c.ext + party::kExtBestXp, 0, 4);
+        c.ext[party::kExtBestHp] = 0;
+        snprintf(reinterpret_cast<char*>(c.rec) + 1, 15, "T%04d", i);
+        c.rec[0] = 5;
+        if (kd != drn::kPool && shape == 3) {   // (a former class past the current now and then)
+            for (int k = 0; k < 7; ++k)
+                if (c.rec[0x111 + k] && drn::rnd(2)) c.rec[0x111 + k] = static_cast<uint8_t>(c.rec[0x111 + k] + 4);
+        }
+        g_book.clear();
+        char name[24];
+        c.name(name, sizeof name);
+        int sumlv = 0;
+        for (int k = 0; k < 8; ++k)
+            if (static_cast<int8_t>(c.rec[0x109 + k]) > 0) sumlv += c.rec[0x109 + k];
+        if (sumlv == 0 || c.rec[0x78] < 4) continue;
+        const bool use_book = drn::rnd(2);
+        if (use_book)
+            for (int k = 0; k < 8; ++k)
+                for (int L = 1; L <= c.rec[0x109 + k]; ++L) levelbook::set_hp(name, k, L, 1 + (k + L) % 3);
+        const int n = 1 + drn::rnd(2);
+        before = c;
+        // Expected, from the books: each level in turn
+        struct Want { int cls, lv; bool former; int hp; };
+        Want want[2];
+        static party::Character sim;
+        sim = c;
+        int nw = 0, mask = 0;
+        int32_t exp_to = 0x7FFFFFFF;
+        for (int j = 0; j < n; ++j) {
+            int cls = -1, lv = 0;
+            bool former = false;
+            int32_t need = -1;
+            for (int pass = 0; pass < 2 && cls < 0; ++pass)
+                for (int k = 0; k < 8; ++k)
+                    for (int o = 0; o < 2; ++o) {
+                        if (o && k == 7 && !queen) continue;
+                        const int L = lvl(sim, k, o);
+                        if (L <= 0 || (pass == 0 && (mask >> k & 1))) continue;
+                        const int32_t e = create::level_start(t, sim, k, L);
+                        if (L > lv || (L == lv && e > need)) { cls = k; lv = L; former = o; need = e; }
+                    }
+            if (cls < 0) break;
+            int s2 = 0;
+            for (int k = 0; k < 8; ++k) {
+                if (static_cast<int8_t>(sim.rec[0x109 + k]) > 0) s2 += sim.rec[0x109 + k];
+                if (k < 7 || queen) s2 += sim.rec[0x111 + k];
+            }
+            // (the book holds the current classes' levels written above; a
+            // former class's: the average over every level held)
+            int hp = use_book && !former ? 1 + (cls + lv) % 3 : s2 ? sim.rec[0x78] / s2 : sim.rec[0x78];
+            if (hp > sim.rec[0x78]) hp = sim.rec[0x78];
+            want[nw++] = {cls, lv, former, hp};
+            if (former) --sim.rec[0x111 + cls];
+            else {
+                --sim.rec[0x109 + cls];
+                const int32_t lo = create::level_start(t, c, cls, lv - 1), hi = create::level_start(t, c, cls, lv);
+                exp_to = std::min(exp_to, lo + (hi - lo) / 2);
+            }
+            sim.rec[0x78] = static_cast<uint8_t>(sim.rec[0x78] - hp);
+            mask |= 1 << cls;
+        }
+        const create::DrainResult res = create::adnd_drain(c, t, n);
+        ++cases;
+        {   // A8: a level left - not dead (the book's 0-level rule left out, Tom)
+            bool left = false;
+            for (int k = 0; k < 8; ++k)
+                if (static_cast<int8_t>(c.rec[0x109 + k]) > 0) left = true;
+            if (left && c.rec[0x78] > 0 && res == create::DrainResult::Dies) fail("A8 a level left, alive", "case", i, 0);
+            if (!left && res != create::DrainResult::Dies) fail("A8 no level left, dead", "case", i, 0);
+        }
+        if (nw == 2 && want[0].cls != want[1].cls) ++two;
+        if (use_book) ++booked;
+        for (int j = 0; j < nw; ++j) {
+            if (want[j].former) ++formers;
+            const int now = lvl(c, want[j].cls, want[j].former);
+            const int was = lvl(before, want[j].cls, want[j].former);
+            const int times = (nw == 2 && want[0].cls == want[1].cls && want[0].former == want[1].former) ? 2 : 1;
+            if (now != was - times) fail("A1 the level drained", "class level now / before", now, was);
+        }
+        // A2: two levels from a multi-class come from two classes
+        int held = 0;
+        for (int k = 0; k < 8; ++k)
+            if (static_cast<int8_t>(before.rec[0x109 + k]) > 0) ++held;
+        if (nw == 2 && held >= 2 && want[0].cls == want[1].cls && !want[0].former) fail("A2 one from each class", "class", want[0].cls, held);
+        // A3 / A4
+        const int32_t xb = drn::get32(before.rec + 0x127), xa = drn::get32(c.rec + 0x127);
+        if (exp_to != 0x7FFFFFFF && xa != std::min(xb, exp_to)) fail("A3 experience mid-point", "now / want", xa, std::min(xb, exp_to));
+        int hp_lost = 0;
+        for (int j = 0; j < nw; ++j) hp_lost += want[j].hp;
+        if (before.rec[0x78] - c.rec[0x78] != hp_lost) fail("A4 the level's hit points", "lost / want", before.rec[0x78] - c.rec[0x78], hp_lost);
+        // A6: the game's own bookkeeping
+        if ((kd == drn::kPool || kd == drn::kCurse) && c.rec[0xE7] != nw) fail("A6 lost levels counted", "0xE7 / drains", c.rec[0xE7], nw);
+        if (kd != drn::kPool && kd != drn::kCurse && !(nw == 1 && want[0].former) && !create::drained(c, queen) &&
+            (c.rec[0x78] > 0)) fail("A6 best levels kept", "drained", 0, nw);
+        // A5: Restoration, the latest first, back to where it was
+        const int32_t xd = xa;
+        for (int j = nw - 1; j >= 0; --j) {
+            static party::Character pre;
+            pre = c;
+            // (through the engine's own Restoration - the switch asked there)
+            drn::engine_restore(c);
+            if (memcmp(c.rec + 0x109, pre.rec + 0x109, 16) == 0) {
+                fail("A5 Restoration found the drain", "drain", j, nw);
+                break;
+            }
+            const Want& w = want[j];
+            if (lvl(c, w.cls, w.former) != lvl(pre, w.cls, w.former) + 1) fail("A5 the level drained comes back", "class", w.cls, w.lv);
+            if (lvl(c, w.cls, w.former) != w.lv) fail("A5 to the level it was", "now / was", lvl(c, w.cls, w.former), w.lv);
+            const int gain = c.rec[0x78] - pre.rec[0x78];
+            if (gain != w.hp && pre.rec[0x78] + w.hp <= 255) {
+                fail("A5 its hit points back", "gain / want", gain, w.hp);
+                if (getenv("ADNDDBG") && bad["A5 its hit points back"] < 4) {
+                    printf("  dbg case %d j %d nw %d want cls %d lv %d former %d hp %d; hp before %d after drain %d; book:\n%s",
+                           i, j, nw, w.cls, w.lv, w.former, w.hp, before.rec[0x78], c.rec[0x78] - gain, g_book.c_str());
+                    for (int k = 0; k < 8; ++k) printf(" %d/%d", static_cast<int8_t>(before.rec[0x109 + k]), before.rec[0x111 + k]);
+                    printf("\n");
+                }
+            }
+            if (!w.former && drn::get32(c.rec + 0x127) < create::level_start(t, c, w.cls, w.lv))
+                fail("A5 experience at least the level's", "exp / start", drn::get32(c.rec + 0x127), create::level_start(t, c, w.cls, w.lv));
+        }
+        if (create::adnd_drained(c)) fail("A5 nothing more to restore", "case", i, 0);
+        (void)xd;
+    }
+    // A7: training writes each new level's hit points in the book
+    {
+        static party::Character c;
+        drn::make(c, 0, kd);
+        c.rec[0] = 5;
+        memcpy(c.rec + 1, "TRAIN", 5);
+        g_book.clear();
+        int k0 = -1;
+        for (int k = 0; k < 8; ++k)
+            if (static_cast<int8_t>(c.rec[0x109 + k]) > 0) k0 = k;
+        if (k0 >= 0) {
+            const int lv0 = c.rec[0x109 + k0], hp0 = c.rec[0x78];
+            create::Dice d;
+            create::train_classes(c, t, m->facts, d, t.u8(static_cast<uint16_t>(t.lay.class_masks + k0)), true);
+            if (c.rec[0x109 + k0] != lv0 + 1) fail("A7 training (the test's character didn't train)", "level", c.rec[0x109 + k0], lv0);
+            else {
+                const int got = levelbook::hp("TRAIN", k0, lv0 + 1);
+                if (got != c.rec[0x78] - hp0) fail("A7 training writes the level's hit points", "book / gain", got, c.rec[0x78] - hp0);
+            }
+        }
+    }
+    levelbook::set_store(nullptr);
+    rules::set_adnd(keep);
+    drn::g_rst = false;
+    char t2[200];
+    snprintf(t2, sizeof t2, "adnd: AD&D 1E Level Drain & Restoration against the books: %d characters (two classes drained %d, "
+             "former classes %d, hit points from the book %d)", cases, two, formers, booked);
+    int nb = 0;
+    for (auto& b : bad) {
+        printf("  adnd: %-40s wrong in %d cases\n", b.first.c_str(), b.second);
+        nb += b.second;
+    }
+    expect(P, t2, cases > 0 && nb == 0, "%s", why);
+}
+} // namespace adnd1e
 
 void drain_part()
 {
@@ -1448,6 +1666,7 @@ void run()
     if (!only || strstr(only, "maxhp")) maxhp();
     if (only && strstr(only, "drain")) drain_part();
     if (only && strstr(only, "restore")) restore_part();
+    if (only && strstr(only, "adnd")) adnd1e::run();
 }
 
 } // namespace blv

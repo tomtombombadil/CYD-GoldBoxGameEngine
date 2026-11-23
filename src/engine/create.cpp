@@ -1,6 +1,7 @@
 #include "create.h"
 
 #include "rules.h"
+#include "levelbook.h"
 
 #include <cstring>
 
@@ -1440,7 +1441,36 @@ int train_pick(const party::Character& c, const classes::Tables& t, uint32_t* ex
     return ready;
 }
 
+namespace {
+void train_classes_now(party::Character& c, const classes::Tables& t, const Facts& f, Dice& d, int mask, bool silent);
+}
+// Training, the hit points each new level gave written in the level book
+// (the AD&D 1E drain takes them; a multi-class's gain shared by the classes
+// trained together)
 void train_classes(party::Character& c, const classes::Tables& t, const Facts& f, Dice& d, int mask, bool silent)
+{
+    uint8_t before[8];
+    for (int k = 0; k < 8; ++k) before[k] = c.rec[kLevels + k];
+    const int hp0 = c.rec[kHpMax];
+    train_classes_now(c, t, f, d, mask, silent);
+    if (!levelbook::have_file()) return;
+    int up = 0;
+    for (int k = 0; k < 8; ++k)
+        if (c.rec[kLevels + k] > before[k]) ++up;
+    if (!up) return;
+    const int gain = c.rec[kHpMax] - hp0;
+    char name[24];
+    c.name(name, sizeof name);
+    int first = 1;
+    for (int k = 0; k < 8; ++k) {
+        if (c.rec[kLevels + k] <= before[k]) continue;
+        const int share = gain > 0 ? gain / up + (first ? gain % up : 0) : 0;
+        first = 0;
+        levelbook::set_hp(name, k, c.rec[kLevels + k], share);
+    }
+}
+namespace {
+void train_classes_now(party::Character& c, const classes::Tables& t, const Facts& f, Dice& d, int mask, bool silent)
 {
     uint8_t* r = c.rec;
     if (t.lay.queen) {
@@ -1508,6 +1538,7 @@ void train_classes(party::Character& c, const classes::Tables& t, const Facts& f
     r[kHpMax] = static_cast<uint8_t>(r[kHpMax] + up);
     r[kHp] = static_cast<uint8_t>(r[kHpMax] - lost);
 }
+} // namespace
 
 bool drained(const party::Character& c, bool queen)
 {
@@ -1521,6 +1552,7 @@ bool drained(const party::Character& c, bool queen)
 
 bool restore(party::Character& c, const classes::Tables& t)
 {
+    if (rules::adnd(rules::kAdndDrain) && adnd_restore(c, t)) return true;   // (AD&D 1E: the drained level back)
     uint8_t* r = c.rec;
     const int lost = rules::lost_levels(r[0xE7]);
     if (lost <= 0) return false;
@@ -2701,6 +2733,7 @@ void dkk_restore(party::Character& c, const classes::Tables& t);
 void queen_restore(party::Character& c, const classes::Tables& t);
 void dk_restore(party::Character& c, const classes::Tables& t)
 {
+    if (rules::adnd(rules::kAdndDrain) && adnd_restore(c, t)) return;   // (AD&D 1E: the drained level back)
     if (t.lay.queen) {
         queen_restore(c, t);
         return;
@@ -2785,6 +2818,173 @@ void dkk_restore(party::Character& c, const classes::Tables& t)
         else put32(r + kExp, least);
     }
     c.ext[party::kExtTrain] = trainable(c, t) ? 1 : 0;
+}
+
+// ---- AD&D 1E Level Drain & Restoration (rules::kAdndDrain)
+
+int32_t level_start(const classes::Tables& t, const party::Character& c, int cls, int level)
+{
+    if (level <= 1) return 0;
+    if (t.lay.queen) return queen_level_exp(t, c, cls, level);
+    if (t.lay.dkk) return dkk_exp(t, c, cls, level);
+    if (t.lay.dk) return dk_level_exp(t, cls, level);
+    const int32_t e = t.exp_needed(cls, level - 1, &c);
+    return e > 0 ? e : 0;
+}
+
+namespace {
+// The game's own best level of a class (the Darkness family's drain and
+// Restoration bookkeeping); nullptr where the game keeps none
+uint8_t* best_ref(party::Character& c, const classes::Tables& t, int k)
+{
+    if (t.lay.queen) {
+        for (int qi = 0; qi < 7; ++qi)
+            if (kQueenOrder[qi] == k) return &c.ext[party::kExtBestLevels + qi];
+        return nullptr;
+    }
+    if (t.lay.dkk) return k == 7 ? &c.ext[party::kExtDkBestKnight] : k < 7 ? &c.ext[party::kExtBestLevels + k] : nullptr;
+    if (t.lay.dk) return k < 7 ? &c.ext[party::kExtBestLevels + k] : nullptr;
+    return nullptr;
+}
+bool best_kind(const classes::Tables& t) { return t.lay.dk || t.lay.dkk || t.lay.queen; }
+
+struct Fit {
+    const party::Character* c;
+};
+bool drain_fits(const levelbook::Drain& d, void* u)
+{
+    const party::Character& c = *static_cast<Fit*>(u)->c;
+    const int now = d.former ? c.rec[kOldLevels + d.cls] : static_cast<int8_t>(c.level(d.cls));
+    return d.cls < 8 && now == d.level - 1;
+}
+} // namespace
+
+DrainResult adnd_drain(party::Character& c, const classes::Tables& t, int n)
+{
+    uint8_t* r = c.rec;
+    char name[24];
+    c.name(name, sizeof name);
+    int drained = 0;                    // (the classes drained by this drain: a bit a class)
+    int32_t exp_to = 0x7FFFFFFF;
+    bool any = false;
+    for (int i = 0; i < n; ++i) {
+        // The highest level held, current or a dual-classed human's former
+        // (DMG p.119: "the highest level he or she has gained"); a class not
+        // drained yet first; a tie: the class whose level needs the most
+        int cls = -1, lv = 0;
+        bool former = false;
+        int32_t need = -1;
+        for (int pass = 0; pass < 2 && cls < 0; ++pass)
+            for (int k = 0; k < 8; ++k)
+                for (int o = 0; o < 2; ++o) {
+                    const int L = o ? c.old_level(k) : static_cast<int8_t>(c.level(k));
+                    if (L <= 0 || (o && k == 7 && !t.lay.queen)) continue;   // (the Dark Queen's knight's former level: 0x118)
+                    if (pass == 0 && (drained >> k & 1)) continue;
+                    const int32_t e = level_start(t, c, k, L);
+                    if (L > lv || (L == lv && e > need)) {
+                        cls = k;
+                        lv = L;
+                        former = o != 0;
+                        need = e;
+                    }
+                }
+        if (cls < 0) break;
+        // That level's hit points: the book's, else the average a level over
+        // every level held now - a dual-classed human's former ones too (its
+        // hit points came from them)
+        int sum = 0;
+        for (int k = 0; k < 8; ++k) {
+            if (static_cast<int8_t>(c.level(k)) > 0) sum += c.level(k);
+            if (k < 7 || t.lay.queen) sum += c.old_level(k);
+        }
+        int hp = levelbook::hp(name, cls, lv);
+        if (hp < 0) hp = sum > 0 ? r[kHpMax] / sum : r[kHpMax];
+        if (hp > r[kHpMax]) hp = r[kHpMax];
+        // The game's own bookkeeping, as its drain keeps it
+        if (best_kind(t)) {
+            if (!former)
+                if (uint8_t* b = best_ref(c, t, cls))
+                    if (*b < lv) *b = static_cast<uint8_t>(lv);
+            if (get32(c.ext + party::kExtBestXp) < get32(r + kExp)) put32(c.ext + party::kExtBestXp, get32(r + kExp));
+            if (c.ext[party::kExtBestHp] < r[kHpMax]) c.ext[party::kExtBestHp] = r[kHpMax];
+        } else {
+            if (rules::lost_levels(r[0xE7]) != r[0xE7]) r[0xE7] = r[0xE8] = 0;
+            ++r[0xE7];
+            r[0xE8] = static_cast<uint8_t>(r[0xE8] + hp > 255 ? 255 : r[0xE8] + hp);
+        }
+        // The level, its hit points, the experience to the middle of the level below
+        if (former) --r[kOldLevels + cls];
+        else --r[kLevels + cls];
+        r[kHpMax] = static_cast<uint8_t>(r[kHpMax] - hp);
+        r[kHp] = static_cast<uint8_t>(r[kHp] > hp ? r[kHp] - hp : 0);
+        r[kHpRolled] = static_cast<uint8_t>(r[kHpRolled] > hp ? r[kHpRolled] - hp : 0);
+        if (!former) {
+            const int32_t lo = level_start(t, c, cls, lv - 1), hi = level_start(t, c, cls, lv);
+            const int32_t mid = lo + (hi - lo) / 2;
+            if (mid < exp_to) exp_to = mid;
+            any = true;
+        }
+        levelbook::Drain dr;
+        dr.cls = static_cast<uint8_t>(cls);
+        dr.level = static_cast<uint8_t>(lv);
+        dr.hp = static_cast<uint8_t>(hp);
+        dr.former = former;
+        levelbook::push_drain(name, dr);
+        drained |= 1 << cls;
+    }
+    if (any && get32(r + kExp) > exp_to) put32(r + kExp, exp_to);
+    classes::class_bonuses(c, t);
+    bool left = false;
+    for (int k = 0; k < 8; ++k)
+        if (static_cast<int8_t>(c.level(k)) > 0) left = true;
+    if (!left || r[kHpMax] == 0) return DrainResult::Dies;
+    if (r[kHp] == 0) return DrainResult::Collapses;
+    return DrainResult::Lives;
+}
+
+bool adnd_restore(party::Character& c, const classes::Tables& t)
+{
+    char name[24];
+    c.name(name, sizeof name);
+    Fit fit{&c};
+    levelbook::Drain d;
+    if (!levelbook::pop_drain(name, drain_fits, &fit, &d)) return false;
+    uint8_t* r = c.rec;
+    if (d.former) ++r[kOldLevels + d.cls];
+    else ++r[kLevels + d.cls];
+    r[kHpMax] = static_cast<uint8_t>(r[kHpMax] + d.hp > 255 ? 255 : r[kHpMax] + d.hp);
+    r[kHp] = static_cast<uint8_t>(r[kHp] + d.hp > r[kHpMax] ? r[kHpMax] : r[kHp] + d.hp);
+    r[kHpRolled] = static_cast<uint8_t>(r[kHpRolled] + d.hp > 255 ? 255 : r[kHpRolled] + d.hp);
+    // (PHB p.53: the experience the level needs - never taken below what the
+    // character has)
+    if (!d.former) {
+        const int32_t e = level_start(t, c, d.cls, d.level);
+        if (get32(r + kExp) < e) put32(r + kExp, e);
+    }
+    if (!best_kind(t) && rules::lost_levels(r[0xE7]) > 0) {
+        r[0xE8] = static_cast<uint8_t>(r[0xE8] > d.hp ? r[0xE8] - d.hp : 0);
+        --r[0xE7];
+    }
+    classes::class_bonuses(c, t);
+    if (best_kind(t)) c.ext[party::kExtTrain] = trainable(c, t) ? 1 : 0;
+    return true;
+}
+
+bool adnd_drained(const party::Character& c)
+{
+    char name[24];
+    c.name(name, sizeof name);
+    // (looked at, not taken: popped and put back would reorder the book)
+    struct Seen {
+        Fit fit;
+        bool any;
+    } seen{{&c}, false};
+    levelbook::pop_drain(name, [](const levelbook::Drain& d, void* u) {
+        Seen* s = static_cast<Seen*>(u);
+        if (drain_fits(d, &s->fit)) s->any = true;
+        return false;
+    }, &seen, nullptr);
+    return seen.any;
 }
 
 } // namespace create

@@ -1711,6 +1711,14 @@ const AdndInfo kAdnd[kAdndCount] = {
     {kAdndProtEvil, "Protection from Evil", kAll,
      "An evil attacker is -2 to hit one protected (good for Protection from Good), and the 10' radius "
      "version wards those next to its holder. The originals keep only the +2 to the holder's saves."},
+    {kAdndDrain, "Level Drain & Restoration", kPool | kCurse | kGate | kDark | kTreas | kKnights | kQueen,
+     "Level drain and Restoration as AD&D 1st edition (DMG p.119, PHB p.53). A drain takes the highest level "
+     "(on a tie the class needing the most experience; two levels from a multi-class, one from each class; a "
+     "dual-classed human's former class too), the hit points that level gave, and the experience down to the "
+     "middle of the level below. Restoration gives back the level drained with its hit points, the experience "
+     "at least that level's start, and cures Feeblemind. The hit points of each level and each drain are kept "
+     "by the engine (LEVELS.TXT) from now on; older characters use their average a level. The originals "
+     "differ game by game (which class, how many hit points, the experience)."},
     {kAdndRaise, "Raising the Dead", kAll,
      "Raise Dead and Resurrection take no Constitution from the one raised - AD&D 1st edition has no such "
      "cost. The originals take a point for Raise Dead, by spell or at a temple (where some take maximum hit "

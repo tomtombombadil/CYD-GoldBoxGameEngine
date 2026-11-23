@@ -3109,7 +3109,9 @@ __attribute__((noinline)) int dk_drain_hook(combat::Battle&, int who, int n)
     if (hl() || read_hp_facts(fa)) {    // (the Dark Queen's hit dice are in its tables)
         create::DrainResult r = create::DrainResult::Lives;
         if (f.member >= 0 && f.member < pt->count) {
-            r = create::dk_drain(pt->m[f.member], mrules->tables, fa, rng, n);
+            // (AD&D 1E Level Drain & Restoration: the books' drain of a party member)
+            r = rules::adnd(rules::kAdndDrain) ? create::adnd_drain(pt->m[f.member], mrules->tables, n)
+                                               : create::dk_drain(pt->m[f.member], mrules->tables, fa, rng, n);
         } else if (combat::Monster* m = f.rec.monster()) {
             uint8_t* w = m->whole();
             party::Character* tmp = w ? new (std::nothrow) party::Character : nullptr;
@@ -3126,6 +3128,21 @@ __attribute__((noinline)) int dk_drain_hook(combat::Battle&, int who, int n)
     }
     if (!had) end_magic();
     return res;
+}
+
+// PoolRad's drain of a party member under the AD&D 1E rule (combat::g_adnd_drain)
+__attribute__((noinline)) int adnd_drain_hook(combat::Battle&, int who, int n)
+{
+    combat::Fighter& f = fg->b.f[who];
+    if (f.member < 0 || f.member >= pt->count) return 0;
+    const bool had = mrules != nullptr;
+    if (!had && !load_rules(mrules)) {
+        memlog::note("drain: no memory for the rule tables");
+        return 0;
+    }
+    const create::DrainResult r = create::adnd_drain(pt->m[f.member], mrules->tables, n);
+    if (!had) end_magic();
+    return r == create::DrainResult::Dies ? 2 : r == create::DrainResult::Collapses ? 1 : 0;
 }
 
 // What the engine says happened besides the plain blows (monster_fx_facts.md),
@@ -5677,7 +5694,8 @@ void fight_start(pic::Canvas& c)
     fg->arena = b.duel = vm->arena();
     b.tables = &fg->t;
     memcpy(b.level_exp, level_exp, sizeof level_exp);
-    combat::g_dk_drain = darkness_files() || hl() ? dk_drain_hook : nullptr;     // (its own drain: facts L1; the Dark Queen's its shape)
+    combat::g_dk_drain = darkness_files() || hl() ? dk_drain_hook : nullptr;
+    combat::g_adnd_drain = !combat::g_dk_drain && rules::adnd(rules::kAdndDrain) ? adnd_drain_hook : nullptr;     // (its own drain: facts L1; the Dark Queen's its shape)
     b.indoors = vm->get(0x4BE6) != 0;
     // (Pool: the picture before the fight isn't come back to - its treasure's
     // Exit shows the 3D view, DOSBox)
