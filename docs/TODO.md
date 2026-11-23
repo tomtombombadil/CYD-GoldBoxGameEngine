@@ -343,12 +343,11 @@ to the bottom with their version, then drop off after a while. Synced to
 the Project as claude/TODO.md.
 
 ## Tom
-- [ ] **The AD&D 1E books for the rules comparisons** (2026-11-23: Tom wants the official rules, not online
-      summaries): the level drain / Restoration comparison (v0.214.9, the Project's claude/drain_restore_facts.md)
-      was made from fan summaries and is marked unchecked. Claude can't get the books here. Tom: upload your own
-      copies (the PHB, DMG and Unearthed Arcana - e.g. the PDFs sold on DMs Guild) to the Project, each PDF inside
-      a zip; then Claude checks energy drain, Restoration, Raise Dead / Resurrection, ageing and the rest of the
-      AD&D 1E Rules switches against them, with page numbers.
+- [ ] **The AD&D 1E books** (Tom uploaded them 2026-11-23: the Project's "1st Edition.zip" - PHB, DMG, Unearthed
+      Arcana, Premium Editions; unzip to scratch /tmp/claude-0/books, pdftotext): level drain / Restoration done
+      against them (the Project's claude/drain_restore_facts.md, with pages). Claude, next: every AD&D 1E Rules
+      switch (Magic Missile, Multi-Class Hit Points, Thrown Weapons, Magic Items, Age with Time, Power Word Kill,
+      Protection from Evil, Raising the Dead) and the Game Fixes' "AD&D" versions checked against the books' pages.
 - [ ] v0.210.5 (Tom, 2026-11-18 12:57, Death Knights' camp, Cinder): (1) memorizing Magic Missiles
       past the 1st-level slots dropped the 2nd / 3rd-level counts - the moon's extra spells (Cinder's
       robe's moon full: 2, shared by levels 1-5) were added into every level's count. The original

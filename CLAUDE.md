@@ -1207,7 +1207,9 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   comes from the official books (TSR / Wizards of the Coast: PHB, DMG,
   Unearthed Arcana, official errata / Sage Advice) - never from fan sites,
   forums or summaries online. Without the book's page in hand, say the rule
-  is unchecked.
+  is unchecked. Tom's copies: the Project's "1st Edition.zip" (PHB, DMG,
+  Unearthed Arcana - Premium Editions; unzip to scratch, `pdftotext`; cite
+  the printed page).
 - **Standing answer for originals' mistakes** (Tom, 2026-10-23): the game
   keeps the original's behaviour; the fixed (AD&D) version goes behind
   Game Fixes - don't ask, just do it and list each such case in the
