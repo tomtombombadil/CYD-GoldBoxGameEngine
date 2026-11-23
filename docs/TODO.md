@@ -58,8 +58,18 @@
       For the PortMaster port: `play::map_place(x, y)` is new in play.h (its panel can draw the places).
 - [ ] Death Knights play-through (started 2026-11-23; the Project's claude/playthrough_knights.md): the Champions
       winners imported; Gargath outpost done (the commander, the burial, the patrol, Ayn, the dread wolf and the
-      snakes - Charm Snakes cast by the script's question), out by the west gate onto the overland. Next: Kalaman
-      (overland 25,1). Engine faults found: v0.214.4.
+      snakes - Charm Snakes cast by the script's question), out by the west gate onto the overland. Kalaman (the bazaar's
+      ambush: the party trained to 10th by the Trainer first), Vingaard (the dream merchant, Sir Thom's dream).
+      Engine faults found: v0.214.4, v0.214.5.
+- [x] v0.214.5 (the Death Knights play-through, 2026-11-23): **Vingaard's inn rooms had no Rest** - Darkness's
+      "no rest here" rule (rest words 1 / 100) was applied to Death Knights, whose camp is Curse's: 1 / 100 there is
+      an encounter at the rest's first step, which the inn's pre-camp script sets for Sir Thom's dream (block 33
+      0x80E1; its camp-interrupted script 0x8180 gives the dream, journal 7). Without Rest the story stopped. Now
+      Darkness / Treasures / the Dark Queen only. Not run in DOSBox: the original hung at "LOADING" on the engine's
+      Death Knights town saves (Vingaard, Gargath - an overland save loaded fine): to look at (below).
+- [ ] Death Knights: the original (DOSBox, GOG) stays at "LOADING... PLEASE WAIT" with the engine's saves made in a
+      3D town (Gargath block 36, Vingaard 33); its own and the engine's overland saves load. Compare the engine's
+      .PTY with one the original writes in the same place (the wall blocks / sets, the mode bytes).
 - [x] v0.214.4 (the Death Knights play-through, 2026-11-23): **the Krynn overlands' diagonal steps skipped the
       terrain test** - the step scripts read the step's direction in area word 0x4BEA (Death Knights' block 17: ON
       GOSUB 0x4BEA, a neighbour test for each of the 8 ways; Champions' block 16 its coasts), which the engine never

@@ -5111,7 +5111,10 @@ int camp_pic()
     return v.camp_pic_byte && d->gs.area1[0x4F] ? d->gs.area1[0x4F] : prof_camp_pic();
 }
 
-bool no_rest_here() { return darkness_files() && vm->get(0x2B) == 1 && vm->get(0x2C) >= 100; }
+// (Death Knights' camp is Curse's: 0x7ED2 / 0x7ED3 = 1 / 100 there is an encounter at the rest's first step -
+// Vingaard's inn sets it for Sir Thom's dream (ECL1 block 33's pre-camp 0x80E1, its camp-interrupted 0x8180);
+// with Rest taken away the dream - and the story - never came)
+bool no_rest_here() { return darkness_files() && !dkk() && vm->get(0x2B) == 1 && vm->get(0x2C) >= 100; }
 
 // The camp menu's words (without Rest and Fix where no rest is possible)
 bool tr_crown()
