@@ -5637,7 +5637,7 @@ static void test_items()
     CHECK(vm.resume() == ecl::Stop::Stopped);
     if (const profile::Profile* tp = profile::first(games::Game::TreasuresOfTheSavageFrontier); tp && tp->ecl_ops) {
         // SHOP n: its goods on the item list while the shop is open, gone when it is left (they came up in the
-        // next fight's treasure - v0.214.8)
+        // next fight's treasure - v0.214.10)
         Bytes sc;
         for (int i = 0; i < 5; ++i) { sc.push_back(0); op_addr(sc, kBase + 20); }
         sc.push_back(0x3C); op_imm(sc, 1);

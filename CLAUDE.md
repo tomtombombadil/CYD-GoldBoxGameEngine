@@ -1203,6 +1203,13 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   place, every chain of events that leads to the ending works, and a
   player can play and enjoy the game to its completion. Findings and
   progress in the Project's claude/playtest_<game>.md and docs/TODO.md.
+- **AD&D rules from the books only** (Tom, 2026-11-23): what AD&D 1E says
+  comes from the official books (TSR / Wizards of the Coast: PHB, DMG,
+  Unearthed Arcana, official errata / Sage Advice) - never from fan sites,
+  forums or summaries online. Without the book's page in hand, say the rule
+  is unchecked. Tom's copies: the Project's "1st Edition.zip" (PHB, DMG,
+  Unearthed Arcana - Premium Editions; unzip to scratch, `pdftotext`; cite
+  the printed page).
 - **Standing answer for originals' mistakes** (Tom, 2026-10-23): the game
   keeps the original's behaviour; the fixed (AD&D) version goes behind
   Game Fixes - don't ask, just do it and list each such case in the

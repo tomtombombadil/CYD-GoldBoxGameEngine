@@ -1509,12 +1509,14 @@ void train_classes(party::Character& c, const classes::Tables& t, const Facts& f
     r[kHp] = static_cast<uint8_t>(r[kHpMax] - lost);
 }
 
-bool drained(const party::Character& c)
+bool drained(const party::Character& c, bool queen)
 {
     if (c.rec[0xE7] > 0 && c.rec[0xE7] < 0x80) return true;   // (0x80 on: filler, never a count - rules::lost_levels)
+    // (the best levels in the record's order: the Dark Queen's its own -
+    // cleric, knight, fighter ...; Death Knights' knight a byte of its own)
     for (int j = 0; j < 7; ++j)
-        if (c.ext[party::kExtBestLevels + j] > c.rec[kLevels + j]) return true;
-    return false;
+        if (c.ext[party::kExtBestLevels + j] > c.rec[kLevels + (queen ? kQueenOrder[j] : j)]) return true;
+    return !queen && c.ext[party::kExtDkBestKnight] > c.rec[kLevels + 7];
 }
 
 bool restore(party::Character& c, const classes::Tables& t)
@@ -1968,6 +1970,16 @@ static int queen_hp_least(const party::Character& c, const classes::Tables& t)
     const int v = fig > 0 ? (sum + fig) / n : sum / n;
     return v & 0xFF;
 }
+// Its own Constitution figure (0x77E:0x20CE; the most hit points' and
+// Restoration's): 3 -2, 4-6 -1, 7-14 0, 15 +1, 16 +2, 17 and up +2, or for
+// the knight, fighter, paladin and ranger (its order's 1-4) Con - 14
+static int queen_most_cf(const party::Character& c, int qi)
+{
+    const int con = stat_full(c, 4);
+    int cf = con <= 3 ? -2 : con <= 6 ? -1 : con <= 14 ? 0 : con == 15 ? 1 : con == 16 ? 2 : 2;
+    if (con >= 17 && qi >= 1 && qi <= 4) cf = con - 14;
+    return cf;
+}
 static int queen_hp_most(const party::Character& c, const classes::Tables& t)
 {
     static const int kOrder[7] = {classes::Cleric, classes::Monk, classes::Fighter, classes::Paladin,
@@ -1980,9 +1992,7 @@ static int queen_hp_most(const party::Character& c, const classes::Tables& t)
         // (its own figure here - 0x77E:0x20CE: 3 -2, 4-6 -1, 7-14 0, 15 +1,
         // 16 +2, 17-19 +2 or for knights / fighters / paladins / rangers
         // Con - 14; past 19 the code leaves it unset - taken as 17-19's)
-        const int con = stat_full(c, 4);
-        int cf = con <= 3 ? -2 : con <= 6 ? -1 : con <= 14 ? 0 : con == 15 ? 1 : con == 16 ? 2 : 2;
-        if (con >= 17 && qi >= 1 && qi <= 4) cf = con - 14;
+        const int cf = queen_most_cf(c, qi);
         int L;
         if (former > 0) {
             L = former;
@@ -1990,18 +2000,20 @@ static int queen_hp_most(const party::Character& c, const classes::Tables& t)
             ++n;
             L = lv;
         }
+        // (L - a former class's level in its place - only picks the branch:
+        // both figures take the class's own level now, 0xA5 - 0x600FB)
         if (L < hd) {
             switch (qi) {
-            case 0: sum += (c.ext[party::kExtGod] <= 4 ? L + 1 : L) * (cf + 8); break;
-            case 1: sum += (L + 1) * (cf + 10); break;
-            case 2: sum += L * (cf + 8); break;
-            case 3: sum += L * (cf + 10); break;
-            case 4: sum += L * (cf + 8) + 1; break;
-            case 5: sum += L * (cf + 4); break;
-            default: sum += L * (cf + 6); break;
+            case 0: sum += (c.ext[party::kExtGod] <= 4 ? lv + 1 : lv) * (cf + 8); break;
+            case 1: sum += (lv + 1) * (cf + 10); break;
+            case 2: sum += lv * (cf + 8); break;
+            case 3: sum += lv * (cf + 10); break;
+            case 4: sum += lv * (cf + 8) + 1; break;
+            case 5: sum += lv * (cf + 4); break;
+            default: sum += lv * (cf + 6); break;
             }
         } else {
-            const int x = (L - hd + 1) & 0xFF;
+            const int x = (lv - hd + 1) & 0xFF;
             static const int kFig[7] = {9, 10, 9, 9, 11, 11, 10}, kPer[7] = {2, 2, 3, 3, 2, 1, 2},
                              kAdd[7] = {0x48, 0x64, 0x5A, 0x5A, 0x58, 0x2C, 0x3C};
             sum += cf * kFig[qi] + x * kPer[qi] + kAdd[qi];
@@ -2444,7 +2456,7 @@ void dkk_take_hp(party::Character& c, const classes::Tables& t, const Facts& f, 
 int32_t dkk_exp(const classes::Tables& t, const party::Character& c, int cls, int level)
 {
     const int row = t.xp_row(&c, cls);
-    return t.i32(static_cast<uint16_t>(t.lay.class_records + row * 204 + (level & 0xFF) * 4));
+    return t.i32(static_cast<uint16_t>(t.lay.class_records + row * 204 + static_cast<int8_t>(level) * 4));   // (its level signed: 0 - 1 reads the dword before)
 }
 uint8_t& dkk_best(party::Character& c, int cls)
 {
@@ -2453,8 +2465,9 @@ uint8_t& dkk_best(party::Character& c, int cls)
 DrainResult dkk_drain(party::Character& c, const classes::Tables& t, const Facts& f, Dice& d, int n)
 {
     uint8_t* r = c.rec;
+    int cls = 0;                        // (kept from the level before when none is left - as the original's)
     for (int k = 0; k < n; ++k) {
-        int held = 0, best = 0, cls = 0;
+        int held = 0, best = 0;
         for (int j = 0; j < 8; ++j) {
             const int l = static_cast<int8_t>(r[kLevels + j]);
             if (l > 0 || static_cast<int8_t>(dkk_best(c, j)) > 0) ++held;
@@ -2476,8 +2489,13 @@ DrainResult dkk_drain(party::Character& c, const classes::Tables& t, const Facts
             hi = dkk_exp(t, c, cls, best);
         }
         put32(r + kExp, lo + (hi - lo) / 2);
-        if (r[kLevels + cls] > 0) --r[kLevels + cls];
+        --r[kLevels + cls];                                  // (its byte dec, unconditioned: 0 -> 255)
         dkk_take_hp(c, t, f, d, t.u8(static_cast<uint16_t>(t.lay.class_masks + cls)), held);
+        // (then its class values, 0x365FF: the hit dice the highest level held)
+        int hd = 0;
+        for (int j = 0; j < 8; ++j)
+            if (static_cast<int8_t>(r[kLevels + j]) > hd) hd = static_cast<int8_t>(r[kLevels + j]);
+        r[kHitDice] = static_cast<uint8_t>(hd);
     }
     for (int j = 0; j < 8; ++j)
         if (static_cast<int8_t>(r[kLevels + j]) > 0 && r[kHpMax] != 0) return r[kHp] == 0 ? DrainResult::Collapses : DrainResult::Lives;
@@ -2485,12 +2503,157 @@ DrainResult dkk_drain(party::Character& c, const classes::Tables& t, const Facts
 }
 } // namespace
 
+// ---- The Dark Queen's level drain (DQK.EXE ovl 9 0x2B3A:0x17DD = file
+// 0x4F66D; effects 0x65 / 0x66 one and two levels): Darkness's shape in its
+// own record order (cleric, knight, fighter, paladin, ranger, magic-user,
+// thief - its best levels 0x9E in that order too), its experience routine
+// (ovl 0xB +0x5FDC) and its hit point routine taking (ovl 0xB +0x380E with 0)
+
+// A class's experience at a level (0x62B8C): the level a byte - under 18 the
+// row's table, from 18 the 17th's + a step a level, 41 and over never
+int32_t queen_level_exp(const classes::Tables& t, const party::Character& c, int cls, int level)
+{
+    level &= 0xFF;
+    if (level >= 41) return 0x7FFFFFFF;
+    const int row = t.xp_row(&c, cls);
+    const uint16_t r = static_cast<uint16_t>(t.lay.q_xp + row * 76);
+    if (level < 18) return t.i32(static_cast<uint16_t>(r + level * 4));
+    return static_cast<int32_t>(static_cast<uint32_t>(t.i32(static_cast<uint16_t>(r + 17 * 4))) +
+                                static_cast<uint32_t>((level - 17) * t.i32(static_cast<uint16_t>(t.lay.q_xp_step + row * 4))));
+}
+// A level's hit points taken: queen_hp's sum (the classes in `mask`), the
+// rolled hit points less the gain, the most less gain and Constitution's
+// part - kept at or under its Modify most (queen_hp_most) - the damage
+// taken kept; no class held: none
+void queen_take_hp(party::Character& c, const classes::Tables& t, Dice& d, int mask, int held)
+{
+    uint8_t* r = c.rec;
+    if (held <= 0) {
+        r[kHp] = r[kHpRolled] = r[kHpMax] = 0;
+        return;
+    }
+    static const uint8_t kPast[11] = {1, 1, 3, 2, 2, 2, 2, 1, 1, 2, 3};
+    int rolled = 0, con = 0;
+    for (int k : kQueenOrder) {
+        const int lv = c.level(k);
+        if (lv <= 0 || !(t.u8(static_cast<uint16_t>(t.lay.class_masks + k)) & mask)) continue;
+        if (lv < t.max_hit_dice(k)) {
+            const int n = lv > 1 ? 1 : t.u8(static_cast<uint16_t>(t.lay.q_hp_count + k));
+            const int sides = t.u8(static_cast<uint16_t>(t.lay.q_hp_sides + k));
+            const int a = d.roll(sides, n), b = d.roll(sides, n);
+            rolled = (rolled + (a > b ? a : b)) & 0xFF;
+            con = (con + static_cast<int8_t>(queen_con(c, t, k)) * n) & 0xFF;
+        } else {
+            const int row = t.xp_row(&c, k);
+            rolled = row >= 0 && row < 11 ? kPast[row] : 1;
+        }
+    }
+    int inc = rolled / held;
+    if (inc < 1) inc = 1;
+    inc &= 0xFF;
+    const int cp = (con / held) & 0xFF;
+    const int lost = (r[kHpMax] - r[kHp]) & 0xFF;
+    r[kHpRolled] = static_cast<uint8_t>(r[kHpRolled] > inc ? r[kHpRolled] - inc : 0);
+    int take = (inc + cp) & 0xFF;
+    const int most = queen_hp_most(c, t);
+    if (r[kHpMax] - take > most) take = (r[kHpMax] - most) & 0xFF;
+    r[kHpMax] = static_cast<uint8_t>(take > r[kHpMax] ? 0 : r[kHpMax] - take);
+    r[kHp] = static_cast<uint8_t>(lost > r[kHpMax] ? 0 : r[kHpMax] - lost);
+}
+DrainResult queen_drain(party::Character& c, const classes::Tables& t, Dice& d, int n)
+{
+    uint8_t* r = c.rec;
+    int qc = 0;                         // (its place in the record's order; kept from the level before)
+    for (int k = 0; k < n; ++k) {
+        int held = 0, best = 0;
+        for (int qi = 0; qi < 7; ++qi) {
+            const int l = r[kLevels + kQueenOrder[qi]];
+            if (l > 0 || dk_ext(c, party::kExtBestLevels + qi) > 0) ++held;
+            if (l > best) {
+                best = l;
+                qc = qi;
+            } else if (l == best && best != 0 &&
+                       queen_level_exp(t, c, kQueenOrder[qc], l) > queen_level_exp(t, c, kQueenOrder[qi], best)) {
+                qc = qi;
+            }
+        }
+        const int cls = kQueenOrder[qc];
+        uint8_t& bl = dk_ext(c, party::kExtBestLevels + qc);
+        if (bl <= r[kLevels + cls]) bl = r[kLevels + cls];
+        if (get32(c.ext + party::kExtBestXp) <= get32(r + kExp)) put32(c.ext + party::kExtBestXp, get32(r + kExp));
+        if (dk_ext(c, party::kExtBestHp) <= r[kHpMax]) dk_ext(c, party::kExtBestHp) = r[kHpMax];
+        int32_t lo = 0, hi = 0;
+        if (best == 2) hi = queen_level_exp(t, c, cls, 2);
+        else if (best != 1) {
+            lo = queen_level_exp(t, c, cls, best - 1);
+            hi = queen_level_exp(t, c, cls, best);
+        }
+        const int32_t half = static_cast<int32_t>(static_cast<uint32_t>(hi) - static_cast<uint32_t>(lo)) / 2;
+        put32(r + kExp, static_cast<int32_t>(static_cast<uint32_t>(half) + static_cast<uint32_t>(lo)));
+        if (r[kLevels + cls] > 0) --r[kLevels + cls];
+        if (r[kLevels + cls] >= r[kMultiLevel])
+            queen_take_hp(c, t, d, t.u8(static_cast<uint16_t>(t.lay.class_masks + cls)), held);
+    }                                   // (its class values 0x304E:0x07F1 after each: the caller's, as Darkness's)
+    bool any = false;
+    for (int qi = 0; qi < 7; ++qi)
+        if (r[kLevels + kQueenOrder[qi]] > 0) any = true;
+    if (!any || r[kHpMax] == 0) return DrainResult::Dies;
+    if (r[kHp] == 0) return DrainResult::Collapses;
+    return DrainResult::Lives;
+}
+
+// The Dark Queen's Restoration (DQK.EXE overlay w10, file 0x5838C):
+// Darkness's in its own order - the classes counted by their best levels,
+// the class whose next level starts at the least experience (its routine,
+// the later on a tie), the hit points' share less its Constitution figure
+// over the classes held below the last hit die, the best experience only
+// for the last level lost and only when more, "able to train"
+void queen_restore(party::Character& c, const classes::Tables& t)
+{
+    uint8_t* r = c.rec;
+    int held = 0, lost = 0, qc = -1;
+    int32_t least = 0x7FFFFFFF;
+    for (int qi = 0; qi < 7; ++qi)
+        if (dk_ext(c, party::kExtBestLevels + qi) > 0) ++held;
+    for (int qi = 0; qi < 7; ++qi) {
+        const int k = kQueenOrder[qi], lv = r[kLevels + k], best = dk_ext(c, party::kExtBestLevels + qi);
+        if (lv >= best) continue;
+        lost = (lost + best - lv) & 0xFF;
+        const int32_t e = queen_level_exp(t, c, k, (lv + 1) & 0xFF);
+        if (e <= least) {
+            least = e;
+            qc = qi;
+        }
+    }
+    if (qc >= 0) {
+        const int cls = kQueenOrder[qc];
+        const int best_hp = c.ext[party::kExtBestHp];
+        if (r[kHpMax] < best_hp && lost > 0) {
+            const int per = ((best_hp - r[kHpMax]) / lost) & 0xFF;
+            int con = 0;
+            if (r[kLevels + cls] + 1 < t.max_hit_dice(cls) && held > 0) con = static_cast<int8_t>(queen_most_cf(c, qc)) / held;
+            r[kHp] = static_cast<uint8_t>(r[kHp] + per);
+            r[kHpRolled] = static_cast<uint8_t>(r[kHpRolled] + per - (con & 0xFF));
+            r[kHpMax] = static_cast<uint8_t>(r[kHpMax] + per);
+        }
+        ++r[kLevels + cls];
+        classes::class_bonuses(c, t);
+        if (lost == 1 && get32(r + kExp) < get32(c.ext + party::kExtBestXp)) put32(r + kExp, get32(c.ext + party::kExtBestXp));
+        else put32(r + kExp, least);
+    }
+    c.ext[party::kExtTrain] = trainable(c, t) ? 1 : 0;
+}
+
 DrainResult dk_drain(party::Character& c, const classes::Tables& t, const Facts& f, Dice& d, int n)
 {
+    if (t.lay.queen) return queen_drain(c, t, d, n);
     if (t.lay.dkk) return dkk_drain(c, t, f, d, n);
     uint8_t* r = c.rec;
+    // (the class is the original's local, set only when a level is found: a
+    // second level drained with none left comes off the first one's class)
+    int cls = 0;
     for (int k = 0; k < n; ++k) {
-        int held = 0, best = 0, cls = 0;
+        int held = 0, best = 0;
         for (int j = 0; j < 7; ++j) {
             const int l = r[kLevels + j];
             if (l > 0 || dk_ext(c, party::kExtBestLevels + j) > 0) ++held;
@@ -2534,8 +2697,18 @@ DrainResult dk_drain(party::Character& c, const classes::Tables& t, const Facts&
 // class is below its last hit die) to the rolled hit points; experience:
 // one level lost - the best when more, else that level's start. Then the
 // class values and "able to train"
+void dkk_restore(party::Character& c, const classes::Tables& t);
+void queen_restore(party::Character& c, const classes::Tables& t);
 void dk_restore(party::Character& c, const classes::Tables& t)
 {
+    if (t.lay.queen) {
+        queen_restore(c, t);
+        return;
+    }
+    if (t.lay.dkk) {
+        dkk_restore(c, t);
+        return;
+    }
     uint8_t* r = c.rec;
     int held = 0, lost = 0, cls = -1;
     int32_t least = 0x7FFFFFFF;
@@ -2564,11 +2737,52 @@ void dk_restore(party::Character& c, const classes::Tables& t)
         }
         ++r[kLevels + cls];
         classes::class_bonuses(c, t);
-        if (lost == 1) {
-            if (get32(r + kExp) < get32(c.ext + party::kExtBestXp)) put32(r + kExp, get32(c.ext + party::kExtBestXp));
-        } else {
-            put32(r + kExp, least);
+        // (the best experience only when one level was lost AND it is more
+        // than now; any other way the new level's start - 0x2EDC0)
+        if (lost == 1 && get32(r + kExp) < get32(c.ext + party::kExtBestXp)) put32(r + kExp, get32(c.ext + party::kExtBestXp));
+        else put32(r + kExp, least);
+    }
+    c.ext[party::kExtTrain] = trainable(c, t) ? 1 : 0;
+}
+
+// Death Knights' Restoration (GAME.OVR 0x2BF32): Darkness's shape over the
+// eight classes (the knight's best level its own byte, 0x54 - the eighth of
+// the best levels), the levels signed, the experience from its rows (204
+// bytes a row, by the class's row - dkk_exp), a class whose next level
+// starts past 3,500,000 never chosen (DS 0x7A6C, its first least), its
+// most hit points' Constitution figure (0x35D99)
+void dkk_restore(party::Character& c, const classes::Tables& t)
+{
+    uint8_t* r = c.rec;
+    int held = 0, lost = 0, cls = -1;
+    int32_t least = 3500000;
+    for (int j = 0; j < 8; ++j)
+        if (static_cast<int8_t>(dkk_best(c, j)) > 0) ++held;
+    for (int j = 0; j < 8; ++j) {
+        const int lv = static_cast<int8_t>(r[kLevels + j]), best = static_cast<int8_t>(dkk_best(c, j));
+        if (lv >= best) continue;
+        lost = (lost + best - lv) & 0xFF;
+        const int32_t e = dkk_exp(t, c, j, (lv + 1) & 0xFF);
+        if (e <= least) {
+            least = e;
+            cls = j;
         }
+    }
+    if (cls >= 0) {
+        const int best_hp = c.ext[party::kExtBestHp];
+        if (r[kHpMax] < best_hp && lost > 0) {
+            const int per = ((best_hp - r[kHpMax]) / lost) & 0xFF;
+            int con = 0;
+            if (r[kLevels + cls] + 1 < t.max_hit_dice(cls) && held > 0)
+                con = static_cast<int8_t>(dkk_most_fig(stat_full(c, 4), cls)) / held;
+            r[kHp] = static_cast<uint8_t>(r[kHp] + per);
+            r[kHpRolled] = static_cast<uint8_t>(r[kHpRolled] + per - (con & 0xFF));
+            r[kHpMax] = static_cast<uint8_t>(r[kHpMax] + per);
+        }
+        ++r[kLevels + cls];
+        classes::class_bonuses(c, t);
+        if (lost == 1 && get32(r + kExp) < get32(c.ext + party::kExtBestXp)) put32(r + kExp, get32(c.ext + party::kExtBestXp));
+        else put32(r + kExp, least);
     }
     c.ext[party::kExtTrain] = trainable(c, t) ? 1 : 0;
 }

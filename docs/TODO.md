@@ -30,6 +30,14 @@
       moves. Also seen (not looked into): the caves' wyvern at 15,8 - the engine shows its big picture, DOSBox the
       3D view with the sprite. The fight budget check (budgetx.sh) reads ~176 KB in every game, a 64 KB block from a
       system library among it (the PC build's, not the board's) - the measure needs that left out.
+- [x] v0.214.10 (the PortMaster session's Treasures play-through, 2026-11-23): **a shop's goods came up in the next
+      fight's treasure** - SHOP n put them on the item list and nothing took them off when the shop was left (Ruathym:
+      a 34-item treasure showed 64, the list's cap). The original (DOSBox, the same save: the shop at 8,11, Exit, the
+      guards' fight): two pages, the guards' own items, 2012 experience each as the engine without the goods. Fixed in
+      the VM (the list cleared as SHOP n is left); host test. Every SHOP n game (Secret on) had it.
+- [ ] Curse / PoolRad shops (TREASURE then COMBAT with the shop flag): their goods stay on the list until the next
+      CLEARMONSTERS - what the original does on leaving such a shop is not checked (a script that fights without
+      CLEARMONSTERS after a shop would show the goods as treasure). For the session that has those games' kits.
 - [ ] v0.214.0 **Tom: the overland's movement keys** (Tom, 2026-11-22): on PoolRad's wilderness the turn keys
       greyed (they do nothing there) and Turn Around a down arrow (a step south); on Champions' / Death Knights' /
       the Dark Queen's overland the turn keys show their diagonal steps (north-west / north-east) and Turn Around a
@@ -62,6 +70,43 @@
       ambush: the party trained to 10th by the Trainer first), Vingaard (the dream merchant, Sir Thom's dream), the
       High Clerist's Tower, the Dragon Pit, Vingaard's second trail (10 red doors to 11,15), Kalaman's second visit,
       Cerberus, its graveyard and the crypt under it. Engine faults found: v0.214.4, v0.214.5, v0.214.6, v0.214.7.
+- [x] v0.214.9 (Tom, 2026-11-23: "verify that the Restoration spell and Restoration from healers/temples works
+      properly with the level drain mechanics"): each game's Restoration routine RUN in Unicorn on 3000 drained
+      characters (single, multi, dual-classed, the Krynn knight; tools/devkit/oracles/restore_emu.py, drain_queen.py
+      restore; sweep `behave levels` ONLY=restore with RSTMAKE / RSTIN / RSTCHK) and compared field by field: PoolRad
+      (GAME.OVR 0x29C5B), Curse (0x31D1D), Gateway (0x38C29), Darkness (0x2EBEC), Treasures (0x38136), Death Knights
+      (0x2BF32), the Dark Queen (DQK.EXE 0x5838C) - all 0 differ now. Secret has no Restoration; Champions has the
+      spell's row (cleric 7th) but no routine and no cleric reaches it. Fixed: Darkness / Treasures - with one level
+      lost and the experience already past the best, the original sets the new level's start (the engine kept it);
+      Death Knights - Darkness's routine was used (7 classes, Darkness's experience rows): now its own (8 classes,
+      the knight's best byte, its rows, a class whose next level starts past 3,500,000 never chosen, its
+      Constitution figure); the Dark Queen - its own (its class order - Darkness's routine read its best levels in the
+      engine's order, its experience routine, its Constitution figure); the Darkness-family / Dark Queen temples'
+      Restoration and Repair were a short version of their own (the first drained class, no Constitution part):
+      now the spell's routine, as the originals' temples call it; "Drained" on the Companion: the Dark Queen's best
+      levels in its own order, Death Knights' knight counted. The old Darkness model (oracles/darkness.py R11) had
+      the same experience mistake - put right. Left as SPEC 12: PoolRad / Curse / Gateway's no-class-can-rise case.
+- [ ] Curse's `behave` classes: 9 "race 5 class 2 level 7-9 Str 16-18: may train - doesn't, the original does"
+      (halfling fighters) - already so before v0.214.9 (found 2026-11-23, with PoolRad's below).
+- [x] v0.214.8 (Tom, 2026-11-23: "verify the level drain mechanics ... multiclass characters and human characters
+      that change class ... across the games"): each game's drain routine RUN in Unicorn on 2000 made characters
+      (single, two and three classes, a human with a former class, the Krynn knight; one and two levels; dice high
+      and low) and the engine's drain compared field by field - levels, former / best levels, experience, hit points
+      (most, now, rolled), hit dice, drained counts, the fall (tools/devkit/oracles/emu_far.py, drain_emu.py,
+      drain_queen.py; sweep `behave levels` ONLY=drain with DRAINMAKE / DRAININ / DRAINCHK). All five games with a
+      drain now 0 differ: PoolRad, Darkness, Treasures, Death Knights, the Dark Queen (Curse, Secret, Gateway and
+      Champions have no drain). Fixed: Darkness / Treasures - a second level drained from a character left with none
+      came off the wrong class (the original keeps the first one's class); Death Knights - the hit dice after each
+      level (its class values: the highest level), a level of 0 drained to 255 and its experience read signed, as the
+      original; PoolRad - the drained class picked by its own experience row as the original reads it (0 past a
+      class's last level, not -1: a 10th-level thief beside an 8th-level fighter lost the thief's level), its hit dice
+      kept at the drained class's level (the engine's class values raised them to the highest); the Dark Queen -
+      drained by PoolRad's routine until now (Pool's hit point share, drained counts, death under 2 hit dice): now its
+      own (DQK.EXE 0x4F66D: Darkness's shape in its class order, its experience routine, its hit point routine
+      taking), and its most hit points (Modify's bound too) take the class's own level where a dual-classed human's
+      former level only picks the branch.
+- [ ] PoolRad's `behave pool` ONLY=train: "ready with the experience, the race limits" - 9 of 1098 wrong (first: race
+      2, fighter, Str 16, level 6: not ready) - already so before v0.214.8 (found 2026-11-23); look at it.
 - [x] v0.214.7 (the Death Knights play-through, 2026-11-23): **a level drain killed a knight with no other class**
       (Sir Strongsword, one spectre's touch: "dies from drainning"). Death Knights drained through Darkness's routine,
       which counts classes 0-6 - the knight's levels (class 7) weren't seen, so "no level left" at once; its
@@ -306,6 +351,19 @@ to the bottom with their version, then drop off after a while. Synced to
 the Project as claude/TODO.md.
 
 ## Tom
+- [ ] **AD&D 1E level drain / Restoration as 1E switches?** (Tom, 2026-11-23: wants the books' rules behind an AD&D 1E
+      switch, ageing left out; asked whether it's feasible given what saves don't keep). Claude's answer: yes, in
+      three tiers - (1) needs nothing new (mid-point experience, ties, one level from each class, dual-classed
+      highest level, Restoration's exact experience, the Feeblemind cure); (2) needs a per-character record the
+      engine keeps beside the saves, by name, as QUICK.TXT (each level's hit points, which class each lost level
+      came from, the game time of the drain) with a fallback when it's missing; (3) left out (rising as undead;
+      possibly the 0-level person). Waiting on Tom: go ahead? one switch or two (Level Drain / Restoration)?
+      the 0-level person in or out?
+- [ ] **The AD&D 1E books** (Tom uploaded them 2026-11-23: the Project's "1st Edition.zip" - PHB, DMG, Unearthed
+      Arcana, Premium Editions; unzip to scratch /tmp/claude-0/books, pdftotext): level drain / Restoration done
+      against them (the Project's claude/drain_restore_facts.md, with pages). Claude, next: every AD&D 1E Rules
+      switch (Magic Missile, Multi-Class Hit Points, Thrown Weapons, Magic Items, Age with Time, Power Word Kill,
+      Protection from Evil, Raising the Dead) and the Game Fixes' "AD&D" versions checked against the books' pages.
 - [ ] v0.210.5 (Tom, 2026-11-18 12:57, Death Knights' camp, Cinder): (1) memorizing Magic Missiles
       past the 1st-level slots dropped the 2nd / 3rd-level counts - the moon's extra spells (Cinder's
       robe's moon full: 2, shared by levels 1-5) were added into every level's count. The original

@@ -3149,6 +3149,17 @@ a PC, PortMaster handhelds):
 
 ## 12. Where the engine differs from the original games (Tom, 2026-10-10: keep this list up to date)
 
+- **Restoration with no class able to rise (PoolRad, Curse, Gateway;
+  v0.214.9)**: when every class is at its race limit or its last level,
+  the originals' routine (Curse GAME.OVR 0x31D1D, PoolRad 0x29C5B, Gateway
+  0x38C29) still raises the class an uninitialised local names and sets
+  the experience to 10,000,000 - undefined (stack leftovers). The engine
+  gives back the hit points and counts the lost level off, and raises no
+  class.
+- **The Darkness-family temples' Restoration and Repair (v0.214.9)**: the
+  spell's own routine (`create::dk_restore`), as the originals' temples
+  call it; Repair restores until no class can rise (at most 64 times -
+  the original's loop end not read).
 - **Spell lists, every game (Tom, 2026-11-18; v0.210.9)**: one way in all
   nine - Up / Down move the lit spell a line at a time and the window
   scrolls a line as it passes its edge (the originals: Curse-type lists
