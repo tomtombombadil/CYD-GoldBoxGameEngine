@@ -59,8 +59,17 @@
 - [ ] Death Knights play-through (started 2026-11-23; the Project's claude/playthrough_knights.md): the Champions
       winners imported; Gargath outpost done (the commander, the burial, the patrol, Ayn, the dread wolf and the
       snakes - Charm Snakes cast by the script's question), out by the west gate onto the overland. Kalaman (the bazaar's
-      ambush: the party trained to 10th by the Trainer first), Vingaard (the dream merchant, Sir Thom's dream).
-      Engine faults found: v0.214.4, v0.214.5, v0.214.6.
+      ambush: the party trained to 10th by the Trainer first), Vingaard (the dream merchant, Sir Thom's dream), the
+      High Clerist's Tower, the Dragon Pit, Vingaard's second trail (10 red doors to 11,15), Kalaman's second visit,
+      Cerberus, its graveyard and the crypt under it. Engine faults found: v0.214.4, v0.214.5, v0.214.6, v0.214.7.
+- [x] v0.214.7 (the Death Knights play-through, 2026-11-23): **a level drain killed a knight with no other class**
+      (Sir Strongsword, one spectre's touch: "dies from drainning"). Death Knights drained through Darkness's routine,
+      which counts classes 0-6 - the knight's levels (class 7) weren't seen, so "no level left" at once; its
+      experience by Darkness's rows too. Now its own (GAME.OVR 0x1D089, read): classes 0-7, the knight's best level in
+      its own byte, ties to the class whose level needed more experience, its rows (204 bytes), its hit point routine
+      every level (0x26E33 with 0: the knight with the fighters) and its highest-hit-points figure (0x270F4). Checks:
+      sweep behave deathknights ONLY=drain (3, expected from the oracle's experience rows); Darkness's drain cases
+      unchanged; the play-through's spectre fight now leaves him a level down.
 - [x] v0.214.5 (the Death Knights play-through, 2026-11-23): **Vingaard's inn rooms had no Rest** - Darkness's
       "no rest here" rule (rest words 1 / 100) was applied to Death Knights, whose camp is Curse's: 1 / 100 there is
       an encounter at the rest's first step, which the inn's pre-camp script sets for Sir Thom's dream (block 33

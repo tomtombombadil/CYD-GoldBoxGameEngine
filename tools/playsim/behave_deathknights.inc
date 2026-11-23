@@ -49,6 +49,53 @@ int xp_row_of(const party::Character& c, int k)
     }
 }
 
+// The level drain (its GAME.OVR 0x1D089 - every class 0-7, the knight's
+// too; 2026-11-23, Sir Strongsword died of one level): a knight with no other
+// class keeps living a level down, its best level kept, the experience half
+// way between the old level's start and the one before (the oracle's rows),
+// hit points fewer; a cleric / knight on equal levels loses the class whose
+// level needed more experience; nothing left: dies
+void drain()
+{
+    static party::Character c;
+    auto set_stat = [](party::Character& ch, int i, int v) {
+        ch.rec[0x10 + i * 2] = ch.rec[0x11 + i * 2] = static_cast<uint8_t>(v);
+    };
+    auto xp = [&](int xrow, int L) {
+        const auto* x = row("xp", xrow);
+        return x && 1 + L < static_cast<int>(x->size()) ? (*x)[1 + L] : -1;
+    };
+    auto fresh = [&](int order) {
+        c = party::Character{};
+        for (int i = 0; i < 6; ++i) set_stat(c, i, 12);
+        c.ext[party::kExtKnight] = static_cast<uint8_t>(order);
+        c.rec[0x78] = c.rec[0x1A4] = 100;
+        c.rec[0x12C] = 60;
+    };
+    fresh(1);
+    c.rec[0x109 + 7] = 10;
+    const int r7 = xp_row_of(c, 7);
+    const create::DrainResult res = create::dk_drain(c, bdkk::m->tables, bdkk::m->facts, bdkk::m->dice, 1);
+    const int32_t want = xp(r7, 9) + (xp(r7, 10) - xp(r7, 9)) / 2;
+    expect(P, "drain: a knight-only character lives a level down", res == create::DrainResult::Lives && c.rec[0x109 + 7] == 9 &&
+           c.ext[party::kExtDkBestKnight] == 10 && static_cast<int32_t>(c.exp()) == want && c.rec[0x78] < 100 && c.rec[0x78] > 0,
+           "result %d level %d best %d exp %d (want %d) hp max %d", static_cast<int>(res), c.rec[0x109 + 7],
+           c.ext[party::kExtDkBestKnight], static_cast<int>(c.exp()), static_cast<int>(want), c.rec[0x78]);
+    fresh(1);
+    c.ext[party::kExtGod] = 1;
+    c.rec[0x109 + 0] = 6;
+    c.rec[0x109 + 7] = 6;
+    const int r0 = xp_row_of(c, 0);
+    const int expect_cls = xp(r7, 6) > xp(r0, 6) ? 7 : 0;
+    create::dk_drain(c, bdkk::m->tables, bdkk::m->facts, bdkk::m->dice, 1);
+    expect(P, "drain: equal levels - the class whose level needed more goes", c.rec[0x109 + expect_cls] == 5 &&
+           c.rec[0x109 + (7 - expect_cls)] == 6, "cleric %d knight %d (want %d down)", c.rec[0x109], c.rec[0x109 + 7], expect_cls);
+    fresh(1);
+    c.rec[0x109 + 7] = 1;
+    const create::DrainResult gone = create::dk_drain(c, bdkk::m->tables, bdkk::m->facts, bdkk::m->dice, 1);
+    expect(P, "drain: a 1st-level knight drained dies", gone == create::DrainResult::Dies, "result %d", static_cast<int>(gone));
+}
+
 // The level a class reaches with this experience: its row's need met, under
 // the race's limit (training while the limit is above the level)
 int level_for(int xrow, uint32_t xp, int cap)
@@ -300,6 +347,7 @@ static void behave_deathknights()
     }
     const char* only = getenv("ONLY");
     auto want = [&](const char* s) { return !only || strstr(only, s); };
+    if (want("drain")) bdkk::drain();
     if (want("create")) creation();
     if (want("create")) b_krynn_stats_check(bdkk::m, P);
     if (want("train")) training();

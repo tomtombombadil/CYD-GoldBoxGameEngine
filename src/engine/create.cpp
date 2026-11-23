@@ -2356,10 +2356,138 @@ void dk_take_hp(party::Character& c, const classes::Tables& t, const Facts& f, D
     r[kHpMax] = static_cast<uint8_t>(take > r[kHpMax] ? 0 : r[kHpMax] - take);
     r[kHp] = static_cast<uint8_t>(lost > r[kHpMax] ? 0 : r[kHpMax] - lost);
 }
+// Death Knights' own drain (its GAME.OVR 0x1D089; Darkness's shape with the
+// knight's eighth class - Tom's play-through 2026-11-23: a spectre's one
+// level killed Sir Strongsword, a knight with no other class, as the
+// engine counted Darkness's seven classes). Its Constitution figures: the
+// hit point routine's (0x26DAE) as Secret's with the knight among the
+// fighters; the most hit points' (0x35D99): 3 -2, 4-6 -1, 7-14 0, 15 1,
+// 16 2, 17 and up the con - 14 (at most 5) for fighters, paladins, rangers
+// and knights, else 2 (above 19 the original leaves it unset: 19's here)
+int dkk_con_fig(const party::Character& c, int k)
+{
+    const int con = stat_full(c, 4);
+    return secret_con_fig(con, k == 7 ? 2 : k);
+}
+int dkk_most_fig(int con, int k)
+{
+    if (con <= 3) return con == 3 ? -2 : 0;
+    if (con <= 6) return -1;
+    if (con <= 14) return 0;
+    if (con == 15) return 1;
+    if (con == 16) return 2;
+    if (k == 2 || k == 3 || k == 4 || k == 7) return (con > 19 ? 19 : con) - 14;
+    return 2;
+}
+// The most hit points a character may have (0x270F4): each class held -
+// below its last hit die its level (a cleric of a neutral god, the knight
+// and the ranger one more) times the figure plus the class's die, past it
+// the dice's sum plus a few a level - over the classes held
+int dkk_hp_most(const party::Character& c, const classes::Tables& t)
+{
+    unsigned total = 0, n = 0;
+    for (int k = 0; k < 8; ++k) {
+        const int lv = static_cast<int8_t>(c.level(k));
+        if (lv <= 0) continue;
+        const int fig = dkk_most_fig(stat_full(c, 4), k), hd = t.max_hit_dice(k);
+        ++n;
+        if (lv < hd) {
+            static const int kSide[8] = {8, 8, 10, 10, 8, 4, 6, 10};
+            const int levels = (k == 0 && c.ext[party::kExtGod] <= 4) || k == 7 || k == 4 ? lv + 1 : lv;
+            total += static_cast<unsigned>(levels * (fig + kSide[k]));
+        } else {
+            const int x = lv - hd + 1;
+            static const int kPer[8] = {2, 0, 3, 3, 2, 1, 2, 3}, kTimes[8] = {9, 0, 9, 9, 11, 11, 10, 9},
+                             kPlus[8] = {0x48, 0x70, 0x5A, 0x5A, 0x58, 0x2C, 0x3C, 0x5A};
+            total += static_cast<unsigned>(kPer[k] * x + kTimes[k] * fig + kPlus[k]);
+        }
+    }
+    return n ? static_cast<int>((total & 0xFFFF) / n) & 0xFF : 0;
+}
+// A level's hit points taken (the hit point routine 0x26E33 with 0)
+void dkk_take_hp(party::Character& c, const classes::Tables& t, const Facts& f, Dice& d, int mask, int held)
+{
+    uint8_t* r = c.rec;
+    if (held <= 0) {
+        r[kHp] = r[kHpRolled] = r[kHpMax] = 0;
+        return;
+    }
+    int rolled = 0, con = 0;
+    for (int k = 0; k < 8; ++k) {
+        const int lv = static_cast<int8_t>(c.level(k));
+        if (lv <= 0 || !(t.u8(static_cast<uint16_t>(t.lay.class_masks + k)) & mask)) continue;
+        if (lv < t.max_hit_dice(k)) {
+            const int n = lv > 1 || (k == 0 && c.ext[party::kExtGod] > 4) ? 1 : f.hp_count[k];
+            const int a = d.roll(f.hp_dice[k], n), b = d.roll(f.hp_dice[k], n);
+            rolled = (rolled + (a > b ? a : b)) & 0xFF;
+            con = (con + dkk_con_fig(c, k) * n) & 0xFF;
+        } else if (k == 2 || k == 3 || k == 7) {
+            rolled = 3;
+        } else if (k == 4 || k == 0 || k == 6) {
+            rolled = 2;
+        } else if (k == 5) {
+            rolled = 1;
+        }
+    }
+    int inc = rolled / held;
+    if (inc < 1) inc = 1;
+    const int cp = con / held;
+    const int lost = (r[kHpMax] - r[kHp]) & 0xFF;
+    r[kHpRolled] = static_cast<uint8_t>(r[kHpRolled] > inc ? r[kHpRolled] - inc : 0);
+    int take = (inc + cp) & 0xFF;
+    const int most = dkk_hp_most(c, t);
+    if (r[kHpMax] - take > most) take = (r[kHpMax] - most) & 0xFF;
+    r[kHpMax] = static_cast<uint8_t>(take > r[kHpMax] ? 0 : r[kHpMax] - take);
+    r[kHp] = static_cast<uint8_t>(lost > r[kHpMax] ? 0 : r[kHpMax] - lost);
+}
+// A class's experience at a level (its row's table, 204 bytes a row)
+int32_t dkk_exp(const classes::Tables& t, const party::Character& c, int cls, int level)
+{
+    const int row = t.xp_row(&c, cls);
+    return t.i32(static_cast<uint16_t>(t.lay.class_records + row * 204 + (level & 0xFF) * 4));
+}
+uint8_t& dkk_best(party::Character& c, int cls)
+{
+    return dk_ext(c, cls == 7 ? party::kExtDkBestKnight : party::kExtBestLevels + cls);
+}
+DrainResult dkk_drain(party::Character& c, const classes::Tables& t, const Facts& f, Dice& d, int n)
+{
+    uint8_t* r = c.rec;
+    for (int k = 0; k < n; ++k) {
+        int held = 0, best = 0, cls = 0;
+        for (int j = 0; j < 8; ++j) {
+            const int l = static_cast<int8_t>(r[kLevels + j]);
+            if (l > 0 || static_cast<int8_t>(dkk_best(c, j)) > 0) ++held;
+            if (l > best) {
+                best = l;
+                cls = j;
+            } else if (l == best && best != 0 && dkk_exp(t, c, j, l) > dkk_exp(t, c, cls, best)) {
+                cls = j;
+            }
+        }
+        uint8_t& bl = dkk_best(c, cls);
+        if (static_cast<int8_t>(bl) <= static_cast<int8_t>(r[kLevels + cls])) bl = r[kLevels + cls];
+        if (get32(c.ext + party::kExtBestXp) <= get32(r + kExp)) put32(c.ext + party::kExtBestXp, get32(r + kExp));
+        if (dk_ext(c, party::kExtBestHp) <= r[kHpMax]) dk_ext(c, party::kExtBestHp) = r[kHpMax];
+        int32_t lo = 0, hi = 0;
+        if (best == 2) hi = dkk_exp(t, c, cls, 2);
+        else if (best != 1) {
+            lo = dkk_exp(t, c, cls, best - 1);
+            hi = dkk_exp(t, c, cls, best);
+        }
+        put32(r + kExp, lo + (hi - lo) / 2);
+        if (r[kLevels + cls] > 0) --r[kLevels + cls];
+        dkk_take_hp(c, t, f, d, t.u8(static_cast<uint16_t>(t.lay.class_masks + cls)), held);
+    }
+    for (int j = 0; j < 8; ++j)
+        if (static_cast<int8_t>(r[kLevels + j]) > 0 && r[kHpMax] != 0) return r[kHp] == 0 ? DrainResult::Collapses : DrainResult::Lives;
+    return DrainResult::Dies;
+}
 } // namespace
 
 DrainResult dk_drain(party::Character& c, const classes::Tables& t, const Facts& f, Dice& d, int n)
 {
+    if (t.lay.dkk) return dkk_drain(c, t, f, d, n);
     uint8_t* r = c.rec;
     for (int k = 0; k < n; ++k) {
         int held = 0, best = 0, cls = 0;
