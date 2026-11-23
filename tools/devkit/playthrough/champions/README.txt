@@ -52,3 +52,12 @@ nowhere and were "LOST on Auto"; a Delay word tells that menu apart. Hidden trea
 room) needs Look on the square (script 0x7ECA = 1). Huerzyd's tunnels: each passage's west end steps on to the next
 section (0,15 W -> 9,14; 0,14 W; 0,13 W -> 7,10); the Ancient Revered One at 4,10, out at 0,10 W into Duerghast's
 basement (15,0).
+The end (2026-11-23): Duerghast's stairs up are 5,15 S; Sir Lebaum on the balcony (0,12 from 0,5 W); after him the
+blue dragon and the gold dragons' flight are one story run into script 96 (the first citadel at 6,14 - after Tas's
+"DO YOU REST?" the camp's Exit lets the story go on: adv.sh passes a screen 7 "wait 14" by /E); the second citadel's
+stairs: 11,4 from 10,4 goes down to the uniforms (3,7: Yes to the disguise), 0,10 the dragons to Kernen (PICK
+Greet for Gravnak's ogres). Kernen (script 97): 11,14, 10,14 / 5,11 (the fire), 3,11 (greet; later the crown), 11,11 /
+14,9 ogres, 14,7 the crown, 14,2 rebels, 0,4 Gravnak, the gate 7,8. The compound (script 98): 7,4, 8,3, the vault
+7,1, the bedroom 10,5 (Look: the key), the library 9,2 (Use Key), the lab 11,2 (the salve), 4,3, 4,4, the dragon
+master 4,6 (lost on Auto: WINFIGHT), Myrtani 4,2, the three red dragons 3,1 - the ending, back to the overland.
+AUTOMONEY gives a too-heavy treasure up after a dozen tries (the vault's 95,000 coins).

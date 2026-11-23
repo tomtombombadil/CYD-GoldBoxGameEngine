@@ -2078,19 +2078,19 @@ int main(int argc, char** argv)
             t = tm; auto_money = 1;
         }
         else if (scr == 16 && getenv("AUTOMONEY") && auto_money && strstr(play::menu.prompt, "coin")) {
-            // (a refused amount - Overloaded - leaves the ground's money as it was: smaller amounts, then on)
-            static long last_sum = -1; static int step_ = 0, line_ = 0;
+            // (a refused amount - Overloaded - leaves the ground's money as it was: smaller amounts, then the
+            // next line; a dozen tries in all, then Exit for good - the rest stays on the ground)
+            static long last_sum = -1; static int step_ = 0, line_ = 0, tries = 0;
             static const char* const amounts[] = {"/S=65000;", "/S=2000;", "/S=500;", "/S=100;", "/S=20;"};
-            long sum = 0;
-            for (int m = 0; m < 7; ++m) sum += play::ground->money[m];
-            int kinds = 0;
-            for (int m = 0; m < 7; ++m) kinds += play::ground->money[m] > 0;
-            if (auto_money == 1) { last_sum = -1; step_ = 0; line_ = 0; auto_money = 2; }
-            else if (sum == last_sum && step_ < 5) ++step_;
-            else if (sum != last_sum) step_ = 0;
+            long sum = 0; int kinds = 0;
+            for (int m = 0; m < 7; ++m) { sum += play::ground->money[m]; kinds += play::ground->money[m] > 0; }
+            if (auto_money == 1) { last_sum = -1; step_ = 0; line_ = 0; tries = 0; auto_money = 2; }
+            else if (sum == last_sum) ++step_;
+            else step_ = 0;
             last_sum = sum;
-            if (step_ == 5) { step_ = 0; ++line_; last_sum = -1; t = line_ < kinds ? "v" : "/E"; }   // (the next coin's line)
-            else t = has('S') && money_left ? amounts[step_] : "/E";
+            if (auto_money == 3 || !money_left || !has('S') || ++tries > 14) { auto_money = 3; t = "/E"; }
+            else if (step_ >= 5) { step_ = 0; last_sum = -1; t = ++line_ < kinds ? "v" : (auto_money = 3, "/E"); }
+            else t = amounts[step_];
         }
         else if (scr == 5 && has('T') && has('V') && getenv("AUTOTAKE") && !auto_take) {
             // (the taker: of the first six, the one with the fewest items, then the lightest - a full or
