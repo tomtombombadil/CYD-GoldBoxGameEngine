@@ -1519,6 +1519,9 @@ void drain(Battle& b, int c, int n, Event* out, int cap, int* n_out, int hit = -
 // fights, nullptr otherwise - not in the Battle: its memory): the work on
 // fighter c's record (create::dk_drain) - 0 lives, 1 collapses, 2 dies
 extern int (*g_dk_drain)(Battle& b, int c, int n);
+// PoolRad's drain of a party member under the AD&D 1E rule (rules::kAdndDrain;
+// the caller's create::adnd_drain): 0 lives, 1 no hit points, 2 no level left
+extern int (*g_adnd_drain)(Battle& b, int c, int n);
 // Damage: HP 0 unconscious, -1..-9 dying (bleeding), -10 dead (HP kept 0
 // when down); true when they went down
 bool damage(Battle& b, int c, int amount);

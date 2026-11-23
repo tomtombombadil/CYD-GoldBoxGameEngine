@@ -301,4 +301,26 @@ int32_t dk_level_exp(const classes::Tables& t, int cls, int level);
 // else that level's start), the class values, "able to train"
 void dk_restore(party::Character& c, const classes::Tables& t);
 
+// ---- The AD&D 1E Level Drain & Restoration rule (rules::kAdndDrain; Tom,
+// 2026-11-23; DMG p.119, PHB p.53), the hit points of each level and each
+// drain kept in the level book (engine/levelbook.h) by the character's name.
+// A party member's drain of n levels: each the highest level held - a dual-
+// classed human's former class too - (a tie: the class whose level needs
+// the most experience; a second level from a class not drained yet when
+// there is one), that level's hit points (the book's, else the character's
+// average a level), the experience to the middle of the level below; the
+// game's own bookkeeping kept (PoolRad / Curse family's lost levels 0xE7 /
+// 0xE8, the Darkness family's best levels / experience / hit points) so the
+// game's Restoration still works with the rule off. Lives / collapses (hit
+// points 0) / dies (no level left, or no hit points most)
+DrainResult adnd_drain(party::Character& c, const classes::Tables& t, int n);
+// Restoration of the latest drain the book holds that still fits (the class
+// one level below it): the level, its hit points, the experience at least
+// the level's start. False: none in the book (the caller: the game's own)
+bool adnd_restore(party::Character& c, const classes::Tables& t);
+// A drain in the book that a Restoration would give back (the temple's test)
+bool adnd_drained(const party::Character& c);
+// The experience level `level` of class `cls` starts at, as each game reckons
+int32_t level_start(const classes::Tables& t, const party::Character& c, int cls, int level);
+
 } // namespace create

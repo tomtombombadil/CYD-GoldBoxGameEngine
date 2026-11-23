@@ -24,6 +24,7 @@
 #include "engine/classes.h"
 #include "engine/combat.h"
 #include "engine/create.h"
+#include "engine/levelbook.h"
 #include "engine/items.h"
 #include "engine/magic.h"
 #include "engine/layout.h"
@@ -8700,20 +8701,60 @@ void dk_temple_say(pic::Canvas& c, party::Character& ch, int word, bool ask_anyw
     }
 }
 
+// The level book's file (engine/levelbook.h): _CYD/<folder>/LEVELS.TXT
+void levels_path(char* out, size_t cap) { snprintf(out, cap, "%s/LEVELS.TXT", d->cache_dir); }
+char* lb_load(size_t* n)
+{
+    char path[200];
+    levels_path(path, sizeof path);
+    plat::File f = plat::open(path, "r");
+    const size_t sz = f ? f.size() : 0;
+    char* buf = static_cast<char*>(malloc(sz + 1));
+    if (!buf) return nullptr;
+    const int got = sz ? f.read(reinterpret_cast<uint8_t*>(buf), sz) : 0;
+    f.close();
+    *n = got > 0 ? static_cast<size_t>(got) : 0;
+    buf[*n] = 0;
+    return buf;
+}
+void lb_save(const char* text, size_t n)
+{
+    char path[200], tmp[210];
+    levels_path(path, sizeof path);
+    snprintf(tmp, sizeof tmp, "%s.TMP", path);
+    plat::File f = plat::open(tmp, "w");
+    if (!f) return;
+    const bool ok = f.write(reinterpret_cast<const uint8_t*>(text), n) == n;
+    f.close();
+    if (ok) plat::rename(tmp, path);
+    else plat::remove(tmp);
+}
+void lb_append(const char* line, size_t n)
+{
+    char path[200];
+    levels_path(path, sizeof path);
+    plat::File f = plat::open(path, "a");
+    if (f) f.write(reinterpret_cast<const uint8_t*>(line), n);
+    f.close();
+}
+const levelbook::Store kLevelBook = {lb_load, lb_save, lb_append};
+
 // Restoration at the Darkness family's / the Dark Queen's temple: the spell's
 // own routine (Darkness GAME.OVR 0x2EBEC - its temple's ov+0x5A9 calls spell
 // 102; create::dk_restore: Treasures', Death Knights', the Dark Queen's own
 // too); false when no level was lost
 bool dk_restore(party::Character& ch)
 {
-    if (!create::drained(ch, hl())) return false;
+    const bool adnd = rules::adnd(rules::kAdndDrain);
+    if (!create::drained(ch, hl()) && !(adnd && create::adnd_drained(ch))) return false;
+    if (adnd) rules::remove_affects(ch, d->prof->cures.feeblemind);   // (PHB p.53: Restoration cures Feeblemind)
     MagicRules* mr = nullptr;           // (the rule tables for the moment - the temple holds none)
     if (!load_rules(mr)) return false;
     int before = 0, after = 0;
-    for (int k = 0; k < 8; ++k) before += ch.rec[0x109 + k];
+    for (int k = 0; k < 16; ++k) before += ch.rec[0x109 + k];   // (the levels and the former ones)
     create::dk_restore(ch, mr->tables);
     delete mr;
-    for (int k = 0; k < 8; ++k) after += ch.rec[0x109 + k];
+    for (int k = 0; k < 16; ++k) after += ch.rec[0x109 + k];
     rules::recalc(ch, *names, d->facts);
     return after != before;             // (none could rise - Death Knights' past its 3,500,000: no more to do)
 }
@@ -8804,7 +8845,8 @@ void dk_cure(int i, pic::Canvas& c)
         ch.rec[0x1A4] = 1;
         break;
     case 10:                                        // Restoration
-        if (!create::drained(ch, hl())) say = profile::kDkNoLostLevels, ask = true;
+        if (!create::drained(ch, hl()) && !(rules::adnd(rules::kAdndDrain) && create::adnd_drained(ch)))
+            say = profile::kDkNoLostLevels, ask = true;
         else dk_restore(ch);
         break;
     default: return;
@@ -19323,6 +19365,7 @@ const char* open(const char* data_dir, games::Game g, pic::Canvas& c, const char
     }
     strncpy(d->data_dir, data_dir, sizeof d->data_dir - 1);
     if (cache_dir) strncpy(d->cache_dir, cache_dir, sizeof d->cache_dir - 1);
+    levelbook::set_store(d->cache_dir[0] ? &kLevelBook : nullptr);   // (the AD&D 1E drain's book)
     load_icon_picks();
     title_music = (musicfiles::songs(d->data_dir, profile::first(g)) >> 1) & 1;
 
@@ -19484,6 +19527,7 @@ void reset_session()
 
 void close()
 {
+    levelbook::set_store(nullptr);
     for (auto& r : ready_look) r = ReadyLook{};
     // (a fight first: its end reads the script's parked code back into the
     // machine - host and vm still there)

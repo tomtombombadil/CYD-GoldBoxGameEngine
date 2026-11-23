@@ -3432,6 +3432,7 @@ int drain_class(const Battle& b, const Rec& r, int32_t* exp)
 } // namespace
 
 int (*g_dk_drain)(Battle& b, int c, int n) = nullptr;
+int (*g_adnd_drain)(Battle& b, int c, int n) = nullptr;
 
 void drain(Battle& b, int c, int n, Event* out, int cap, int* n_out, int hit)
 {
@@ -3466,6 +3467,19 @@ void drain(Battle& b, int c, int n, Event* out, int cap, int* n_out, int hit)
     if (f.status() == party::Animated) {
         put_down(party::Gone, Ev::DeadForever);
         r[kHpMax] = 0;
+        return;
+    }
+    // (the AD&D 1E rule's drain of a party member - g_adnd_drain: 2 gone, 1
+    // no hit points left; PoolRad's consequences kept: dead forever, killed)
+    if (g_adnd_drain && f.member >= 0) {
+        if (f.status() == party::Gone) return;
+        const int res = g_adnd_drain(b, c, n);
+        if (res == 2) {
+            put_down(party::Gone, Ev::DeadForever);
+            r[kHpMax] = 0;
+        } else if (r[kHp] == 0 && f.status() != party::Dead) {
+            put_down(party::Dead, Ev::Killed);
+        }
         return;
     }
     for (int k = 0; k < n; ++k) {

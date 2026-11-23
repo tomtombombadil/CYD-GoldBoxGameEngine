@@ -380,7 +380,7 @@ stay in the session's scratch space, never in the repo.
   - AD&D 1E Rules (section 12): Magic Missile, Multi-Class Hit Points,
     Thrown Weapons, Magic Items (PoolRad's Flame Tongue only - oil is no
     magic item), Age with Time, Power Word Kill, Protection from Evil,
-    Raising the Dead.
+    Level Drain & Restoration, Raising the Dead.
   - Game Fixes: Every Game and one page a game (in a game: Every Game and
     that game's); each fix its own switch, on each page of a game it
     touches (`rules::fix_info`: names, games, help).
@@ -3299,6 +3299,19 @@ the game's Settings (As Original: all of them).
     `rules::thrown_hit_shift`; the party's members - monsters' records are
     their own). Darts throw 3 a round in every game (the ITEMS file's 6 half
     attacks - as the originals).
+  - **Level Drain & Restoration** (v0.215.0; Tom, 2026-11-23; `rules::kAdndDrain`, every game with a drain or
+    Restoration - all but Secret and Champions): the books' rules (DMG p.119, PHB p.53) - the highest level drained,
+    a dual-classed human's former levels included (ties: the class whose level needs the most experience), a
+    multi-class's second level from another class, the hit points that level gave, experience down to the middle of
+    the level below; Restoration gives back the level drained last with its hit points, experience at least that
+    level's start, and cures Feeblemind (spell and temple). What the saves don't keep - each level's hit points and
+    each drain - is in the engine's level book `_CYD/<folder>/LEVELS.TXT` (`engine/levelbook.*`, by name; training
+    writes the hit points); a level it lacks: the hit points max / the levels held. The game's own bookkeeping (lost
+    levels 0xE7 / 0xE8, best levels) kept too, so the rule off still restores. Left out (Tom): the 1 day / caster
+    level limit, the 0-level person (no level left = dead as the originals), rising as undead, ageing. Rule off: the
+    originals' routines (checked against them run in Unicorn). Checks: sweep `behave levels` ONLY=adnd (A1-A8
+    against the books, 1500 characters a game; fails in all seven games with ADNDOFF=200), fight_check R21 (the
+    rule in fuzzed fights: the book's lines against the levels and hit points lost).
   - **Raising the Dead**: Raise Dead and Resurrection take no Constitution
     (the 1E books have no such cost - Tom). The originals take a point for
     Raise Dead (spell and temple: Secret's, the Darkness-type temples) -

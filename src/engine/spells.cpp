@@ -494,8 +494,11 @@ int cast(party::Party& p, int caster, int target, const CampSpell& cs, const cla
         }
         break;
     case Does::Restore:
-        for (int k = 0; k < n; ++k)
-            if (create::restore(p.m[who[k]], t) && cs.word) o.say(who[k], Said::Word);
+        for (int k = 0; k < n; ++k) {
+            // (AD&D 1E: Restoration cures Feeblemind too - PHB p.53)
+            const bool fed = rules::adnd(rules::kAdndDrain) && cures.feeblemind && cure(p.m[who[k]], cures.feeblemind);
+            if ((create::restore(p.m[who[k]], t) || fed) && cs.word) o.say(who[k], Said::Word);
+        }
         break;
     case Does::HealOrUnpoison:
         for (int k = 0; k < n; ++k) {
@@ -672,7 +675,10 @@ int cast(party::Party& p, int caster, int target, const CampSpell& cs, const cla
         }
         break;
     case Does::DkRestore:
-        for (int k = 0; k < n; ++k) create::dk_restore(p.m[who[k]], t);
+        for (int k = 0; k < n; ++k) {
+            if (rules::adnd(rules::kAdndDrain) && cures.feeblemind) cure(p.m[who[k]], cures.feeblemind);   // (PHB p.53)
+            create::dk_restore(p.m[who[k]], t);
+        }
         break;
     case Does::ProtFire:
         // Darkness (GAME.OVR 0x2EFEC): a ranger (the casters) its own effect for

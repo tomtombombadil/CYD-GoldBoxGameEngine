@@ -406,9 +406,10 @@ enum Adnd : uint16_t {
     kAdndAge      = 0x40,   // Age with Time: a year older for each year of game time
     kAdndPwk      = 0x80,   // Power Word Kill: by hit points, 120 in all
     kAdndProtEvil = 0x100,  // Protection from Evil: -2 to hit for evil attackers; the 10' radius wards those near
-    kAdndAll      = 0x1DF,
+    kAdndDrain    = 0x200,  // Level Drain & Restoration: DMG p.119 / PHB p.53 (create::adnd_drain / adnd_restore)
+    kAdndAll      = 0x3DF,
 };
-constexpr int kAdndCount = 8;
+constexpr int kAdndCount = 9;
 void set_adnd(uint16_t bits);
 uint16_t adnd_bits();
 bool adnd(uint16_t rule);

@@ -351,14 +351,6 @@ to the bottom with their version, then drop off after a while. Synced to
 the Project as claude/TODO.md.
 
 ## Tom
-- [ ] **AD&D 1E level drain / Restoration as 1E switches?** (Tom, 2026-11-23: wants the books' rules behind an AD&D 1E
-      switch, ageing left out; asked whether it's feasible given what saves don't keep). Claude's answer: yes, in
-      three tiers - (1) needs nothing new (mid-point experience, ties, one level from each class, dual-classed
-      highest level, Restoration's exact experience, the Feeblemind cure); (2) needs a per-character record the
-      engine keeps beside the saves, by name, as QUICK.TXT (each level's hit points, which class each lost level
-      came from, the game time of the drain) with a fallback when it's missing; (3) left out (rising as undead;
-      possibly the 0-level person). Tom, 2026-11-23: leave out the 1 day / caster level limit, rising as undead,
-      the 0-level person and ageing. Waiting on Tom: one switch or two (Claude recommends one - below)?
 - [ ] **The AD&D 1E books** (Tom uploaded them 2026-11-23: the Project's "1st Edition.zip" - PHB, DMG, Unearthed
       Arcana, Premium Editions; unzip to scratch /tmp/claude-0/books, pdftotext): level drain / Restoration done
       against them (the Project's claude/drain_restore_facts.md, with pages). Claude, next: every AD&D 1E Rules
@@ -2011,6 +2003,8 @@ the Project as claude/TODO.md.
       credits and maps should look like the original's.
 
 ## Done
+- [x] v0.215.0 AD&D 1E Level Drain & Restoration, one switch (Tom, 2026-11-23): the books' drain and Restoration
+      with the level book `_CYD/<folder>/LEVELS.TXT`; left out the time limit, 0-level, undead, ageing (SPEC 12).
 - [x] v0.202.1 (the port's sanitizer run, 2026-11-15): `panel_field_sig` shifted -1 left (no fighter's
       turn) - undefined before C++20, the port builds C++17; the value is the same.
 - [x] v0.201.2 (the port's button test): the Dark Queen's knights read "Monk 9" on the Companion's
