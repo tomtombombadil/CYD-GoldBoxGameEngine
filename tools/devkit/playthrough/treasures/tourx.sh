@@ -1,7 +1,7 @@
 #!/bin/bash
 # tourx.sh "x,y x,y ...": go.sh to each square in turn from slot J, a log line each
 P=/tmp/claude-0/tplay
-export AUTOLOOT=${AUTOLOOT-1} AUTOTAKE=${AUTOTAKE-/S/T/I}
+export AUTOLOOT=${AUTOLOOT-1} AUTOTAKE=${AUTOTAKE-/S/T/I} TAKELEAVE=1 LOOTLOG=1
 for g in $1; do
   echo "== to $g" | tee -a $P/transcript.txt
   AUTOPICK="${AUTOPICK:-Attack,Fight,Take,Yes}" $P/bin/go.sh J "|B" $g 2>&1 | grep -v "^  TEXT:  *%" | tail -${TL:-7} | cut -c1-200

@@ -30,6 +30,14 @@
       moves. Also seen (not looked into): the caves' wyvern at 15,8 - the engine shows its big picture, DOSBox the
       3D view with the sprite. The fight budget check (budgetx.sh) reads ~176 KB in every game, a 64 KB block from a
       system library among it (the PC build's, not the board's) - the measure needs that left out.
+- [x] v0.214.10 (the PortMaster session's Treasures play-through, 2026-11-23): **a shop's goods came up in the next
+      fight's treasure** - SHOP n put them on the item list and nothing took them off when the shop was left (Ruathym:
+      a 34-item treasure showed 64, the list's cap). The original (DOSBox, the same save: the shop at 8,11, Exit, the
+      guards' fight): two pages, the guards' own items, 2012 experience each as the engine without the goods. Fixed in
+      the VM (the list cleared as SHOP n is left); host test. Every SHOP n game (Secret on) had it.
+- [ ] Curse / PoolRad shops (TREASURE then COMBAT with the shop flag): their goods stay on the list until the next
+      CLEARMONSTERS - what the original does on leaving such a shop is not checked (a script that fights without
+      CLEARMONSTERS after a shop would show the goods as treasure). For the session that has those games' kits.
 - [ ] v0.214.0 **Tom: the overland's movement keys** (Tom, 2026-11-22): on PoolRad's wilderness the turn keys
       greyed (they do nothing there) and Turn Around a down arrow (a step south); on Champions' / Death Knights' /
       the Dark Queen's overland the turn keys show their diagonal steps (north-west / north-east) and Turn Around a
