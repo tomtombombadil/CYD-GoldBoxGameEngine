@@ -343,6 +343,14 @@ to the bottom with their version, then drop off after a while. Synced to
 the Project as claude/TODO.md.
 
 ## Tom
+- [ ] **AD&D 1E level drain / Restoration as 1E switches?** (Tom, 2026-11-23: wants the books' rules behind an AD&D 1E
+      switch, ageing left out; asked whether it's feasible given what saves don't keep). Claude's answer: yes, in
+      three tiers - (1) needs nothing new (mid-point experience, ties, one level from each class, dual-classed
+      highest level, Restoration's exact experience, the Feeblemind cure); (2) needs a per-character record the
+      engine keeps beside the saves, by name, as QUICK.TXT (each level's hit points, which class each lost level
+      came from, the game time of the drain) with a fallback when it's missing; (3) left out (rising as undead;
+      possibly the 0-level person). Waiting on Tom: go ahead? one switch or two (Level Drain / Restoration)?
+      the 0-level person in or out?
 - [ ] **The AD&D 1E books** (Tom uploaded them 2026-11-23: the Project's "1st Edition.zip" - PHB, DMG, Unearthed
       Arcana, Premium Editions; unzip to scratch /tmp/claude-0/books, pdftotext): level drain / Restoration done
       against them (the Project's claude/drain_restore_facts.md, with pages). Claude, next: every AD&D 1E Rules
