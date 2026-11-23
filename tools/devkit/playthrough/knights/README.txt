@@ -32,3 +32,7 @@ Lessons (Gargath outpost):
 - Vingaard (block 33): the inn is entered across the map's west edge (0,2 west -> 15,2); the dream merchant's
   shop event 0x22 (8,14); Sir Thom's dream comes by resting in an inn room (12,0) - the pre-camp sets the rest
   words 1 / 100 (an encounter at once).
+- Vingaard's red-door trail (after the dream, 0x4C53 = 3): step south from 4,9 (0x4C0F = 1), then only through
+  red doors (types the table at 9D6B marks 1) and open sides - a door marked 2 ends it ("whispers fade away").
+  redpath.py <slot> <x,y,facing> <goal> plans it, drive.sh walks it a step at a time (presses, Leave, No); the
+  door is revealed at 12,11 - answer Talk, then Good.
