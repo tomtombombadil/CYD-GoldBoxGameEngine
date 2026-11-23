@@ -62,6 +62,24 @@
       ambush: the party trained to 10th by the Trainer first), Vingaard (the dream merchant, Sir Thom's dream), the
       High Clerist's Tower, the Dragon Pit, Vingaard's second trail (10 red doors to 11,15), Kalaman's second visit,
       Cerberus, its graveyard and the crypt under it. Engine faults found: v0.214.4, v0.214.5, v0.214.6, v0.214.7.
+- [x] v0.214.9 (Tom, 2026-11-23: "verify that the Restoration spell and Restoration from healers/temples works
+      properly with the level drain mechanics"): each game's Restoration routine RUN in Unicorn on 3000 drained
+      characters (single, multi, dual-classed, the Krynn knight; tools/devkit/oracles/restore_emu.py, drain_queen.py
+      restore; sweep `behave levels` ONLY=restore with RSTMAKE / RSTIN / RSTCHK) and compared field by field: PoolRad
+      (GAME.OVR 0x29C5B), Curse (0x31D1D), Gateway (0x38C29), Darkness (0x2EBEC), Treasures (0x38136), Death Knights
+      (0x2BF32), the Dark Queen (DQK.EXE 0x5838C) - all 0 differ now. Secret has no Restoration; Champions has the
+      spell's row (cleric 7th) but no routine and no cleric reaches it. Fixed: Darkness / Treasures - with one level
+      lost and the experience already past the best, the original sets the new level's start (the engine kept it);
+      Death Knights - Darkness's routine was used (7 classes, Darkness's experience rows): now its own (8 classes,
+      the knight's best byte, its rows, a class whose next level starts past 3,500,000 never chosen, its
+      Constitution figure); the Dark Queen - its own (its class order - Darkness's routine read its best levels in the
+      engine's order, its experience routine, its Constitution figure); the Darkness-family / Dark Queen temples'
+      Restoration and Repair were a short version of their own (the first drained class, no Constitution part):
+      now the spell's routine, as the originals' temples call it; "Drained" on the Companion: the Dark Queen's best
+      levels in its own order, Death Knights' knight counted. The old Darkness model (oracles/darkness.py R11) had
+      the same experience mistake - put right. Left as SPEC 12: PoolRad / Curse / Gateway's no-class-can-rise case.
+- [ ] Curse's `behave` classes: 9 "race 5 class 2 level 7-9 Str 16-18: may train - doesn't, the original does"
+      (halfling fighters) - already so before v0.214.9 (found 2026-11-23, with PoolRad's below).
 - [x] v0.214.8 (Tom, 2026-11-23: "verify the level drain mechanics ... multiclass characters and human characters
       that change class ... across the games"): each game's drain routine RUN in Unicorn on 2000 made characters
       (single, two and three classes, a human with a former class, the Krynn knight; one and two levels; dice high

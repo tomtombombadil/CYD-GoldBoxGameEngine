@@ -212,8 +212,11 @@ def restore(con, hp, hpmax, bhp, rolled, exp, bexp, lv, bl):
         rolled = (rolled + per - cp) & 0xFF
         hpmax = (hpmax + per) & 0xFF
     lv[c] += 1
-    if lost == 1:
-        exp = max(exp, bexp)
+    # (0x2EDC0: the best experience only for the last level lost AND when
+    # more than now - otherwise, also when now is more, the new level's
+    # start; the routine run in Unicorn agrees - restore_emu.py)
+    if lost == 1 and exp < bexp:
+        exp = bexp
     else:
         exp = E(c, lv[c])
     return lv, hp, hpmax, rolled, exp

@@ -8700,32 +8700,22 @@ void dk_temple_say(pic::Canvas& c, party::Character& ch, int word, bool ask_anyw
     }
 }
 
-// Restoration (Darkness's spell 102, GAME.OVR 0x2EBEC): one level back in a
-// drained class (the first; the original takes the one whose next level
-// costs least), hit points back by the lost ones shared over the levels
-// lost; the last level back brings the best experience back
+// Restoration at the Darkness family's / the Dark Queen's temple: the spell's
+// own routine (Darkness GAME.OVR 0x2EBEC - its temple's ov+0x5A9 calls spell
+// 102; create::dk_restore: Treasures', Death Knights', the Dark Queen's own
+// too); false when no level was lost
 bool dk_restore(party::Character& ch)
 {
-    int lost = 0, cls = -1;
-    for (int k = 0; k < 7; ++k) {
-        const int l = ch.rec[0x109 + k], best = ch.ext[party::kExtBestLevels + k];
-        if (l < best) {
-            lost += best - l;
-            if (cls < 0) cls = k;
-        }
-    }
-    if (cls < 0) return false;
-    const int best_hp = ch.ext[party::kExtBestHp];
-    if (ch.hp_max() < best_hp) {
-        const int gain = (best_hp - ch.hp_max()) / lost;
-        ch.rec[0x78] = static_cast<uint8_t>(ch.hp_max() + gain);
-        ch.rec[0x1A4] = static_cast<uint8_t>(ch.hp() + gain);
-        ch.rec[0x12C] = static_cast<uint8_t>(ch.rec[0x12C] + gain);
-    }
-    ++ch.rec[0x109 + cls];
-    if (lost == 1) memcpy(ch.rec + 0x127, ch.ext + party::kExtBestXp, 4);
+    if (!create::drained(ch, hl())) return false;
+    MagicRules* mr = nullptr;           // (the rule tables for the moment - the temple holds none)
+    if (!load_rules(mr)) return false;
+    int before = 0, after = 0;
+    for (int k = 0; k < 8; ++k) before += ch.rec[0x109 + k];
+    create::dk_restore(ch, mr->tables);
+    delete mr;
+    for (int k = 0; k < 8; ++k) after += ch.rec[0x109 + k];
     rules::recalc(ch, *names, d->facts);
-    return true;
+    return after != before;             // (none could rise - Death Knights' past its 3,500,000: no more to do)
 }
 
 // Darkness's cures (its temple overlay; facts_shops.md 3): free, done at once;
@@ -8814,7 +8804,8 @@ void dk_cure(int i, pic::Canvas& c)
         ch.rec[0x1A4] = 1;
         break;
     case 10:                                        // Restoration
-        if (!dk_restore(ch)) say = profile::kDkNoLostLevels, ask = true;
+        if (!create::drained(ch, hl())) say = profile::kDkNoLostLevels, ask = true;
+        else dk_restore(ch);
         break;
     default: return;
     }
@@ -8857,7 +8848,7 @@ void dk_repair()
             ch.rec[0x195] = party::Okay;
             ch.rec[0x196] = 1;
         }
-        while (dk_restore(ch)) {}
+        for (int i = 0; i < 64 && dk_restore(ch); ++i) {}
         rules::recalc(ch, *names, d->facts);
         if (mr) create::dk_con_recompute(ch, mr->tables);
         if (ch.health() != party::Gone) ch.rec[0x1A4] = ch.rec[0x78];
@@ -18406,7 +18397,7 @@ void member_look(const party::Character& ch, PanelMember& m)
     m.hp_max = static_cast<int16_t>(ch.hp_max());
     m.health = static_cast<uint8_t>(ch.health());
     m.fx = member_fx(ch);
-    m.drained = create::drained(ch);
+    m.drained = create::drained(ch, hl());
     m.current = false;
     m.ready = 0;
     // (View's rule: a class with levels, and a former class once a newer one passed it)
@@ -18439,7 +18430,7 @@ bool panel_member(int i, PanelMember& m)
     m.hp_max = static_cast<int16_t>(ch.hp_max());
     m.health = static_cast<uint8_t>(ch.health());
     m.fx = member_fx(ch);
-    m.drained = create::drained(ch);
+    m.drained = create::drained(ch, hl());
     const int k = member_fighter(i);
     if (k >= 0 && fg->b.f[k].fleeing) m.fx |= kPxFleeing;
     m.current = fg ? (fg->cur >= 0 && fg->cur < fg->b.n && fg->b.f[fg->cur].member == i) : pt->selected == i;

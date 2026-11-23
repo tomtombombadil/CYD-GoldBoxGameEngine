@@ -1086,7 +1086,11 @@ void maxhp()
 // points and the fall (D1 - D6).
 namespace drn {
 
-enum Kind { kPool, kDark, kKnights, kQueen, kNone };
+enum Kind { kPool, kDark, kKnights, kQueen, kCurse, kNone };
+// The part's mode: false the drain (part drain), true Restoration (part
+// restore - the characters made drained, the engine's Restoration against
+// the original's routine; Curse and Gateway join, their records Curse's)
+bool g_rst = false;
 Kind kind()
 {
     switch (play::d->prof->game) {
@@ -1095,18 +1099,21 @@ Kind kind()
     case games::Game::TreasuresOfTheSavageFrontier: return kDark;
     case games::Game::DeathKnightsOfKrynn: return kKnights;
     case games::Game::DarkQueenOfKrynn: return kQueen;
+    case games::Game::CurseOfTheAzureBonds:
+    case games::Game::GatewayToTheSavageFrontier: return g_rst ? kCurse : kNone;
     default: return kNone;
     }
 }
 size_t rec_size(Kind k)
 {
     return k == kPool ? party::kPoolRecordSize : k == kDark ? party::kDarknessRecordSize
-         : k == kQueen ? party::kQueenRecordSize : party::kDkkRecordSize;
+         : k == kQueen ? party::kQueenRecordSize : k == kCurse ? party::kRecordSize : party::kDkkRecordSize;
 }
 void to_orig(Kind k, const party::Character& c, uint8_t* out)
 {
     static uint8_t wiz[party::kDkkSpellSize];
     if (k == kPool) party::to_pool(c, out);
+    else if (k == kCurse) memcpy(out, c.rec, party::kRecordSize);
     else if (k == kDark) party::to_darkness(c, out);
     else if (k == kQueen) party::to_queen(c, out);
     else party::to_dkk(c, out, wiz);
@@ -1115,6 +1122,7 @@ void from_orig(Kind k, const uint8_t* in, party::Character& c)
 {
     c = party::Character{};
     if (k == kPool) party::from_pool(in, c);
+    else if (k == kCurse) memcpy(c.rec, in, party::kRecordSize);
     else if (k == kDark) party::from_darkness(in, c);
     else if (k == kQueen) party::from_queen(in, c);
     else party::from_dkk(in, nullptr, c);
@@ -1135,9 +1143,9 @@ void make(party::Character& c, int shape, Kind k)
     static const int kRaces[] = {1, 2, 4, 7};
     r[0x74] = static_cast<uint8_t>(shape == 3 ? 7 : kRaces[rnd(4)]);
     r[0x11B] = static_cast<uint8_t>(rnd(9));                              // alignment
-    const int top = k == kPool ? 9 : k == kQueen ? 30 : 18;   // (the Dark Queen's experience past 17th: steps)
+    const int top = k == kPool ? 9 : k == kQueen ? 30 : k == kCurse ? 11 : 18;   // (the Dark Queen's experience past 17th: steps)
     int hd = 0;
-    auto lv = [&](int cls, int l) { r[0x109 + cls] = static_cast<uint8_t>(l); hd = std::max(hd, l); };
+    auto lv = [&](int cls, int l) { if (g_rst) l = std::min(l, top); r[0x109 + cls] = static_cast<uint8_t>(l); hd = std::max(hd, l); };
     static const int kSingles[] = {0, 2, 3, 4, 5, 6};
     static const int kPairs[][2] = {{0, 2}, {0, 5}, {0, 6}, {2, 5}, {2, 6}, {5, 6}, {0, 4}};
     static const int kTriples[][3] = {{0, 2, 5}, {2, 5, 6}, {0, 2, 6}};
@@ -1161,7 +1169,7 @@ void make(party::Character& c, int shape, Kind k)
         int now = kSingles[rnd(6)];
         if (now == old) now = old == 2 ? 5 : 2;
         const int ol = 2 + rnd(top - 1);
-        r[0x111 + old] = static_cast<uint8_t>(ol);                         // the former class
+        r[0x111 + old] = static_cast<uint8_t>(g_rst ? std::min(ol, top) : ol);                       // the former class
         r[0xE6] = static_cast<uint8_t>(ol);
         const int nl = std::max(1, ol + rnd(7) - 4);                         // below, at or past it
         lv(now, nl);
@@ -1186,6 +1194,29 @@ void make(party::Character& c, int shape, Kind k)
         c.ext[party::kExtBestHp] = static_cast<uint8_t>(std::min(255, hpmax + rnd(20)));
     }
     if (k == kPool && rnd(4) == 0) { r[0xE7] = static_cast<uint8_t>(1 + rnd(3)); r[0xE8] = static_cast<uint8_t>(rnd(30)); }
+    if (!g_rst) return;
+    // Restoration's cases: drained as each game keeps it - lost levels and
+    // their hit points (PoolRad, Curse, Gateway: 0x00-0x03 levels, now and
+    // then none), or best levels / experience / hit points above the now
+    // (the Darkness family, Death Knights' knight too)
+    if (k == kPool || k == kCurse) {
+        r[0xE7] = static_cast<uint8_t>(rnd(5) ? 1 + rnd(3) : 0);
+        r[0xE8] = static_cast<uint8_t>(rnd(60));
+        return;
+    }
+    memset(c.ext + party::kExtBestLevels, 0, 7);
+    c.ext[party::kExtDkBestKnight] = 0;
+    for (int j = 0; j < 8; ++j) {
+        const int l = r[0x109 + j];
+        if (!l) continue;
+        const int best = rnd(3) ? l + rnd(3) : l;
+        if (j < 7) c.ext[party::kExtBestLevels + j] = static_cast<uint8_t>(best);
+        else if (k == kKnights) c.ext[party::kExtDkBestKnight] = static_cast<uint8_t>(best);
+        else if (k == kQueen) c.ext[party::kExtBestLevels + 1] = static_cast<uint8_t>(best);   // (its knight: 2nd in its order)
+    }
+    const int32_t xp = get32(r + 0x127);
+    put32(c.ext + party::kExtBestXp, rnd(4) ? xp + rnd(200000) : std::max(0, xp - rnd(50000)));
+    c.ext[party::kExtBestHp] = static_cast<uint8_t>(rnd(4) ? std::min(255, hpmax + rnd(40)) : std::max(0, hpmax - rnd(10)));
 }
 
 void write_cases(const char* file, int n)
@@ -1211,6 +1242,15 @@ void write_cases(const char* file, int n)
 
 int g_hi = 1;
 int die(int n) { return g_hi ? n - 1 : 0; }
+
+// The engine's Restoration on the character (the spell's, a temple's)
+int engine_restore(party::Character& c)
+{
+    const Kind k = kind();
+    if (k == kPool || k == kCurse) create::restore(c, m->tables);
+    else create::dk_restore(c, m->tables);
+    return 0;
+}
 
 // The engine's drain on the character, as a fight does it
 int engine_drain(party::Character& c, int n, int hi)
@@ -1267,7 +1307,7 @@ void check(const char* in_file, const char* out_file)
     std::ifstream fo(out_file);
     static party::Character eng, orig;
     static uint8_t a[0x200], b2[0x200];
-    int n = 0, bad = 0, fails = 0, by_shape[5] = {}, bad_shape[5] = {};
+    int n = 0, bad = 0, fails = 0, undefined = 0, by_shape[5] = {}, bad_shape[5] = {};
     std::map<std::string, int> what;
     while (std::getline(fo, line)) {
         std::istringstream s(line);
@@ -1280,7 +1320,10 @@ void check(const char* in_file, const char* out_file)
         memset(a, 0, sizeof a);
         unhex(cs.first, a);
         from_orig(k, a, eng);
-        const int est = engine_drain(eng, cs.second[0], cs.second[1]);
+        static party::Character before;
+        before = eng;
+        const uint8_t* a2 = before.rec;
+        const int est = g_rst ? engine_restore(eng) : engine_drain(eng, cs.second[0], cs.second[1]);
         memset(b2, 0, sizeof b2);
         unhex(hex, b2);
         from_orig(k, b2, orig);
@@ -1297,21 +1340,31 @@ void check(const char* in_file, const char* out_file)
         };
         const uint8_t* e = eng.rec;
         const uint8_t* o = orig.rec;
-        for (int j = 0; j < 8; ++j) {
+        for (int j = 0; j < 8 && !(g_rst && (k == kPool || k == kCurse) && get32(o + 0x127) == 10000000); ++j) {
             char nm[16];
             snprintf(nm, sizeof nm, "D1 level%d", j);
             cmp(nm, e[0x109 + j], o[0x109 + j]);
             snprintf(nm, sizeof nm, "D1 former%d", j);
             if (j < 7) cmp(nm, e[0x111 + j], o[0x111 + j]);
         }
+        // (Restoration with no class able to rise - every one at its race
+        // limit or last level: PoolRad's / Curse's / Gateway's routine raises
+        // the class its uninitialised local names and sets the experience to
+        // its first limit, 10,000,000 - undefined; the engine raises none.
+        // Counted apart, the levels and experience not compared)
+        const bool nopick = g_rst && (k == kPool || k == kCurse) && get32(o + 0x127) == 10000000;
+        if (nopick) {
+            ++undefined;
+            for (int j = 0; j < 8; ++j) cmp("R1 level (none to raise)", e[0x109 + j], a2[0x109 + j]);
+        } else
         cmp("D2 exp", get32(e + 0x127), get32(o + 0x127));
         cmp("D3 hpmax", e[0x78], o[0x78]);
         cmp("D3 hp", e[0x1A4], o[0x1A4]);
         cmp("D3 rolled", e[0x12C], o[0x12C]);
-        if (status != 8 && k != kQueen) cmp("D4 hitdice", e[0xE5], o[0xE5]);   // (a character gone: its class values unused - the
+        if (status != 8 && k != kQueen && !g_rst) cmp("D4 hitdice", e[0xE5], o[0xE5]);   // (a character gone: its class values unused - the
                                                                    // engine's class_bonuses reads a level of 255 there)
-        if (k != kPool) cmp("D4 multi", e[0xE6], o[0xE6]);   // (PoolRad has none: its loader copies the hit dice there)
-        if (k == kPool) {
+        if (k != kPool && k != kCurse) cmp("D4 multi", e[0xE6], o[0xE6]);   // (PoolRad has none: its loader copies the hit dice there)
+        if (k == kPool || k == kCurse) {
             cmp("D5 drained", e[0xE7], o[0xE7]);
             cmp("D5 drainedhp", e[0xE8], o[0xE8]);
         } else {
@@ -1329,19 +1382,33 @@ void check(const char* in_file, const char* out_file)
             ++bad;
             if (shape >= 0 && shape < 5) ++bad_shape[shape];
             if (bad <= (getenv("DRAINSHOW") ? atoi(getenv("DRAINSHOW")) : 12))
-                printf("  drain case %d (shape %d, %d level%s, dice %s):%s\n", id, shape, cs.second[0], cs.second[0] > 1 ? "s" : "",
-                       cs.second[1] ? "high" : "low", diff.c_str());
+                printf("  %s case %d (shape %d, %d level%s, dice %s):%s\n", g_rst ? "restore" : "drain", id, shape, cs.second[0],
+                       cs.second[0] > 1 ? "s" : "", cs.second[1] ? "high" : "low", diff.c_str());
         }
     }
-    for (const auto& w : what) printf("  drain: %-16s differs in %d cases\n", w.first.c_str(), w.second);
+    for (const auto& w : what) printf("  %s: %-16s differs in %d cases\n", g_rst ? "restore" : "drain", w.first.c_str(), w.second);
+    if (g_rst) printf("  restore: %d cases with no class able to rise (the original's undefined case)\n", undefined);
     char t[200];
-    snprintf(t, sizeof t, "drain against the original's routine: %d cases (single %d, two %d, three %d, former class %d, knight %d), %d not run",
-             n, by_shape[0], by_shape[1], by_shape[2], by_shape[3], by_shape[4], fails);
+    snprintf(t, sizeof t, "%s against the original's routine: %d cases (single %d, two %d, three %d, former class %d, knight %d), %d not run",
+             g_rst ? "Restoration" : "drain", n, by_shape[0], by_shape[1], by_shape[2], by_shape[3], by_shape[4], fails);
     expect(P, t, n > 0 && bad == 0, "%d differ (single %d, two %d, three %d, former class %d, knight %d)", bad, bad_shape[0], bad_shape[1],
            bad_shape[2], bad_shape[3], bad_shape[4]);
 }
 
 } // namespace drn
+
+void restore_part()
+{
+    drn::g_rst = true;
+    if (drn::kind() == drn::kNone) {
+        printf("  restore: this game has no Restoration routine looked at\n");
+        drn::g_rst = false;
+        return;
+    }
+    if (const char* f = getenv("RSTMAKE")) drn::write_cases(f, getenv("DRAINN") ? atoi(getenv("DRAINN")) : 2000);
+    if (const char* f = getenv("RSTCHK")) drn::check(getenv("RSTIN") ? getenv("RSTIN") : "", f);
+    drn::g_rst = false;
+}
 
 void drain_part()
 {
@@ -1380,6 +1447,7 @@ void run()
     if (!only || strstr(only, "racecap")) racecap();
     if (!only || strstr(only, "maxhp")) maxhp();
     if (only && strstr(only, "drain")) drain_part();
+    if (only && strstr(only, "restore")) restore_part();
 }
 
 } // namespace blv

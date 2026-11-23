@@ -162,7 +162,7 @@ bool restore(party::Character& c, const classes::Tables& t);
 // Companion's "Drained"): the record's lost levels (0xE7 - PoolRad, Curse,
 // Secret, the Savage Frontier, Champions) or a class below its best level
 // from before the drain (the Ext's - Darkness, Death Knights, the Dark Queen)
-bool drained(const party::Character& c);
+bool drained(const party::Character& c, bool queen = false);   // (queen: the Dark Queen's order of best levels)
 
 // The classes a character has the experience for (and no race limit), as
 // class mask bits (the tables' class masks; a training hall's 0x7EA8 uses
