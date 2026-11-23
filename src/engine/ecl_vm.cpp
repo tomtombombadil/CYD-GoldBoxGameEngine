@@ -1095,6 +1095,14 @@ Stop Vm::resume()
         duel_ = false;                                 // (and its arena flag: ovr4 +0x18AC)
         sel_mon_ = -1;
     }
+    if (shop_goods_) {
+        // SHOP n is left: its goods are no treasure. They stayed on the list and came up in the next fight's
+        // treasure - the whole stock, free (Treasures' Ruathym, the PortMaster session's play-through,
+        // 2026-11-23; the original, DOSBox from the same save: the shop, then the guards' fight - their own
+        // items only)
+        shop_goods_ = false;
+        if (ground_) ground_->clear();
+    }
     wait_ = Wait::None;
     n_runes_ = 0;
     budget_ = kBudget;                                  // (each stretch between waits has its own)
@@ -1687,6 +1695,7 @@ bool Vm::dk_step(Stop& r)
         if (ground_) {
             ground_->clear();
             h_.shop_items(n, *ground_);
+            shop_goods_ = true;
         }
         r = wait_for(Wait::Shop);
         return true;

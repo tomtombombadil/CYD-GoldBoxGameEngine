@@ -2398,6 +2398,7 @@ struct TestHost : ecl::Host {
     int map = -1, walls[4] = {-2, -2, -2, -2}, pic = -1, loads = 0, frames = 0;
     int sprite_id = -1, sprite_dist = -1, sprites = 0, items_block = -1, song = 0;
     void load_items(int block, items::Ground&) override { items_block = block; }
+    void shop_items(int, items::Ground& g) override { g.n = 2; }        // (a SHOP n's goods: two)
     void music(int n) override { song = n; }
     bool load_script(int, uint8_t* code, uint32_t* len) override
     {
@@ -5634,6 +5635,25 @@ static void test_items()
     // The second COMBAT: the after-fight step (treasure)
     CHECK(vm.resume() == ecl::Stop::Waiting && vm.wait() == ecl::Wait::Treasure);
     CHECK(vm.resume() == ecl::Stop::Stopped);
+    if (const profile::Profile* tp = profile::first(games::Game::TreasuresOfTheSavageFrontier); tp && tp->ecl_ops) {
+        // SHOP n: its goods on the item list while the shop is open, gone when it is left (they came up in the
+        // next fight's treasure - v0.214.8)
+        Bytes sc;
+        for (int i = 0; i < 5; ++i) { sc.push_back(0); op_addr(sc, kBase + 20); }
+        sc.push_back(0x3C); op_imm(sc, 1);
+        sc.push_back(0x00);
+        ecl::GameState ss;
+        memcpy(ss.code, sc.data(), sc.size());
+        ss.code_len = static_cast<uint32_t>(sc.size());
+        TestHost sh;
+        items::Ground sg;
+        sg.n = 5;                                       // (something left from before: gone at the shop's door)
+        ecl::Vm sv(ss, sh, *tp->ecl_ops);
+        sv.set_ground(&sg);
+        CHECK(sv.init_script());
+        CHECK(sv.run(kBase + 20) == ecl::Stop::Waiting && sv.wait() == ecl::Wait::Shop && sg.n == 2);
+        CHECK(sv.resume() == ecl::Stop::Stopped && sg.n == 0);
+    }
     if (const profile::Profile* kp = profile::first(games::Game::DeathKnightsOfKrynn); kp && kp->ecl_ops) {
         // Death Knights' memory: 033D the facing (its loader's "else" part,
         // [0xC075]), 03DE nothing; a write to the name's place sets the flag

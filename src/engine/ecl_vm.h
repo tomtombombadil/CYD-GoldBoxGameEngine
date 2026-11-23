@@ -421,6 +421,7 @@ private:
 #endif
     items::Ground* ground_ = nullptr;
     bool monsters_ = false;             // LOAD MONSTER since the last CLEARMONSTERS
+    bool shop_goods_ = false;           // SHOP n waits: its goods on the item list, gone when it is left
     bool duel_ = false;                 // CALL 0x8000 / 0x8001 since the last fight
     const OpSet& set_;
     uint16_t entry_[5] = {};

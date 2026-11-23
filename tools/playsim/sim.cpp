@@ -2133,7 +2133,9 @@ int main(int argc, char** argv)
         }
         // (items still on the ground after AUTOTAKE's taker was refused: the auto run stops at the treasure menu -
         // the kit's takeall goes member by member; an Exit here had left Sir Lebaum's treasure, 2026-11-23)
-        else if (scr == 5 && getenv("AUTOTAKE") && auto_take && play::ground && play::ground->n > 0 && has('T') && has('V')) t = nullptr;
+        // (TAKELEAVE=1: Exit instead - a walk that must go on leaves what the taker was refused; the Treasures kit)
+        else if (scr == 5 && getenv("AUTOTAKE") && auto_take && play::ground && play::ground->n > 0 && has('T') && has('V') &&
+                 !getenv("TAKELEAVE")) t = nullptr;
         else if (scr == 5 || scr == 16 || scr == 25) t = has('E') ? "/E" : ".";
         else if (play::screen == play::Screen::Won) t = ".";      // (an ending's pages: a key each)
         else if (scr == 11 && getenv("AUTOFIGHT") && has('Y') && has('N')) t = "/N";     // ("There is still treasure left ...": No)
@@ -2401,6 +2403,7 @@ int main(int argc, char** argv)
             }
             char l1[48], l2[48]; play::describe(l1, l2, 48);
             printf("   now %d,%d %s | %s | %s | sel %d%s\n", play::pos_x(), play::pos_y(), geo::dir_name(play::dir()), l1, l2, play::pt ? play::pt->selected : -1, tp_text());
+            if (getenv("GROUNDLOG") && play::ground) printf("   ground %d items\n", play::ground->n);   // (GROUNDLOG=1: the item list after each token)
             continue;
         }
         play::Act a = play::Act::Forward;
@@ -2485,6 +2488,7 @@ int main(int argc, char** argv)
 #endif
         char l1[48], l2[48]; play::describe(l1, l2, 48);
         printf("   now %d,%d %s | %s | %s | sel %d%s\n", play::pos_x(), play::pos_y(), geo::dir_name(play::dir()), l1, l2, play::pt ? play::pt->selected : -1, tp_text());
+        if (getenv("GROUNDLOG") && play::ground) printf("   ground %d items\n", play::ground->n);
         if (play::q_overland())      // (the Dark Queen's overland: its square, the whole map's, the picture)
             printf("   overland %d,%d (map %d,%d) picture %d clock %d %d %d %d %d\n", play::vm->get(0x25), play::vm->get(0x26),
                    play::vm->get(0x111), play::vm->get(0x112), play::vm->get(0x3E), play::vm->get(0x4BC6),
