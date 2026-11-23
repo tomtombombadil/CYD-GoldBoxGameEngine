@@ -36,3 +36,17 @@ Lessons (Gargath outpost):
   red doors (types the table at 9D6B marks 1) and open sides - a door marked 2 ends it ("whispers fade away").
   redpath.py <slot> <x,y,facing> <goal> plans it, drive.sh walks it a step at a time (presses, Leave, No); the
   door is revealed at 12,11 - answer Talk, then Good.
+
+Lessons (Dragon Pit, Vingaard's second visit, 2026-11-23):
+- evsq.py [codes]: each event code's squares from MAPFLAGS=1 (run p.sh with it first).
+- The Dragon Pit (overland 5,2): the rope bridge 12,4 refused at first (Maya flies over) - Sebas's door 10,2, the wights,
+  the wolf, the altar's treasure, Spark the chained red dragon 2,9 (PICK=Free), south and back east, the barracks,
+  Sir Karl (4,12 then 3,10: the wolf's 13-monster fight), the courtyard 6,8 (Karl's lance takes Maya), the lair 11,8,
+  the bridge 12,6; out by 15,8 east ("leave the cave?" Yes, then the overland's "enter?" No: drive.sh YES=CONTINUE).
+- A long fight on auto can end the playsim's AUTOTOK run before it is over (it reads as "stuck at the fight menu"):
+  give another SEED= - not an engine fault (2026-11-23, the wolf's 13 monsters).
+- Vingaard again: 0x4C57 2 after Sebas's talk; the trail needs exactly table[0x4C57] red doors (9D60: 9 9 10 10) and the
+  reveal event 0x23 is at 12,11 (first visit, 9 doors) AND 11,15 (second, 10 doors) - bfsn.py COUNT=10 to 11,15.
+  The original (DOSBox, the engine's save) counts the same 9 at 12,11. Then the hideout 12,14: the sivak ambush, and
+  again for Ariela's earring (0x4C57 5) -> Kalaman.
+- Never walk through 2,5 (a temple: the walker loops) - bfsn.py BLOCK="2,5".
