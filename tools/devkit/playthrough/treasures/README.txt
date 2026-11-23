@@ -97,3 +97,14 @@ key first ("./L...").
   the river has no way west.
 - rdy.sh makes the readied items EXACTLY the list given - name everything the member should wear.
 - ovwalk.sh saves over the slot after a fight: back the slot up first; it stops at a place's question.
+
+2026-11-23, later (Ruathym)
+- Coins weigh: with ~1,500+ platinum each every Take is refused and (since the auto run waits at a refused
+  treasure) the walk stalls there. tourx.sh sets TAKELEAVE=1; sellall.sh <slot> after loot.py sells the unreadied,
+  sets every member's platinum to 500 (SETMONEY=4:500) and heals.
+- GROUNDLOG=1: the item list's count after each token (how the shop's goods in the treasure were found).
+- An event's square from the script's table: the disassembler prints only the first 22 targets of the step
+  table - count on from there by the END (op 23 / 00) boundaries (Luskan: 0x1E = 7,4 Jagaerda bound, 0x22 = 6,6).
+- A level drain: SETEXP=m:exp, tlevel.sh (NORACE=1 for Elwyn), SETHP=n.
+- The original from the engine's save: cp bak/<name>/* /tmp/claude-0/dbx/T/SAVE/, dosbox -conf dbt.conf (Xvfb :5),
+  Load Saved Game - Treasures - J, Begin (arrows + Return), the journal word (ans.py), "m" for Move.
