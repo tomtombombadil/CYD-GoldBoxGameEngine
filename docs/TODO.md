@@ -9,9 +9,14 @@
       frame pixel for pixel, 181 of 185 VGA captures among the player's states within 70 ms (the rest: half-drawn
       DOSBox captures), the EGA dissolve's order, the fades' waits (713 / 942 / 485 ms vs 718 / 955 / 490).
       Tools: tools/devkit/vace (vace_run, vace_cmp.py); host test test_vace; the playsim's Movie screen (MOVIEKEY).
-- [ ] Champions play-through (2026-11-22; the Project's claude/playthrough_champions.md): GOG save A's party in a
-      new game; Throtl, its temple and catacombs, Gargath, Sir Dargaard's tomb, the Ogre Base, Jelek, the third
-      outpost and Neraka done (Sir Karl's memorial, the Sanction orders); next Sanction. Open: Throtl's 2,6 / 4,0 / 5,1 (Strangbourn, the plate-mail soldier, the
+- [x] Champions play-through - **COMPLETE 2026-11-23** (the Project's claude/playthrough_champions.md): GOG save
+      A's party in a new game through Throtl, Gargath, Sir Dargaard's tomb, the Ogre Base, Jelek, the third
+      outpost, Neraka, Sanction, Huerzyd, the Shadowpeople's tunnels, Duerghast (the Dragonlance, Skyla, Sir
+      Lebaum), the flying citadels, Kernen and Myrtani's compound to "VICTORY. YOU HAVE SAVED THE GOOD ARMIES." and
+      the epilogue (the major items given to the knights as the guide lists). Engine faults found: v0.212.1,
+      v0.212.2, v0.214.3 (random treasure). Story fights won by the playsim's WINFIGHT: the temple altar, Jelek's
+      graveyard, the dragon master (and possibly the Neraka prison / Sanction fights: the kit's Auto took the Done
+      menu's Quit there - fixed). Open: Throtl's 2,6 / 4,0 / 5,1 (Strangbourn, the plate-mail soldier, the
       arrows) gave nothing when walked onto - the guide's squares or a facing?
 - [x] v0.214.2 (Tom, 2026-11-22: keep the S on every walk-through wall, option 1) **Tom: secret doors on the Companion map** (Tom, 2026-11-22: the kobold caves' marks weren't secret
       doors; then: "Don't mark secret doors only after they're found"): each passable side drawn as the area's plain
