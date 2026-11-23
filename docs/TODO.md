@@ -56,6 +56,17 @@
       Checked: playsim MAPASCII=1 (area 26 save B against its own 5 x 5 view), QEMU 4.0" S3 firmware (load,
       three steps east - the arrow and window followed), host tests (find_places, onto / step_refused).
       For the PortMaster port: `play::map_place(x, y)` is new in play.h (its panel can draw the places).
+- [ ] Death Knights play-through (started 2026-11-23; the Project's claude/playthrough_knights.md): the Champions
+      winners imported; Gargath outpost done (the commander, the burial, the patrol, Ayn, the dread wolf and the
+      snakes - Charm Snakes cast by the script's question), out by the west gate onto the overland. Next: Kalaman
+      (overland 25,1). Engine faults found: v0.214.4.
+- [x] v0.214.4 (the Death Knights play-through, 2026-11-23): **the Krynn overlands' diagonal steps skipped the
+      terrain test** - the step scripts read the step's direction in area word 0x4BEA (Death Knights' block 17: ON
+      GOSUB 0x4BEA, a neighbour test for each of the 8 ways; Champions' block 16 its coasts), which the engine never
+      set: every key tested the square north, so the party walked NW / NE onto mountains. DOSBox: from 33,12 the
+      original takes the NW steps to 32,11 / 31,10 and refuses the NE one onto 32,9 ("TOO HIGH"); the engine now
+      the same (`step`, play.cpp). Also noted: the Darkness-family games' TREASURE has no random-item maker in
+      Death Knights (its item rows only).
 - [x] v0.214.3 (the Champions play-through, 2026-11-23): **Champions' random treasure made nothing** (Huerzyd's
       TREASURE 0x82 / 0x83 - the guide's random magic items): its own facts now (`kChampionsMake`, profile.cpp, from
       its roller GAME.OVR 0x2817 and create_item 0x2C92B): Secret's shape with its own dice tables, a d10 plus (10:

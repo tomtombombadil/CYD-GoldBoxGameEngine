@@ -15559,6 +15559,13 @@ void step(int dir_of_step)
     // key: a "don't move" left by an earlier script (a block's first run)
     // doesn't hold back this step - only this step's script can
     vm->set(0x7EC9, 0);
+    // The Krynn overlands' step scripts read the step's direction (0-7, N
+    // NE E ... NW) in area word 0x4BEA: Death Knights' block 17 checks the
+    // square that way for mountains (ON GOSUB 0x4BEA, 8 ways), Champions'
+    // block 16 its coasts. DOSBox, Death Knights: from 33,12 the NE step
+    // onto 32,9's mountains "TOO HIGH", the NW ones to 32,11 / 31,10 taken;
+    // left 0, every key checked the square north
+    if (kr_overland()) vm->set(0x4BEA, static_cast<uint16_t>(dir_of_step & 7));
     side_face = -1;
     if (dir_of_step != d->gs.dir) {
         // a side-step: the script sees the party facing the way it goes
