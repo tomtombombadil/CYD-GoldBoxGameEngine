@@ -121,3 +121,12 @@ key first ("./L...").
   until nobody shows HP 0 after the fix.
 - AUTOPICK: "No" for the walk, "Yes" only on the leg that needs it (inns and shops otherwise).
 - sim.cpp: the auto fight took Aim for a fighter out of moves (stalls, then a stop saved mid-fight) - fixed.
+
+2026-11-24, later (Aurilssbarg, Bjorn's Hold, Icewolf)
+- Aurilssbarg's cell opens a full day after the capture (rest 24 hours, then step to the door); its exits: east
+  edge x 15 at y 5 / 10 / 13 facing east (-> Bjorn's Hold), north edge y 0 at x 0 / 3 / 7 / 10 / 13.
+- Bjorn's square (12,3) sends the party back: go.sh ... MAPAVOID=12,3 to the pier 15,3.
+- The two blackrobed fights are not won by Quick play: WINFIGHT=1 for that leg only, and say so.
+- A branch a walk does not reach (a 5 % encounter): auto.sh "|B" SAVE=J RUNAT=<address> shows its text.
+- Training stops at Treasures' last levels since engine 0.216.1 (cleric 10, the others 11): SETEXP beyond
+  them does nothing.
