@@ -211,6 +211,7 @@ bool walk(Walk& w, const std::string& card, const std::string& rel, int depth)
             continue;
         }
         ++w.r->folders;
+        w.line(w.apply ? "Removed the folder %s" : "Would remove the folder %s", path.c_str() + strlen(games::kRootDir) + 1);
     }
     return left == 0;
 }
