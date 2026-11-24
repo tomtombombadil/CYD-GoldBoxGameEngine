@@ -50,3 +50,22 @@ Lessons (Dragon Pit, Vingaard's second visit, 2026-11-23):
   The original (DOSBox, the engine's save) counts the same 9 at 12,11. Then the hideout 12,14: the sivak ambush, and
   again for Ariela's earring (0x4C57 5) -> Kalaman.
 - Never walk through 2,5 (a temple: the walker loops) - bfsn.py BLOCK="2,5".
+
+Lessons (Dargaard Keep, Dulcimer, Voice Wood, 2026-11-24):
+- The "crypt" checkpoints (kn_crypt*) are Dargaard Keep's first floor (area 3 block 96), entered by the graveyard
+  tunnel. Its gate: 7,15 south ("leave Dargaard Keep?"); the stairs up 14,0 need the Rod (block 97, then 98).
+- Dulcimer (overland 31,5, block 81): the lich's guard room 9,0, the lich 5,0, the phylactery under the asparagus
+  1,13 (Yes to DIG); Voice Wood through the east gate 15,8 (block 82): the offering 4,8 (0x4C01), the sprites'
+  chamber MOVE (PICK=Move), the Voice 12,7 (the Rod: 0x4CB8 = 1); out by 0,8 west into Dulcimer, its exit 7,15 S.
+- Keep's second floor (block 97): sneak past the vampires (PICK="Sneak,Attack"); the portcullis stages 0x4CCC
+  (1 -> lever 1,1 -> 2, flesh golems 3,5 -> 3, lever 3,3 -> 4, cell guards 5,9 -> 5); the evocation 14,2, the tome
+  13,9, Sebas 8,7, the cleric's cache 7,3 (one time only), Sturm 14,13; up by 8,14 (NOANS="GO DOWN" - walkans
+  answers the third floor's "go down?" Yes otherwise).
+- Third floor (block 98): Lenore 1,4; the spiked doors (6,7 / 7,7 north): Open door (WHO = a strong member) - the
+  secret passage was not found; the statues 10,11 (Ignore -> they join Durfey's fight 11,11 - the script's 0x4C02);
+  Soth 12,6.
+- "take refused" for everyone: the party's coins are the weight. At the treasure: Pool, take the items, then Share
+  (it hands out only what each can carry) - takeall.py doesn't do it.
+- An adv / walkans run that ends at a fight menu with "screen 1" and "0 characters" is a party wiped out (the auto
+  driver stops at the party menu), not a long fight: another SEED or a stronger party.
+- A save's experience: read the CHRDAT file (offset 0x62) or ITEMDUMP after a load into a real slot (A-J).
