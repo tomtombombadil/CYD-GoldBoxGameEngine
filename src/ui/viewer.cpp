@@ -1769,8 +1769,9 @@ void clean_up()
         all.files += r.files, all.bytes += r.bytes, all.folders += r.folders, all.failed += r.failed;
     }
     char line[200];
-    snprintf(line, sizeof line, "Done: %d files and %d folders removed, %.1f MB freed. Game files, saves and PDFs "
-             "are all still there.", all.files, all.folders, all.bytes / 1048576.0);
+    snprintf(line, sizeof line, "Done: %d file%s and %d folder%s removed, %.1f MB freed. Game files, saves and "
+             "PDFs are all still there.", all.files, all.files == 1 ? "" : "s", all.folders, all.folders == 1 ? "" : "s",
+             all.bytes / 1048576.0);
     scan_say(line, false, nullptr);
     if (all.left) {
         snprintf(line, sizeof line, "%d file%s the engine doesn't know left alone (listed in this report).", all.left,

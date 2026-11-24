@@ -203,9 +203,11 @@ bool walk(Walk& w, const std::string& card, const std::string& rel, int depth)
             continue;
         }
         if (w.apply && !plat::rmdir(path.c_str())) {
+            // (a file the platform's listing doesn't show - a port's hidden
+            // ".name" files - keeps it: left, as an unknown file is)
             ++left;
-            ++w.r->failed;
-            w.line("Couldn't remove the folder %s", path.c_str() + strlen(games::kRootDir) + 1);
+            ++w.r->left;
+            w.line("Left alone (holds hidden files): the folder %s", path.c_str() + strlen(games::kRootDir) + 1);
             continue;
         }
         ++w.r->folders;
