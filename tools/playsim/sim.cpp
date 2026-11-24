@@ -477,6 +477,11 @@ static void disasm()
                         sp += 2 + in.ops[k].low;
                     }
                 }
+                if (in.count > ecl::kMaxOps) {
+                    // (a table longer than the decoder keeps: its bytes, to read the rest by hand)
+                    printf(" RAW");
+                    for (uint32_t q = in.at; q < in.next; ++q) printf(" %02X", ecl::code_of(gs)[q]);
+                }
                 printf("\n");
             }
             at = in.next;
@@ -2064,8 +2069,8 @@ int main(int argc, char** argv)
             if (dir < 0) { t = "{"; maze_blocked = true; }      // (blocked: the move ended, then Guard)
             else { maze_tok[1] = static_cast<char>('0' + dir); t = maze_tok; }
         } else if (maze_walk) { t = has('M') && !maze_blocked ? "/M" : "/G"; maze_blocked = false; }    // (no moves left: Guard - not Quick, the walk goes on next round)
-        else if (scr == 24) t = has('A') && has('S') && has('E') && !has('M') && (!has('Q') || has('D')) ? "/A" : has('Q') ? "/Q" : has('Y') && has('N') && getenv("AUTOFIGHT") ? "/N" :
-                                     has('D') && (has('M') || (has('V') && has('C'))) ? "/D" : ".";   // (Champions: no Quick - Done, then its Guard Delay Quit Auto's Auto; its Quit (Q) ends the turn - a Delay (D) tells that menu from a menu with Quick)   // ("Continue Battle": No)
+        else if (scr == 24) t = has('A') && has('S') && has('E') && !has('M') && (!has('Q') || has('D')) && !(has('U') && has('V')) ? "/A" : has('Q') ? "/Q" : has('Y') && has('N') && getenv("AUTOFIGHT") ? "/N" :
+                                     has('D') && (has('M') || (has('V') && has('C'))) ? "/D" : ".";   // (Champions: no Quick - Done, then its Guard Delay Quit Auto's Auto; its Quit (Q) ends the turn - a Delay (D) tells that menu from a menu with Quick; Use and View: a fighter's own menu without Move - out of moves, Treasures - Quick, not Aim)   // ("Continue Battle": No)
         // (AUTOMONEY=1: before AUTOTAKE the treasure's money - gems, jewelry, coins - Take - Money, each line the
         // most there is, by the selected member)
         else if (scr == 5 && has('T') && has('V') && getenv("AUTOMONEY") && money_left && !auto_money) {

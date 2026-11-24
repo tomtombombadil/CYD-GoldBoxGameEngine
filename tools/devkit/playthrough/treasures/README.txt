@@ -108,3 +108,16 @@ key first ("./L...").
 - A level drain: SETEXP=m:exp, tlevel.sh (NORACE=1 for Elwyn), SETHP=n.
 - The original from the engine's save: cp bak/<name>/* /tmp/claude-0/dbx/T/SAVE/, dosbox -conf dbt.conf (Xvfb :5),
   Load Saved Game - Treasures - J, Begin (arrows + Return), the journal word (ans.py), "m" for Move.
+
+2026-11-24 (Mirabar, Fireshear)
+- tab.sh <slot>: the script's event map, its whole step table (sim.cpp's DISASM prints a long table's bytes
+  as RAW), the journal numbers and menus it holds. An event past the 22nd is found there.
+- Events that test the facing (op 03 on 0x11): enter the square from the side the script wants (Fireshear's
+  Great Hall 3,9 from the east; Neverwinter's piers facing west).
+- One-chance houses (Mirabar's Raurym / Steelfist): after the welcome go straight to the room.
+- Fireshear is reached by Neverwinter's Northpier Shipping (4,12) after Mirabar's council; the mines' shafts
+  join pockets of both levels - a "no way" square is reached through another shaft.
+- The beholder (Fireshear 1,1) can disintegrate (GONE for good): back up before, and play the leg on SEED=n
+  until nobody shows HP 0 after the fix.
+- AUTOPICK: "No" for the walk, "Yes" only on the leg that needs it (inns and shops otherwise).
+- sim.cpp: the auto fight took Aim for a fighter out of moves (stalls, then a stop saved mid-fight) - fixed.
