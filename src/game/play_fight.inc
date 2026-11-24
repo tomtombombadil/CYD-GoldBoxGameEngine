@@ -6016,7 +6016,14 @@ void fight_cleanup_party(combat::Result r)
             }
         }
         if (r == combat::Lost && !(fg && fg->arena)) continue;
-        if (rec[0x195] == party::Running) rec[0x195] = party::Okay;
+        // (a runner is back in the party able to fight - in_combat too, after
+        // a flight as well: coab CleanupPlayersStateAfterCombat; without it
+        // the next fight placed no one of them and counted as won - Death
+        // Knights' Soth, 2026-11-24)
+        if (rec[0x195] == party::Running) {
+            rec[0x195] = party::Okay;
+            rec[0x196] = 1;
+        }
         if (r == combat::Fled) continue;
         if (rec[0x195] == party::Dying) rec[0x195] = party::Unconscious;
         if (rec[0x195] == party::Unconscious && rec[0x1A4] > 0) rec[0x195] = party::Okay;

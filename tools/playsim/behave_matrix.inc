@@ -1121,6 +1121,19 @@ void run()
             expect(P, w, (o.exp >= 100) == want, "exp %d", o.exp);
         }
     }
+    // T8b a flight's runner: back Okay AND able to fight (in_combat 1) - coab
+    // CleanupPlayersStateAfterCombat (6.1); without it the next fight placed
+    // none of them and counted as won (Death Knights' Soth, 2026-11-24)
+    if (F(A).member >= 0) {
+        uint8_t* r = play::pt->m[F(A).member].rec;
+        for (combat::Result res : {combat::Fled, combat::Won}) {
+            r[0x195] = party::Running;
+            r[0x196] = 0;
+            play::fight_cleanup_party(res);
+            snprintf(w, sizeof w, "ran x the fight %s: Okay and in the next fight", res == combat::Fled ? "fled" : "won");
+            expect(P, w, r[0x195] == party::Okay && r[0x196] == 1, "status %d, in_combat %d", r[0x195], r[0x196]);
+        }
+    }
     // T9 charmed (Charm Person): on the caster's side, back when it ends
     if (fx.charm && play::load_magic()) {
         const combat::FightSpell* fs = nullptr;
