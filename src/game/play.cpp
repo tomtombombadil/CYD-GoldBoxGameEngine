@@ -11252,6 +11252,60 @@ void fix_party(pic::Canvas& c)
     draw_rest_time(c);
 }
 
+// Treasures' PROGRAM 5 (GAME.OVR 0x4D5F, ovl 0x4F +0x971): everyone in the
+// party made well, nothing said - feeblemind, blindness and the diseases
+// (its table DS 0x4550) off; the poisoned unpoisoned and on their feet (1 hit
+// point when at none); the dead with a Constitution left resurrected (its
+// spell 0x69); the stoned back; every drained level restored (its spell 0x66
+// until no class is under its best); the abilities worked out again; all the
+// hit points back for all but the dead and the gone; the unconscious awake
+void program_heal()
+{
+    if (!pt) return;
+    const rules::CureFacts& cf = d->prof->cures;
+    const bool tables = mrules || load_magic();
+    for (int i = 0; i < pt->count; ++i) {
+        party::Character& ch = pt->m[i];
+        uint8_t* r = ch.rec;
+        rules::remove_affects(ch, cf.feeblemind);
+        rules::remove_affects(ch, cf.blinded);
+        for (int k = 0; k < 4; ++k)
+            if (cf.disease[k]) rules::remove_affects(ch, cf.disease[k]);
+        if (spells::find_affect(ch, cf.poisoned) >= 0) {
+            if (!r[0x1A4]) r[0x1A4] = 1;
+            rules::remove_affects(ch, cf.poisoned);
+            rules::remove_affects(ch, cf.slow_poison);
+            rules::remove_affects(ch, cf.poison_damage);
+            r[0x196] = 1;
+            r[0x195] = party::Okay;
+        }
+        if (ch.health() == party::Dead && r[0x18] && ch.race() != d->prof->magic.facts.elf_race) {
+            rules::remove_affects(ch, cf.poisoned);
+            r[0x195] = party::Okay;
+            r[0x196] = 1;
+        }
+        if (ch.health() == party::Stoned) {
+            r[0x195] = party::Okay;
+            r[0x196] = 1;
+        }
+        if (tables)
+            for (int n = 0; n < 64; ++n) {          // (a level a call)
+                bool under = false;
+                for (int j = 0; j < 7; ++j)
+                    if (r[0x109 + j] < ch.ext[party::kExtBestLevels + j]) under = true;
+                if (!under) break;
+                create::dk_restore(ch, mrules->tables);
+            }
+        if (names) rules::recalc(ch, *names, d->facts);
+        if (ch.health() != party::Dead && ch.health() != party::Gone) r[0x1A4] = r[0x78];
+        if (ch.health() == party::Unconscious) {
+            r[0x195] = party::Okay;
+            r[0x196] = 1;
+        }
+    }
+    plat::log("[play] PROGRAM 5: the party healed\n");
+}
+
 // Treasures' PROGRAM 4 (ovl 0x74 +0x292C): on a ship's passage the party
 // heals itself as the camp's Fix does when anyone is hurt (not with game
 // byte 1 set), then the script goes on
@@ -14898,6 +14952,7 @@ struct Host : ecl::Host {
         if (cv && screen == Screen::Game && !bigpic_shown()) draw_party(*cv, 17);
     }
     void party_killed() override { party_dead = true; }
+    void party_healed() override { program_heal(); }
     void redraw_by_state() override
     {
         // (Pool's 00BA:27D9: state 3 the wilderness - main_frame(0), the

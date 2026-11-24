@@ -158,6 +158,7 @@ public:
     virtual void redraw_by_state() {}
     // DAMAGE killed the whole party ("The entire party is killed!" shown)
     virtual void party_killed() {}
+    virtual void party_healed() {}              // Treasures' PROGRAM 5: everyone made well (play.cpp program_heal)
     // A sound effect (the games' sound numbers; CALL B200 - a step, or the
     // fireball's roar when the script set 0x03DE to 10)
     virtual void sound(int id) { (void)id; }

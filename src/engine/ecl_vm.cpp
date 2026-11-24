@@ -2611,6 +2611,14 @@ Stop Vm::step()
         }
         if (set_.tr_ops && (v == 3 || v == 4))             // (Treasures: its ovl 0x74 +0x2A75 / +0x292C)
             return wait_for(v == 3 ? Wait::Luck : Wait::ShipRest);
+        if (set_.tr_ops && v == 5) {
+            // (Treasures, GAME.OVR 0x28F4 -> ovl 0x4F +0x971: the whole party
+            // made well, then "Press button or enter to continue" and a key -
+            // after the opening fight and at the ending, "all are healed")
+            h_.party_healed();
+            prompt_ = word(kWDkPressKey);
+            return wait_for(Wait::Key);
+        }
         if (v == 3 && set_.program_kills) {                 // the party is killed
             stop_script();
             h_.party_killed();

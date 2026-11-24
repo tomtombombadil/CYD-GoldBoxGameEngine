@@ -1,5 +1,15 @@
 # Open tasks (Tom and Claude)
 
+- [x] v0.216.2 (the PortMaster session's Treasures play-through, 2026-11-24, its ending): **Treasures' PROGRAM 5
+      did nothing** - its program (GAME.OVR 0x28F4 -> ovl 0x4F +0x971, read) makes the whole party well there:
+      feeblemind, blindness, the diseases and poison off, the dead with a Constitution left resurrected, the stoned
+      back, every drained level restored, all hit points back for all but the dead and the gone, the unconscious
+      awake - then "Press button or enter to continue" and a key. The scripts use it twice: after the demo's fight
+      and at the ending ("ice hunters tend your wounds, and all are healed"). In the engine the party stayed hurt
+      and that page was replaced by the next at once, unread. Now `Host::party_healed` (play.cpp `program_heal`)
+      and the key. Seen in the playsim: the ending's party full again, a drained member's levels back (7 / 9 ->
+      9 / 11), the page waiting with the prompt. Not seen in DOSBox (the lair's two fights would have to be won
+      there); what the original says when it resurrects someone at that point is unchecked - the engine says nothing.
 - [x] v0.216.1 (the PortMaster session's Treasures play-through, 2026-11-24): two faults, each set against the
       original (its routine read, then DOSBox on the engine's save):
       **Treasures trained past its last levels** - its hall stops a class at DS 0x6F92 + class (cleric 10, fighter /

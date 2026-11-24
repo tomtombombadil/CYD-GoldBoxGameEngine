@@ -130,3 +130,17 @@ key first ("./L...").
 - A branch a walk does not reach (a 5 % encounter): auto.sh "|B" SAVE=J RUNAT=<address> shows its text.
 - Training stops at Treasures' last levels since engine 0.216.1 (cleric 10, the others 11): SETEXP beyond
   them does nothing.
+
+2026-11-24, last (Ice Peak, Freezefire's lair, the ending)
+- A walk does not cross blocks: cross.sh <slot> <tokens> steps off an edge square and saves. The exits are in
+  each script's leave routine (PEEKEND=<table>): Icewolf west edge x 0 at y 1 / 4 / 7 / 11 / 14 / 15 -> Ice Peak
+  x 15, the same y; Ice Peak south edge y 15 <-> Aurilssbarg y 0 at x 0 / 3 / 7 / 10 / 13.
+- Ice Peak: 15,1 is the maze (the undead, the giants), 15,14 a pocket whose 13,15 goes south; the way to the
+  lair is outside - Aurilssbarg 10,0 north -> Ice Peak 10,15 -> 10,10 -> the avalanche 9,10 (Enter Tunnel) ->
+  the cavern 7,8 -> the lair 3,6 / 2,6.
+- The lair's two fights by Quick leave half the party down and Kriiador's speech unsaid (FIND NPC answers
+  0x80 + place for a member not okay): WINFIGHT=1 for that leg, said so in the notes.
+- The ending's rewards are two treasure screens: auto.sh with AUTOLOOT=1 AUTOTAKE=/S/T/I TAKELEAVE=1 shares
+  them; AUTOPICK "No" walks past them.
+- PROGRAM 5 (engine 0.216.2): everyone made well, then a key - the ending's "all are healed", the demo's fight.
+- After the ending the script puts the party on the overland at 54;7,1 and play goes on.

@@ -3144,6 +3144,29 @@ static void test_ecl_party()
     CHECK(vm.init_script());
     r = vm.run(vm.entry(4));
     CHECK(r == ecl::Stop::Stopped && vm.get(0x4C07) == 9);      // (Curse's set: PROGRAM 1 does nothing)
+    // Treasures' PROGRAM 5 (tr_ops): the party made well, then a key, then on
+    struct HealHost : PartyHost {
+        int healed = 0;
+        void party_healed() override { ++healed; }
+    };
+    static HealHost hh;
+    hh.p = &pa;
+    c5[f5 + 2] = 5;
+    memcpy(gs.code, c5.data(), c5.size());
+    static ecl::OpSet tr_set;
+    tr_set = *pr->ecl_ops;
+    tr_set.tr_ops = true;
+    static ecl::Vm tvm(gs, hh, tr_set);
+    tvm.set(0x4C07, 0);
+    CHECK(tvm.init_script());
+    r = tvm.run(tvm.entry(4));
+    CHECK(r == ecl::Stop::Waiting && tvm.wait() == ecl::Wait::Key && hh.healed == 1 && tvm.get(0x4C07) != 9);
+    r = tvm.resume();
+    CHECK(hh.healed == 1 && tvm.get(0x4C07) == 9);
+    vm.set(0x4C07, 0);
+    CHECK(vm.init_script());
+    r = vm.run(vm.entry(4));
+    CHECK(r == ecl::Stop::Stopped && vm.get(0x4C07) == 9 && hh.healed == 1);    // (Curse's set: PROGRAM 5 does nothing)
 }
 
 // The original's ways (coab's facts / the listing): RETURN with nothing to
