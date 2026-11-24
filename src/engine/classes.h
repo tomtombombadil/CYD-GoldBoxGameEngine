@@ -72,7 +72,8 @@ struct Layout {
     // Gateway's training (its GAME.OVR 0x3EB10): each class's last level
     // (8 bytes at this offset, read through lo2..hi2: training stops when
     // the level reaches it) and its own race limits (create.cpp
-    // gw_race_limited) instead of Curse's; 0: none
+    // gw_race_limited) instead of Curse's; 0: none. Treasures has such a
+    // table too (DS 0x6F92, its GAME.OVR 0x1E177) beside Darkness's rules
     uint16_t level_caps = 0;
     // Champions of Krynn's (champions_facts.md 4): Curse's shapes (8 class
     // columns, the knight in the monk's) but its race-indexed tables by its

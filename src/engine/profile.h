@@ -445,6 +445,14 @@ struct Profile {
         uint8_t     sell_keep = 0;                 // (Secret: a pile of this type sells for one's price)
         uint8_t     types_head = 2;                // the type file's bytes before row 0 (Darkness 0)
         uint8_t     types_stride = 16;             // a row's bytes (Gateway's ITEMS.1 24: 8 more each)
+        // Armour class (rules::ItemFacts): an item type slot whose plus is a
+        // bonus of its own - the last one readied counts, none at all with
+        // magic armour on - as rings' slot 9 in every game. cloak_slot: the
+        // cloaks' 7 in Darkness (GAME.OVR 0x341DC / 0x350E1) and Treasures
+        // (0x3E03D / 0x3F000), counted from behind too; belt_slot: Treasures'
+        // slot 5 (0x3E053 / 0x3F00A), not counted from behind. 0: none - the
+        // plus is summed with the helm's and boots'
+        uint8_t     cloak_slot = 0, belt_slot = 0;
         // Darkness: the items screen's menu as one string ("Ready Use Trade
         // Deposit Drop Halve Join Sell Id") - "Ready" and the item words
         // Use ... Id, Deposit taken from it (0: the words above / item_words)

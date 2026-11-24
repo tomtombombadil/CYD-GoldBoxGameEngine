@@ -5533,6 +5533,8 @@ static void test_items()
     ty(58, 0) = 2; ty(58, 6) = 0x80 + 57;   // AC 3 = 57 ty(58, 13) = 0xFF;
     ty(59, 0) = 1; ty(59, 1) = 1; ty(59, 6) = 0x81; ty(59, 13) = 0xFF;
     ty(73, 0) = 10; ty(73, 13) = 0xFF;
+    // (90 a cloak - slot 7, 91 a slot-5 piece, 92 a helm - slot 4: their plus is their armour class)
+    ty(90, 0) = 7; ty(90, 6) = 0x80; ty(91, 0) = 5; ty(91, 6) = 0x80; ty(92, 0) = 4; ty(92, 6) = 0x80;
     dax::MemorySource tsrc(types.data(), static_cast<uint32_t>(types.size()));
     CHECK(n.read_types(tsrc) && n.type(58).slot == 2 && n.type(58).ac == 0x80 + 57 && n.type(36).dice == 1);
     {
@@ -5587,6 +5589,40 @@ static void test_items()
     // (plain plate: 6 - the +3 only for magic armour, GAME.OVR 0x37920)
     CHECK(ch.movement() == 6 && ch.encumbrance() == 217 + 60 + 450 + 100);
     CHECK(items::readied_in(ch.items, ch.n_items, n, items::kSlotArmour) == 1);
+    {
+        // Darkness's and Treasures' cloaks (slot 7), Treasures' slot 5: a bonus
+        // of their own - the last one readied, and nothing with magic armour
+        // on (their GAME.OVR routines; Treasures in DOSBox: plate +3, shield
+        // +1, helm +2, a cloak +1, Dexterity 18 list AC -8, not -9). A helm's
+        // plus always counts. Without the slots named (the other games) the
+        // plus is summed as before
+        party::Character c2 = ch;
+        uint8_t cloak[items::kRecordSize] = {}, belt[items::kRecordSize] = {}, helm[items::kRecordSize] = {};
+        cloak[0x2E] = 90; cloak[0x31] = 1; cloak[0x32] = 1; cloak[0x34] = 1;
+        belt[0x2E] = 91; belt[0x31] = 1; belt[0x32] = 2; belt[0x34] = 1;
+        helm[0x2E] = 92; helm[0x31] = 1; helm[0x32] = 2; helm[0x34] = 1;
+        CHECK(rules::add_item(c2, cloak) && rules::add_item(c2, belt) && rules::add_item(c2, helm));
+        rules::ItemFacts f2 = f;
+        rules::recalc(c2, n, f2);
+        CHECK(c2.ac() == -1 - 5);                           // (no slots named: 1 + 2 + 2 summed)
+        f2.cloak_slot = 7;
+        f2.belt_slot = 5;
+        rules::recalc(c2, n, f2);
+        CHECK(c2.ac() == -1 - 5);                           // (plain plate: all three count)
+        const int behind = c2.rec[0x19B];
+        for (int i = 0; i < c2.n_items; ++i)
+            if (c2.items[i][0x2E] == 58) c2.items[i][0x32] = 3;     // (the plate now +3)
+        rules::recalc(c2, n, f2);
+        CHECK(c2.ac() == -1 - 3 - 2);                       // (plate +3 and the helm; cloak and slot 5 nothing)
+        CHECK(c2.rec[0x19B] == behind + 3 - 1);             // (from behind: the cloak had counted, slot 5 never)
+        f2.belt_slot = 0;                                   // (Darkness: slot 5 is summed with the rest)
+        rules::recalc(c2, n, f2);
+        CHECK(c2.ac() == -1 - 3 - 2 - 2);
+        for (int i = 0; i < c2.n_items; ++i)
+            if (c2.items[i][0x2E] == 90) c2.items[i][0x32] = static_cast<uint8_t>(-1);  // (a cursed cloak stays)
+        rules::recalc(c2, n, f2);
+        CHECK(c2.ac() == -1 - 3 - 2 - 2 + 1);
+    }
     int pool[7] = {50, 0, 0, 0, 0, 0, 0};
     CHECK(rules::gold_worth(pool) == 0);
     pool[3] = 3;

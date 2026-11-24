@@ -1,5 +1,21 @@
 # Open tasks (Tom and Claude)
 
+- [x] v0.216.1 (the PortMaster session's Treasures play-through, 2026-11-24): two faults, each set against the
+      original (its routine read, then DOSBox on the engine's save):
+      **Treasures trained past its last levels** - its hall stops a class at DS 0x6F92 + class (cleric 10, fighter /
+      paladin / ranger / magic-user / thief 11: GAME.OVR 0x1E177); the profile named no such table, so a fighter
+      with the experience went on to 12 and, with more, to 18. DOSBox: a fighter of 11th level with 1,200,000
+      experience in Mirabar's hall stays 11. (The journal's tables print a 12th level for fighters and thieves; the
+      program's table says 11 - the program is followed.) Characters already trained past it keep their levels.
+      **Darkness's and Treasures' cloaks of protection counted with magic armour** - their routines keep a cloak's
+      plus (item slot 7; Treasures: slot 5 too) as a bonus of its own, dropped with magic armour on as a ring of
+      protection's (Darkness GAME.OVR 0x341DC / 0x350E1, Treasures 0x3E03D / 0x3F000); the engine summed it.
+      DOSBox: the engine's save listed two clerics at AC -7 / -8 where the engine showed -8 / -9; the eight
+      members' AC now agree. Those two games work a record's figures out as it is read (Treasures' Load does), so
+      older saves are put right. Checks: host test (the cloak, slot 5, a cursed cloak, from behind); `behave levels`
+      with the oracle's last levels from the program (lv_oracle.py). [ ] Darkness in DOSBox: a cloak of protection
+      over magic armour - by its code only so far. [ ] What the original's hall SAYS to a member at the last level
+      (nothing was seen on its screen; the engine says "Not Enough Experience").
 - [x] v0.215.2 (Tom, 2026-11-23, Curse's Fire Knives, the Android app): **the 3D view comes back after a fight** in
       every game - the picture shown before the fight is forgotten at its start (`last_pic_id`, play_fight.inc
       `fight_start`), as Pool's already was (DOSBox); it stayed after the fight's treasure until a step redrew the

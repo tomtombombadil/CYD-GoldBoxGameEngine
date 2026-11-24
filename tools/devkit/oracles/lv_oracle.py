@@ -21,9 +21,13 @@ if game in ('darkness', 'treasures'):
     w = gb.Writer('lv_' + game)
     w.c('behave levels oracle (%s: experience, last level, hit points) - tools/devkit/oracles/lv_oracle.py' % game)
     for k in (0, 2, 3, 4, 5, 6):
-        w.row('class', k, 0, 40)                    # (training's limit: level 40 - 40.8)
-        for L in range(1, 41):
-            w.row('xp', k, 0, L, dk.E(k, L + 1) if L < 40 else -1)
+        # (training's limit: level 40 - 40.8; Treasures' routine, GAME.OVR 0x1E177, also stops a class
+        # at its last level - DS 0x6F92 + class: cleric 10, the others 11 - seen in DOSBox, 2026-11-24:
+        # a fighter of 11th level with 1,200,000 experience is not trained)
+        top = dk.ds.u8(0x6F92 + k) if game == 'treasures' else 40
+        w.row('class', k, 0, top)
+        for L in range(1, top + 1):
+            w.row('xp', k, 0, L, dk.E(k, L + 1) if L < top else -1)
             if L >= 2:
                 for con in (18, 16, 12, 5):
                     lv = [0] * 7

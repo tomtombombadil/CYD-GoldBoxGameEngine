@@ -46,6 +46,9 @@ struct ItemFacts {
     // armour's +3 movement only for magic armour, and the Boots of Speed's
     // effect doubling the movement
     bool    light_magic_armour = true, sell_secret = false;
+    // (profile.h items.cloak_slot / belt_slot: Darkness's and Treasures'
+    // cloaks, Treasures' slot 5 - a bonus of their own, gone with magic armour)
+    uint8_t cloak_slot = 0, belt_slot = 0;
     // Sell: a pile's price - Curse's family: every pile count x value / 20
     // (their arrows' test can never hold - Curse GAME.OVR 0x2984E, Pool
     // 0x22D57, Gateway 0x2FF90, Champions 0x295BC); sell_secret: arrows /

@@ -3842,7 +3842,7 @@ const Profile kProfiles[] = {
                .detect = {5, 0x4D, 0, 0},
                // (Sell's prices as Secret's - facts_shops.md 2.2)
                .sell_secret = true,
-               .types_head = 0, .menu = kP | 0xCC11,
+               .types_head = 0, .cloak_slot = 7, .menu = kP | 0xCC11,
                // SHOP n's goods: DS 0x0001 + n .. 0x000C + n, rows DS 0x0017 + k of
                // ITEM0.DAX block 1; the random scroll's spells by DS 0x651A + 16 s;
                // the temple's 11 cures by spell number (DS 0x08CC)
@@ -4298,7 +4298,7 @@ const Profile kProfiles[] = {
                .detect = {5, 0x4D, 0, 0},
                // (Sell's prices as Secret's - facts_shops.md 2.2)
                .sell_secret = true,
-               .types_head = 0, .menu = kP | 0xF25A,
+               .types_head = 0, .cloak_slot = 7, .belt_slot = 5, .menu = kP | 0xF25A,
                // SHOP n's goods: the n-th run of rows from DS 0x0002, runs ended by
                // 0xFF (goods_runs; rows of ITEM0.DAX block 1); the random scroll's
                // spells by DS 0x578A + 16 s; the temple's cures (DS 0x08E0)
@@ -4310,8 +4310,13 @@ const Profile kProfiles[] = {
      // starting kit DS 0x0AE7 (its own items)
      .create = {.ds_image = 0xC3E0,
                 .tables = {0x5789, 0x6F67, 0x5789, 127, 0x5F98, 0x6032, 0x603A, 0x604C, 0x6061, 0x60F9, 0x60FC,
-                           0x617E, 0x61DE, 0x6232, 0x62DA, 0x6316, 0x637C, 0x6436, 0x6C83, false, 0, 0, 0, true,
-                           true, 0x6162},
+                           0x617E, 0x61DE, 0x6232, 0x62DA, 0x6316, 0x637C, 0x6436, 0x6C83, false, 0, 0x6F92, 0x6F9A, true,
+                           true, 0x6162,
+                           // (training: the classes' last levels at DS 0x6F92 - cleric 10,
+                           // fighter / paladin / ranger / magic-user / thief 11; its
+                           // training routine, GAME.OVR 0x1E177: "mov al,[di+0x6F92] /
+                           // cmp al,level / ja" - a class trains only below it)
+                           0x6F92},
                 .hp_count = 0x6054, .hp_dice = 0x605C, .icon_colours = 0x6064,
                 // Create New Character as Darkness's (the races' effects, the book by its
                 // slots - GAME.OVR 0x1BA8C sets Darkness's spells)

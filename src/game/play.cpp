@@ -2882,6 +2882,12 @@ void character_read(party::Character& ch)
     // (Death Knights' record keeps no attack level and the like: worked out
     // as its program does after a load)
     if (dkk() && names) rules::recalc(ch, *names, d->facts);
+    // (Darkness-type records - Darkness, Treasures: the figures worked out
+    // anew as well. Treasures' own Load does it - DOSBox, 2026-11-24: a save
+    // whose record said AC -9 listed -8, a cloak of protection over plate
+    // mail +3 - so a save from an engine before 0.216.1, which counted that
+    // cloak, is put right as it is read)
+    else if (darkness_files() && names) rules::recalc(ch, *names, d->facts);
 }
 
 // Loads saved game `slot`: the game's memory, position and script, and
@@ -13795,6 +13801,8 @@ __attribute__((noinline)) void load_party_text(dax::ByteSource& exe, const exepa
         d->facts.str_fighter_now = pi.str_fighter_now;
         d->facts.berserk_fx = pi.berserk;
         d->facts.light_magic_armour = pi.light_magic_armour;
+        d->facts.cloak_slot = pi.cloak_slot;
+        d->facts.belt_slot = pi.belt_slot;
         memcpy(d->facts.race_weapon, pi.race_weapon, sizeof d->facts.race_weapon);
         d->facts.unarmed_no_str_hit = hl();
         d->facts.weightless_coin = static_cast<int8_t>(champions_money() ? 2 : -1);

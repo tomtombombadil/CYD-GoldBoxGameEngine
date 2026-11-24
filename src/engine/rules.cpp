@@ -454,6 +454,8 @@ void recalc_values(party::Character& c, const items::Names& names, const ItemFac
     r[kBonus + 1] = r[kBonusBase + 1];
 
     int bonus[5] = {};
+    // (Darkness's and Treasures' cloaks, Treasures' slot 5: bonuses of their own)
+    int cloak = 0, belt = 0;
     bool magic_armour = false;
     r[kSaveBonus] = 0;
     int ac = r[kBaseAc];
@@ -524,6 +526,10 @@ void recalc_values(party::Character& c, const items::Names& names, const ItemFac
             } else if (v == 0) {
                 if (t.slot == 9) {
                     if (it.plus() > bonus[3]) bonus[3] = it.plus();
+                } else if (f.cloak_slot && t.slot == f.cloak_slot) {
+                    cloak = it.plus();          // (the last one readied, not a sum)
+                } else if (f.belt_slot && t.slot == f.belt_slot) {
+                    belt = it.plus();
                 } else {
                     bonus[2] += it.plus();
                 }
@@ -534,7 +540,14 @@ void recalc_values(party::Character& c, const items::Names& names, const ItemFac
             }
         }
     }
-    if (magic_armour) bonus[3] = 0;
+    if (magic_armour) {
+        // (rings of protection - and Darkness's / Treasures' cloaks, Treasures'
+        // slot 5 - give nothing with magic armour on: only a plus is dropped,
+        // a cursed one's minus stays - "cmp ...,0 / jng" in each routine)
+        if (bonus[3] > 0) bonus[3] = 0;
+        if (cloak > 0) cloak = 0;
+        if (belt > 0) belt = 0;
+    }
 
     // Carrying too much slows down too
     int over = weight - max_encumbrance(c);
@@ -548,8 +561,9 @@ void recalc_values(party::Character& c, const items::Names& names, const ItemFac
     if (bonus[4] < ac) bonus[4] = ac;
     ac = 0;
     for (int b : bonus) ac += b;
+    ac += cloak + belt;
     r[kAc] = static_cast<uint8_t>(ac);
-    r[kAcBehind] = static_cast<uint8_t>(bonus[4] + bonus[2] + bonus[3] - 2);
+    r[kAcBehind] = static_cast<uint8_t>(bonus[4] + bonus[2] + bonus[3] + cloak - 2);
     r[kMove] = static_cast<uint8_t>(move);
     r[kHitBonus] = static_cast<uint8_t>(hit);
     r[kBonus] = static_cast<uint8_t>(dmg);

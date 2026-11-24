@@ -231,6 +231,10 @@ w.c('behave %s oracle (creation, kit, Modify, conhp, Human Change) - tools/devki
 for k in range(7):
     w.row('xp', k, [E(k, L + 1) for L in range(1, 41)])
 w.row('conhp', conhp)
+if GAME == 'treasures':
+    # (its training routine, GAME.OVR 0x1E177: a class trains only below its last level - DS 0x6F92;
+    # Darkness's routine has only the level 40 test)
+    w.row('level_cap', list(ds.bytes(0x6F92, 8)))
 w.row('classmask', masks)
 w.row('lasthd', lasthd)
 w.row('hpcount', hpcount)
