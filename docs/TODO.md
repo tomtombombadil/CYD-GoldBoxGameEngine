@@ -1,5 +1,10 @@
 # Open tasks (Tom and Claude)
 
+- [x] v0.215.1 (Tom, 2026-11-23, the Android app): **a tap moves the highlight to what it picks before acting**, as
+      the cursor keys do - the party menu's line (`pm_sel`: tapping Modify Character left Drop Character lit while
+      it asked for a character) and the menu line's word (`menu.selected`, CYD_MENU_HIGHLIGHT builds; not the Dark
+      Queen's buttons). The state is the one a button player reaches; play not re-run here (no game files in that
+      session) - [ ] a look on a CYD board: tap a party-menu line and a menu-line word, the highlight follows.
 - [x] v0.212.0 (Tom, 2026-11-22: "fix the final cinematic to match the DOSBox behavior"): **Darkness's ending movie** -
       block 75's PROGRAM 1 now plays VACE's FINAL from the player's FINAL.ACF / FINAL.BMA as VACE.EXE does
       (`engine/vace.*`, Wait::Movie; facts: the Project's claude/vace_facts.md): Bane's avatar struck down, Phlan

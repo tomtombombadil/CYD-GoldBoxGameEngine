@@ -13726,7 +13726,14 @@ void pm_tap(int x, int y, pic::Canvas& c)
     }
     const int line = row - pm_row0();
     if (line >= 0 && line < pm_lines && y < text::kMenuTapTop) {
-        if (d->prof->variant.tr) pm_sel = line;     // (Treasures: its menu keeps the line picked white)
+        // A tap moves the highlight to the line it picks first, as the cursor
+        // keys would (Tom, 2026-11-23, the Android app: tapping Modify Character
+        // left the highlight on Drop Character while it asked for a character).
+        // Treasures' menu keeps the line picked white in any case
+        if (pm_sel != line || d->prof->variant.tr) {
+            pm_sel = line;
+            if (pm_lit() && !d->prof->variant.tr) draw_party_menu(c);
+        }
         pm_prompt(c);
         pm_choose(pm_item[line], c);
     }
@@ -20476,6 +20483,19 @@ void tap(int x, int y, pic::Canvas& c)
     if (kept_hl() && menu_on && y >= text::kMenuTapTop && menu.count > 0) hl_picked(menu_item_at(x, y));
     // (every game: the menu's place kept for when it comes back - hl_apply)
     if (menu_on && y >= text::kMenuTapTop && menu.count > 0) hl_remember(menu_item_at(x, y));
+#if CYD_MENU_HIGHLIGHT
+    // (every game: the menu line's highlight goes to the word tapped before it
+    // acts - what the cursor keys and Select do - so a menu or question that
+    // stays up shows the word picked, not the last one keyed - Tom, 2026-11-23)
+    if (menu_on && !hl() && y >= text::kMenuTapTop && menu.count > 1) {
+        const int k = menu_item_at(x, y);
+        if (k >= 0 && k != menu.selected) {
+            menu.selected = k;
+            hl_moved();
+            show_menu_line(c);
+        }
+    }
+#endif
     if (screen != Screen::Game) {
         pm_tap(x, y, c);
         return;
