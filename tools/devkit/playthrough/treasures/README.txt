@@ -132,7 +132,7 @@ key first ("./L...").
   them does nothing.
 
 2026-11-24, last (Ice Peak, Freezefire's lair, the ending)
-- A walk does not cross blocks: cross.sh <slot> <tokens> steps off an edge square and saves. The exits are in
+- A walk does not cross blocks: cross.sh <slot> <script> steps off the edge square into that script and saves. The exits are in
   each script's leave routine (PEEKEND=<table>): Icewolf west edge x 0 at y 1 / 4 / 7 / 11 / 14 / 15 -> Ice Peak
   x 15, the same y; Ice Peak south edge y 15 <-> Aurilssbarg y 0 at x 0 / 3 / 7 / 10 / 13.
 - Ice Peak: 15,1 is the maze (the undead, the giants), 15,14 a pocket whose 13,15 goes south; the way to the
