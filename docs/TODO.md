@@ -1,5 +1,11 @@
 # Open tasks (Tom and Claude)
 
+- [x] v0.215.2 (Tom, 2026-11-23, Curse's Fire Knives, the Android app): **the 3D view comes back after a fight** in
+      every game - the picture shown before the fight is forgotten at its start (`last_pic_id`, play_fight.inc
+      `fight_start`), as Pool's already was (DOSBox); it stayed after the fight's treasure until a step redrew the
+      view. "It's supposed to regenerate the view when exiting combat." [ ] Checked by code only (no game files in
+      that session): a fight in Curse, Secret, Darkness, Treasures and a Krynn game when the files are here - the
+      treasure's Exit shows the 3D view; a script that draws a picture after its COMBAT still shows it.
 - [x] v0.215.1 (Tom, 2026-11-23, the Android app): **a tap moves the highlight to what it picks before acting**, as
       the cursor keys do - the party menu's line (`pm_sel`: tapping Modify Character left Drop Character lit while
       it asked for a character) and the menu line's word (`menu.selected`, CYD_MENU_HIGHLIGHT builds; not the Dark

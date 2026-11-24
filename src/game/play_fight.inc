@@ -5697,9 +5697,13 @@ void fight_start(pic::Canvas& c)
     combat::g_dk_drain = darkness_files() || hl() ? dk_drain_hook : nullptr;
     combat::g_adnd_drain = !combat::g_dk_drain && rules::adnd(rules::kAdndDrain) ? adnd_drain_hook : nullptr;     // (its own drain: facts L1; the Dark Queen's its shape)
     b.indoors = vm->get(0x4BE6) != 0;
-    // (Pool: the picture before the fight isn't come back to - its treasure's
-    // Exit shows the 3D view, DOSBox)
-    if (pool_files()) last_pic_id = -1;
+    // The picture before the fight isn't come back to: after the fight (its
+    // treasure's Exit) the 3D view is drawn again (Pool: DOSBox. Every game
+    // since v0.215.2 - Tom, 2026-11-23, Curse's Fire Knives: their picture
+    // stayed after the fight until a step redrew the view; "It's supposed to
+    // regenerate the view when exiting combat"). A script that wants a
+    // picture after its COMBAT draws it itself (PICTURE)
+    last_pic_id = -1;
     // (Dark Queen: game byte 0x22 - vm 0x4BE6 - as the others: set, the
     // field from the 3D map on DungCom1's look, else WildCom1 and the outdoor
     // builder - DQK.EXE 0x2CC04 / 0x2CC52; a square's roof plays no part,
