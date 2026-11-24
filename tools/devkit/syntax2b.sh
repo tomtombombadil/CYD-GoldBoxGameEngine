@@ -2,7 +2,7 @@
 # CLAUDE.md's gnu++2b syntax check
 cd "${REPO:-$(cd "$(dirname "$0")/../.." && pwd)}"
 bad=0
-for f in src/engine/*.cpp src/game/play.cpp src/game/look.cpp src/game/walk.cpp; do
+for f in src/engine/*.cpp src/game/play.cpp src/game/look.cpp src/game/walk.cpp src/game/tidy.cpp; do
   g++ -std=gnu++2b -fsyntax-only -Isrc "$f" 2>/tmp/claude-0/ag7/syntax.err || { echo "FAIL $f"; head -5 /tmp/claude-0/ag7/syntax.err; bad=1; }
 done
 echo "gnu++2b syntax: $([ $bad = 0 ] && echo ok || echo FAILED)"

@@ -58,6 +58,8 @@ File open(const char* path, const char* mode = "r");
 bool exists(const char* path);
 bool remove(const char* path);
 bool mkdir(const char* path);
+// Removes an empty folder (false: not there, not empty, or refused)
+bool rmdir(const char* path);
 // Gives file `from` the name `to` (on the same card), replacing a file
 // already called that. Used to write a file whole under a temporary name
 // first, so a failed write never leaves `to` half written. False: `from`

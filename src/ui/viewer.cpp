@@ -39,6 +39,7 @@
 #include "pdfview.h"
 #include "game/companion.h"
 #include "game/music_make.h"
+#include "game/tidy.h"
 #include "game/play.h"
 #include "game/walk.h"
 #include "ui.h"
@@ -239,6 +240,7 @@ void close_file()
 int wrap_text(int x, int y, int w, const char* s, ui::Font font, uint16_t col, bool draw, int max_lines = 0);
 
 void rescan();
+void clean_up();
 // Rescan makes everything again (Tom, 2026-10-31: "a manual rescan should
 // force rebuilding of things") - the journals, the programs' copies, the
 // pictures - never "ready (made by an earlier scan)"
@@ -1713,6 +1715,79 @@ void rescan()
     scr = nullptr;
     logui::open(true, fallback);
     free(fallback);
+    go(Screen::Logs);
+}
+
+// Clean Up Game Files (Tom, 2026-11-24; game/tidy.h has the rules): every
+// game found has what the engine never reads taken out of its folder - DOSBox,
+// the installers, the Steam launcher's and the Gold Box Companion's own files
+// - its game files, saves and PDFs kept; the Launcher folder down to the box
+// art. Its lines scroll as the scan's do, every file in _CYD/CLEANUP.TXT,
+// then that report with Continue.
+void clean_up()
+{
+    scr = new (std::nothrow) ScanScreen;
+    ui::clear();
+    ui::header("Cleaning Up Game Files", false);
+    close_file();
+    if (!sd_begin()) {
+        scan_say("No SD card found.", false, nullptr);
+    } else if (scr) {
+        char path[160];
+        library::cache_path("CLEANUP.TXT", path, sizeof path);
+        scr->log = sd_fs().open(path, "w");
+        if (scr->log) scr->log.printf("CYD BYOG Gold Box Engine %s (%s), %s - Clean Up Game Files\n\n", env_.version, env_.build, BOARD_NAME);
+    }
+    // (each file's line into the report only - the screen gets each game's sum)
+    tidy::Say detail = [](const char* line, void*) {
+        if (scr && scr->log) scr->log.printf("  %s\n", line);
+    };
+    tidy::Report all;
+    for (int i = 0; i < n_games; ++i) {
+        const library::GameDir& g = game_dirs[i];
+        char line[120];
+        snprintf(line, sizeof line, "Cleaning up %s...", games::title(g.game));
+        scan_say(line, false, nullptr);
+        scan_flush_log();
+        tidy::Report r;
+        tidy::clean_game(g.folder, g.data_dir, true, r, detail, nullptr);
+        snprintf(line, sizeof line, "%s: %d file%s removed (%.1f MB)%s", games::short_title(g.game), r.files,
+                 r.files == 1 ? "" : "s", r.bytes / 1048576.0, r.failed ? " - some couldn't be" : "");
+        scan_say(line, true, nullptr);
+        all.files += r.files, all.bytes += r.bytes, all.folders += r.folders, all.left += r.left,
+            all.failed += r.failed;
+    }
+    {
+        scan_say("Cleaning up the Launcher folder...", false, nullptr);
+        scan_flush_log();
+        tidy::Report r;
+        tidy::clean_launcher(true, r, detail, nullptr);
+        char line[120];
+        snprintf(line, sizeof line, "Launcher: %d file%s removed (%.1f MB) - its box art kept", r.files,
+                 r.files == 1 ? "" : "s", r.bytes / 1048576.0);
+        scan_say(line, true, nullptr);
+        all.files += r.files, all.bytes += r.bytes, all.folders += r.folders, all.failed += r.failed;
+    }
+    char line[200];
+    snprintf(line, sizeof line, "Done: %d files and %d folders removed, %.1f MB freed. Game files, saves and PDFs "
+             "are all still there.", all.files, all.folders, all.bytes / 1048576.0);
+    scan_say(line, false, nullptr);
+    if (all.left) {
+        snprintf(line, sizeof line, "%d file%s the engine doesn't know left alone (listed in this report).", all.left,
+                 all.left == 1 ? "" : "s");
+        scan_say(line, false, nullptr);
+    }
+    if (all.failed) scan_say("Some files couldn't be removed (listed in this report).", false, nullptr);
+    if (scr) {
+        scan_flush_log();
+        if (scr->log) scr->log.close();
+    }
+    delete scr;
+    scr = nullptr;
+    snprintf(line, sizeof line, "Clean Up Game Files: %d files, %d folders, %.1f MB", all.files, all.folders,
+             all.bytes / 1048576.0);
+    memlog::note(line);
+    logui::open_report("Clean Up Game Files", "CLEANUP.TXT");
     go(Screen::Logs);
 }
 
@@ -4071,7 +4146,7 @@ void tap_quick(const ui::Tap& t)
 bool in_game_menu() { return set_from == SetFrom::InGame; }
 
 enum ItemKind : uint8_t { kIFolder, kIBoard, kIComfort, kIAdnd, kIFix, kIFixGame, kIAction, kIOriginal };
-enum Act : uint8_t { kAExit, kARescan, kADevice, kALogScan, kALogRestart, kALogError, kALogMemory, kASend };
+enum Act : uint8_t { kAExit, kARescan, kADevice, kALogScan, kALogRestart, kALogError, kALogMemory, kASend, kAClean };
 struct Item {
     uint8_t kind, id;
 };
@@ -4192,6 +4267,7 @@ int page_items(Page p, Item* out)
         break;
     case Page::System:
         add(kIAction, kARescan);
+        add(kIAction, kAClean);
         add(kIAction, kADevice);
         add(kIAction, kALogScan);
         add(kIAction, kALogRestart);
@@ -4258,6 +4334,7 @@ const char* item_name(const Item& it)
         switch (it.id) {
         case kAExit: return "Exit Game";
         case kARescan: return "Rescan Card";
+        case kAClean: return "Clean Up Game Files";
         case kADevice: return "Device Info";
         case kALogScan: return "Card Log";
         case kALogRestart: return "Restart Log";
@@ -4407,6 +4484,11 @@ void do_action(uint8_t a)
         // (in a game: out of it first - the scan remakes the files the game reads)
         if (in_game_menu()) menu_esc();
         rescan();
+        return;
+    case kAClean:
+        // (in a game: out of it first - its files are what this goes through)
+        if (in_game_menu()) menu_esc();
+        clean_up();
         return;
     case kADevice: open_page(Page::Device); return;
     case kALogScan: open_log(0); return;

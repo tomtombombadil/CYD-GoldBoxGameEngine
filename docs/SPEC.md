@@ -388,7 +388,19 @@ stay in the session's scratch space, never in the repo.
   - Cheats: Healer, Merchant, Sanctuary, Trainer, Max Hit Points.
   - Quick Actions: its page, On / Off at the top (off: dimmed, the
     originals' Quick).
-  - System: Rescan Card (in a game: leaves it first), Device Info (version,
+  - System: Rescan Card (in a game: leaves it first), Clean Up Game Files
+    (v0.216.0, Tom 2026-11-24: each found game's folder loses what the engine
+    never reads - DOSBox, the GOG installer / Galaxy files, Steam's launcher
+    scripts and conf files, the Gold Box Companion's program and pictures, the
+    DOS sound / video drivers and tools beside the game's program, the Dark
+    Queen's music for other sound cards; kept: every file the engine reads,
+    every save / character file, every SAVE* folder, every PDF, the game's
+    icon, the Companion's Game.dat / JE_*.jpg, and any file it doesn't know
+    (listed). The Launcher folder down to the box art. `game/tidy.*` (the
+    rules in tidy.h), the report _CYD/CLEANUP.TXT; checked by test_platform
+    and by every game's reads (tools/devkit/tidy_check.sh: the PC platform's
+    FILELOG over an events sweep, the demo, fights and the music - no file
+    read is on the list), Device Info (version,
     board, chip, screen, PSRAM, memory, each game's release - Steam / GOG /
     unknown), Card Log, Restart Log, Error Log, Memory Log, Send Logs.
   - Home: a tap on the game starts it; Rescan Card in System (an empty

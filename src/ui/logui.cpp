@@ -19,6 +19,7 @@ bool after_scan_ = false;
 bool from_game_ = false;
 int  tab = 0;
 int  one_ = -1;             // one log alone (open_one: 0-3; 4 Send Logs alone), -1: the tabs
+const char* report_title_ = nullptr;   // open_report's (nullptr: the scan's log)
 
 int body_top() { return ui::header_h() + ui::gap(); }
 int body_bottom() { return ui::height() - ui::key_h() - ui::gap() * 2; }
@@ -43,6 +44,7 @@ bool load(int i)
 
 void open(bool after_scan, const char* fallback)
 {
+    report_title_ = nullptr;
     after_scan_ = after_scan;
     from_game_ = false;
     one_ = -1;
@@ -73,6 +75,19 @@ void open_one(int which, bool in_game)
     ui::allow_drag(true);
 }
 
+void open_report(const char* title, const char* file)
+{
+    report_title_ = title;
+    after_scan_ = true;
+    from_game_ = false;
+    one_ = -1;
+    tab = 0;
+    char path[96];
+    library::cache_path(file, path, sizeof path);
+    if (!logview::open_file(path, true)) logview::open_text("The report couldn't be written on the card.", true);
+    ui::allow_drag(true);
+}
+
 bool from_scan() { return after_scan_; }
 bool from_game() { return from_game_; }
 
@@ -83,7 +98,7 @@ void draw()
         return;
     }
     ui::clear();
-    ui::header(after_scan_ ? "Card Scan" : one_ >= 0 && one_ < kLogs ? kOne[one_] : "Logs", !after_scan_);
+    ui::header(after_scan_ ? (report_title_ ? report_title_ : "Card Scan") : one_ >= 0 && one_ < kLogs ? kOne[one_] : "Logs", !after_scan_);
     logview::set_area({ui::gap(), body_top(), ui::width() - ui::gap() * 2, body_bottom() - body_top()});
     logview::draw();
     if (after_scan_) {

@@ -362,6 +362,14 @@ to the bottom with their version, then drop off after a while. Synced to
 the Project as claude/TODO.md.
 
 ## Tom
+- [ ] v0.216.0 **Clean Up Game Files** (Tom, 2026-11-24: "a function ... to cleanup the files copied to the device
+      ... except I want to leave all the PDFs"): Settings - System - Clean Up Game Files (the port: its main menu, beside
+      Rescan Game Files). Removes what the engine never reads (DOSBox, GOG installer / Galaxy files, Steam launcher
+      scripts and confs, the Companion's program and pictures, DOS drivers / tools, the Dark Queen's non-AdLib music, the
+      Launcher folder but its box art); keeps game files, saves, SAVE* folders, icons, the Companion's journal files,
+      every PDF, and anything unknown (listed). Report: _CYD/CLEANUP.TXT. On Tom's lists: about 11 MB a GOG set, 83 MB
+      the Steam set (on copies of the Project's zips). Kept on purpose: Darkness's INTRO.ACF / .BMA (its intro movie,
+      an open question above). Tom: run it on a card / device, then play a game of each release.
 - [ ] **The AD&D 1E books** (Tom uploaded them 2026-11-23: the Project's "1st Edition.zip" - PHB, DMG, Unearthed
       Arcana, Premium Editions; unzip to scratch /tmp/claude-0/books, pdftotext): level drain / Restoration done
       against them (the Project's claude/drain_restore_facts.md, with pages). Claude, next: every AD&D 1E Rules

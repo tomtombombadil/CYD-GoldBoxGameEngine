@@ -22,6 +22,10 @@ void open_from_game();
 // straight away; leaving goes back to the page (in_game: the game's menu)
 void open_one(int which, bool in_game);
 bool from_game();
+// A report the engine wrote in /GOLDBOX/_CYD (Clean Up Game Files' CLEANUP.TXT,
+// Tom 2026-11-24), shown as the scan's log is - its own title, Continue on to
+// the library
+void open_report(const char* title, const char* file);
 
 void draw();
 // False when the screen is left (back to Settings, or on from the scan)

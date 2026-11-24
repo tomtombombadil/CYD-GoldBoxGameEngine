@@ -2,6 +2,7 @@
 // and writes, as the board's card gives them. CI builds it with
 //   g++ -std=c++17 -Wall -Werror -fsanitize=address,undefined -Itools/host -Isrc
 //       -o test_platform tools/host_tests/test_platform.cpp tools/host/*.cpp src/engine/dax.cpp
+#include "game/tidy.h"
 #include "host.h"
 #include "platform/file.h"
 #include "platform/memlog.h"
@@ -126,6 +127,82 @@ int main()
     // The memory figures and the memory log: unknown / plenty on a PC
     CHECK(plat::free_heap() == 0 && plat::largest_block() == 0);
     CHECK(memlog::largest_kb() >= 999 || getenv("LOWMEM"));
+    // Clean Up Game Files (game/tidy.*): a GOG and a Steam install made of
+    // empty files with the releases' own names - what goes and what stays
+    {
+        auto put = [&](const std::string& rel) {
+            std::string path = std::string(games::kRootDir) + "/" + rel;
+            for (size_t k = strlen(games::kRootDir) + 1; (k = path.find('/', k)) != std::string::npos; ++k)
+                plat::mkdir(path.substr(0, k).c_str());
+            plat::File f = plat::open(path.c_str(), "w");
+            f.write(reinterpret_cast<const uint8_t*>("x"), 1);
+            f.close();
+        };
+        auto there = [&](const std::string& rel) { return plat::exists((std::string(games::kRootDir) + "/" + rel).c_str()); };
+        const char* gog[] = {"Pools of Darkness/GAME.EXE", "Pools of Darkness/GAME.OVR", "Pools of Darkness/ECL1.DAX",
+                             "Pools of Darkness/POOL4.CFG", "Pools of Darkness/ITEMS", "Pools of Darkness/FINAL.ACF",
+                             "Pools of Darkness/INTRO.BMA", "Pools of Darkness/Adventurers Journal.pdf",
+                             "Pools of Darkness/goggame-1432643408.ico", "Pools of Darkness/SAVE/CHRDATA1.SAV",
+                             "Pools of Darkness/SAVE/VAULTA.DAT", "Pools of Darkness/Manual.pdf", nullptr};
+        const char* gog_out[] = {"Pools of Darkness/VACE.EXE", "Pools of Darkness/CONTROL.EXE", "Pools of Darkness/EGA.DRV",
+                                 "Pools of Darkness/IBMSND.COM", "Pools of Darkness/P1.SMS", "Pools of Darkness/START.BAT",
+                                 "Pools of Darkness/unins000.exe", "Pools of Darkness/unins000.dat", "Pools of Darkness/gog.ico",
+                                 "Pools of Darkness/goggame-1432643408.hashdb", "Pools of Darkness/dosbox_pod.conf",
+                                 "Pools of Darkness/Launch Pools of Darkness.lnk", "Pools of Darkness/DOSBOX/DOSBox.exe",
+                                 "Pools of Darkness/DOSBOX/Documentation/README.txt", nullptr};
+        const char* steam[] = {"The Dark Queen of Krynn/GAME/DQK/DQK.EXE", "The Dark Queen of Krynn/GAME/DQK/DISK1/ADLIB.ADV",
+                               "The Dark Queen of Krynn/GAME/DQK/DISK1/ADDQ1.XMI", "The Dark Queen of Krynn/GAME/DQK/DISK1/INSTR.AD",
+                               "The Dark Queen of Krynn/GAME/DQK/DISK2/MONCHA.GLB", "The Dark Queen of Krynn/GAME/DQK/SAVGAMA.QSV",
+                               "The Dark Queen of Krynn/GAME/DQK/SAVE/BALTHIRN.QCH", "The Dark Queen of Krynn/GAME/DKK/SAVE/x.GAM",
+                               "The Dark Queen of Krynn/game.ico", "The Dark Queen of Krynn/Documentation/Journal-ENG.pdf",
+                               "The Dark Queen of Krynn/Default files/Saves/SAVGAMA.QSV",
+                               "The Dark Queen of Krynn/GBC/Games/07. The Dark Queen of Krynn/Game.dat",
+                               "The Dark Queen of Krynn/GBC/Games/07. The Dark Queen of Krynn/JE_012.jpg",
+                               "The Dark Queen of Krynn/Documentation/mine.zip", nullptr};
+        const char* steam_out[] = {"The Dark Queen of Krynn/GAME/DQK/DISK1/PCDQ1.XMI", "The Dark Queen of Krynn/GAME/DQK/DISK1/TANDY.ADV",
+                                   "The Dark Queen of Krynn/GAME/DQK/DISK1/SFXDQ.VOC", "The Dark Queen of Krynn/GAME/DQK/INSTALL.EXE",
+                                   "The Dark Queen of Krynn/GAME/DQK/START.BAT", "The Dark Queen of Krynn/base.conf",
+                                   "The Dark Queen of Krynn/run-game.bat", "The Dark Queen of Krynn/metadata",
+                                   "The Dark Queen of Krynn/stdout.txt", "The Dark Queen of Krynn/Default files/graphics.conf",
+                                   "The Dark Queen of Krynn/GBC/GBC.exe", "The Dark Queen of Krynn/GBC/GBC.dat",
+                                   "The Dark Queen of Krynn/GBC/Games/07. The Dark Queen of Krynn/Baldric_1.bmp",
+                                   "The Dark Queen of Krynn/GBC/Games/07. The Dark Queen of Krynn/XP.txt",
+                                   "The Dark Queen of Krynn/DOSBOX/Source/dosbox-0.74-3.tar.gz",
+                                   "The Dark Queen of Krynn/Documentation/Controls.exe", nullptr};
+        const char* launcher[] = {"Launcher/Sprites/Backgrounds/Back-007.jpg", "Launcher/Sprites/Backgrounds/Back-016+.jpg", nullptr};
+        const char* launcher_out[] = {"Launcher/Launcher.exe", "Launcher/Sprites/Backgrounds/Back-001+.jpg",
+                                      "Launcher/Sprites/Title-007-PLO4.jpg", "Launcher/fonts/SouvenirStd-Light.otf", nullptr};
+        for (const char* const* l : {gog, gog_out, steam, steam_out, launcher, launcher_out})
+            for (; *l; ++l) put(*l);
+        tidy::Report dry;
+        tidy::clean_game("Pools of Darkness", "Pools of Darkness", false, dry);
+        CHECK(dry.files == 14 && there("Pools of Darkness/VACE.EXE"));     // (a dry run removes nothing)
+        tidy::Report r;
+        tidy::clean_game("Pools of Darkness", "Pools of Darkness", true, r);
+        tidy::clean_game("The Dark Queen of Krynn", "The Dark Queen of Krynn/GAME/DQK", true, r);
+        tidy::clean_launcher(true, r);
+        for (const char* const* l : {gog, steam, launcher})
+            for (; *l; ++l) CHECK(there(*l));
+        for (const char* const* l : {gog_out, steam_out, launcher_out})
+            for (; *l; ++l) CHECK(!there(*l));
+        CHECK(r.files == 14 + 16 + 4 && r.left == 1 && r.failed == 0);
+        CHECK(!there("Pools of Darkness/DOSBOX") && !there("The Dark Queen of Krynn/DOSBOX") && !there("Launcher/fonts"));
+        CHECK(there("The Dark Queen of Krynn/GAME/DKK/SAVE") && there("The Dark Queen of Krynn/GAME/DQK/DISK1"));
+        // the verdicts on their own
+        CHECK(tidy::verdict("GAME/CURSE/COPYCURS.EXE", "GAME/CURSE") == tidy::Verdict::Remove);
+        CHECK(tidy::verdict("GAME/CURSE/START.EXE", "GAME/CURSE") == tidy::Verdict::Keep);
+        CHECK(tidy::verdict("GAME/PAUSE6K.COM", "GAME/CURSE") == tidy::Verdict::Remove);
+        CHECK(tidy::verdict("GAME/CURSE/SAVE/Notes.txt", "GAME/CURSE") == tidy::Verdict::Keep);
+        CHECK(tidy::verdict("POOLRAD/CHRDATA1.ITM", "POOLRAD") == tidy::Verdict::Keep);
+        CHECK(tidy::verdict("codewheel.exe", "POOLRAD") == tidy::Verdict::Remove);
+        CHECK(tidy::verdict("Cluebook.PDF", "POOLRAD") == tidy::Verdict::Keep);
+        // (the trees gone again)
+        for (const char* const* l : {gog, steam, launcher})
+            for (; *l; ++l) plat::remove((std::string(games::kRootDir) + "/" + *l).c_str());
+        const std::string rm = "rm -rf '" + std::string(root) + "/Pools of Darkness' '" + std::string(root) +
+                               "/The Dark Queen of Krynn' '" + std::string(root) + "/Launcher'";
+        CHECK(system(rm.c_str()) == 0);
+    }
     // (tidy up)
     plat::remove("/GOLDBOX/GAME/F.BIN");
     rmdir((std::string(root) + "/GAME/SUB").c_str());

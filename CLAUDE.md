@@ -456,7 +456,11 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   1E Rules, Game Fixes (in a game Every Game + that game's page; at Home every
   game's - a fix shared by games shows on each of their pages). Journal: the
   entries + Whole Journal (the book). Quick Actions: On / Off at the top.
-  System: Rescan Card, Device Info (version, board, memory, each game's
+  System: Rescan Card, Clean Up Game Files (Tom, 2026-11-24: what the
+  engine never reads taken out of the game folders, the PDFs, saves and game
+  files kept - `game/tidy.*`, its rules in tidy.h; a new file the engine
+  reads must not match them - tools/devkit/tidy_check.sh), Device Info
+  (version, board, memory, each game's
   release - Steam / GOG / unknown), Card Log, Restart Log, Error Log, Memory
   Log, Send Logs. Home: a tap on the game starts it (no game page; Rescan
   only in System, or a tap on an empty card's page). Gone (Tom): Cheats Tab,

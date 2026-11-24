@@ -10,6 +10,7 @@
 #include <cstring>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #include <ctime>
 
 namespace pc {
@@ -130,11 +131,28 @@ private:
 
 bool card_ready() { return true; }
 
+// FILELOG=<file>: every card file opened for reading (or asked for by
+// exists) noted there - what a game needs (tools/devkit/tidy_check.sh)
+void note_read(const char* path)
+{
+    static FILE* log = nullptr;
+    static bool tried = false;
+    if (!tried) {
+        tried = true;
+        if (const char* f = getenv("FILELOG")) log = fopen(f, "a");
+    }
+    if (log) {
+        fprintf(log, "%s\n", path);
+        fflush(log);
+    }
+}
+
 File open(const char* card_path, const char* mode)
 {
     const std::string hp = pc::host_path(card_path);
     const char* path = hp.c_str();
     struct stat st;
+    if ((!mode || mode[0] == 'r') && stat(path, &st) == 0 && !S_ISDIR(st.st_mode)) note_read(path);
     if ((!mode || mode[0] != 'w') && stat(path, &st) == 0 && S_ISDIR(st.st_mode))
         return File(std::make_shared<HostFile>(opendir(path), path));
     static const int slots = getenv("SLOTS") ? atoi(getenv("SLOTS")) : 3;    // (the board's: hal/sdcard.cpp)
@@ -154,7 +172,9 @@ File open(const char* card_path, const char* mode)
 bool exists(const char* path)
 {
     struct stat st;
-    return stat(pc::host_path(path).c_str(), &st) == 0;
+    const bool there = stat(pc::host_path(path).c_str(), &st) == 0;
+    if (there && !S_ISDIR(st.st_mode)) note_read(pc::host_path(path).c_str());
+    return there;
 }
 bool remove(const char* path) { return ::remove(pc::host_path(path).c_str()) == 0; }
 bool rename(const char* from, const char* to)
@@ -164,6 +184,7 @@ bool rename(const char* from, const char* to)
     if (exists(to) && !remove(to)) return false;
     return ::rename(pc::host_path(from).c_str(), pc::host_path(to).c_str()) == 0;
 }
+bool rmdir(const char* path) { return ::rmdir(pc::host_path(path).c_str()) == 0; }
 bool mkdir(const char* path)
 {
     ::mkdir(pc::host_path(path).c_str(), 0755);
