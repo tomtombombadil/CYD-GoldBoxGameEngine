@@ -67,6 +67,16 @@
       moves. Also seen (not looked into): the caves' wyvern at 15,8 - the engine shows its big picture, DOSBox the
       3D view with the sprite. The fight budget check (budgetx.sh) reads ~176 KB in every game, a 64 KB block from a
       system library among it (the PC build's, not the board's) - the measure needs that left out.
+- [x] v0.216.3 (the Death Knights play-through, 2026-11-24): **a flight's runners stayed out of the next fight** -
+      Running -> Okay but in_combat (0x196) left 0 after a flight, so the next fight placed none of them and counted as
+      won (Soth's "won't allow you to escape" fight again: skipped, the fallen left behind). coab's cleanup sets both.
+      Every game; behave matrix T8b (fails without the fix).
+- [x] v0.216.4 (the same): **Resist Fire / Resist Cold did nothing in Secret, Champions, Darkness, Treasures and Death
+      Knights** - their facts never named the effects (0x14 / 0x0A); each program's handler halves the damage and gives
+      +3 on the save (handler tables read: Darkness 0xA7E6, Treasures 0x9E30, Knights 0xBE7E, Secret 0x87E6, Champions
+      0x6B94). Host test. Death Knights' fire handler acts only when its event argument is 0 (cold's always) - the
+      engine halves always; not looked into.
+- [ ] The Dark Queen's Resist Fire / Resist Cold: its .mon facts name neither - its DQK.EXE handlers not read yet.
 - [x] v0.214.10 (the PortMaster session's Treasures play-through, 2026-11-23): **a shop's goods came up in the next
       fight's treasure** - SHOP n put them on the item list and nothing took them off when the shop was left (Ruathym:
       a 34-item treasure showed 64, the list's cap). The original (DOSBox, the same save: the shop at 8,11, Exit, the

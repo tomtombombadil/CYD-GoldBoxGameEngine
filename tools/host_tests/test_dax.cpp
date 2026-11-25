@@ -1256,6 +1256,19 @@ static void test_layout()
         CHECK(sec && !strcmp(sec->font_file, "8X8D5.DAX") && sec->variant.tile_window == 40 && sec->party.count == 13 &&
               sec->ecl_ops->area_by_block && sec->start_script == 17 && sec->variant.bigpic_from == 0x70);
         CHECK(profile::ready(games::Game::SecretOfTheSilverBlades));
+        // Resist Fire / Resist Cold halve their damage (+3 on the save) in
+        // every DAX game: each program's effect handler 0x14 / 0x0A (the
+        // handler table's entries - Darkness 0xA7E6, Treasures 0x9E30, Death
+        // Knights 0xBE7E, Secret 0x87E6, Champions 0x6B94, Curse 0x6FC0).
+        // Until v0.216.4 only PoolRad, Curse and Gateway had them (Death
+        // Knights' Soth, 2026-11-24: Resist Fire did nothing)
+        for (games::Game g : {games::Game::PoolOfRadiance, games::Game::CurseOfTheAzureBonds,
+                              games::Game::SecretOfTheSilverBlades, games::Game::PoolsOfDarkness,
+                              games::Game::GatewayToTheSavageFrontier, games::Game::TreasuresOfTheSavageFrontier,
+                              games::Game::ChampionsOfKrynn, games::Game::DeathKnightsOfKrynn}) {
+            const profile::Profile* p = profile::first(g);
+            CHECK(p && p->fight.facts.mon.resist_fire == 0x14 && p->fight.facts.mon.resist_cold == 0x0A);
+        }
         // Pools of Darkness: playable (v0.141.0); GAME.EXE; its scripts'
         // operand counts (darkness_facts.md 2); VGA pictures
         const profile::Profile* dk = profile::find(games::Game::PoolsOfDarkness, 64203, 72784);
