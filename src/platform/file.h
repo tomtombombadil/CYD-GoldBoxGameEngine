@@ -70,6 +70,11 @@ bool rename(const char* from, const char* to);
 // handhelds; the boards have none). A platform without it needn't define
 // it: play.cpp has a weak stand-in (false: not known).
 bool file_time(const char* path, char* out, size_t cap);
+// When the file was last written as a number that grows with the time
+// (seconds since 1970 on a platform with a clock), for telling the newest
+// of several files apart - 0: not known. Optional as file_time (a weak
+// stand-in in play.cpp: 0).
+uint32_t file_stamp(const char* path);
 
 // Called after each card read of a FileSource while set (nullptr: none) -
 // the game's music keeps its ring filled through long loads with it

@@ -21550,6 +21550,54 @@ void describe(char* line1, char* line2, int cap)
     snprintf(line2, cap, "Map %d", vm->get(0x4BC5));
 }
 
+// ---- Continue (Tom, 2026-11-24: the Android app's game chooser - "Continue
+// (the last save) first") ------------------------------------------------------
+char newest_save()
+{
+    if (!d) return 0;
+    find_saves();
+    char best = 0;
+    uint32_t best_at = 0;
+    for (const char* s = pm_saves; *s; ++s) {
+        char name[24], path[160];
+        save_file_name(*s, name, sizeof name);
+        save_path(name, path, sizeof path);
+        const uint32_t at = plat::file_stamp(path);
+        // (no times known: the last slot there)
+        if (!best || at >= best_at) {
+            best = *s;
+            best_at = at;
+        }
+    }
+    return best;
+}
+
+bool continue_game(char slot, pic::Canvas& c, const char** why)
+{
+    if (why) *why = nullptr;
+    if (!d || slot < savegame::kFirst || slot > savegame::kLast) {
+        if (why) *why = "No saved game to continue.";
+        return false;
+    }
+    // From the title sequence (as its Play) or the party menu: Load Which
+    // Game's slot, then BEGIN Adventuring - the party menu's own steps
+    if (screen == Screen::Title && title_run) end_title(c);
+    if (screen != Screen::PartyMenu || in_demo) {
+        if (why) *why = "Continue works from the game's start only.";
+        return false;
+    }
+    load_where = load_secret = false;
+    if (!load_game(slot) || load_problem || pt->count == 0) {
+        screen = Screen::PartyMenu;
+        draw_party_menu(c);
+        if (why) *why = load_problem ? load_problem : "That saved game has no party.";
+        if (load_problem) error(c, load_problem);
+        return false;
+    }
+    begin_adventuring();
+    return screen != Screen::PartyMenu;
+}
+
 } // namespace play
 
 // The 16-bit output's stand-ins for a platform without one (platform/audio.h:
@@ -21564,4 +21612,5 @@ __attribute__((weak)) bool file_time(const char*, char* out, size_t cap)
     if (cap) out[0] = 0;
     return false;
 }
+__attribute__((weak)) uint32_t file_stamp(const char*) { return 0; }
 }

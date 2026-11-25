@@ -56,6 +56,15 @@ void tap_highlight_end(pic::Canvas& c);
 // Moves printing text and pauses on. Call often.
 void tick(uint32_t now_ms, pic::Canvas& c);
 
+// Continue (Tom, 2026-11-24 - the Android app's game chooser: "Continue (the
+// last save) first"): newest_save - the open game's newest saved game ('A' -
+// 'J'; 0 none) by its file's time (plat::file_stamp; without times: the last
+// slot there); continue_game - straight from the title sequence (or the party
+// menu) into that save, as the party menu's Load Which Game and then BEGIN
+// Adventuring do. False: not loaded - the party menu is up, *why says why.
+char newest_save();
+bool continue_game(char slot, pic::Canvas& c, const char** why = nullptr);
+
 // Esc: back out of a question the Play Test asked (Load Which Game);
 // false if there is none (the viewer leaves the Play Test).
 bool back(pic::Canvas& c);

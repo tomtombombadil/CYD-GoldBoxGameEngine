@@ -2058,6 +2058,8 @@ the Project as claude/TODO.md.
       credits and maps should look like the original's.
 
 ## Done
+- [x] v0.217.0 Continue for front ends (Tom, 2026-11-24, the Android app's chooser): `play::newest_save`,
+      `play::continue_game`, `plat::file_stamp` (weak); SPEC beside Save Slot Info. Checked through the port, nine GOG copies.
 - [x] v0.215.0 AD&D 1E Level Drain & Restoration, one switch (Tom, 2026-11-23): the books' drain and Restoration
       with the level book `_CYD/<folder>/LEVELS.TXT`; left out the time limit, 0-level, undead, ageing (SPEC 12).
 - [x] v0.202.1 (the port's sanitizer run, 2026-11-15): `panel_field_sig` shifted -1 left (no fighter's

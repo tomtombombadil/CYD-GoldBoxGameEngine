@@ -3158,6 +3158,15 @@ a PC, PortMaster handhelds):
     model), fight_check R13 with QAFUZZ=1 (NPCs too; QANPC=1 makes the
     party's last member an NPC), tools/devkit/qa_verify.sh; the tab's
     pictures from the real firmware in QEMU: tools/devkit/qemu_shots.sh.
+    **Continue** (v0.217.0; Tom, 2026-11-24, for the Android app's game
+    chooser - "Continue (the last save) first", his OK for the engine call):
+    `play::newest_save()` - the open game's newest saved game by its file's
+    time (`plat::file_stamp`, optional: a weak 0 here; without times the
+    last slot there) - and `play::continue_game(slot, c, &why)`: from the
+    title sequence or the party menu, Load Which Game's load of that slot,
+    then BEGIN Adventuring (Darkness: its own saves, no "Load from where?").
+    Checked through the port with the nine GOG releases: eight went into
+    their game; Gateway's GOG copy has no saved game ("no save").
 
 ## 12. Where the engine differs from the original games (Tom, 2026-10-10: keep this list up to date)
 
