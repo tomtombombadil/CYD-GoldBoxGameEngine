@@ -1,5 +1,9 @@
 # Open tasks (Tom and Claude)
 
+- [x] v0.219.3 (the PortMaster session, 2026-11-26): **spell names cut at 23 letters** - Treasures' grimoire read
+      "Invisibility, 10' Radiu", "Protection From Evil, 1", "Protection From Normal"; the original (DOSBox, the
+      same save, Zoltan's grimoire) shows them whole. The names' reader kept Curse's 23; now as long as the table's
+      entry holds (40 at most; the Dark Queen's far names too). Darkness and Death Knights have the same long names.
 - [ ] **Secret's demo: the party's three are black stick figures** (found 2026-11-26 by the port's demo shots; the
       original in DOSBox beside it): Capet, Sieglinda and Averoes come by ADD NPC 0x33 / 0x32 / 0x34 (ECL1 block
       3, 0x805C), CPIC1.DAX has no block 50 - 52, so `load_monster_icon` finds nothing and the head / body 0 icon
@@ -687,7 +691,7 @@ the Project as claude/TODO.md.
       `rules::enh`); kAdndItems is PoolRad's Flame Tongue only; Coin Exchange's old bit 0x20 is free.
 - [ ] Treasures play-through leftovers (2026-11-17): a fight page read "LORDSMAN goes down LORDSMAN" /
       "COCKATRICE goes down COCKATRICE" in the playsim's PAGELOG (two pages joined, or a wrong second line?);
-      "INVISIBILITY, 10' RADIU" in the spell book list (cut at the frame - the original's?).
+      "INVISIBILITY, 10' RADIU" in the spell book list (cut at the frame - the original's?). [the engine's: fixed v0.219.3]
 - [ ] Save Slot Info's map of the save (v0.208.0, with a side panel): the
       originals' stock saves (the party not yet begun: "Square 7,13", time
       00:00) give no map - right? Seen with a map, place and arrow (PortMaster
