@@ -1008,8 +1008,12 @@ the Project as claude/TODO.md.
         Points (`kFixImportHp`, Curse, on by default) - no former class: every level counted
         (the same test 64; NOFIXES=1 40). Host test in test_dax (fix off / on). Not checked: the
         ioun stone (same routine), an imported character taken on to Secret.
-  - [ ] Curse's dwarf poison save: Thorin's shows 14 in Curse vs 10 in PoolRad (classes.cpp
-        adds the Constitution bonus to the save number "as the games do") - check it.
+  - [x] v0.221.0 (the PortMaster session, 2026-11-26): Curse's dwarf poison save 14 vs PoolRad's 10 -
+        the ORIGINAL's sum (Curse GAME.OVR 0x3B654: the bonus ADDED to the number; 0x36382: the save made
+        when roll + changes >= the number), a bonus that hurts. Game Fixes' Poison Save Bonus
+        (`kFixPoisonSave`, all but PoolRad, on by default) takes it off the number instead (PHB pp. 15,
+        17). behave classes checks both ways. Read in Curse's code only - the other games' sums are
+        the engine's earlier readings ("as the games do"); the fix turns whatever the engine added.
   - [ ] Curse's camp on the travel map (seen 2026-11-19, outside Zhentil Keep): the camp is drawn over the
         map with no party list, so View / Drop act on the first member only - the player can't pick anyone
         else there. DOSBox: does the original's travel camp show the party list (as Death Knights' PROGRAM 9

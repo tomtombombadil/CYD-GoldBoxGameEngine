@@ -525,7 +525,14 @@ void saving_throws(party::Character& c, const Tables& t)
     else if (con == 25) add += 4;
     // (Pool: none here - its dwarves and halflings have an effect for it, 0x5A;
     // the sample dwarf's and halfling's saves are the table's)
-    if (!t.lay.pool) c.rec[kSaves] = static_cast<uint8_t>(c.rec[kSaves] + add);
+    // The originals ADD it to the number the roll must reach (Curse GAME.OVR
+    // 0x3B654-0x3B735: inc / add byte [record + 0xDF]; the save is made when
+    // roll + mods >= that number, 0x36382) - a bonus that makes the save
+    // harder. Game Fixes' Poison Save Bonus takes it off instead (PHB pp. 15, 17)
+    if (!t.lay.pool) {
+        const int v = rules::fix(rules::kFixPoisonSave) ? c.rec[kSaves] - add : c.rec[kSaves] + add;
+        c.rec[kSaves] = static_cast<uint8_t>(v < 0 ? 0 : v);
+    }
 }
 
 // The thief skills' race row. Champions (its GAME.OVR 0x3ABC5) reads its own

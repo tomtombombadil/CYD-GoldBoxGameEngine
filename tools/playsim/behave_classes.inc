@@ -335,11 +335,17 @@ void tables()
         int lv[8] = {};
         lv[2] = 1;
         levels(c, lv);
-        classes::class_bonuses(c, m->tables);
         const auto* s = osave(2, 1);
         char w[64];
+        // (Game Fixes' Poison Save Bonus off: the original's; on: the bonus taken off the number)
+        rules::set_fixes_off(1ull << rules::kFixPoisonSave);
+        classes::class_bonuses(c, m->tables);
         snprintf(w, sizeof w, "poison save race %d Con %d", pc.race, pc.con);
         expect(P, w, s && c.rec[0xDF] == (*s)[2] + pc.add, "%d, the original's %d", c.rec[0xDF], s ? (*s)[2] + pc.add : -1);
+        rules::set_fixes_off(0);
+        classes::class_bonuses(c, m->tables);
+        snprintf(w, sizeof w, "poison save race %d Con %d, Poison Save Bonus", pc.race, pc.con);
+        expect(P, w, s && c.rec[0xDF] == (*s)[2] - pc.add, "%d, the fix's %d", c.rec[0xDF], s ? (*s)[2] - pc.add : -1);
     }
 }
 
@@ -999,7 +1005,9 @@ void sample_party()
         fclose(f);
         if (n != party::kRecordSize) continue;
         c = raw;
+        rules::set_fixes_off(1ull << rules::kFixPoisonSave);     // (the original's poison number)
         classes::class_bonuses(c, m->tables);
+        rules::set_fixes_off(0);
         rules::recalc(c, *names, d->facts);
         char nm[20], w[96];
         raw.name(nm, sizeof nm);

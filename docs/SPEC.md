@@ -3259,6 +3259,15 @@ the game's Settings (As Original: all of them).
   dwarf fighter 8 with Constitution 16 and 56 hit points readies the Girdle -
   Constitution 17, 40 hit points; the engine the same with the fix off). With
   the fix a character with no former class has every level counted (64).
+- **The Constitution bonus to poison saves (every game but PoolRad; Game
+  Fixes' Poison Save Bonus, v0.221.0)**: the originals add the dwarves' and
+  halflings' +1 to +5 (and Constitution 19+'s) to the poison NUMBER in the
+  record (Curse GAME.OVR 0x3B654-0x3B735), and a save is made when the roll
+  and its changes reach that number (0x36382) - so the bonus makes the save
+  harder (a dwarf fighter 8 with Constitution 16: 14 where PoolRad has 10).
+  With the fix it is taken off the number (6). The books: PHB p. 15 (dwarves),
+  p. 17 (halflings); the 19+ part is in none of the three books here
+  (unchecked) - the fix only turns the originals' own sum the right way.
 - **Death Knights' Remove Curse and Heal** (Game Fixes, v0.201.0): its
   Remove Curse (0x2CD27) and Darkness's in a fight look for effect 0x2B
   while Bestow Curse gives 0x24 - the curse stays; Death Knights' Heal
