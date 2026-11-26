@@ -2916,11 +2916,17 @@ int main(int argc, char** argv)
         // MAPLINK=x,y,d>x2,y2,d2;...: a script's stairs - a step from x,y facing d answered Yes puts the party
         // at x2,y2 facing d2 (the Temple of Tyr's basements share one map: 0,8 S > 8,9 E; the walk had
         // found "no way" and the play-through ran the event by hand where it stood - a wrong battlefield)
-        struct Link { int x, y, d, x2, y2, d2; };
+        // (a trailing n: no question - a script's door that moves the party by itself, the Dark Queen's
+        // Naulidis strips joined so: 15,18,4>8,19,4n)
+        struct Link { int x, y, d, x2, y2, d2; bool ask; };
         std::vector<Link> links;
         for (const char* q = getenv("MAPLINK"); q && *q;) {
             Link l;
-            if (sscanf(q, "%d,%d,%d>%d,%d,%d", &l.x, &l.y, &l.d, &l.x2, &l.y2, &l.d2) == 6) links.push_back(l);
+            int used = 0;
+            if (sscanf(q, "%d,%d,%d>%d,%d,%d%n", &l.x, &l.y, &l.d, &l.x2, &l.y2, &l.d2, &used) == 6) {
+                l.ask = q[used] != 'n';
+                links.push_back(l);
+            }
             q = strchr(q, ';');
             if (q) ++q;
         }
@@ -2965,7 +2971,7 @@ int main(int argc, char** argv)
             path += t == 1 ? "R" : t == 2 ? "B" : t == 3 ? "L" : "";
             path += 'F';
             face = dir;
-            if (via[i] >= 0) { path += "/Y"; face = links[via[i]].d2; }   // (the stairs' question answered)
+            if (via[i] >= 0) { if (links[via[i]].ask) path += "/Y"; face = links[via[i]].d2; }   // (the stairs' question answered)
         }
         printf("  MAPPATH %d,%d -> %d,%d: %s\n", sx, sy, tx, ty, from3[goal] < 0 ? "no way" : path.c_str());
     }

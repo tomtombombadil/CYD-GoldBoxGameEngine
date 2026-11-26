@@ -5097,13 +5097,13 @@ static void test_geo_view()
         sq(0, w - 1, h - 1) = 0x52;          // north 5, east 2
         sq(1, 3, 2) = 0x0C;                  // west 12
         sq(2, 3, 2) = 0x85;
-        sq(3, 3, 2) = 0x80;                  // the west side locked
+        sq(3, 3, 2) = 0x80;                  // the west side's door bits 2: shut (the Queen's low bit - v0.219.3)
         dax::MemorySource gs(g.data(), static_cast<uint32_t>(g.size()));
         static geo::Map hm;
         CHECK(geo::load_hlib(gs, 0, static_cast<uint32_t>(g.size()), hm) && hm.loaded && !hm.wraps);
         CHECK(hm.w == w && hm.h == h && (hm.big != nullptr) == (n > 256) && hm.head[0] == 1 && hm.head[5] == 6);
         CHECK(geo::wall(hm, w - 1, h - 1, geo::North) == 5 && geo::wall(hm, w - 1, h - 1, geo::East) == 2);
-        CHECK(geo::wall(hm, 3, 2, geo::West) == 12 && geo::passage(hm, 3, 2, geo::West) == 2 && geo::flags(hm, 3, 2) == 0x85);
+        CHECK(geo::wall(hm, 3, 2, geo::West) == 12 && geo::passage(hm, 3, 2, geo::West) == 0 && geo::flags(hm, 3, 2) == 0x85);
         CHECK(geo::wall(hm, w, h - 1, geo::North) == 0 && geo::flags(hm, -1, 0) == 0);     // off the map: nothing
         int sx = w - 1, sy = 0;
         CHECK(!geo::step(hm, sx, sy, geo::East) && sx == w - 1 && !geo::step(hm, sx, sy, geo::North) && sy == 0);

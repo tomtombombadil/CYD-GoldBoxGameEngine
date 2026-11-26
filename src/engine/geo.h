@@ -59,6 +59,12 @@ struct Map {
     // square past the edge at all (no walls there): 1 / 2; 0 = wraps / not
     uint8_t  pool_edge = 0;
     uint8_t  head[6] = {};            // HLIB maps: the header's wall set ids
+    // The Dark Queen's maps (HLIB): a side with a wall is open when its door
+    // bits' low bit is set - 1 or 3; 0 and 2 stop the party (DOSBox, Naulidis:
+    // 16,22 east (3) walked through, 9,19 east (2) not; the two sides of a
+    // wall share the low bit, the high one is on one side only). The DAX
+    // games' 2 / 3 are locked doors (passage). v0.219.3
+    bool     low_bit_doors = false;
     bool loaded = false;
 
     int squares() const { return w * h; }

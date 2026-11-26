@@ -522,6 +522,20 @@ static void test_view()
     dax::MemorySource gs(g.data(), static_cast<uint32_t>(g.size()));
     static geo::Map m;
     CHECK(geo::load_hlib(gs, 0, static_cast<uint32_t>(g.size()), m));
+    {
+        // The Dark Queen's door bits: a walled side open on its low bit (1, 3),
+        // shut on 0 / 2 - DOSBox, Naulidis (v0.219.3); a DAX map's 2 / 3 stay locked
+        static geo::Map dm;
+        Bytes g2 = g;
+        g2[geo::kHlibHeader + 3 * n + 3 + 4 * mw] = 0x00 | (3 << 2);  // (3, 4): north 0, east 3
+        g2[geo::kHlibHeader + 3 * n + 3 + 3 * mw] = 2 << 6;           // (3, 3): west 2
+        dax::MemorySource g2s(g2.data(), static_cast<uint32_t>(g2.size()));
+        CHECK(geo::load_hlib(g2s, 0, static_cast<uint32_t>(g2.size()), dm));
+        CHECK(geo::passage(dm, 3, 4, geo::North) == 0 && geo::passage(dm, 3, 4, geo::East) == 1);
+        CHECK(geo::passage(dm, 3, 3, geo::West) == 0 && geo::passage(dm, 2, 4, geo::East) == 1);   // (no wall: open)
+        geo::release(dm);
+        CHECK(!dm.low_bit_doors);
+    }
     dax::MemorySource ws(walls.data(), static_cast<uint32_t>(walls.size())), bs(backs.data(), static_cast<uint32_t>(backs.size()));
     qview::Libs libs;
     libs.walls[1] = &ws;          // (found in the second library: the first is null)

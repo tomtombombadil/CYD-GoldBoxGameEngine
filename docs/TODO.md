@@ -105,6 +105,12 @@
       step ahead (9 uses: Turef's trapdoor never moved the party - "you slip into the next room" left it on the
       trapdoor; Kalaman's / Quazle's pushes), CALL 2DCB the 3D view again when something moved (97 uses). Host test
       test_vm_knights_call (fails without the fix).
+- [x] v0.219.3 (the Dark Queen play-through, Naulidis): **the Queen's door bits read as the DAX games' locked
+      doors** - in its maps a walled side is open on its low bit (1 or 3) and shut on 0 / 2 (DOSBox: 16,22 east,
+      state 3, walked through; 9,19 east, state 2, not); the engine took 3 as barred and 2 as locked, so the
+      workshop (the hinge for the safe hall's door) could not be reached. Naulidis's one-way sides 49 -> 4
+      (geo::Map::low_bit_doors). Host test. Also: the playsim's MAPLINK takes a trailing n (a script's door with
+      no question - Naulidis's strips, tools/devkit/playthrough/queen/naul_links.txt).
 - [x] v0.219.2 (the Dark Queen play-through, Naulidis): **a script's move of the party kept only 4 bits of x / y** -
       right for the 16 x 16 games, wrong on the Dark Queen's bigger maps: Naulidis's arrival (11,17) put the party at
       11,1, inside the palace, past the guarded portals (OpSet::big_maps; the save slots' position line too). Host test.

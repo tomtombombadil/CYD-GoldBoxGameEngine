@@ -44,6 +44,7 @@ void release(Map& m)
     m.big = nullptr;
     m.w = m.h = kSize;
     m.wraps = true;
+    m.low_bit_doors = false;
     m.loaded = false;
 }
 
@@ -75,6 +76,7 @@ bool load_hlib(dax::ByteSource& src, uint32_t pos, uint32_t len, Map& out)
     out.w = static_cast<uint8_t>(w);
     out.h = static_cast<uint8_t>(ht);
     out.wraps = false;
+    out.low_bit_doors = true;
     for (int k = 0; k < 6; ++k) out.head[k] = h[2 + k];
     // (a map of up to 256 squares: each plane in plane[k], x + y * w)
     for (int k = 0; k < 4; ++k)
@@ -140,6 +142,7 @@ uint16_t plain_walls(const Map& m)
 int passage(const Map& m, int x, int y, int dir)
 {
     if (wall(m, x, y, dir) == 0) return 1;
+    if (m.low_bit_doors) return door(m, x, y, dir) & 1;
     return door(m, x, y, dir);
 }
 
