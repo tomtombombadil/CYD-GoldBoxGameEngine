@@ -63,7 +63,10 @@ bool load_hlib(dax::ByteSource& src, uint32_t pos, uint32_t len, Map& out)
     release(out);
     uint8_t h[kHlibHeader];
     if (len < kHlibHeader || src.read_at(pos, h, sizeof h) != sizeof h) return false;
-    const int w = h[0], ht = h[1], n = w * ht;
+    // (the header's first byte is the HEIGHT, the second the width: read the
+    // other way round every non-square map's sides disagreed with their
+    // neighbours' - Naulidis 430 of 1501, read so 49; v0.219.1)
+    const int ht = h[0], w = h[1], n = w * ht;
     if (!w || !ht || n > kMaxSquares || len < static_cast<uint32_t>(kHlibHeader + 4 * n)) return false;
     if (n > 256) {
         out.big = static_cast<uint8_t*>(malloc(static_cast<size_t>(4 * n)));

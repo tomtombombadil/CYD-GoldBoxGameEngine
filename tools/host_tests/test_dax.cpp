@@ -5062,12 +5062,13 @@ static void test_geo_view()
         CHECK(geo::step(m, sx, sy, geo::East) && sx == 0 && sy == 0);
         CHECK(geo::step(m, sx, sy, geo::North) && sx == 0 && sy == 15);
     }
-    // HLIB maps (Dark Queen's GEO.GLB entries): w, h, 6 header bytes, then
-    // four planes of w x h bytes; any size up to kMaxSquares, no wrapping
+    // HLIB maps (Dark Queen's GEO.GLB entries): h, w (the height first -
+    // v0.219.1: Naulidis 20 wide, 39 tall), 6 header bytes, then four planes
+    // of w x h bytes, x + y * w; any size up to kMaxSquares, no wrapping
     for (int big = 0; big < 2; ++big) {
         const int w = big ? 30 : 10, h = big ? 21 : 12, n = w * h;
         std::vector<uint8_t> g(geo::kHlibHeader + 4 * n + 2, 0);
-        g[0] = static_cast<uint8_t>(w), g[1] = static_cast<uint8_t>(h);
+        g[0] = static_cast<uint8_t>(h), g[1] = static_cast<uint8_t>(w);
         for (int k = 0; k < 6; ++k) g[2 + k] = static_cast<uint8_t>(k + 1);
         auto sq = [&](int plane, int x, int y) -> uint8_t& { return g[geo::kHlibHeader + plane * n + x + y * w]; };
         sq(0, w - 1, h - 1) = 0x52;          // north 5, east 2

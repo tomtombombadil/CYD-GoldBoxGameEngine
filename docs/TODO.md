@@ -88,6 +88,11 @@
       step ahead (9 uses: Turef's trapdoor never moved the party - "you slip into the next room" left it on the
       trapdoor; Kalaman's / Quazle's pushes), CALL 2DCB the 3D view again when something moved (97 uses). Host test
       test_vm_knights_call (fails without the fix).
+- [x] v0.219.1 (the Dark Queen play-through, Naulidis): **every non-square Dark Queen map was read sideways** - GEO.GLB's
+      header is height, width (the engine took width, height), so a 20 x 39 map was laid out 39 x 20: sides disagreed
+      with their neighbours' everywhere (Naulidis 430 of 1501 - 49 read the right way; the same for all 9 non-square
+      maps: 18, 22, 38, 46, 47, 54, 66), the party walked into pockets and out of them nowhere. Square maps (Palanthas,
+      Caergoth's forest, the cave) were never affected. Found by the playsim's new MAPONEWAY; host tests.
 - [ ] v0.219.0 (Tom, 2026-11-26): bows shoot twice a round (they always did - every game's bow type has 4
       half-attacks; the v0.218.0 note's "one a round" came from the test's made-up bow, now a real one); holy water
       a missile weapon only at foes it hurts (PoolRad's / Gateway's undead, 1d6 + 1 - the other games' holy water does
