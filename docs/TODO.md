@@ -77,6 +77,12 @@
       0x6B94). Host test. Death Knights' fire handler acts only when its event argument is 0 (cold's always) - the
       engine halves always; not looked into.
 - [ ] The Dark Queen's Resist Fire / Resist Cold: its .mon facts name neither - its DQK.EXE handlers not read yet.
+- [x] v0.217.2 (the PortMaster session, 2026-11-25, Treasures set beside the original): **a step on Treasures'
+      overland took ten minutes of its own** (a minute with Search off) besides the hours the script adds for the
+      ground. The original, DOSBox, Search on, from the engine's save: 6,1 11:07 -> 7,1 22:07 -> 8,1 09:07 - whole
+      hours, where the engine showed 13:07 -> 00:17 -> 12:27. In a town both add ten minutes a step (Neverwinter,
+      17 steps: 19:56 -> 22:46 in both). Now no step minutes while its overland map is up (`tr_overland`). Not
+      checked: Search off in the original; Gateway's overland.
 - [x] v0.217.1 (Death Knights play-through, Turef): **Death Knights' CALL did nothing** - the engine took
       Darkness's CALL 1 / 2 / 3, but Knights' scripts write Curse-style addresses (its GAME.OVR 0x2AB1): CALL C01E a
       step ahead (9 uses: Turef's trapdoor never moved the party - "you slip into the next room" left it on the

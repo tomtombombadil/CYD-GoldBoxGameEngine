@@ -159,3 +159,18 @@ key first ("./L...").
   the town's shaft at 12,8.
 - A save made while a Yes / No waits starts the script's event again at the next load: tokens, then SAVENOW only
   on the exploring menu.
+
+2026-11-25, later (the tunnels' rest, the ending's branches, the original set beside the engine)
+- The tunnels are three places: the Crossroads (51;14,10 - the same square as 52;0,10), the Hall of Ten Doors
+  (56;3,6), the Room of Three Doors (54;10,8).
+- The Crossroads: its portals carry the party only after the centre (5,5) has been stood on; portals.sh <slot>
+  tries every flagged square's four ways and follows what moves the party. Out by a stair (5,0 north, 10,5 east,
+  5,10 south, 0,5 west).
+- The Hall of Ten Doors (four squares in a row): west off the first square, then north and south at each square
+  in turn, then east off the last - tokens |BBFLFFRFLFFRFLFFRFLFFRF from the stair. A wrong door is a fight.
+- The ending's other branches without another play-through: RECSET renames an NPC's record (name length at 0,
+  letters from 1; F7 = 80 marks an NPC) - GAUHOK alone, GAUHOK and KRIIADOR both.
+- The journal's wording against the scenes: tools read the scan's JOURNAL.DAT (version 2: text pieces) of the
+  Steam copy and print each entry's first words beside the transcript's lines before its "JOURNAL J n".
+- DOSBox, Treasures: the copy protection's word is the n-th word of the journal's paragraph under the heading
+  asked (pdftotext mixes the columns - read the paragraph, not the words after the heading).
