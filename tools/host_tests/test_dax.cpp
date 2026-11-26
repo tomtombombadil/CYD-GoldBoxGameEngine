@@ -4340,6 +4340,69 @@ static Bytes make_typeset_pdf()
     return Bytes(s.begin(), s.end());
 }
 
+// A PDF whose fonts are the standard ones named without /Widths (the Steam Treasures journal's OCR layer:
+// Times-Roman), and an OCR layer's small "of" set close before "the" (the Steam Champions journal's Courier)
+static Bytes make_std14_pdf()
+{
+    std::string s = "%PDF-1.4\n";
+    std::vector<size_t> off(7, 0);
+    auto obj = [&](int n, const std::string& body) {
+        off[static_cast<size_t>(n)] = s.size();
+        s += std::to_string(n) + " 0 obj\n" + body + "\nendobj\n";
+    };
+    std::string widths = "[";
+    for (int c = 32; c <= 126; ++c) widths += " 600";
+    widths += "]";
+    obj(1, "<</Type/Catalog/Pages 2 0 R>>");
+    obj(2, "<</Type/Pages/Kids[3 0 R]/Count 1>>");
+    obj(3, "<</Type/Page/Parent 2 0 R/MediaBox[0 0 400 500]/Contents 6 0 R/Resources<</Font<</T1 4 0 R/C1 5 0 R>>>>>>");
+    obj(4, "<</Type/Font/Subtype/Type1/BaseFont/Times-Roman/Encoding/WinAnsiEncoding>>");
+    obj(5, "<</Type/Font/Subtype/Type1/BaseFont/Courier/FirstChar 32/LastChar 126/Widths " + widths + ">>");
+    // "th" then "e " each placed by its own Tm (t 278 + h 500 at 16 pt: 12.448 on), then "party"; "of" at 8.5 pt
+    // squeezed to 88%, "the" 2 pt after it at 10.5 (under a fifth of 10.5)
+    const std::string c = "BT /T1 1 Tf 16 0 0 16 100 400 Tm (th)Tj 16 0 0 16 112.3 400 Tm (e )Tj (party)Tj ET\n"
+                          "BT /C1 8.5 Tf 88 Tz 1 0 0 1 145 300 Tm (of)Tj /C1 10.5 Tf 77 Tz 1 0 0 1 156 300 Tm (the)Tj ET\n";
+    off[6] = s.size();
+    s += "6 0 obj\n<</Length " + std::to_string(c.size()) + ">>stream\r\n" + c + "\r\nendstream\nendobj\n";
+    const size_t xref = s.size();
+    s += "xref\n0 7\n0000000000 65535 f \n";
+    for (int n = 1; n <= 6; ++n) {
+        char e[24];
+        snprintf(e, sizeof e, "%010zu 00000 n \n", off[static_cast<size_t>(n)]);
+        s += e;
+    }
+    s += "trailer\n<</Size 7/Root 1 0 R>>\nstartxref\n" + std::to_string(xref) + "\n%%EOF\n";
+    return Bytes(s.begin(), s.end());
+}
+
+static void test_pdf_std14()
+{
+    const Bytes b = make_std14_pdf();
+    dax::MemorySource src(b.data(), b.size());
+    static pdf::Doc doc;
+    CHECK(pdf::open(src, doc));
+    int pages[2];
+    CHECK(pdf::pages(src, doc, pages, 2) == 1);
+    struct Lines : pdf::TextSink {
+        std::vector<std::string> t;
+        std::vector<pdf::TextLine> l;
+        bool line(const pdf::TextLine& x) override
+        {
+            t.emplace_back(x.text, static_cast<size_t>(x.len));
+            l.push_back(x);
+            return true;
+        }
+    } lines;
+    pdf::TextReader tr;
+    CHECK(tr.ok() && tr.page(src, doc, pages[0], lines) == 2);
+    if (lines.t.size() == 2) {
+        CHECK(lines.t[0] == "the party");               // (no gap read inside "the": Times-Roman's own widths)
+        // (its end: "party" 500 + 333 + 333 + 278 + 500 at 16 pt after "e ", 444 + 250)
+        CHECK(std::fabs(lines.l[0].x_end - (112.3f + (444 + 250 + 500 + 444 + 333 + 278 + 500) * 0.016f)) < 0.05f);
+        CHECK(lines.t[1] == "of the");                  // (the gap measured by the smaller "of")
+    }
+}
+
 static void test_journal_typeset()
 {
     // Headings
@@ -10162,6 +10225,7 @@ int main()
     test_journal_view();
     test_journal_gbc();
     test_journal_typeset();
+    test_pdf_std14();
     test_icon_looks();
     test_gbc_icons();
     test_geo_view();

@@ -1,4 +1,5 @@
 #include "pdf_text.h"
+#include "pdf_std14.h"
 
 #include "inflate.h"
 #include "pdf_internal.h"
@@ -452,6 +453,7 @@ struct TextReader::Impl : inflate::Output {
     char     line[kLine];
     int      ll = 0;
     float    lx = 0, ly = 0, lx_end = 0, lsize = 0;
+    float    prev_size = 0;               // the line's last letter's size
     float    alt = 0;                     // the line's sizes: lsize's letters (n_main), another's (n_alt)
     int      n_main = 0, n_alt = 0;
     float    main_size() const { return n_alt > n_main ? alt : lsize; }
@@ -509,6 +511,32 @@ struct TextReader::Impl : inflate::Output {
         return stream(src, doc, *a, *b, cm, window);
     }
 
+    // A standard font's widths for each code (by the letter the code stands for), from its name - Times,
+    // Helvetica (Arial), Courier; anything else as Times
+    static void std_widths(Font* f, const char* base)
+    {
+        const bool bold = strstr(base, "Bold") || strstr(base, "Black") || strstr(base, "Heavy");
+        const bool italic = strstr(base, "Italic") || strstr(base, "Oblique");
+        const bool courier = strstr(base, "Courier") != nullptr;
+        const bool sans = strstr(base, "Helvetica") || strstr(base, "Arial");
+        const uint16_t* t = sans ? (bold ? std14::kHelvetica_Bold : std14::kHelvetica)
+                          : bold ? (italic ? std14::kTimes_BoldItalic : std14::kTimes_Bold)
+                                 : (italic ? std14::kTimes_Italic : std14::kTimes_Roman);
+        for (int code = 0; code < 256; ++code) {
+            if (courier) {
+                f->w[code] = 600;
+                continue;
+            }
+            const uint16_t u = f->u[code];
+            int c = -1;
+            if (u >= 0x20 && u < 0x100 && !(u >= 0x80 && u < 0xA0)) c = u;
+            else
+                for (int k = 0x80; k < 0xA0 && c < 0; ++k)
+                    if (u && kWinAnsi80[k - 0x80] == u) c = k;
+            f->w[code] = static_cast<uint16_t>(c >= 32 && t[c - 32] ? t[c - 32] : t['n' - 32]);
+        }
+    }
+
     Font* load_font(dax::ByteSource& src, const Doc& doc, int obj)
     {
         Font* f = new (std::nothrow) Font;
@@ -522,15 +550,15 @@ struct TextReader::Impl : inflate::Output {
             return nullptr;
         }
         const int st = get(*a, a->root, "Subtype");
+        char base[64] = {};
         {
             // (a dingbat or ornament font: check boxes and flourishes, not text)
             const int bf = get(*a, a->root, "BaseFont");
             if (bf >= 0 && a->node[bf].t == T::Name) {
-                char nm[64];
-                const size_t k = a->node[bf].n < sizeof nm - 1 ? a->node[bf].n : sizeof nm - 1;
-                memcpy(nm, a->buf + a->node[bf].s, k);
-                nm[k] = 0;
-                f->marks = strstr(nm, "Dingbat") || strstr(nm, "Ornament") || strstr(nm, "Wingding");
+                const size_t k = a->node[bf].n < sizeof base - 1 ? a->node[bf].n : sizeof base - 1;
+                memcpy(base, a->buf + a->node[bf].s, k);
+                base[k] = 0;
+                f->marks = strstr(base, "Dingbat") || strstr(base, "Ornament") || strstr(base, "Wingding");
             }
         }
         int tu = get(*a, a->root, "ToUnicode");
@@ -671,6 +699,7 @@ struct TextReader::Impl : inflate::Output {
         if (enc >= 0 && a->node[enc].t == T::Ref) enc_ref = a->node[enc].v;
         else encoding(*a, enc);
         const int wd = get(*a, a->root, "Widths");
+        const bool has_widths = wd >= 0 && (a->node[wd].t == T::Array || a->node[wd].t == T::Ref);
         if (wd >= 0 && a->node[wd].t == T::Array) {
             WidthScan ws{f, first};
             scan_span(a->buf + a->node[wd].s, a->node[wd].n, ws);
@@ -683,6 +712,10 @@ struct TextReader::Impl : inflate::Output {
             scan_span(b->buf + b->node[b->root].s, b->node[b->root].n, ws);
         }
         if (tu_ref) to_unicode(src, doc, tu_ref, set_simple, f);
+        // No /Widths: one of PDF's standard fonts, named only (the Steam journals' OCR text layer - Times-Roman).
+        // Their widths from Adobe's metrics, else every letter 0 wide and a gap read after each Tj (Tom,
+        // 2026-11-26: Treasures' Introduction read "th e pa rt}'1")
+        if (!has_widths) std_widths(f, base);
         return f;
     }
 
@@ -758,8 +791,10 @@ struct TextReader::Impl : inflate::Output {
             lsize = size;
             n_main = n_alt = 0;
             lx_end = x1;
-        } else if (!space && x0 - lx_end > 0.2f * em && ll > 0 && line[ll - 1] != ' ' && ll < kLine) {
-            line[ll++] = ' ';               // (a gap: a word space drawn as a move)
+        } else if (!space && x0 - lx_end > 0.2f * (prev_size > 0.5f && prev_size < em ? prev_size : em) && ll > 0 &&
+                   line[ll - 1] != ' ' && ll < kLine) {
+            line[ll++] = ' ';               // (a gap: a word space drawn as a move - measured by the smaller of
+                                            // the two letters' sizes: an OCR layer's small "of" before "the")
         }
         if (space && ll > 0 && line[ll - 1] == ' ') {
             if (x1 > lx_end) lx_end = x1;
@@ -768,6 +803,7 @@ struct TextReader::Impl : inflate::Output {
         for (int i = 0; i < n && ll < kLine; ++i) line[ll++] = ch[i];
         if (x1 > lx_end || space) lx_end = x1 > lx_end ? x1 : lx_end;
         if (!space) {
+            prev_size = size;
             if (std::fabs(size - lsize) < 0.05f) {
                 ++n_main;
             } else {
