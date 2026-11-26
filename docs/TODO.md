@@ -1006,7 +1006,10 @@ the Project as claude/TODO.md.
         else there. DOSBox: does the original's travel camp show the party list (as Death Knights' PROGRAM 9
         camp does, v0.210.1)? Then the same for Curse.
   - [ ] Add Character lists 48 entries at most (a save folder with many slots hides some).
-  - [ ] Curse's hideout leader fight: Mira's unidentified Dust (Dust of Disappearance) - Use in the
+  - [ ] (2026-11-26, the PortMaster session, the original in DOSBox with the engine's save - the playsim's GIVE: in camp,
+        Use on a Dust NOT readied does nothing one can see, the list stays; readied, Use takes it - gone from the
+        list, nothing said. So "nothing happened" is the original's own for an item not readied. Not tried: in a
+        fight; whether Mira's was readied.) Curse's hideout leader fight: Mira's unidentified Dust (Dust of Disappearance) - Use in the
         fight left the items list up and nothing happened; what does the original do?
 - [x] PoolRad play-through to the end (Tom, 2026-11-16; the Project's
       claude/playthrough_poolrad.md): a new party, the clerk's chain to
