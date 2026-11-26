@@ -136,6 +136,15 @@ long fx_count[4] = {};                        // (counted down, ran out, renewed
 // R18: the party's effects at the fight's last tick
 std::vector<std::vector<FxSeen>> party_fx;
 std::vector<std::string> party_names;           // (by name: one leaving at the fight's end moves the others up)
+std::vector<uint32_t> party_ready;              // (each member's readied items at that look: Quick's re-readying at the
+                                                // fight's end takes an item's own effect with the item - a kender's hoopak, 2026-11-26)
+uint32_t ready_sum(const party::Character& c)
+{
+    uint32_t h = 0;
+    for (int k = 0; k < c.n_items; ++k)
+        if (c.items[k][0x34]) h = h * 31 + c.items[k][0x2E] * 7 + k + 1;
+    return h;
+}
 long party_fx_acts = 0;                       // (the acts when it was taken: any after it, the fight's last tick did more than end it)
 
 void on_act(const combat::Battle& b, int i, combat::TestAct a, int t, int extra)
@@ -369,6 +378,7 @@ void fight_end()
             }
             if (fp.facts.sp.animated && was.type == fp.facts.sp.animated) continue;
             if (was.minutes == 1) continue;
+            if (was.minutes == 0 && i < (int)party_ready.size() && party_ready[i] != ready_sum(ch)) continue;   // (an item's, unreadied by Quick's end)
             if (acts != party_fx_acts) continue;        // (blows and spells after the last look)
             bool still = false;
             for (int k = 0; k < ch.n_affects; ++k)
@@ -638,6 +648,8 @@ void tick()
             play::pt->m[i].name(nm, sizeof nm);
             party_names[i] = nm;
         }
+        party_ready.assign(play::pt->count, 0);
+        for (int i = 0; i < play::pt->count; ++i) party_ready[i] = ready_sum(play::pt->m[i]);
         for (int i = 0; i < play::pt->count; ++i)
             for (int k = 0; k < play::pt->m[i].n_affects; ++k)
                 party_fx[i].push_back(FxSeen{play::pt->m[i].affects[k][0], play::pt->m[i].affects[k][1] | play::pt->m[i].affects[k][2] << 8});

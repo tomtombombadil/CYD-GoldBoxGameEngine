@@ -3409,3 +3409,7 @@ the Project as claude/TODO.md.
       `tools/devkit/oracles_all.sh` makes them all). Left by design: `behave levels` values / multi have an
       oracle for Curse, Darkness and Treasures only. Not run: fightfuzz, campfuzz, navcheck, the events oracle
       (oracle_events.txt has no generator in the repo).
+- [x] 2026-11-26 (the PortMaster session): fightfuzz (seeds 1126 and 77, 30 fights each), campfuzz (200) and
+      navcheck (150) in all nine games on 0.221.2 - 0 problems, after one false alarm of the check's own was put
+      right: R18 took a readied item's own effect (the kender's hoopak, effect 7) for a fight-end loss when
+      Quick's end readied the member's earlier weapon again (fight_check's party_ready).
