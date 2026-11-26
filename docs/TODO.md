@@ -166,8 +166,9 @@
       party): the engine differs at 0x9F, 0xBC, 0xBD, 0xC3, 0xC4 / 0xC5, 0xC7 / 0xC8 (original 0, engine 2), a knight's
       memorized 0x12A, the elves' known spells 0x15B-0x164. Which of them play: not worked out
       (tools/devkit/playthrough/queen/qsv.py compares two QSVs).
-- [ ] Caergoth's warehouse 7,13: entered from 7,12 (door 1), its north side door 3 - the engine can't leave it.
-      Whether the original traps the party too: not checked (DOSBox walks lost step in the text waits).
+- [ ] Caergoth's warehouse 7,13: entered from 7,12 (door 1), its north side door 3 - the engine couldn't leave it.
+      Since v0.219.4 a door state 3 is open in the Queen's maps (checked in DOSBox at Naulidis) - most likely
+      the same cause; walk it again when the play-through passes there.
 - [ ] Turef: Skomp's boar square 9,4 answers only a step east from 8,4 - a side the playsim's MAPPATH (and
       `map_secret`'s plain-wall rule) takes for wall. Check what the Companion map draws there.
 - [x] v0.214.10 (the PortMaster session's Treasures play-through, 2026-11-23): **a shop's goods came up in the next
