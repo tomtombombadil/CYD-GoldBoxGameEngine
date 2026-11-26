@@ -4,14 +4,12 @@
       "Invisibility, 10' Radiu", "Protection From Evil, 1", "Protection From Normal"; the original (DOSBox, the
       same save, Zoltan's grimoire) shows them whole. The names' reader kept Curse's 23; now as long as the table's
       entry holds (40 at most; the Dark Queen's far names too). Darkness and Death Knights have the same long names.
-- [ ] **Secret's demo: the party's three are black stick figures** (found 2026-11-26 by the port's demo shots; the
-      original in DOSBox beside it): Capet, Sieglinda and Averoes come by ADD NPC 0x33 / 0x32 / 0x34 (ECL1 block
-      3, 0x805C), CPIC1.DAX has no block 50 - 52, so `load_monster_icon` finds nothing and the head / body 0 icon
-      is composed with the record's colours, all 0. The original draws three CPIC-style pictures - Averoes a
-      blue-robed wizard (CPIC1 block 66 by its look), the others a blond swordswoman and a man in blue (77 and 76
-      / 78 by their looks). Where the original takes the block from: not found (not in the 439-byte records, not
-      in the script); its NPC icon routine is to read. The field and the fight are the same in both. Do Secret's
-      joining NPCs in the game proper have CPIC blocks of their own ids? Not looked at.
+- [x] v0.219.5 (the PortMaster session, 2026-11-26) **Secret's demo: the party's three were black stick figures**
+      (found by the port's demo shots; the original in DOSBox beside it): Capet, Sieglinda and Averoes come by
+      ADD NPC 0x33 / 0x32 / 0x34, CPIC1.DAX has no block 50 - 52, so the head / body 0 icon was composed in the
+      record's colours, all 0. The original's NPC loader (GAME.OVR 0x25EEC) swaps the picture while its demo flag
+      (DS 0x67E9) is set: 0x32 -> 0x4D (Vala's), 0x33 -> 0x4C (the townsman's), 0x34 -> 0x42 (the Black Circle
+      wizard's). Now so (`compose_icon`); seen in the playsim's demo beside the DOSBox shots - the same three.
 - [x] v0.219.1 (the PortMaster session, 2026-11-26, from an unexplained Treasures run by the port's buttons): **a
       fight the party won was taken for a flight when ONE member had run from it** (Treasures, Darkness). The
       originals' fight end sets "<>" only when the party FLED - a member running and none left okay or animated

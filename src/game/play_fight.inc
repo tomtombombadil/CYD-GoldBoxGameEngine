@@ -1593,7 +1593,14 @@ void compose_icon(int slot, const party::Character& ch)
     // (Pool: an NPC is drawn as a character - its CHEAD / CBODY icon, ovr18
     // +0x482; 0x126 is a random number there)
     if (npc_own_icon(ch)) {
-        load_monster_icon(slot, ch.rec[0x126]);
+        // (Secret's demo: its three NPCs - MON blocks 0x32 - 0x34, which have no CPIC blocks - are drawn
+        // with other pictures: Vala's 0x4D, the townsman's 0x4C, the Black Circle wizard's 0x42 - its
+        // load routine, GAME.OVR 0x25EEC, while the demo flag DS 0x67E9 is set. Found 2026-11-26: the
+        // port's demo shots showed three black figures - the head / body 0 icon in colours all 0)
+        int block = ch.rec[0x126];
+        if (in_demo && d->prof->game == games::Game::SecretOfTheSilverBlades)
+            block = block == 0x32 ? 0x4D : block == 0x33 ? 0x4C : block == 0x34 ? 0x42 : block;
+        load_monster_icon(slot, block);
         if (fg->icon[slot].px[0]) return;
     }
     build_icon(ch.rec, fg->icon[slot]);
