@@ -3391,3 +3391,15 @@ the Project as claude/TODO.md.
       both (v0.173.1).
 - [x] Tom (2026-11-06): Right Hand / Left Hand setting for the Play
       Test's keys (Settings key; next version).
+- [x] v0.221.2 (the PortMaster session, 2026-11-26; numbered 0.221.1 beside the other session's): **Treasures' new characters got Darkness's 1,500,001
+      experience** (a new thief came out at level 11, a fighter / magic-user / thief 6 / 9 / 11) - the original
+      gives 22,600 (two classes 11,300 each, three 7,533: GAME.OVR 0x1A422, Modify's test 0x1BEDF; DOSBox: a
+      new elf thief, level 6, 22,600). Since Treasures was added: the oracle wrote Darkness's figure for both
+      games, so the check agreed with the mistake. Now `create.start_xp = 22600` in its profile, shared out
+      rounded down; Modify asks those three figures there; the oracle reads them from the program. Playsim:
+      thief 6 at 22,600, fighter / magic-user 4 / 4 at 11,300, fighter / magic-user / thief 3 / 3 / 4 at 7,533
+      (the stock Cherrod's levels). Not checked in DOSBox: a multi-class's figures on screen, the hit points'
+      range. behave: treasures 156, darkness 155, gateway 3 pass, 0 fail - after two checks of their own were
+      put right (Gateway's list colour to the at-or-past limit rule; the original's Restoration cases run
+      with AD&D 1E's Level Drain & Restoration held off - a drain an earlier check left in the level book
+      had fitted one case).

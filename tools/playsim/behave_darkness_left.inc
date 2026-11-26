@@ -379,7 +379,11 @@ void camp_checks()
     expect(D_, "camp: Protection from Fire on a ranger - its own effect", pr && caff(0, (*pr)[4]) >= 0 && caff(0, fx(2)) < 0);
     ccast(0, 1, 0x6D);
     expect(D_, "camp: Protection from Fire on a fighter - Resist Fire's effect", pr && caff(1, (*pr)[4]) < 0 && caff(1, fx(2)) >= 0);
-    // Restoration: the oracle's cases (R11 worked out there)
+    // Restoration: the oracle's cases (R11 worked out there) - the ORIGINAL's routine, so
+    // AD&D 1E's Level Drain & Restoration held off (a drain an earlier check wrote in the level
+    // book fitted case 481 and was given back instead - Treasures, 2026-11-26)
+    const uint16_t adnd_was = rules::adnd_bits();
+    rules::set_adnd(adnd_was & ~rules::kAdndDrain);
     int rn = 0, rbad = 0;
     for (const auto& r : b_rows("restore")) {
         if (r.size() < 1 + 7 + 14 + 7 + 4) continue;
@@ -407,6 +411,7 @@ void camp_checks()
             expect(D_, "Restoration case", false, "case %d: hp %d/%d rolled %d exp %d; the original's %d/%d %d %d", r[0], c.rec[0x1A4],
                    c.rec[0x78], c.rec[0x12C], get32(c.rec + 0x127), e[7], e[8], e[9], e[10]);
     }
+    rules::set_adnd(adnd_was);
     snprintf(w, sizeof w, "camp: Restoration (R11): %d cases", rn);
     expect(D_, w, rn > 0 && rbad == 0, "%d wrong", rbad);
 }
