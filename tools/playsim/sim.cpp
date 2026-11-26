@@ -488,6 +488,21 @@ static void settle(int choice = 0, int max_ms = 60000)
     }
     printf("  (still waiting)\n");
 }
+static void codedump()
+{
+    // CODEDUMP=from,count (hex vm address, decimal bytes): the loaded script's raw bytes - a table the script
+    // reads by GET TABLE (the Dark Queen's overland map: 30 rows of 38 at 0xA97D)
+    unsigned a0 = 0, n = 0;
+    sscanf(getenv("CODEDUMP"), "%x,%u", &a0, &n);
+    const auto& gs = play::d->gs;
+    const uint8_t* c = ecl::code_of(gs);
+    for (unsigned i = 0; i < n; ++i) {
+        const unsigned at = a0 - 0x8000 + i;
+        if (i % 38 == 0) printf("%s  %04X:", i ? "\n" : "", a0 + i);
+        printf(" %02X", at < gs.code_len ? c[at] : 0);
+    }
+    printf("\n");
+}
 static void disasm()
 {
     {
@@ -1753,6 +1768,7 @@ int main(int argc, char** argv)
         if (q) ++q;
     }
     if (getenv("DISASM") && !getenv("AREA")) disasm();
+    if (getenv("CODEDUMP")) codedump();
     // GBYTES=off=value,...: the game block's bytes (hex offsets) before the
     // moves; GNAME=off:NAME,...: a name there (Treasures' romance)
     for (const char* q = getenv("GBYTES"); q && *q;) {

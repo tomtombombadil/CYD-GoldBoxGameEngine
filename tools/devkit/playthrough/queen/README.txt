@@ -44,3 +44,13 @@ Lessons (the cave, 2026-11-26):
   Daenor (0x123 = 2, Carry Him); a safe hall: the crylokon (0x123 = 3, 0x6F = 2); the upshaft 8,28 / 9,28
   with the crylokon commanded (Yes) - no suffocation; the air rooms of Celanost (0x123 = 4).
   Never SAVENOW inside a talk (script 15 / 16): the save resumes mid-talk with no map events.
+
+Hizden (script 18, map 18) and the overland (script 5):
+- The tavern's Talk (PICK=Talk) gives the lead; the door at 8,6 east asks who sent the party - list line 1
+  (@1), then Yes: Ezra (journal 37, 0x12D = 1); a walk after it brings the raid (the fight at ~7,11,
+  0x12E = 1); the exit is a step SOUTH off 7,15 (Yes).
+- The overland's map: playsim CODEDUMP=A97D,1140 (30 rows of 38, x = the byte's place in its row, 0F the left
+  border; high nibble F a place - F0 Hizden at 3,4, F1 the Luminari lighthouse at 4,1 ...; E a city; D
+  blocked). Steps: F north, B south, < west, > east, L north-west, R north-east (play::move_keys()).
+- The lighthouse: R F F from Hizden's square, Yes (script 22, map 22 24 x 27; its floors script 23).
+
