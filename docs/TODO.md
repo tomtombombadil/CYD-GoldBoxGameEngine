@@ -1,5 +1,13 @@
 # Open tasks (Tom and Claude)
 
+- [ ] **Secret's demo: the party's three are black stick figures** (found 2026-11-26 by the port's demo shots; the
+      original in DOSBox beside it): Capet, Sieglinda and Averoes come by ADD NPC 0x33 / 0x32 / 0x34 (ECL1 block
+      3, 0x805C), CPIC1.DAX has no block 50 - 52, so `load_monster_icon` finds nothing and the head / body 0 icon
+      is composed with the record's colours, all 0. The original draws three CPIC-style pictures - Averoes a
+      blue-robed wizard (CPIC1 block 66 by its look), the others a blond swordswoman and a man in blue (77 and 76
+      / 78 by their looks). Where the original takes the block from: not found (not in the 439-byte records, not
+      in the script); its NPC icon routine is to read. The field and the fight are the same in both. Do Secret's
+      joining NPCs in the game proper have CPIC blocks of their own ids? Not looked at.
 - [x] v0.219.1 (the PortMaster session, 2026-11-26, from an unexplained Treasures run by the port's buttons): **a
       fight the party won was taken for a flight when ONE member had run from it** (Treasures, Darkness). The
       originals' fight end sets "<>" only when the party FLED - a member running and none left okay or animated
