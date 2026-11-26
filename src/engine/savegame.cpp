@@ -327,12 +327,19 @@ bool write_queen(Sink& out, const ecl::GameState& gs, const Header& h, const par
         ok = queen_member_out(out, c, q);
     }
     delete[] q;
-    // the rest, as it was
-    for (uint32_t pos = rest; ok && src && pos < src->size();) {
+    // the rest, as it was - up to the original's file size: DQK.EXE writes
+    // 7965 bytes whatever the party (DOSBox: its saves with six small and
+    // six large characters), the rest after the party cut there
+    uint32_t written = kQueenHead;
+    for (int i = 0; i < p.count; ++i)
+        written += party::kQueenRecordSize + kQueenItem * p.m[i].n_items + kQueenEffect * p.m[i].n_affects;
+    for (uint32_t pos = rest; ok && src && pos < src->size() && written < kQueenFile;) {
         uint8_t buf[256];
-        const uint32_t n = src->size() - pos < sizeof buf ? src->size() - pos : static_cast<uint32_t>(sizeof buf);
+        uint32_t n = src->size() - pos < sizeof buf ? src->size() - pos : static_cast<uint32_t>(sizeof buf);
+        if (n > kQueenFile - written) n = kQueenFile - written;
         ok = src->read_at(pos, buf, n) == n && out.put(buf, n);
         pos += n;
+        written += n;
     }
     return ok;
 }

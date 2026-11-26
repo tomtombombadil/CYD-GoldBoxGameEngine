@@ -82,6 +82,20 @@
       step ahead (9 uses: Turef's trapdoor never moved the party - "you slip into the next room" left it on the
       trapdoor; Kalaman's / Quazle's pushes), CALL 2DCB the 3D view again when something moved (97 uses). Host test
       test_vm_knights_call (fails without the fix).
+- [x] v0.217.2 (the Dark Queen play-through, 2026-11-26): **JOURNAL n printed only the number** - the Queen's
+      sentence ("This is recorded as journal entry %s.", DQK.EXE DS 0x78A1) wasn't in its profile, so the entry was
+      never offered. Profile word + the %s split; host test.
+- [x] v0.217.2 (the same): **the engine's Dark Queen saves with imported characters didn't load in the original**
+      ("DISK READ ERROR" in DOSBox) - record byte 0x08 is the item count DQK.EXE's loader counts by, 0 for a member
+      with no record of its own in the save. Also the file is now cut at the original's size, 7965 bytes (its saves
+      are always that size). Checked: the engine's save of the Death Knights winners loads in the original (DOSBox,
+      Load Saved Game: the party list as the original's own import). Host test.
+- [ ] The Dark Queen's import, record by record against the original's own (DOSBox import of the same Death Knights
+      party): the engine differs at 0x9F, 0xBC, 0xBD, 0xC3, 0xC4 / 0xC5, 0xC7 / 0xC8 (original 0, engine 2), a knight's
+      memorized 0x12A, the elves' known spells 0x15B-0x164. Which of them play: not worked out
+      (tools/devkit/playthrough/queen/qsv.py compares two QSVs).
+- [ ] Caergoth's warehouse 7,13: entered from 7,12 (door 1), its north side door 3 - the engine can't leave it.
+      Whether the original traps the party too: not checked (DOSBox walks lost step in the text waits).
 - [ ] Turef: Skomp's boar square 9,4 answers only a step east from 8,4 - a side the playsim's MAPPATH (and
       `map_secret`'s plain-wall rule) takes for wall. Check what the Companion map draws there.
 - [x] v0.214.10 (the PortMaster session's Treasures play-through, 2026-11-23): **a shop's goods came up in the next

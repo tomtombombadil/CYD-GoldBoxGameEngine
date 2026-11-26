@@ -95,6 +95,7 @@ bool write_dkk(Sink& out, const ecl::GameState& gs, const Header& h);
 // effects.
 constexpr uint32_t kQueenHead = kDarknessBlock + 15;
 constexpr uint32_t kQueenItem = 17, kQueenEffect = 9;
+constexpr uint32_t kQueenFile = 7965;   // (DQK.EXE's saves: always this size)
 bool read_queen(dax::ByteSource& src, ecl::GameState& gs, Header& h, party::Party& p);
 // Writes one: gs and h as read_queen reads them, the party's records - each
 // laid over its own record in `src` (a saved game holding the character by

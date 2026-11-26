@@ -4609,6 +4609,9 @@ const Profile kProfiles[] = {
      // Darkness's numbers + 1 (its spell 3, lightning 9, fireball 12, the
      // step 11 - 14 / 15 on the game byte 0x39's grounds 3 / 6); turning
      // silent as Darkness's
+     // (JOURNAL n: DQK.EXE 0x43572 prints "This is recorded as journal entry %s." - DS 0x78A1 - then
+     // its "~Press button or enter to continue" and a key; the engine splits the sentence at its %s)
+     .script_words = {0, 0, 0, 0, 0, 0, 0, qw(0x78A1)},
      .clips = {.file = "DISK1/SOUNDS.GLB", .hz = 7418, .first = 3, .last = 15,
                .ids = {0, 0, 3, 10, 7, 6, 10, 8, 9, 10, 11, 12, 13, 0, 0, 0}, .quiet_turns = true, .to_block = -3,
                .glb = true},

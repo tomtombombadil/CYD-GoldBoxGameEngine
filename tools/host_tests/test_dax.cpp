@@ -3403,6 +3403,10 @@ static void test_vm_events_facts()
 // only when something moved; CALL 2 is nothing there
 static void test_vm_knights_call()
 {
+    // (the Dark Queen's JOURNAL sentence, DQK.EXE DS 0x78A1 "This is recorded as journal entry %s." - without it the
+    // VM printed the bare number and the journal was never offered: play.cpp open_script_words splits it at %s)
+    if (const profile::Profile* q = profile::find(games::Game::DarkQueenOfKrynn, 449664, 449664))
+        CHECK(q->script_words[ecl::kWDkJournal] == (text::kCString | (q->data_base + 0x78A1)));
     const profile::Profile* p = profile::find(games::Game::DeathKnightsOfKrynn, 74299, 82336);
     if (!p || !p->ecl_ops) return;
     struct DrawHost : TestHost {
@@ -5548,6 +5552,18 @@ static void test_party()
             VecSink qn;
             CHECK(savegame::write_queen(qn, qgs, qh, qp, nullptr) && qn.v[savegame::kDarknessBlock + 11] == 0 &&
                   qn.v[savegame::kDarknessBlock + 12] == 0);
+            // each record's 0x08 = its item count (DQK.EXE's loader counts by it),
+            // also for a character with no record of its own in the save
+            CHECK(qn.v[savegame::kQueenHead + 8] == 2);
+            const uint32_t second = savegame::kQueenHead + party::kQueenRecordSize + 2 * savegame::kQueenItem +
+                                    2 * savegame::kQueenEffect;
+            CHECK(qn.v[second + 8] == 1 && qn.v[second + 0x68] == 'n');
+            // the rest cut at the original's file size
+            std::vector<uint8_t> big(q);
+            big.insert(big.end(), 9000, 0x55);
+            dax::MemorySource bs(big.data(), static_cast<uint32_t>(big.size()));
+            VecSink qb;
+            CHECK(savegame::write_queen(qb, qgs, qh, qp, &bs) && qb.v.size() == savegame::kQueenFile);
         }
         // short: the second character cut
         q.resize(q.size() - 60);

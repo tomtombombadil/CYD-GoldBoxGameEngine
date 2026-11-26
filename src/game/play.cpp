@@ -19343,6 +19343,12 @@ __attribute__((noinline)) void open_script_words()
             text::read_pascal(src, d->prof->script_words[i], d->script_word[i], sizeof d->script_word[i]);
         d->script_words[i] = d->script_word[i];
     }
+    // (the Dark Queen's JOURNAL sentence is one printf word, "... entry %s." - its two parts)
+    char* j = d->script_word[ecl::kWDkJournal];
+    if (char* ps = strstr(j, "%s")) {
+        snprintf(d->script_word[ecl::kWDkJournalEnd], sizeof d->script_word[ecl::kWDkJournalEnd], "%s", ps + 2);
+        *ps = 0;
+    }
 }
 
 // The copy's bytes into its file

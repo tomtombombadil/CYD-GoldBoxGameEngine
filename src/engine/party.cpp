@@ -312,6 +312,11 @@ void to_queen(const Character& c, uint8_t* q)
         q[0xAC + i] = r[0x111 + kLevelTo[i]];
     }
     q[0xC9] = static_cast<uint8_t>(c.n_items);
+    // (0x08: the item count again - the one DQK.EXE's loader counts the
+    // items by; 0 with items after it and the original's load fails "DISK
+    // READ ERROR", as it did with every imported character until v0.217.2)
+    q[0x08] = static_cast<uint8_t>(c.n_items);
+    q[0x09] = 0;
     queen_spells_out(c, q);
     // (a new character's record: its creation's 0xC5, 0xC7 and 0xC8 - not
     // known what they are; queen_facts_4.md 5)
