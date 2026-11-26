@@ -524,7 +524,7 @@ static void test_view()
     CHECK(geo::load_hlib(gs, 0, static_cast<uint32_t>(g.size()), m));
     {
         // The Dark Queen's door bits: a walled side open on its low bit (1, 3),
-        // shut on 0 / 2 - DOSBox, Naulidis (v0.219.3); a DAX map's 2 / 3 stay locked
+        // shut on 0 / 2 - DOSBox, Naulidis (v0.219.4); a DAX map's 2 / 3 stay locked
         static geo::Map dm;
         Bytes g2 = g;
         g2[geo::kHlibHeader + 3 * n + 3 + 4 * mw] = 0x00 | (3 << 2);  // (3, 4): north 0, east 3

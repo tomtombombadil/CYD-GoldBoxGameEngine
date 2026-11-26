@@ -5097,7 +5097,7 @@ static void test_geo_view()
         sq(0, w - 1, h - 1) = 0x52;          // north 5, east 2
         sq(1, 3, 2) = 0x0C;                  // west 12
         sq(2, 3, 2) = 0x85;
-        sq(3, 3, 2) = 0x80;                  // the west side's door bits 2: shut (the Queen's low bit - v0.219.3)
+        sq(3, 3, 2) = 0x80;                  // the west side's door bits 2: shut (the Queen's low bit - v0.219.4)
         dax::MemorySource gs(g.data(), static_cast<uint32_t>(g.size()));
         static geo::Map hm;
         CHECK(geo::load_hlib(gs, 0, static_cast<uint32_t>(g.size()), hm) && hm.loaded && !hm.wraps);

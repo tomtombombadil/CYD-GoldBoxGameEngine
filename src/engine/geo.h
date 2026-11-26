@@ -63,7 +63,7 @@ struct Map {
     // bits' low bit is set - 1 or 3; 0 and 2 stop the party (DOSBox, Naulidis:
     // 16,22 east (3) walked through, 9,19 east (2) not; the two sides of a
     // wall share the low bit, the high one is on one side only). The DAX
-    // games' 2 / 3 are locked doors (passage). v0.219.3
+    // games. 2 / 3 are locked doors (passage). v0.219.4
     bool     low_bit_doors = false;
     bool loaded = false;
 
