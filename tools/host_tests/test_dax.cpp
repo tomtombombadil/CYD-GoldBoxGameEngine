@@ -1904,7 +1904,7 @@ static void test_add_fighter()
     CHECK(combat::add_fighter(b) == nullptr && b.n == 3);
 }
 
-// An indoor field past a map's 16th column / row (the Dark Queen's 28 x 28 maps; v0.217.2): a map with no
+// An indoor field past a map's 16th column / row (the Dark Queen's 28 x 28 maps; v0.217.3): a map with no
 // walls gives an open field there - until then every square past 15 was wall but the party's row
 static void test_field_big_map()
 {

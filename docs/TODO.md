@@ -88,15 +88,15 @@
       step ahead (9 uses: Turef's trapdoor never moved the party - "you slip into the next room" left it on the
       trapdoor; Kalaman's / Quazle's pushes), CALL 2DCB the 3D view again when something moved (97 uses). Host test
       test_vm_knights_call (fails without the fix).
-- [x] v0.217.2 (the Dark Queen play-through, 2026-11-26): **JOURNAL n printed only the number** - the Queen's
+- [x] v0.217.3 (the Dark Queen play-through, 2026-11-26): **JOURNAL n printed only the number** - the Queen's
       sentence ("This is recorded as journal entry %s.", DQK.EXE DS 0x78A1) wasn't in its profile, so the entry was
       never offered. Profile word + the %s split; host test.
-- [x] v0.217.2 (the same): **the engine's Dark Queen saves with imported characters didn't load in the original**
+- [x] v0.217.3 (the same): **the engine's Dark Queen saves with imported characters didn't load in the original**
       ("DISK READ ERROR" in DOSBox) - record byte 0x08 is the item count DQK.EXE's loader counts by, 0 for a member
       with no record of its own in the save. Also the file is now cut at the original's size, 7965 bytes (its saves
       are always that size). Checked: the engine's save of the Death Knights winners loads in the original (DOSBox,
       Load Saved Game: the party list as the original's own import). Host test.
-- [x] v0.217.2 (the same, the purple worms' cave): **a fight past a map's 16th column / row was no fight** - the
+- [x] v0.217.3 (the same, the purple worms' cave): **a fight past a map's 16th column / row was no fight** - the
       indoor field builder took every square past 15 for off the map (walls), so in the Dark Queen's 28 x 28 maps the
       field was walls but the party's row: the umber hulks shut in pockets, 15 rounds of nothing, "won" with 0
       experience. The map's own size now. Host test test_field_big_map (fails without the fix). The playsim's

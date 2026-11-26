@@ -132,7 +132,7 @@ struct Sides {
     // 0 open, 1 wall, 3 door (one square's own side)
     int code(int x, int y, int dir) const
     {
-        // (the map's own size: the Dark Queen's maps reach 28 x 28 - until v0.217.2 16 x 16, and a fight past
+        // (the map's own size: the Dark Queen's maps reach 28 x 28 - until v0.217.3 16 x 16, and a fight past
         // its 16th column / row was all walls but the party's row: the monsters shut in pockets, no fight)
         if (x < 0 || y < 0 || x >= m->w || y >= m->h)
             return ends || (y == py && (dir == 2 || dir == 6)) ? 0 : 1;
