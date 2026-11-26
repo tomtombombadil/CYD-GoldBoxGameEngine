@@ -36,3 +36,11 @@ Lessons (the cave, 2026-11-26):
 - Naulidis (20 x 39): the party arrives at 11,17 in the refugees' halls (before v0.219.2 a 4-bit mask put it at
   11,1 inside the palace). The safe halls' barred doors (4,9 / 6,17) open to SHOUT (PICK=Shout - Bash loops);
   the hinge for the cracked door is in the workshop at 17,25; the portals (14-16,7) lead up into the palace.
+  After the hinge: walk the safe hall's refugee squares in ONE playsim run (a talk is a 1 in 7 at a step - each
+  run of a walk restarts from the save; p.sh now gives each run its own dice); answer the talks (spears: Yes,
+  then No to more). Then the families: the event 9 rooms (12,15 15,11 15,20 ...) and back to a safe hall,
+  avoiding the dragons' common room at 13,20 / 14,20 (a fight there leaves them behind). Then more hall
+  squares: Lyzian's scene (byte 0x123 = 1); the royal bedroom 5,5 with Search on (a step out and back in):
+  Daenor (0x123 = 2, Carry Him); a safe hall: the crylokon (0x123 = 3, 0x6F = 2); the upshaft 8,28 / 9,28
+  with the crylokon commanded (Yes) - no suffocation; the air rooms of Celanost (0x123 = 4).
+  Never SAVENOW inside a talk (script 15 / 16): the save resumes mid-talk with no map events.
