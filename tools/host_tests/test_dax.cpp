@@ -3397,6 +3397,65 @@ static void test_vm_events_facts()
 
 // Darkness's scripts' memory (darkness_facts.md S3): bytes and words by
 // the operand's code, the game block, the selected character's record at
+// Death Knights' CALL (its GAME.OVR 0x2AB1): Curse-style addresses, not
+// Darkness's 1 / 2 / 3 - CALL 0xC01E a step ahead by the facing (Turef's
+// trapdoor: facing 3 = west, one square west), CALL 0x2DCB the 3D view again
+// only when something moved; CALL 2 is nothing there
+static void test_vm_knights_call()
+{
+    const profile::Profile* p = profile::find(games::Game::DeathKnightsOfKrynn, 74299, 82336);
+    if (!p || !p->ecl_ops) return;
+    struct DrawHost : TestHost {
+        int redraws = 0;
+        void redraw() override { ++redraws; }
+    };
+    auto run = [&](const Bytes& body, ecl::GameState& gs, DrawHost& h) {
+        Bytes c;
+        const uint16_t kBase = 0x8000;
+        for (int i = 0; i < 5; ++i) { c.push_back(0); op_addr(c, static_cast<uint16_t>(kBase + 20)); }
+        c.insert(c.end(), body.begin(), body.end());
+        memcpy(gs.code, c.data(), c.size());
+        gs.code_len = static_cast<uint32_t>(c.size());
+        ecl::Vm vm(gs, h, *p->ecl_ops);
+        CHECK(vm.init_script());
+        return vm.run(vm.entry(0));
+    };
+    static ecl::GameState gs;
+    {
+        gs = ecl::GameState{};
+        gs.x = 6; gs.y = 9; gs.dir = 0;
+        DrawHost h;
+        Bytes b;
+        b.push_back(0x09); op_imm(b, 3); op_addr(b, 0xC04D);      // SAVE 3 -> the facing: west
+        b.push_back(0x2D); op_addr(b, 0xC01E);                    // CALL C01E: a step ahead
+        b.push_back(0x2D); op_addr(b, 0x2DCB);                    // CALL 2DCB: the view again
+        b.push_back(0x00);
+        run(b, gs, h);
+        CHECK(gs.x == 5 && gs.y == 9 && gs.dir == 6 && h.redraws == 1);
+    }
+    {
+        gs = ecl::GameState{};
+        gs.x = 0; gs.y = 15; gs.dir = 4;                           // south, at the edge: round to 0
+        DrawHost h;
+        Bytes b;
+        b.push_back(0x2D); op_addr(b, 0xC01E);
+        b.push_back(0x2D); op_imm(b, 2);                          // (Darkness's step: nothing here)
+        b.push_back(0x00);
+        run(b, gs, h);
+        CHECK(gs.x == 0 && gs.y == 0 && h.redraws == 0);
+    }
+    {
+        gs = ecl::GameState{};
+        gs.x = 3; gs.y = 3; gs.dir = 2;
+        DrawHost h;
+        Bytes b;
+        b.push_back(0x2D); op_addr(b, 0x2DCB);                    // nothing moved: no redraw
+        b.push_back(0x00);
+        run(b, gs, h);
+        CHECK(gs.x == 3 && h.redraws == 0);
+    }
+}
+
 // 0x401 + its offset, the engine's Curse addresses turned into its places,
 // CALL 2's step, YES NO's flags, EXPERIENCE x 100 split by classes
 static void test_vm_darkness()
@@ -9890,6 +9949,7 @@ int main()
     test_vm_and();
     test_coin_fixes();
     test_vm_darkness();
+    test_vm_knights_call();
     test_vm_events_facts();
     test_ecl_party();
     test_queen_damage();

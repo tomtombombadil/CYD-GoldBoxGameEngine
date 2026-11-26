@@ -1635,6 +1635,25 @@ bool Vm::dk_step(Stop& r)
         // Treasures' inns: No puts the party back a square, CALL 1, and the
         // step script runs again on the square it is back on - DOSBox)
         const int w = o[0].code == 1 || o[0].code == 3 ? o[0].word() : value(o[0]);
+        if (set_.curse_bytes) {
+            // (Death Knights' own CALL, GAME.OVR 0x2AB1: Curse-style
+            // addresses - 0xC01E a step ahead (0x8519: x / y by the facing,
+            // round 0-15, the square's flags and the wall ahead again, the
+            // "moved" flag), 0x2DCB the square's flags and, when something
+            // moved, the 3D view again (0x8981); 0xC018 the wall ahead)
+            if (w == 0xC01E) {
+                s_.x = (s_.x + (s_.dir == 2 ? 1 : s_.dir == 6 ? -1 : 0)) & 15;
+                s_.y = (s_.y + (s_.dir == 4 ? 1 : s_.dir == 0 ? -1 : 0)) & 15;
+                s_.moved = true;
+                h_.square();
+            } else if (w == 0x2DCB) {
+                h_.square();
+                if (s_.moved) h_.redraw();
+            } else if (w == 0xC018) {
+                h_.square();
+            }
+            return true;
+        }
         if (w == 1) {
             h_.redraw();
         } else if (w == 2) {                    // a step ahead

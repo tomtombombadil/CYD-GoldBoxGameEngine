@@ -69,3 +69,32 @@ Lessons (Dargaard Keep, Dulcimer, Voice Wood, 2026-11-24):
 - An adv / walkans run that ends at a fight menu with "screen 1" and "0 characters" is a party wiped out (the auto
   driver stops at the party menu), not a long fight: another SEED or a stronger party.
 - A save's experience: read the CHRDAT file (offset 0x62) or ITEMDUMP after a load into a real slot (A-J).
+
+Lessons (Cekos, Turef, the beached ship, 2026-11-26):
+- place.sh "X,Y" TAG [PICK]: the overland trip, the place's events listed (ev_TAG.txt, TAG.sq) and every event square
+  walked (TAG.out); place3.sh TAG [PICK] the walk alone (TAG.sq made by hand: events.sh, MAPFLAGS=1, evsq.py);
+  leave.sh "X,Y": out by the entry square onto the overland, saved there. A place that asks something at the door
+  (Turef's "Help Skomp", the ship's "Ladder Rope") stops kovgo.sh: enter by adv.sh with the answer, then place3.
+- Read the events before walking a puzzle place: walkans answers every Yes/No and the first PICK word of a menu, and
+  a menu that loops (Turef's cook: Eat Stew) eats the run. NOANS="..." for the questions to answer No.
+- Typed answers: the token "=88;" types 88 at a number question (TYPE= is only the AUTO driver's).
+- MAPAVOID="x,y;x,y" exported reaches every playsim run (walkans passes the environment).
+- Cekos (overland 17,12, block 34): the fist fight 11,5 (Sneak = a fight), the sivaks' table 11,1 (the silver key,
+  0x4C5F 8) opens the wall west of 5,7; the stairs 4,7 (Go down: 0x4C5A) to 15,0 below; the five blue dragons 14,3
+  (Kal / Sirrion are elves: the temple can't raise them - replay with another SEED); the old woman 7,13; then the
+  town's freed table (4C5C): the copper man 7,5 (Give), the statue 8,8 at night (Wait: a scroll). The prisoners 2,8
+  only before the dragons.
+- Turef (overland 22,13, block 67): Help Skomp; barracks 7,1 Shield (the book); scholar 12,1; the bar 7,10 (Order a
+  drink, then Inquire: key 88; Wander stays on the square); Fromm 7,12 ("/N" to selling keys, Yes, "=88;", No); the
+  trapdoor 6,9 from 7,9 (west) with "=88;" -> 5,9; round by the north to 7,8, then east into 8,8: behind the ambush;
+  the dwarf 2,1 Wrestle, his mother 9,11; Skomp's boar 9,4 only from 8,4 (east); the cook 13,4; the relics 6,5.
+- Fix.sh stops at a dead elf ("cast cure anyway?"): the members after it are not healed.
+- adv.sh / kovgo.sh answer EVERY Yes/No with Y: on the way to the strange house they took the faeries' "save the
+  Father of Trees?" and then "do you want to leave the tree?" - Yes, the forest lost for good (0x4C3D 0x10, 0x4C44
+  0). Overland legs past a place with a one-time question: by hand (p.sh) or NOANS. The tree (overland 17,13, block
+  83 with 0x4C3A 1): in at 12,7 ("/Y./N"), wights 14,7, the pale figures 14,10, the tentacles 12,13, the mage 8,14
+  (the wand, 0x4C44 1), the spider 9,11; out at 15,15 (gratitude, the faeries' thanks). The same block holds the
+  ship (0x4C3A 0: deck, the hold by the ladder 4,2 / up at 0,2, out at 7,5), the village (3: shopkeeper 14,12, the
+  sorcerer 14,10, the herbalist 12,13, the impostor 8,14, the meteorite 9,11; out off the edge at 15,15 south) and
+  Gluten's maze (2: riddles at 7,12 "=WATER;", "=HANDS;", "=RING;", the villain 1,12 - MAPAVOID 4,2;0,8 - the prize
+  1,14; out by 6,15 "RRF/N").

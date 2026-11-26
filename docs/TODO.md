@@ -77,6 +77,13 @@
       0x6B94). Host test. Death Knights' fire handler acts only when its event argument is 0 (cold's always) - the
       engine halves always; not looked into.
 - [ ] The Dark Queen's Resist Fire / Resist Cold: its .mon facts name neither - its DQK.EXE handlers not read yet.
+- [x] v0.217.1 (Death Knights play-through, Turef): **Death Knights' CALL did nothing** - the engine took
+      Darkness's CALL 1 / 2 / 3, but Knights' scripts write Curse-style addresses (its GAME.OVR 0x2AB1): CALL C01E a
+      step ahead (9 uses: Turef's trapdoor never moved the party - "you slip into the next room" left it on the
+      trapdoor; Kalaman's / Quazle's pushes), CALL 2DCB the 3D view again when something moved (97 uses). Host test
+      test_vm_knights_call (fails without the fix).
+- [ ] Turef: Skomp's boar square 9,4 answers only a step east from 8,4 - a side the playsim's MAPPATH (and
+      `map_secret`'s plain-wall rule) takes for wall. Check what the Companion map draws there.
 - [x] v0.214.10 (the PortMaster session's Treasures play-through, 2026-11-23): **a shop's goods came up in the next
       fight's treasure** - SHOP n put them on the item list and nothing took them off when the shop was left (Ruathym:
       a 34-item treasure showed 64, the list's cap). The original (DOSBox, the same save: the shop at 8,11, Exit, the
