@@ -10107,23 +10107,25 @@ bool load_magic()
                     }
                     for (int j = 0; j < k; ++j) {
                         const uint8_t* e = buf + static_cast<size_t>(j) * nt.stride;
-                        uint8_t far_name[24];
+                        uint8_t far_name[42];
                         if (far_names) {
                             // (the Dark Queen: far pointers to C strings in its
                             // data segment - made a Pascal string here)
                             far_name[0] = 0;
-                            uint8_t s[23];
+                            uint8_t s[41];
                             if ((e[0] | e[1]) &&
                                 exepack::read(src, info, d->prof->data_base + (e[0] | e[1] << 8), s, sizeof s) ==
                                     exepack::Status::Ok) {
                                 int len = 0;
-                                while (len < 22 && s[len] >= 0x20 && s[len] < 0x7F) ++len;
+                                while (len < 40 && s[len] >= 0x20 && s[len] < 0x7F) ++len;
                                 far_name[0] = static_cast<uint8_t>(len);
                                 memcpy(far_name + 1, s, static_cast<size_t>(len));
                             }
                             e = far_name;
                         }
-                        const int n = far_names ? e[0] : e[0] >= nt.stride ? 0 : e[0] < 23 ? e[0] : 23;    // (Secret's entry 0 isn't a name)
+                        // (a name as long as its table's entry holds - 23 was Curse's; Treasures' "Invisibility, 10'
+                        // Radius" and "Protection From Normal Missiles" were cut at it: the original shows them whole)
+                        const int n = far_names ? e[0] : e[0] >= nt.stride ? 0 : e[0] < 40 ? e[0] : 40;    // (Secret's entry 0 isn't a name)
                         if (pass == 0) {
                             len[at + j] = static_cast<uint8_t>(n);
                         } else if (n) {
