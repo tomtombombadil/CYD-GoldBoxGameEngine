@@ -3391,7 +3391,7 @@ the Project as claude/TODO.md.
       both (v0.173.1).
 - [x] Tom (2026-11-06): Right Hand / Left Hand setting for the Play
       Test's keys (Settings key; next version).
-- [x] v0.221.1 (the PortMaster session, 2026-11-26): **Treasures' new characters got Darkness's 1,500,001
+- [x] v0.221.2 (the PortMaster session, 2026-11-26; numbered 0.221.1 beside the other session's): **Treasures' new characters got Darkness's 1,500,001
       experience** (a new thief came out at level 11, a fighter / magic-user / thief 6 / 9 / 11) - the original
       gives 22,600 (two classes 11,300 each, three 7,533: GAME.OVR 0x1A422, Modify's test 0x1BEDF; DOSBox: a
       new elf thief, level 6, 22,600). Since Treasures was added: the oracle wrote Darkness's figure for both
