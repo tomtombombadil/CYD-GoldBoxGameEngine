@@ -7663,6 +7663,7 @@ int quick_weapon(const Battle& b, int i)
         const items::TypeInfo* ti = k >= 0 ? &n.type(f.items[k][0x2E]) : nullptr;
         if (ti && (ti->slot != items::kSlotWeapon || !(ti->classes & r[0x12B]))) continue;
         const bool oil = ti && n.oil() && f.items[k][0x2E] == n.oil();
+        const bool holy = ti && b.fx && b.fx->gw.holy_water && f.items[k][0x2E] == b.fx->gw.holy_water;
         const bool ranged = ti && ti->range > 1;
         const bool thrown = ranged && (ti->flags & 0x10);
         const bool melee = !ti || ti->range <= 1 || thrown_melee(*ti) || (ti->flags & 0x04);
@@ -7719,6 +7720,16 @@ int quick_weapon(const Battle& b, int i)
                 qc.dice = ti->dice_large;
                 qc.sides = ti->sides_large;
                 qc.bonus += ti->bonus_large - ti->bonus;
+            }
+            // Holy water (Tom, 2026-11-25: "only against enemies that it would
+            // damage. Throw it at a goblin, and they're just wet"): where the
+            // game's undead take its 1d6 + 1 (PoolRad's / Gateway's 0x75), at
+            // them alone; elsewhere its own dice (1d1 - 1: nothing)
+            if (holy && b.fx->gw.holy) {
+                if (!tg.has(b.fx->gw.holy)) continue;
+                qc.dice = 1;
+                qc.sides = 6;
+                qc.bonus = 1;
             }
             const int e = expected_damage(qc, tg.rec[kAc], side, half, ammo);
             if ((reach && !in_range) || (reach == in_range && e > e_best)) {

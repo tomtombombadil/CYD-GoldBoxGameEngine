@@ -3118,7 +3118,18 @@ a PC, PortMaster handhelds):
     (Missile unticked, no ammunition): the melee weapon to go in with. A
     cursed weapon held stays. **Flasks of oil are an item** (Tom,
     2026-11-25): thrown only with Items ticked, Missile or not
-    (`combat::quick_weapon`, `think`'s missile_ok; fight_check R13). NPCs and
+    (`combat::quick_weapon`, `think`'s missile_ok; fight_check R13). Bows
+    shoot twice a round in every game (their type's 4 half-attacks), darts
+    three times; a composite bow takes Strength to hit and damage (its
+    type's melee flag 0x04, the games' rule). **Holy water** (v0.219.0,
+    Tom): a missile weapon, but only at a foe it hurts - PoolRad's /
+    Gateway's undead (effect 0x75: 1d6 + 1); elsewhere its own dice (1d1 -
+    1: nothing), so never thrown. **After a Quick fight** (v0.219.0, Tom:
+    "ready their melee weapon and shield. This impacts their armor class"):
+    a member whose weapon Quick changed and who ends the fight with a missile
+    weapon (or nothing) in hand readies again the weapon and shield it held
+    before (the same items - type, name words, plus - by the game's readying;
+    a cursed one held stays; play_fight.inc `qa_restore`). NPCs and
     monsters keep the games' rating; **Spells** - casts
     nothing; ticked it casts its memorized spells as the games' AI does
     (the same choice as monsters' and NPCs': d7 rounds by priority, its

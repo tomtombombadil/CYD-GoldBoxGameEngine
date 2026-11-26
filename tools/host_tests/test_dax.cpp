@@ -8153,8 +8153,10 @@ static void test_combat()
         // the Strength the bow; a flask of oil (thrown 2d6, 1 a round) only
         // with Items ticked, and never with Missile alone
         {
+            ty(41, 0, 2, 1, 6, 4, 10, 0x0B);                            // (a bow: 4 half-attacks - 2 shots a round, every game's)
             ty(5, 0, 1, 1, 3, 6, 6, 0x10);
             ty(42, 0, 1, 2, 6, 2, 6, 0x10);
+            ty(43, 0, 1, 0, 0, 2, 4, 0x1A);                             // (holy water: no dice of its own)
             dax::MemorySource isrc4(itypes.data(), static_cast<uint32_t>(itypes.size()));
             CHECK(inames.read_types(isrc4));
             inames.set_oil(42);
@@ -8180,11 +8182,58 @@ static void test_combat()
             };
             sb.f[1].qa_own = true;
             sb.f[1].qa = quickacts::kMelee | quickacts::kMissile;
-            CHECK(combat::choose_weapon(sb, 1) == 3);                   // the darts: 3 x 8 over the bow's 1 x 3.5
+            CHECK(combat::choose_weapon(sb, 1) == 3);                   // the darts: 3 x 8 over the bow's 2 x 3.5
             str_bonus = 0;
-            CHECK(combat::choose_weapon(sb, 1) == 3);                   // 3 x 2 still over 1 x 3.5
-            bow_bonus = 3;
-            CHECK(combat::choose_weapon(sb, 1) == combat::kKeep);       // a +3 bow (6.5): the bow held stays
+            CHECK(combat::choose_weapon(sb, 1) == combat::kKeep);       // 3 x 2 under 2 x 3.5: the bow held stays
+            str_bonus = 2;
+            CHECK(combat::choose_weapon(sb, 1) == 3);                   // 3 x 4 over 2 x 3.5
+            bow_bonus = 3;                                               // (a composite bow with Strength's +3: 2 x 6.5)
+            CHECK(combat::choose_weapon(sb, 1) == combat::kKeep);
+            // Holy water (Tom): thrown only at a foe it hurts - PoolRad's / Gateway's
+            // undead (effect 0x75 - 1d6 + 1); at the rest it does nothing
+            {
+                static uint8_t hitems[2][items::kRecordSize];
+                memset(hitems, 0, sizeof hitems);
+                hitems[0][0x2E] = 43; hitems[0][0x39] = 3;
+                hitems[1][0x2E] = 5; hitems[1][0x39] = 1; hitems[1][0x34] = 0;
+                const auto keep_items = sb.f[1].items;
+                const int keep_n = sb.f[1].n_items;
+                sb.f[1].items = hitems;
+                sb.f[1].n_items = 2;
+                fx.gw.holy = 0x75;
+                fx.gw.holy_water = 43;
+                const int keep_str = str_bonus;
+                str_bonus = 0;
+                sb.quick_fig = [](void*, int, int k, combat::Battle::QuickFig& q) {
+                    q = {};
+                    if (k == 1) { q.dice = 1; q.sides = 3; }
+                    return true;
+                };
+                sb.f[0].aff = maff[0];
+                sb.f[0].n_aff = &mnaff[0];
+                mnaff[0] = 0;
+                CHECK(combat::choose_weapon(sb, 1) == 1);               // a goblin: the dart (holy water: just wet)
+                maff[0][0][0] = 0x75;
+                mnaff[0] = 1;
+                CHECK(combat::choose_weapon(sb, 1) == 0);               // an undead: the holy water's 1d6 + 1
+                mnaff[0] = 0;
+                fx.gw.holy = 0;
+                fx.gw.holy_water = 0;
+                CHECK(combat::choose_weapon(sb, 1) == 1);               // (no such undead in the game: its own dice - none)
+                sb.f[1].items = keep_items;
+                sb.f[1].n_items = keep_n;
+                str_bonus = keep_str;
+                sb.quick_fig = [](void*, int, int k, combat::Battle::QuickFig& q) {
+                    q = {};
+                    q.half = 2;
+                    if (k == 0) { q.dice = 1; q.sides = 6; q.bonus = bow_bonus; }
+                    if (k == 2) { q.dice = 1; q.sides = 8; q.bonus = str_bonus; }
+                    if (k == 3) { q.dice = 1; q.sides = 3; q.bonus = str_bonus; }
+                    if (k == 4) { q.dice = 2; q.sides = 6; }
+                    if (k == -1) { q.dice = 1; q.sides = 2; q.bonus = str_bonus; }
+                    return true;
+                };
+            }
             qitems[0][0x34] = 0; qitems[1][0x34] = 0;                    // no bow, no arrows: darts
             CHECK(combat::choose_weapon(sb, 1) == 3);
             qitems[3][0x39] = 1;                                         // one dart left: oil? not without Items

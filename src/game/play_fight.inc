@@ -964,6 +964,12 @@ struct Fight {
     uint8_t  lost[6][items::kRecordSize];
     int8_t   lost_who[6] = {};
     int      n_lost = 0;
+    // Quick Actions (Tom, 2026-11-25): the weapon and shield a Quick member
+    // held before Quick first changed its weapon this fight (type, name
+    // words, plus - items move in the list), readied again as the fight ends
+    // when it ends with a missile weapon in hand (qa_restore)
+    uint8_t  qa_was[party::kMaxParty][2][5] = {};
+    uint16_t qa_switched = 0;
     uint8_t  burst[(combat::kMaxFighters + 7) / 8] = {};
     bool     set_up_done = false;           // (the Dark Queen's fight set-up hooks - event 8: the mummy's fear)
     // Secret's Delayed Blast Fireballs set to go off (secret_facts_2.md 26)
@@ -5079,6 +5085,55 @@ bool quick_fig(void*, int i, int k, combat::Battle::QuickFig& out)
     return true;
 }
 
+// Quick Actions (Tom, 2026-11-25: "at the end of Quick fights ... the
+// characters that switched to missile weapons ... ready their melee weapon and
+// shield. This impacts their armor class"): a member Quick switched that
+// ends the fight with a missile weapon (or nothing) in hand gets the weapon
+// and shield it held before back - the same item (type, words, plus) if it
+// still has it, by the game's own readying; a cursed one held stays
+void qa_restore()
+{
+    for (int m = 0; m < pt->count && m < party::kMaxParty; ++m) {
+        if (!(fg->qa_switched & (1u << m))) continue;
+        party::Character& ch = pt->m[m];
+        int held = -1;
+        for (int k = 0; k < ch.n_items; ++k)
+            if (ch.items[k][0x34] && names->type(ch.items[k][0x2E]).slot == items::kSlotWeapon) held = k;
+        if (held >= 0) {
+            const items::TypeInfo& ti = names->type(ch.items[held][0x2E]);
+            if (ch.items[held][0x36] || ti.range <= 1 || (ti.flags & 0x04)) continue;   // (cursed, or a melee weapon now)
+        }
+        auto find = [&](const uint8_t* was) {
+            if (!was[0] && !was[1] && !was[2] && !was[3] && !was[4]) return -1;
+            for (int k = 0; k < ch.n_items; ++k)
+                if (!ch.items[k][0x34] && memcmp(&ch.items[k][0x2E], was, 5) == 0) return k;
+            return -1;
+        };
+        const int w = find(fg->qa_was[m][0]);
+        const int sh = find(fg->qa_was[m][1]);
+        if (w < 0 && sh < 0) continue;
+        const int ac_before = ch.rec[0x19A];
+        if (held >= 0 && (w >= 0 || names->type(ch.items[held][0x2E]).hands > 1)) {
+            ch.items[held][0x34] = 0;
+            rules::worn(ch, held, false);
+            // (its arrows / quarrels stay readied, as the game leaves them)
+        }
+        if (w >= 0) {
+            ch.items[w][0x34] = 1;
+            rules::worn(ch, w, true);
+        }
+        rules::recalc(ch, *names, d->facts);
+        if (sh >= 0 && ch.rec[0x185] + names->type(ch.items[sh][0x2E]).hands <= 2) {
+            ch.items[sh][0x34] = 1;
+            rules::worn(ch, sh, true);
+        }
+        rules::recalc(ch, *names, d->facts);
+        plat::log("[play] Quick: member %d readies its weapon %d and shield %d again (AC %d -> %d)\n", m, w, sh,
+                  60 - ac_before, 60 - ch.rec[0x19A]);
+    }
+    fg->qa_switched = 0;
+}
+
 bool ai_ready_weapon(int i)
 {
     combat::Fighter& f = fg->b.f[i];
@@ -5102,6 +5157,14 @@ bool ai_ready_weapon(int i)
         else rules::recalc_values(ch, *names, d->facts);
     };
     const int held = combat::weapon(f, *names);
+    if (member && f.qa_own && f.member < party::kMaxParty && !(fg->qa_switched & (1u << f.member))) {
+        // (what it held before Quick changed it: back at the fight's end)
+        fg->qa_switched = static_cast<uint16_t>(fg->qa_switched | (1u << f.member));
+        memset(fg->qa_was[f.member], 0, sizeof fg->qa_was[f.member]);
+        if (held >= 0) memcpy(fg->qa_was[f.member][0], &ch.items[held][0x2E], 5);
+        for (int k = 0; k < ch.n_items; ++k)
+            if (ch.items[k][0x34] && names->type(ch.items[k][0x2E]).slot == 1) memcpy(fg->qa_was[f.member][1], &ch.items[k][0x2E], 5);
+    }
     if (held >= 0) {
         ch.items[held][0x34] = 0;
         rules::worn(ch, held, false);
@@ -6210,6 +6273,7 @@ void end_fight(pic::Canvas& c)
     if (hl()) queen_morale_fig = b.morale_fig;     // (kept for the next fight - round 20)
     fg->out = combat::finish(b, ml ? ml->m : nullptr);
     combat::Result r = fg->out.result;
+    qa_restore();
     // (Pool: a member's attacks left this round live in its record, 0x113 /
     // 0x114 - set at each round's start (ovr14 +0xD23), used up attack by
     // attack (+0x16A4), cleared when the turn ends early (+0x14E4) - and stay

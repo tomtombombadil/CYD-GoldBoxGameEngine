@@ -600,7 +600,10 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   foe's AC, Strength / Dexterity / pluses by the game's recalculation on a
   copy, range, ammunition - `combat::quick_weapon`, `Fighter::qa_own`,
   play_fight.inc `quick_fig`; SPEC 11); flasks of oil are an ITEM to Quick
-  Actions (Items, not Missile - Tom). Engine: `Fighter::qa`,
+  Actions (Items, not Missile - Tom); holy water only at foes it hurts
+  (PoolRad's / Gateway's undead); after a Quick fight a member Quick
+  switched to a missile weapon readies its weapon and shield again
+  (`qa_restore` - Tom, 2026-11-26: its AC). Engine: `Fighter::qa`,
   `think` / `choose_weapon`, `ai_step`, `play_quick.inc`.
 - The computer's step (round 15, 2026-11-10, from the originals' code):
   every DAX game steps by its mood rows (combat::Tables mood / flee_inc /

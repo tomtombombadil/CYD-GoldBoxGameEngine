@@ -88,6 +88,14 @@
       step ahead (9 uses: Turef's trapdoor never moved the party - "you slip into the next room" left it on the
       trapdoor; Kalaman's / Quazle's pushes), CALL 2DCB the 3D view again when something moved (97 uses). Host test
       test_vm_knights_call (fails without the fix).
+- [ ] v0.219.0 (Tom, 2026-11-26): bows shoot twice a round (they always did - every game's bow type has 4
+      half-attacks; the v0.218.0 note's "one a round" came from the test's made-up bow, now a real one); holy water
+      a missile weapon only at foes it hurts (PoolRad's / Gateway's undead, 1d6 + 1 - the other games' holy water does
+      nothing to anyone in the engine, as their item rows); after a Quick fight a member Quick switched to a missile
+      weapon readies its weapon and shield again (Darkness save A's test fight: two members AC -4 -> -7). Checked: host
+      test (darts / bow / composite bow, holy water at a goblin and at an undead), fightfuzz with random Quick switches
+      and bows (PoolRad, Curse, Darkness, Gateway, Champions, the Queen: 0 problems; 57 restores). Tom: on a board, a
+      fighter with sword + shield and a bow on Quick - after the fight, View shows the sword and shield readied.
 - [ ] v0.218.0 **Tom: Quick Actions' weapon by its damage** (Tom, 2026-11-25): one of your own Quick characters (Quick
       Actions on) readies the weapon with the most damage expected a round - attacks (bows / darts' rate of fire, the
       ammunition left), the chance to hit the foe's AC, the average damage with Strength, Dexterity and pluses as the game
@@ -96,8 +104,7 @@
       ticked, not by Missile. NPCs and monsters keep the games' own rating. Checked: host test (darts with an 18/00's +6
       over a bow, a +3 bow over plain darts, the oil only with Items, the sword next to a foe), fightfuzz with random
       Quick switches and bows (PoolRad, Curse, Secret, Darkness, Treasures, Knights, the Queen: 0 problems). Not yet seen
-      in a real fight on a board - Tom: a fighter with darts and a bow on Quick. Question: holy water - an item like
-      the oil, or a missile weapon (now: missile)?
+      in a real fight on a board - Tom: a fighter with darts and a bow on Quick. Holy water: answered (v0.219.0).
 - [x] v0.217.3 (the Dark Queen play-through, 2026-11-26): **JOURNAL n printed only the number** - the Queen's
       sentence ("This is recorded as journal entry %s.", DQK.EXE DS 0x78A1) wasn't in its profile, so the entry was
       never offered. Profile word + the %s split; host test.

@@ -1797,6 +1797,15 @@ int main(int argc, char** argv)
             printf("  %s\n  %s\n", top.c_str(), mid.c_str());
         }
     }
+    if (getenv("ITEMTYPES") && play::names) {   // ITEMTYPES=1: the game's weapon types (range over 1 or melee)
+        for (int t = 0; t < 256; ++t) {
+            const items::TypeInfo& ti = play::names->type(t);
+            if (ti.slot != items::kSlotWeapon) continue;
+            printf("  TYPE %3d %-18s %dd%d+%d large %dd%d+%d range %d attacks %d hands %d flags %02X\n", t,
+                   "", ti.dice, ti.sides, ti.bonus, ti.dice_large, ti.sides_large, ti.bonus_large,
+                   ti.range, ti.attacks, ti.hands, ti.flags);
+        }
+    }
     if (getenv("MAPRAW")) {             // MAPRAW=file: the map's w, h, 6 header bytes and four planes as loaded
         const geo::Map& m = play::d->map;
         if (FILE* f = fopen(getenv("MAPRAW"), "wb")) {
