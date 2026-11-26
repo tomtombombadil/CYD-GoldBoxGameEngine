@@ -1090,6 +1090,10 @@ struct Fighter {
     // their missile attack"): a loaded bow / crossbow / sling whenever no
     // foe is next to it, whatever the games' rating says (choose_weapon)
     bool    qa_shoot = false;
+    // One of the player's own Quick characters under Quick Actions (Tom,
+    // 2026-11-25): its weapon by the damage it can be expected to do
+    // (quick_weapon), not the games' rating
+    bool    qa_own = false;
     uint8_t spell_t[24] = {};
     int8_t  spell_ax = -1, spell_ay = -1;   // (the computer's area spell begun: the square its area finder chose)
     int     team() const { return rec[0x197]; }
@@ -1196,6 +1200,12 @@ struct Battle {
     bool    yielded = false;
     // The fight's tables (set by the caller: a bolt's path), the last bolt's segments (its picture)
     const Tables* tables = nullptr;
+    // The figures a party member would fight with with its item k readied (-1:
+    // no weapon) - the caller's recalculation on a copy (Quick Actions'
+    // weapon choice, quick_weapon); null: none given
+    struct QuickFig { int hit = 0, dice = 0, sides = 0, bonus = 0, half = 2; };
+    bool (*quick_fig)(void* ctx, int i, int k, QuickFig& out) = nullptr;
+    void* quick_ctx = nullptr;
     // The experience each class's level needs ([class][level], from the
     // rule tables; set by the caller when a level can be drained - Pool)
     int32_t level_exp[8][13] = {};
@@ -1994,6 +2004,22 @@ int ai_rating(const Battle& b, int i, const uint8_t* item, int hands_used, int t
 // kKeep: as it is (already held, or the held one is cursed).
 constexpr int kKeep = -2;
 int choose_weapon(const Battle& b, int i);
+// Quick Actions' weapon for one of the player's own Quick characters (Tom,
+// 2026-11-25: "choose the weapon that is most likely to do the most damage"):
+// each weapon it can use is readied on a copy (b.quick_fig - its to-hit,
+// dice, damage bonus and attacks as the game works them out: Strength,
+// Dexterity, pluses, the AD&D 1E thrown rule) and rated by its expected
+// damage a round against the foes it could hit with it now: attacks (a
+// launcher's / thrown weapon's rate of fire, the ammunition left) x the
+// chance to hit their AC x the average damage (large foes' dice). With a foe
+// next to it: the melee weapons (and bare hands); else, Missile ticked: the
+// missile weapons that can hurt a foe in sight - flasks of oil only with
+// Items ticked (Tom: an item, not a missile weapon) - those in range first.
+// A cursed weapon held stays. kKeep as choose_weapon.
+int quick_weapon(const Battle& b, int i);
+// Expected damage a round (x 100) of these figures against a fighter of AC
+// `ac` (the stored, 60-based) with `side` to hit - quick_weapon's measure
+int expected_damage(const Battle::QuickFig& q, int ac, int side, int attacks_half, int ammo);
 // A pure missile weapon (a bow, crossbow, sling: not thrown) held with an
 // enemy next to them
 bool missile_in_melee(const Battle& b, int i);

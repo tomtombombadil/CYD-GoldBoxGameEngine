@@ -8147,6 +8147,70 @@ static void test_combat()
         CHECK(combat::choose_weapon(sb, 1) == combat::kKeep);
         mitems[1][0x34] = 1;                                             // arrows again: the bow
         CHECK(combat::choose_weapon(sb, 1) == 0);
+        // Quick Actions' weapon (combat::quick_weapon, Tom 2026-11-25): the
+        // most damage expected a round. Darts (thrown, 3 a round - half 6)
+        // with an 18/00 Strength's +6 beat the bow (2 a round, 1d6); without
+        // the Strength the bow; a flask of oil (thrown 2d6, 1 a round) only
+        // with Items ticked, and never with Missile alone
+        {
+            ty(5, 0, 1, 1, 3, 6, 6, 0x10);
+            ty(42, 0, 1, 2, 6, 2, 6, 0x10);
+            dax::MemorySource isrc4(itypes.data(), static_cast<uint32_t>(itypes.size()));
+            CHECK(inames.read_types(isrc4));
+            inames.set_oil(42);
+            static uint8_t qitems[5][items::kRecordSize];
+            memcpy(qitems, mitems, sizeof mitems);
+            qitems[0][0x34] = 1; qitems[1][0x34] = 1; qitems[2][0x34] = 0;   // the bow and arrows held, the sword not
+            qitems[3][0x2E] = 5; qitems[3][0x39] = 10;                  // 10 darts
+            qitems[4][0x2E] = 42; qitems[4][0x39] = 2;                  // 2 flasks of oil
+            sb.f[1].items = qitems;
+            sb.f[1].n_items = 5;
+            static int str_bonus, bow_bonus;
+            str_bonus = 6;
+            bow_bonus = 0;
+            sb.quick_fig = [](void*, int, int k, combat::Battle::QuickFig& q) {
+                q = {};
+                q.half = 2;
+                if (k == 0) { q.dice = 1; q.sides = 6; q.bonus = bow_bonus; }
+                if (k == 2) { q.dice = 1; q.sides = 8; q.bonus = str_bonus; }
+                if (k == 3) { q.dice = 1; q.sides = 3; q.bonus = str_bonus; }
+                if (k == 4) { q.dice = 2; q.sides = 6; }
+                if (k == -1) { q.dice = 1; q.sides = 2; q.bonus = str_bonus; }
+                return true;
+            };
+            sb.f[1].qa_own = true;
+            sb.f[1].qa = quickacts::kMelee | quickacts::kMissile;
+            CHECK(combat::choose_weapon(sb, 1) == 3);                   // the darts: 3 x 8 over the bow's 1 x 3.5
+            str_bonus = 0;
+            CHECK(combat::choose_weapon(sb, 1) == 3);                   // 3 x 2 still over 1 x 3.5
+            bow_bonus = 3;
+            CHECK(combat::choose_weapon(sb, 1) == combat::kKeep);       // a +3 bow (6.5): the bow held stays
+            qitems[0][0x34] = 0; qitems[1][0x34] = 0;                    // no bow, no arrows: darts
+            CHECK(combat::choose_weapon(sb, 1) == 3);
+            qitems[3][0x39] = 1;                                         // one dart left: oil? not without Items
+            CHECK(combat::choose_weapon(sb, 1) == 3);
+            sb.f[1].qa = quickacts::kMelee | quickacts::kMissile | quickacts::kItems;
+            CHECK(combat::choose_weapon(sb, 1) == 4);                   // 2d6 once beats 1d3 once
+            sb.f[1].qa = quickacts::kMelee | quickacts::kItems;         // Missile off: the oil still (an item)
+            CHECK(combat::choose_weapon(sb, 1) == 4);
+            sb.f[1].qa = quickacts::kMelee;                              // nothing to throw: the sword to go in with
+            CHECK(combat::choose_weapon(sb, 1) == 2);
+            sb.f[0].x = 11;                                              // a foe next to it: the sword's blows
+            combat::occupancy(sb);
+            sb.f[1].qa = quickacts::kMelee | quickacts::kMissile | quickacts::kItems;
+            CHECK(combat::choose_weapon(sb, 1) == 2);
+            // (a 1d6, to-hit 0, one attack: AC 21 only a 20 - 1 in 20 x 3.5; AC 10 rolls 10-20)
+            CHECK(combat::expected_damage(combat::Battle::QuickFig{0, 1, 6, 0, 2}, 21, 0, 2, -1) == 17);
+            CHECK(combat::expected_damage(combat::Battle::QuickFig{0, 1, 6, 0, 2}, 10, 0, 2, -1) == 192);
+            CHECK(combat::expected_damage(combat::Battle::QuickFig{0, 1, 6, 0, 2}, 10, 0, 6, 1) == 192);   // (one shot left)
+            sb.f[0].x = 10;
+            combat::occupancy(sb);
+            sb.quick_fig = nullptr;
+            sb.f[1].qa_own = false;
+            sb.f[1].qa = quickacts::kComputer;
+            sb.f[1].items = mitems;
+            sb.f[1].n_items = 3;
+        }
         // Clouds: 2 x 2 from the square (a wall square stays as it is), the
         // fighters inside, gone after their rounds with the ground back
         t.ground[0x1E][0] = 1; t.ground[0x1E][1] = 1;

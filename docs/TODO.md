@@ -88,6 +88,16 @@
       step ahead (9 uses: Turef's trapdoor never moved the party - "you slip into the next room" left it on the
       trapdoor; Kalaman's / Quazle's pushes), CALL 2DCB the 3D view again when something moved (97 uses). Host test
       test_vm_knights_call (fails without the fix).
+- [ ] v0.218.0 **Tom: Quick Actions' weapon by its damage** (Tom, 2026-11-25): one of your own Quick characters (Quick
+      Actions on) readies the weapon with the most damage expected a round - attacks (bows / darts' rate of fire, the
+      ammunition left), the chance to hit the foe's AC, the average damage with Strength, Dexterity and pluses as the game
+      works them out (the AD&D 1E Thrown Weapons rule decides whether darts get Strength's damage); next to a foe the
+      melee weapons, else the missile weapons that reach a foe in sight. Flasks of oil are an item: thrown with Items
+      ticked, not by Missile. NPCs and monsters keep the games' own rating. Checked: host test (darts with an 18/00's +6
+      over a bow, a +3 bow over plain darts, the oil only with Items, the sword next to a foe), fightfuzz with random
+      Quick switches and bows (PoolRad, Curse, Secret, Darkness, Treasures, Knights, the Queen: 0 problems). Not yet seen
+      in a real fight on a board - Tom: a fighter with darts and a bow on Quick. Question: holy water - an item like
+      the oil, or a missile weapon (now: missile)?
 - [x] v0.217.3 (the Dark Queen play-through, 2026-11-26): **JOURNAL n printed only the number** - the Queen's
       sentence ("This is recorded as journal entry %s.", DQK.EXE DS 0x78A1) wasn't in its profile, so the entry was
       never offered. Profile word + the %s split; host test.

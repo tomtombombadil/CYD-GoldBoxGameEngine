@@ -8,10 +8,10 @@ namespace quickacts {
 // 2026-11-09: full words, descriptive; "Move", never "Advance")
 const char* const kName[kCols] = {"Melee", "Missile", "Spells", "Items", "Bandage First", "Move", "Turn Undead", "Guard"};
 const char* const kDesc[kCols] = {
-    "Melee: attacks a foe next to it. Unticked: no melee blows (with nothing to shoot, it stays put and guards).",
-    "Missile: shoots bows and slings, throws darts and spears. Unticked: no missile attacks.",
+    "Melee: hits a foe next to it with its most damaging weapon. Unticked: no blows (it guards instead).",
+    "Missile: shoots or throws its most damaging bow, sling, darts or spear. Unticked: no missile attacks.",
     "Spells: the game's Magic On (Alt-M) for this character - it casts its memorized spells. Unticked: no spells.",
-    "Items: uses potions, wands and other magic items where the game's Quick does. Unticked: uses no items.",
+    "Items: potions, wands and magic items as the game's Quick; throws flasks of oil. Unticked: no items.",
     "Bandage First: bandages a dying friend first thing in its turn. Unticked: the game's own order.",
     "Move: steps toward the enemy. Unticked: holds its square, and guards when no foe is in reach.",
     "Turn Undead: turns undead when the game's Quick would. Unticked: never turns undead.",

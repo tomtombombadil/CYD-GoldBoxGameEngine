@@ -595,7 +595,12 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   when it can hurt a foe in sight (the turn's target or another - then
   only such foes are shot; v0.196.13) (`Fighter::qa_shoot`, choose_weapon;
   fight_check R19). Archers so differ from the originals by design
-  (qa_verify's defaults-vs-off DIFFERENT there). Engine: `Fighter::qa`,
+  (qa_verify's defaults-vs-off DIFFERENT there). The weapon by its
+  expected damage a round (Tom, 2026-11-25: attacks, to-hit against the
+  foe's AC, Strength / Dexterity / pluses by the game's recalculation on a
+  copy, range, ammunition - `combat::quick_weapon`, `Fighter::qa_own`,
+  play_fight.inc `quick_fig`; SPEC 11); flasks of oil are an ITEM to Quick
+  Actions (Items, not Missile - Tom). Engine: `Fighter::qa`,
   `think` / `choose_weapon`, `ai_step`, `play_quick.inc`.
 - The computer's step (round 15, 2026-11-10, from the originals' code):
   every DAX game steps by its mood rows (combat::Tables mood / flee_inc /

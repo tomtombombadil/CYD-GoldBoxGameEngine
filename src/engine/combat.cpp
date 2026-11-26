@@ -4353,7 +4353,12 @@ Plan think(Battle& b, const Tables& t, int i, create::Dice& d)
     auto enemy = [&](int c) { return seen_enemy(b, i, c); };
     // Quick Actions (Tom, 2026-11-09): the player's switches for one of its
     // own Quick characters (kComputer for everyone else: as the games)
-    const bool melee_ok = (f.qa & quickacts::kMelee) != 0, missile_ok = (f.qa & quickacts::kMissile) != 0;
+    const bool melee_ok = (f.qa & quickacts::kMelee) != 0;
+    // (a flask of oil held is an item to Quick Actions - Tom, 2026-11-25: thrown
+    // with Items ticked, Missile or not; not with Items unticked)
+    const int held_w = b.names && f.items ? weapon(f, *b.names) : -1;
+    const bool oil_held = held_w >= 0 && b.names->oil() && f.items[held_w][0x2E] == b.names->oil() && f.qa_own;
+    const bool missile_ok = oil_held ? (f.qa & quickacts::kItems) != 0 : (f.qa & quickacts::kMissile) != 0;
     if (f.fleeing && f.moves == 1) {
         // (half a square left: it guards - coab's moralFailureEscape, its
         // move / 2 = 0 -> TryGuarding)
@@ -7611,10 +7616,136 @@ bool missile_in_melee(const Battle& b, int i)
     return ti.range > 1 && (ti.flags & 0x08) && !thrown_melee(ti) && enemy_next_to(b, i);
 }
 
+int expected_damage(const Battle::QuickFig& q, int ac, int side, int attacks_half, int ammo)
+{
+    // To hit: a 1 misses, a 20 hits, else roll + to-hit + side >= AC (attack's test)
+    int hits = 1;
+    for (int roll = 2; roll <= 19; ++roll)
+        if (roll + q.hit + side >= ac) ++hits;
+    // Attacks a round: half-attacks / 2 (3 = one and two by turns), at most the ammunition
+    int att100 = attacks_half * 50;
+    if (ammo >= 0 && ammo * 100 < att100) att100 = ammo * 100;
+    // Damage a hit: the dice's average + the bonus, at least 0 (x 2: halves kept)
+    int avg2 = q.dice * (q.sides + 1) + 2 * q.bonus;
+    if (avg2 < 0) avg2 = 0;
+    return att100 * hits * avg2 / 40;
+}
+
+int quick_weapon(const Battle& b, int i)
+{
+    const Fighter& f = b.f[i];
+    const items::Names& n = *b.names;
+    const Rec r = f.rec;
+    const int held = weapon(f, n);
+    if (held >= 0 && f.items[held][0x36]) return kKeep;                   // (cursed: it stays)
+    int hands = r[0x185];
+    for (int k = 0; k < f.n_items; ++k) {
+        if (!f.items[k][0x34]) continue;
+        const items::TypeInfo& ti = n.type(f.items[k][0x2E]);
+        if (ti.slot == items::kSlotWeapon || ti.slot == 1) hands -= ti.hands;
+    }
+    if (hands < 0) hands = 0;
+    const bool foe_next = enemy_next_to(b, i);
+    const bool melee_ok = (f.qa & quickacts::kMelee) != 0;
+    const bool missile_ok = (f.qa & quickacts::kMissile) && !b.gw_water && !b.underwater;
+    const bool items_ok = (f.qa & quickacts::kItems) != 0;
+    const int side = f.team() ? b.to_hit_monsters : b.to_hit_party;
+    int best = kKeep, best_e = 0, best_held_e = -1;
+    bool best_in_range = false;
+    // Pass 0: what it can use now (a blow next to a foe, else a shot); pass
+    // 1 - nothing to shoot with (Missile unticked, no ammunition, nothing it
+    // can hurt): the melee weapon to go in with
+    for (int pass = 0; pass < 2 && best == kKeep; ++pass) {
+    const bool next_to = foe_next || pass == 1;
+    if (pass == 1 && foe_next) break;
+    // k = -1: bare hands (melee only)
+    for (int k = -1; k < f.n_items; ++k) {
+        const items::TypeInfo* ti = k >= 0 ? &n.type(f.items[k][0x2E]) : nullptr;
+        if (ti && (ti->slot != items::kSlotWeapon || !(ti->classes & r[0x12B]))) continue;
+        const bool oil = ti && n.oil() && f.items[k][0x2E] == n.oil();
+        const bool ranged = ti && ti->range > 1;
+        const bool thrown = ranged && (ti->flags & 0x10);
+        const bool melee = !ti || ti->range <= 1 || thrown_melee(*ti) || (ti->flags & 0x04);
+        // What it can do now: next to a foe, a blow (a thrown-and-melee weapon
+        // as a blow); else a shot / throw
+        bool shoot = false;
+        if (next_to) {
+            if (!melee_ok || !melee || (ranged && !thrown_melee(*ti) && !(ti->flags & 0x04))) continue;
+            if (oil) continue;
+        } else {
+            if (!ranged) continue;
+            if (oil ? !items_ok : !missile_ok) continue;
+            shoot = true;
+        }
+        // Its ammunition: thrown - the pile; a launcher - its readied arrows / quarrels
+        int ammo = -1;
+        int ammo_plus = 0;
+        if (shoot) {
+            if (thrown) {
+                ammo = f.items[k][0x39] ? f.items[k][0x39] : 1;
+            } else if (ti->flags & 0x81) {
+                for (int j = 0; j < f.n_items; ++j) {
+                    if (!f.items[j][0x34]) continue;
+                    const int t = f.items[j][0x2E];
+                    if (((ti->flags & 0x01) && t == b.arrow) || ((ti->flags & 0x80) && t == b.quarrel)) {
+                        ammo = f.items[j][0x39] ? f.items[j][0x39] : 1;
+                        ammo_plus = static_cast<int8_t>(f.items[j][0x32]);
+                    }
+                }
+                if (ammo < 0) continue;                 // (no arrows / quarrels readied)
+            } else if ((ti->flags & 0xFF) != 0x0A) {
+                continue;
+            }
+        }
+        (void)ammo_plus;                                // (the figures already count the arrows' plus)
+        Battle::QuickFig q;
+        if (!b.quick_fig(b.quick_ctx, i, k, q)) continue;
+        const int half = shoot ? (ti->attacks < 2 ? 2 : ti->attacks) : q.half;
+        // The foes it could use it on now, the best of them
+        int e_best = 0;
+        bool in_range = false;
+        for (int c = 0; c < b.n; ++c) {
+            if (!seen_enemy(b, i, c)) continue;
+            if (foe_next && !adjacent(b, i, c)) continue;
+            if (k >= 0 && ai_rating(b, i, f.items[k], hands, c) <= 0) continue;   // (it can't hurt it, two hands too many)
+            bool reach = true;
+            if (shoot && b.tables) {
+                int sq = 0;
+                reach = range(b, *b.tables, i, c, false, &sq) && sq <= (ti->range - 1 > 1 ? ti->range - 1 : 1);
+            }
+            Battle::QuickFig qc = q;
+            const Fighter& tg = b.f[c];
+            if (ti && (tg.rec[kSize] > 0x80 || (tg.rec[kSize] & 7) > 1)) {
+                qc.dice = ti->dice_large;
+                qc.sides = ti->sides_large;
+                qc.bonus += ti->bonus_large - ti->bonus;
+            }
+            const int e = expected_damage(qc, tg.rec[kAc], side, half, ammo);
+            if ((reach && !in_range) || (reach == in_range && e > e_best)) {
+                e_best = e;
+                in_range = reach;
+            }
+        }
+        if (e_best <= 0) continue;
+        if (k == held) best_held_e = e_best;
+        if ((in_range && !best_in_range) || (in_range == best_in_range && e_best > best_e)) {
+            best = k;
+            best_e = e_best;
+            best_in_range = in_range;
+        }
+    }
+    }
+    if (best == kKeep) return kKeep;
+    // (the one held as good as the best: no change)
+    if (best == held || best_held_e >= best_e) return kKeep;
+    return best;
+}
+
 int choose_weapon(const Battle& b, int i)
 {
     const Fighter& f = b.f[i];
     if (!b.names || !f.items) return kKeep;
+    if (f.qa_own && b.quick_fig) return quick_weapon(b, i);
     const items::Names& n = *b.names;
     const Rec r = f.rec;
     // The hands besides the weapon and shield held now

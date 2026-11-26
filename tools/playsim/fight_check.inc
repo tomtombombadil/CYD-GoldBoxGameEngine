@@ -238,8 +238,13 @@ void on_act(const combat::Battle& b, int i, combat::TestAct a, int t, int extra)
             // (one next to it with Melee unticked: only a throw - a dagger, a
             // spear thrown at it, Missile ticked)
             int ammo = -1;
+            // (a flask of oil is an item to Quick Actions, not a missile weapon -
+            // Tom, 2026-11-25: thrown with Items ticked, Missile or not)
+            const int hw = play::names && f.items ? combat::weapon(f, *play::names) : -1;
+            const bool oil = hw >= 0 && play::names->oil() && f.items[hw][0x2E] == play::names->oil();
             if (next && !(q & kMelee) && !((q & kMissile) && combat::missile(b, f, &ammo) > 0)) broke = "a blow with Melee unticked";
-            if (!next && !(q & kMissile)) broke = "a shot with Missile unticked";
+            if (!next && !oil && !(q & kMissile)) broke = "a shot with Missile unticked";
+            if (!next && oil && !(q & kItems) && !play::qa_npc(f.member)) broke = "a flask of oil with Items unticked";
         }
         if (a == TestAct::Step && !f.fleeing && !(q & kMove)) broke = "a step with Move unticked";
         // R19 (Tom, 2026-11-11: his PoolRad fighters charged with bows and

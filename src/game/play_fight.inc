@@ -5050,6 +5050,35 @@ void speed_exit(pic::Canvas& c)
 // back), free hands take the best shield (its plus + 1). A monster's
 // record is worked out again as the original's routine does (with its
 // group's items). True: it changed.
+// Quick Actions' weapon choice (combat::quick_weapon; Tom, 2026-11-25): the
+// figures member i would fight with with item k readied (-1: none) - its
+// record copied, the weapon held put away, k readied, the game's
+// recalculation (Strength, Dexterity, pluses, arrows, the 1E thrown rule)
+bool quick_fig(void*, int i, int k, combat::Battle::QuickFig& out)
+{
+    const combat::Fighter& f = fg->b.f[i];
+    if (f.member < 0 || f.member >= pt->count || !names) return false;
+    party::Character* ch = new (std::nothrow) party::Character(pt->m[f.member]);
+    if (!ch) return false;
+    const int held = combat::weapon(f, *names);
+    if (held >= 0 && held != k) {
+        ch->items[held][0x34] = 0;
+        rules::worn(*ch, held, false);
+    }
+    if (k >= 0 && k != held) {
+        ch->items[k][0x34] = 1;
+        rules::worn(*ch, k, true);
+    }
+    rules::recalc(*ch, *names, d->facts);
+    out.hit = static_cast<int8_t>(ch->rec[0x199]);
+    out.dice = ch->rec[0x19E];
+    out.sides = ch->rec[0x1A0];
+    out.bonus = static_cast<int8_t>(ch->rec[0x1A2]);
+    out.half = ch->rec[0x11C];
+    delete ch;
+    return true;
+}
+
 bool ai_ready_weapon(int i)
 {
     combat::Fighter& f = fg->b.f[i];
@@ -5206,6 +5235,9 @@ void ai_step(pic::Canvas& c)
     // bow / crossbow / sling whenever no foe is next to it - Tom, 2026-11-11)
     f.qa_shoot = qa_on() && qa_member(f.member) && !qa_npc(f.member) && f.quick && !f.team() && f.rec[0xF7] < 0x80 &&
                  f.status() != party::Animated && (f.qa & quickacts::kMissile);
+    // (and its weapon by the damage it can do - combat::quick_weapon, Tom 2026-11-25)
+    f.qa_own = qa_on() && qa_member(f.member) && !qa_npc(f.member) && f.quick && !f.team() && f.rec[0xF7] < 0x80 &&
+               f.status() != party::Animated;
     // The computer bandages a dying friend in its move-and-attack step -
     // after morale, items, the pending spell, Turn, spells and the weapon,
     // with moves left and a foe to go for (below): Curse GAME.OVR 0xC829 in
@@ -5693,6 +5725,7 @@ void fight_start(pic::Canvas& c)
     b.cap = n_fighters;
     fg->arena = b.duel = vm->arena();
     b.tables = &fg->t;
+    b.quick_fig = quick_fig;
     memcpy(b.level_exp, level_exp, sizeof level_exp);
     combat::g_dk_drain = darkness_files() || hl() ? dk_drain_hook : nullptr;
     combat::g_adnd_drain = !combat::g_dk_drain && rules::adnd(rules::kAdndDrain) ? adnd_drain_hook : nullptr;     // (its own drain: facts L1; the Dark Queen's its shape)

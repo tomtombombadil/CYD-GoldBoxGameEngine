@@ -1797,6 +1797,33 @@ int main(int argc, char** argv)
             printf("  %s\n  %s\n", top.c_str(), mid.c_str());
         }
     }
+    if (getenv("MAPRAW")) {             // MAPRAW=file: the map's w, h, 6 header bytes and four planes as loaded
+        const geo::Map& m = play::d->map;
+        if (FILE* f = fopen(getenv("MAPRAW"), "wb")) {
+            fputc(m.w, f); fputc(m.h, f);
+            fwrite(m.head, 1, 6, f);
+            for (int k = 0; k < 4; ++k) fwrite(m.pl(k), 1, static_cast<size_t>(m.w * m.h), f);
+            fclose(f);
+        }
+    }
+    if (getenv("MAPONEWAY")) {          // MAPONEWAY=1: every side whose passage differs from its neighbour's
+                                        // facing side (with each one's wall type and door state)
+        const geo::Map& m = play::d->map;
+        int n = 0;
+        for (int y = 0; y < m.h; ++y)
+            for (int x = 0; x < m.w; ++x)
+                for (int d = 0; d < 8; d += 2) {
+                    const int nx = x + (d == 2 ? 1 : d == 6 ? -1 : 0), ny = y + (d == 4 ? 1 : d == 0 ? -1 : 0);
+                    if (!m.on(nx, ny) || d >= 4) continue;
+                    const int a = geo::passage(m, x, y, d), b = geo::passage(m, nx, ny, d ^ 4);
+                    if ((a == 1) == (b == 1)) continue;
+                    ++n;
+                    printf("  ONEWAY %d,%d side %d: pass %d (wall %X door %d) | %d,%d side %d: pass %d (wall %X door %d)\n", x, y,
+                           d, a, geo::wall(m, x, y, d), geo::door(m, x, y, d), nx, ny, d ^ 4, b, geo::wall(m, nx, ny, d ^ 4),
+                           geo::door(m, nx, ny, d ^ 4));
+                }
+        printf("  ONEWAY count %d\n", n);
+    }
     if (getenv("MAPTYPES")) {           // MAPTYPES=d: each square's wall type on side d (0 N, 2 E, 4 S, 6 W)
         const int dd = atoi(getenv("MAPTYPES"));
         printf("  MAPTYPES side %d\n", dd);

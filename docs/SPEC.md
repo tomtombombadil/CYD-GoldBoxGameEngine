@@ -3098,7 +3098,28 @@ a PC, PortMaster handhelds):
     bow and walks) - and the choice is made again at each step of its
     turn, so the bow comes back out once the foe it fought is gone (the
     originals choose once, at the turn's start); thrown things (darts,
-    daggers, oil, holy water) and the NPCs stay by the games' rating; **Spells** - casts
+    daggers, oil, holy water) and the NPCs stay by the games' rating.
+    **The weapon by its damage** (v0.218.0, Tom, 2026-11-25: "choose the
+    weapon that is most likely to do the most damage. Take into account the
+    number of attacks ... str bonuses, range, dex bonuses"): with Quick
+    Actions on, one of the player's own Quick characters no longer uses the
+    games' rating (dice x sides + 8 x plus + 2 x bonus + 2 a missile attack
+    past the first + 3 one-handed - no Strength, Dexterity, to-hit or AC):
+    each weapon it may use is readied on a copy of it and the game's own
+    recalculation gives its to-hit, dice, damage bonus and attacks
+    (Strength, Dexterity's missile bonus, pluses, the arrows' plus, the AD&D
+    1E thrown rule when on); its expected damage a round = attacks (a
+    launcher's / thrown weapon's rate of fire, at most the ammunition left)
+    x the chance to hit the foe's AC (a 1 misses, a 20 hits) x the average
+    damage (large foes' dice), against the best foe it could use it on now
+    (one it can hurt by the game's rating - immunities, pluses needed). Next
+    to a foe: the melee weapons and bare hands; else, Missile ticked, the
+    missile weapons, those that reach a foe in sight first; nothing to shoot
+    (Missile unticked, no ammunition): the melee weapon to go in with. A
+    cursed weapon held stays. **Flasks of oil are an item** (Tom,
+    2026-11-25): thrown only with Items ticked, Missile or not
+    (`combat::quick_weapon`, `think`'s missile_ok; fight_check R13). NPCs and
+    monsters keep the games' rating; **Spells** - casts
     nothing; ticked it casts its memorized spells as the games' AI does
     (the same choice as monsters' and NPCs': d7 rounds by priority, its
     targets, the spell out of memory). That is each original's **Magic
