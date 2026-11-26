@@ -7,6 +7,7 @@ T='|B"0'; k=0
 while read -r nm hp st; do
   cur=${hp%/*}; mx=${hp#*/}
   [ "$st" = 6 ] && T="$T%$k/Hvvvvvvv/H/E"
+  [ "$st" = 7 ] && T="$T%$k/Hvvvvvvvvv/H/E"   # (the Queen: Stone to Flesh, the 10th)
   [ "$cur" != "$mx" -o "$st" != 0 ] && T="$T%$k/Hvvvvv/H/E"
   k=$((k + 1))
 done < <(grep -a " HP .* st " $P/run.log | head -8 | sed -E 's/^ *([A-Z ]+) HP ([0-9]+\/[0-9]+) st ([0-9]+).*/\1 \2 \3/' | awk '{print $1, $(NF-1), $NF}')
