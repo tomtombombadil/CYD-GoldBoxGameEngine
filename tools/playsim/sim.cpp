@@ -348,11 +348,28 @@ static std::string last_text;
 static std::vector<int> choices; static size_t ci = 0;
 static int next_choice(int dflt) { return ci < choices.size() ? choices[ci++] : dflt; }
 // Runs until the game waits for the player: auto-answers with `choice`
+// WINFIGHT=1: a play-through's cheat - every foe down whenever a fight is up (replays too; the fight's rules
+// are the rule checks' business; the script's after-fight part runs). Not once the fight's results are up: its
+// monsters' records are gone. Run between moves AND while the fight ticks (settle) - between moves only, the
+// foes' first turns came first (the Dark Queen's cave: a fireball before the first token, two dead)
+static void win_fight()
+{
+    if (!getenv("WINFIGHT") || !play::fg || play::screen != play::Screen::Fight || !play::ml ||
+        play::fg->st == play::FSt::Results || play::fg->st == play::FSt::Destroyed || play::fg->st == play::FSt::NpcShare)
+        return;
+    for (int i = 0; i < play::fg->b.n; ++i) {
+        combat::Fighter& f = play::fg->b.f[i];
+        if (!f.size || !f.team()) continue;
+        f.rec[0x1A4] = 0; f.rec[0x195] = 6; f.rec[0x196] = 0;
+    }
+}
+
 static void settle(int choice = 0, int max_ms = 60000)
 {
     for (int t = 0; t < max_ms; t += 20) {
         g_now += 20;
         play::tick(g_now, C);
+        win_fight();
         // MONSTATE=1: each fighter's square, status and HP as each round starts (and as the fight ends)
         static const bool monstate = getenv("MONSTATE") != nullptr;
         static int ms_round = -1;
@@ -2192,17 +2209,7 @@ int main(int argc, char** argv)
     const char* yes_skip_from = nullptr;    // (#NAME;yes~no~: the no part skipped when found)
     const char* yes_skip_to = nullptr;
     for (const char* m = moves; *m || auto_next(m); tp_note(m), ++m) {
-        if (getenv("WINFIGHT") && play::fg && play::screen == play::Screen::Fight && play::ml &&
-            play::fg->st != play::FSt::Results && play::fg->st != play::FSt::Destroyed && play::fg->st != play::FSt::NpcShare) {
-            // (not once the fight's results are up: its monsters' records are gone)
-            // WINFIGHT=1: a play-through's cheat - every foe down whenever a fight is up (replays too;
-            // the fight's rules are the rule checks' business; the script's after-fight part runs)
-            for (int i = 0; i < play::fg->b.n; ++i) {
-                combat::Fighter& f = play::fg->b.f[i];
-                if (!f.size || !f.team()) continue;
-                f.rec[0x1A4] = 0; f.rec[0x195] = 6; f.rec[0x196] = 0;
-            }
-        }
+        win_fight();
         if (getenv("FELL") && play::fg && play::screen == play::Screen::Fight && play::ml && play::fg->b.fx &&
             play::fg->b.crystal_ok && play::fg->b.crystal_who < 0 &&
             play::fg->st != play::FSt::Results && play::fg->st != play::FSt::Destroyed && play::fg->st != play::FSt::NpcShare) {
