@@ -39,6 +39,16 @@
   ymfm_pcm.cpp unchanged but renamed .inc (compiled through
   `src/engine/opl.cpp` / `opl_pcm.cpp`). The YM3812 (AdLib) chip the scan
   renders the games' music with.
+- **The PDF core fonts' widths** (`src/engine/pdf_std14.h`, made by `tools/make_pdf_std14.py`): the character
+  widths of Times-Roman, -Bold, -Italic, -BoldItalic, Helvetica and Helvetica-Bold from Adobe's Font Metrics
+  (AFM) files for the 14 PDF core fonts. Copyright (c) 1985 - 1997 Adobe Systems Incorporated. All Rights
+  Reserved. Modified: only the widths, as tables by WinAnsi code. Adobe's terms: "This file and the 14
+  PostScript(R) AFM files it accompanies may be used, copied, and distributed for any purpose and without
+  charge, with or without modification, provided that all copyright notices are retained; that the AFM files
+  are not distributed without this file; that all modifications to this file or any of the AFM files are
+  prominently noted in the modified file(s); and that this paragraph is not modified. Adobe Systems has no
+  responsibility or obligation to support the use of the AFM files." (The AFM files themselves are not in the
+  repo.) Times is a trademark of Linotype-Hell AG and/or its subsidiaries; Helvetica of Linotype-Hell AG.
 
 ## Loaded by the web pages (not copied into the repo)
 - **ESP Web Tools** (Apache License 2.0) - the installer page loads it from unpkg.

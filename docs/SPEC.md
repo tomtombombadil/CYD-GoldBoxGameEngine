@@ -2485,6 +2485,14 @@ How it works (v0.12.0, Curse):
   JOURNAL.DAT made by v0.161 or before (`gbc3`) is made again at the
   next start ("Preparing Journals" - no Rescan needed). Untested here:
   the Savage Frontier and Krynn SNEG PDFs (not in this session's files).
+  v0.221.3 (Tom, 2026-11-26: Treasures' Introduction read "th e pa rt}'1"): **a standard font named without
+  /Widths** (the Steam Treasures journal's OCR text layer is Times-Roman, unembedded) takes Adobe's widths for
+  it (`engine/pdf_std14.h` - Times, Helvetica / Arial, Courier 600; any other name as Times), else every letter
+  was 0 wide and each piece the OCR placed by itself read as a word; **a gap between pieces is a word space
+  past a fifth of the smaller of the two letters' sizes** (the Steam Champions / Death Knights layers' small
+  "of" set close before "the": "ofthe"). Checked against pdftotext on all nine SNEG PDFs: only Treasures,
+  Champions, Death Knights and the Dark Queen change. The OCR's own misreadings ("~i INTRODUCTION ~",
+  "part}'1") are in the PDFs' text layers and stay.
   **The book view for a typeset PDF**: BOOK.TXT a PDF page at a time in
   the text-entry viewer (Zoom = Small / Medium / Large text; Prev / Next
   a screenful, then the page before / after; the label "3 of 21" - the
