@@ -9657,6 +9657,26 @@ static void test_spells_batch3()
         gc.items[0][0x34] = 0;
         rules::stats(gc, gf);
         CHECK(gc.rec[0x19] == 18 && gc.rec[0x78] == 60 && gc.rec[0x1A4] == 50);
+        // A PoolRad import (0xE6 = its hit dice, no former class): the original
+        // counts no level - the hit points drop to the dice rolled (DOSBox);
+        // Game Fixes' Imported Hit Points counts them all
+        gc.rec[0xE5] = gc.rec[0xE6] = 5;
+        gc.items[0][0x34] = 1;
+        rules::set_fixes_off(1ull << rules::kFixImportHp);
+        rules::stats(gc, gf);
+        CHECK(gc.rec[0x19] == 19 && gc.rec[0x78] == 40 && gc.rec[0x1A4] == 30);
+        rules::set_fixes_off(0);
+        gc.items[0][0x34] = 0;
+        gc.rec[0x19] = 18; gc.rec[0x78] = 60; gc.rec[0x1A4] = 50;
+        rules::stats(gc, gf);
+        gc.rec[0x78] = 60; gc.rec[0x1A4] = 50;
+        gc.items[0][0x34] = 1;
+        rules::stats(gc, gf);
+        CHECK(gc.rec[0x19] == 19 && gc.rec[0x78] == 65 && gc.rec[0x1A4] == 55);
+        gc.items[0][0x34] = 0;
+        rules::stats(gc, gf);
+        CHECK(gc.rec[0x19] == 18 && gc.rec[0x78] == 60 && gc.rec[0x1A4] == 50);
+        gc.rec[0xE5] = gc.rec[0xE6] = 0;
         gc.rec[0x1A4] = 3;
         gc.rec[0x18] = gc.rec[0x19] = 19;
         gc.rec[0x78] = 65;

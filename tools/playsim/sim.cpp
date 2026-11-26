@@ -1236,7 +1236,7 @@ int main(int argc, char** argv)
             pm_tap_line('R');
             if (play::screen == play::Screen::YesNo) tap_word('Y');
             pm_tap_line('A');
-            if (play::screen != play::Screen::AddList) tap_word(play::hl() ? 'T' : play::darkness_files() ? 'P' : 'C');   // (Darkness: Pools; Dark Queen: Tdqk)
+            if (play::screen != play::Screen::AddList) tap_word(getenv("ADDGUYFROM") ? getenv("ADDGUYFROM")[0] : play::hl() ? 'T' : play::darkness_files() ? 'P' : 'C');   // (Darkness: Pools; Dark Queen: Tdqk; ADDGUYFROM=P: Curse's Pool list)
             for (int i = 0; i < play::d->guys; ++i) {
                 char t[48]; play::list_line(i, t, sizeof t);
                 if (getenv("ADDLIST")) printf("    add list %d [%s]\n", i, t);

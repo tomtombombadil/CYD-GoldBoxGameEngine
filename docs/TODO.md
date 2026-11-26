@@ -999,10 +999,15 @@ the Project as claude/TODO.md.
   - [ ] DOSBox: after the Thieves' Guild master's PROGRAM 9 camp the engine runs his speech
         and the fight at the party's next step (4C17 = 1); the original sets byte_1D8AA = 1
         there - does it run the square's script at once after the camp?
-  - [ ] DOSBox / the original's code: the Girdle of the Dwarves' +1 Constitution rebuilt
-        Thorin's maximum hit points to his rolled ones (56 -> 40: record 0xE6 = his hit dice, so
-        con_rebuild adds no level's Constitution; imported characters get 0xE6 = 0xE5, and
-        creation sets 0xE6 = hit dice too) - the original's bug? If so: Game Fixes.
+  - [x] v0.220.0 (the PortMaster session, 2026-11-26): the Girdle of the Dwarves cutting Thorin's
+        hit points 56 -> 40 is the ORIGINAL's - seen in DOSBox with a PoolRad dwarf fighter 8
+        (Constitution 16, 56 hit points; THORIN.CHA made from a PoolRad .CHA) added by Add
+        Character - Pool, the Girdle traded from Travis and readied: Constitution 17, 40 hit points;
+        the engine the same from the same file. A character CREATED in Curse gains as it should
+        in both (a new dwarf fighter +5; stock Travis 34 -> 36). So: Game Fixes' Imported Hit
+        Points (`kFixImportHp`, Curse, on by default) - no former class: every level counted
+        (the same test 64; NOFIXES=1 40). Host test in test_dax (fix off / on). Not checked: the
+        ioun stone (same routine), an imported character taken on to Secret.
   - [ ] Curse's dwarf poison save: Thorin's shows 14 in Curse vs 10 in PoolRad (classes.cpp
         adds the Constitution bonus to the save number "as the games do") - check it.
   - [ ] Curse's camp on the travel map (seen 2026-11-19, outside Zhentil Keep): the camp is drawn over the

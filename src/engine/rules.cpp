@@ -198,13 +198,24 @@ void con_rebuild(party::Character& c, int con, const ItemFacts& f)
 {
     uint8_t* r = c.rec;
     int sum = 0, n = 0;
+    // The levels a human had before changing class (0xE6) are counted by the
+    // former class alone. A PoolRad character's import leaves its hit dice
+    // there with no former class at all (the original's, DOSBox 2026-11-26:
+    // a dwarf fighter 8, 56 hit points, readies the Girdle - 40): Game
+    // Fixes' Imported Hit Points counts every level then
+    int former = r[kMultiLevel];
+    if (former && fix(kFixImportHp)) {
+        bool had = false;
+        for (int k = 0; k < 8; ++k) had = had || r[0x111 + k];
+        if (!had) former = 0;
+    }
     for (int k = 0; k < 8; ++k) {
         int lv = r[0x111 + k];
         if (lv > 0) sum += con_hp(r, k, lv, con, f);
         lv = r[0x109 + k];
         if (lv > 0) ++n;
         if (f.max_hd[k] < lv) lv = f.max_hd[k];
-        if (lv > r[kMultiLevel]) sum += con_hp(r, k, lv - r[kMultiLevel], con, f);
+        if (lv > former) sum += con_hp(r, k, lv - former, con, f);
     }
     if (!n) return;
     sum = (sum & 0xFF) / n;                                 // (a byte, as the original's)
@@ -1696,7 +1707,11 @@ const FixInfo kFixes[kFixCount] = {
      "experience, so the level waiting in the other class could be lost."},
     {kFixHp255, "Hit Points Past 255", kDark | kTreas,
      "A level's hit points stop at 255. The original adds them to a byte that wraps round: a character near "
-     "255 who trains may come back with a handful of hit points, or none."}
+     "255 who trains may come back with a handful of hit points, or none."},
+    {kFixImportHp, "Imported Hit Points", kCurse,
+     "A character brought over from PoolRad keeps the hit points its Constitution gave when an item changes "
+     "that Constitution (the Girdle of the Dwarves, an ioun stone). The original counts none of the levels "
+     "the character arrived with, so its hit points drop to the dice rolled."}
 };
 
 const AdndInfo kAdnd[kAdndCount] = {

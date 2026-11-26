@@ -3250,6 +3250,15 @@ the game's Settings (As Original: all of them).
   paladin, so a pure paladin casts at 6; Death Knights' the same shape
   (its knight). Kept so; with Game Fixes a paladin's cleric spells take
   the paladin's level as the earlier games do.
+- **A PoolRad character's hit points and a Constitution item (Curse; Game
+  Fixes' Imported Hit Points, v0.220.0)**: Curse's import leaves the
+  character's hit dice count in record 0xE6 - the field a human's change of
+  class uses for "levels before the change" - so when the Girdle of the
+  Dwarves or an ioun stone changes Constitution, the original counts no level
+  and the maximum hit points drop to the dice rolled (DOSBox, 2026-11-26: a
+  dwarf fighter 8 with Constitution 16 and 56 hit points readies the Girdle -
+  Constitution 17, 40 hit points; the engine the same with the fix off). With
+  the fix a character with no former class has every level counted (64).
 - **Death Knights' Remove Curse and Heal** (Game Fixes, v0.201.0): its
   Remove Curse (0x2CD27) and Darkness's in a fight look for effect 0x2B
   while Bestow Curse gives 0x24 - the curse stays; Death Knights' Heal
