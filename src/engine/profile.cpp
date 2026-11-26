@@ -4333,7 +4333,10 @@ const Profile kProfiles[] = {
                 .pick_new = 0x4348C, .no_qualify = 0x4347A, .change_select = 0x4349C, .now_first = 0x434A3,
                 .dot = 0x434B8,
                 .mu_by_slot = kDarknessMuSlots, .mu_by_slot_from = 4, .mu_by_slot_n = 4, .mu_all_levels = 3,
-                .mu_all_slot = 9, .kit = 0x0AE7, .kit_block = 1},
+                .mu_all_slot = 9, .kit = 0x0AE7, .kit_block = 1,
+                // (a new character's experience: GAME.OVR 0x1A422 - 22,600 whatever the class; two classes 11,300,
+                // three 7,533 - Modify's test 0x1BEDF; DOSBox, 2026-11-26: a new elf thief, level 6, 22,600)
+                .start_xp = 22600},
      // The items screen's, the shop's, the temple's, Magic's, Alter's and the
      // fights' words: Darkness's, found again
      .item_words = {0, 0, 0, 0, 0, 0, 0, 0x2CBBF, kP | 0xDC10, 0x2D872, kP | 0xDBBC, kP | 0xDBE6, 0, 0x2D7A0,

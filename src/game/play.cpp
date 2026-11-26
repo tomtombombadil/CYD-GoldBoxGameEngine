@@ -13262,7 +13262,7 @@ void start_modify(pic::Canvas& c)
     // (the Cheats tab's Trainer: any character, any time - the bounds as the game's)
     if (cheat != Cheat::Trainer &&
         !create::can_modify(*ch, d->prof->variant.pool_files, secret_files(), darkness_files(), gateway(), krynn_rules(),
-                            hl())) {
+                            hl(), d->prof->create.start_xp)) {
         char t[60], nm[20];
         ch->name(nm, sizeof nm);
         snprintf(t, sizeof t, "%s%s", nm, rw(Data::kCantModify));

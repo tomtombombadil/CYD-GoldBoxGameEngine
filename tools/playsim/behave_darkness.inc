@@ -151,7 +151,7 @@ void creation()
     static party::Character c;
     char w[200];
     int ncase = 0, nbad = 0;
-    const auto* sx = row("start_xp", 1500001);
+    const auto* sx = b_rows("start_xp").empty() ? nullptr : &b_rows("start_xp")[0];   // (Darkness 1,500,001 ...; Treasures 22,600 ...)
     for (int fix = 0; fix < 2; ++fix)
         for (int dr = 0; dr < 6; ++dr) {
             const auto* rc = row("raceclasses", dr);
@@ -412,13 +412,15 @@ void modify()
     snprintf(w, sizeof w, "Modify's hit point bounds: %d cases", n);
     expect(P, w, bad == 0, "%d wrong", bad);
     // Who may be modified: exactly the starting experience
-    for (uint32_t xp : {1500001u, 750000u, 500000u, 1500000u, 0u, 25000u, 200000u, 750001u}) {
+    const auto* mx = b_rows("start_xp").empty() ? nullptr : &b_rows("start_xp")[0];
+    const uint32_t x1 = mx ? (*mx)[0] : 1500001u, x2 = mx ? (*mx)[1] : 750000u, x3 = mx ? (*mx)[2] : 500000u;
+    for (uint32_t xp : {x1, x2, x3, x1 - 1, 0u, 25000u, 200000u, x2 + 1}) {
         c = party::Character{};
         for (int i = 0; i < 4; ++i) c.rec[0x127 + i] = static_cast<uint8_t>(xp >> (8 * i));
         c.rec[0xE6] = 9;                                    // (a former class doesn't matter)
-        const bool want = xp == 1500001u || xp == 750000u || xp == 500000u;
+        const bool want = xp == x1 || xp == x2 || xp == x3;
         snprintf(w, sizeof w, "Modify allowed at %u experience: %s", xp, want ? "yes" : "no");
-        expect(P, w, create::can_modify(c, false, true, true) == want);
+        expect(P, w, create::can_modify(c, false, true, true, false, false, false, d->prof->create.start_xp) == want);
     }
     // Keep: the rolled hit points = the maximum less the Constitution's part
     // (43.5); a magic-user's book by its slots again

@@ -275,7 +275,19 @@ for dr in range(6):
 # 40.3 the races' effects in the original's order
 for dr, fx in ((0, (0x5F,)), (1, (0x12,)), (2, (0x2F, 0x1A, 0x61)), (3, (0x30, 0x07, 0x61)), (4, (0x61,)), (5, ())):
     w.row('racefx', dr, fx)
-w.row('start_xp', 1500001, 750000, 500000)          # 40.4
+# 40.4 a new character's experience. Treasures' own (2026-11-26: the row was Darkness's figure for
+# both, and the engine gave Treasures' new characters 1,500,001): creation's
+# "mov word [record + 0x172], imm" / "mov word [record + 0x174], imm" in GAME.OVR, and Modify's
+# three compares against record + 0x172 (one class, two, three)
+import re as _re
+_m = _re.search(rb'\x26\xc7\x85\x72\x01(..)\x26\xc7\x85\x74\x01(..)', ovr, _re.S)
+_one = (int.from_bytes(_m.group(1), 'little') | int.from_bytes(_m.group(2), 'little') << 16) if _m else 0
+_cmp = [int.from_bytes(x, 'little') for x in _re.findall(rb'\x81\xbd\x72\x01(..)', ovr, _re.S)]
+if 'treasures' in sys.argv[1:] and _one and _one < 0x10000 and _one in _cmp and len(_cmp) >= 3:
+    _i = _cmp.index(_one)
+    w.row('start_xp', _one, _cmp[_i + 1], _cmp[_i + 2])
+else:
+    w.row('start_xp', 1500001, 750000, 500000)
 w.row('money_pp', 200)                              # 40.7
 w.row('icon_head', 5, 9, 0, 7, 3)                   # 40.11: men / women size 2, men / women small, halfling
 w.row('icon_body', 0x17, 1, 0x18, 0x1D, 5)          # cleric, ranger, paladin / fighter, magic-user, thief

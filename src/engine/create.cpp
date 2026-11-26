@@ -66,7 +66,8 @@ uint32_t start_exp(int cls, bool secret = false, bool dk = false, uint32_t xp = 
     // createPlayer GAME.OVR ovl 0x61 +0xBA3; Gateway's divide evenly)
     if (xp) {
         const uint32_t n = cls < ClericFighter ? 1 : (cls == ClericFighterMU || cls == FighterMUThief) ? 3 : 2;
-        return (xp + n - 1) / n;
+        // (Treasures' - Darkness's program with its own figure: shared out rounded down, 22,600 / 11,300 / 7,533)
+        return dk ? xp / n : (xp + n - 1) / n;
     }
     // (Darkness's, GAME.OVR 0x14D74: 1,500,001; two classes 750,000 - the
     // magic-user / thief too -, cleric / fighter / magic-user and fighter /
@@ -1762,7 +1763,7 @@ int class_con_bonus(int con, int cls)
 }
 } // namespace
 
-bool can_modify(const party::Character& c, bool pool, bool secret, bool dk, bool gw, bool krynn, bool queen)
+bool can_modify(const party::Character& c, bool pool, bool secret, bool dk, bool gw, bool krynn, bool queen, uint32_t start_xp)
 {
     const uint32_t e = c.exp();
     if (queen) return e == 1000001 || e == 500000 || e == 333333;
@@ -1773,6 +1774,8 @@ bool can_modify(const party::Character& c, bool pool, bool secret, bool dk, bool
     // (Gateway's: 0 or its starting 3000 / 1000 / 1500, not dual-classed -
     // GAME.OVR 0x290B7)
     if (gw) return (e == 0 || e == 3000 || e == 1000 || e == 1500) && c.rec[kMultiLevel] == 0;
+    // (Treasures': its own starting experience - GAME.OVR 0x1BEDF: 22,600, 11,300, 7,533)
+    if (dk && start_xp) return e == start_xp || e == start_xp / 2 || e == start_xp / 3;
     if (dk) return e == 1500001 || e == 750000 || e == 500000;
     // (Secret's: its own starting experience - GAME.OVR 0x1FBF0)
     if (secret) return (e == 0 || e == 66667 || e == 100000 || e == 200000) && c.rec[kMultiLevel] == 0;

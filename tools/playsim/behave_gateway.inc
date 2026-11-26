@@ -177,7 +177,9 @@ bool list_limited(int race, int k, int lvl, int str)
     const auto& caps = b_rows("level_cap");
     if (!caps.empty() && lvl >= caps[0][k]) return true;
     for (const auto& r : b_rows("list_limit"))
-        if (r[0] == race && r[1] == k && r[2] == lvl &&
+        // (a limit holds AT OR PAST it - the engine's rule since v0.211.13, SPEC 11; the original's
+        // own test is the level alone, so a character past its limit was magenta there)
+        if (r[0] == race && r[1] == k && r[2] <= lvl &&
             (r[3] == 0 || (r[3] == 1 && str == 17) || (r[3] == 2 && str < 17) || (r[3] == 3 && str < 18)))
             return true;
     return false;
