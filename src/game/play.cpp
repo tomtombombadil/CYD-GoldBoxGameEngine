@@ -6424,15 +6424,17 @@ void peek_read(SavePeek& p, char slot)
         uint8_t b[41];
         // (where the position lies: Darkness's after its game block, Death Knights' after its
         // memory as bytes, the others' after Curse's memory and, but for Secret / Champions, the script)
+        // (the Dark Queen's QSV: x, y, facing at 0x400 too - its loaded position matched there, v0.219.6)
+        const bool queen = d->prof->variant.hlib;
         const uint32_t pos = dkk() ? 1 + 0x400 + 0x400 + 0x200
-                             : darkness_files() ? savegame::kDarknessBlock
+                             : darkness_files() || queen ? savegame::kDarknessBlock
                                                 : 1 + 0x800 + 0x800 + 0x400 + (short_saves() ? 0 : ecl::kCodeSize);
         if (!darkness_files() || dkk()) {
             if (src.read_at(0, b, 1) == 1) p.area = b[0];
         }
         if (src.read_at(pos, b, 3) == 3) {
-            p.x = b[0] & 15;
-            p.y = b[1] & 15;
+            p.x = queen ? b[0] : b[0] & 15;     // (its maps are bigger than 16 x 16)
+            p.y = queen ? b[1] : b[1] & 15;
             p.dir = b[2] & 6;
         }
         p.block = peek_word(src, 0x4BF2);
