@@ -15,6 +15,8 @@
       instructions after it): an IF straight after a COMBAT - Darkness 215 of 468, Treasures 63 of 272, the Dark
       Queen 97 of 283; PoolRad (246), Curse (200), Secret (261), Champions (197), Death Knights (212), Gateway
       (286): none, nor an IF within three instructions. Those six need no fight-end flags.
+- [ ] `behave` (Curse): "events: triggers" has no oracle file - oracle_events.txt's generator is not in the repo
+      (lost with the old scratch, 2026-11-08?). The other 6,004 Curse checks and PoolRad's 430 pass (2026-11-26).
 - [x] v0.216.2 (the PortMaster session's Treasures play-through, 2026-11-24, its ending): **Treasures' PROGRAM 5
       did nothing** - its program (GAME.OVR 0x28F4 -> ovl 0x4F +0x971, read) makes the whole party well there:
       feeblemind, blindness, the diseases and poison off, the dead with a Constitution left resurrected, the stoned
@@ -197,7 +199,7 @@
       now the spell's routine, as the originals' temples call it; "Drained" on the Companion: the Dark Queen's best
       levels in its own order, Death Knights' knight counted. The old Darkness model (oracles/darkness.py R11) had
       the same experience mistake - put right. Left as SPEC 12: PoolRad / Curse / Gateway's no-class-can-rise case.
-- [ ] Curse's `behave` classes: 9 "race 5 class 2 level 7-9 Str 16-18: may train - doesn't, the original does"
+- [x] (2026-11-26: the check, not the engine - the engine stops AT OR PAST a limit since v0.211.14, Tom's cheat-off rule; the check now expects that, SPEC 11 says it) Curse's `behave` classes: 9 "race 5 class 2 level 7-9 Str 16-18: may train - doesn't, the original does"
       (halfling fighters) - already so before v0.214.9 (found 2026-11-23, with PoolRad's below).
 - [x] v0.214.8 (Tom, 2026-11-23: "verify the level drain mechanics ... multiclass characters and human characters
       that change class ... across the games"): each game's drain routine RUN in Unicorn on 2000 made characters
@@ -216,7 +218,7 @@
       own (DQK.EXE 0x4F66D: Darkness's shape in its class order, its experience routine, its hit point routine
       taking), and its most hit points (Modify's bound too) take the class's own level where a dual-classed human's
       former level only picks the branch.
-- [ ] PoolRad's `behave pool` ONLY=train: "ready with the experience, the race limits" - 9 of 1098 wrong (first: race
+- [x] (2026-11-26: the same - the check now expects at-or-past; its three level-drain lines were the old hand reading, the Unicorn check is the judge) PoolRad's `behave pool` ONLY=train: "ready with the experience, the race limits" - 9 of 1098 wrong (first: race
       2, fighter, Str 16, level 6: not ready) - already so before v0.214.8 (found 2026-11-23); look at it.
 - [x] v0.214.7 (the Death Knights play-through, 2026-11-23): **a level drain killed a knight with no other class**
       (Sir Strongsword, one spectre's touch: "dies from drainning"). Death Knights drained through Darkness's routine,

@@ -643,7 +643,11 @@ void levelling()
                     levels(c, lv);
                     put32(c.rec, 0x127, 3000000);
                     const int bit = m->tables.u8(static_cast<uint16_t>(m->tables.lay.class_masks + k));
-                    const bool want = oxp(k, L) > 0 && !train_limit(race, k, L, str, str);
+                    // (the original's limits are "level == limit"; the engine stops AT OR PAST it - Tom,
+                    // 2026-11-21, the Cheats' Disable Race Level Limits turned off again; SPEC 12)
+                    bool lim = false;
+                    for (int l = 1; l <= L; ++l) lim = lim || train_limit(race, k, l, str, str);
+                    const bool want = oxp(k, L) > 0 && !lim;
                     const bool got = (create::trainable(c, m->tables) & bit) != 0;
                     if (got != want) {
                         char w[80];
