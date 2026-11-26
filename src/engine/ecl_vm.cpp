@@ -2195,11 +2195,15 @@ Stop Vm::step()
             // +0x11AC; DOSBox: Ohlo's reward)
             if (set_.pool_map) set(0x7EC8, 0);
             if (set_.treasure_flags) {
-                // (the fight's end routine: "=" unless a member is running)
-                bool ran = false;
-                for (int i = 0; party_ && i < party_->count; ++i)
-                    if (party_->m[i].rec[0x195] == party::Running) ran = true;
-                fight_flags(!ran);
+                // (the fight's end routine: "=" unless the party fled - a member running and
+                // none okay or animated; play_fight.inc end_fight has the addresses)
+                bool ran = false, stands = false;
+                for (int i = 0; party_ && i < party_->count; ++i) {
+                    const uint8_t st = party_->m[i].rec[0x195];
+                    if (st == party::Running) ran = true;
+                    if (st == party::Okay || st == party::Animated) stands = true;
+                }
+                fight_flags(!(ran && !stands));
             }
             return wait_for(Wait::Treasure);
         }

@@ -303,9 +303,10 @@ public:
     bool flag(int i) const { return flags_[i]; }
     // A fight's end leaves the compare flags in Treasures: all cleared, then
     // "=" or "<>" (GAME.OVR 0x6645 - its scripts go "COMBAT, IF <>, GOTO")
-    void fight_flags(bool equal)
+    // (the Dark Queen clears only the first four: n = 4)
+    void fight_flags(bool equal, int n = 6)
     {
-        for (bool& f : flags_) f = false;
+        for (int i = 0; i < n && i < 6; ++i) flags_[i] = false;
         flags_[equal ? 0 : 1] = true;
     }
     uint16_t pc() const { return pc_; }

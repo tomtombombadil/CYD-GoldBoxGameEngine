@@ -1,5 +1,20 @@
 # Open tasks (Tom and Claude)
 
+- [x] v0.219.1 (the PortMaster session, 2026-11-26, from an unexplained Treasures run by the port's buttons): **a
+      fight the party won was taken for a flight when ONE member had run from it** (Treasures, Darkness). The
+      originals' fight end sets "<>" only when the party FLED - a member running and none left okay or animated
+      (Treasures GAME.OVR 0x5884 sets byte 0x72AB at a status 3, 0x59D9 clears it at any member okay / animated;
+      Darkness 0x4D97; the 2026-11-17 reading had stopped at the first loop). Treasures' lair: an NPC whose morale
+      broke, the others won - the script put the party back a square, the fight to do again. **The Dark Queen had
+      no fight-end flags at all** (97 of its 283 COMBATs are followed by an IF): its routine is the same (DQK.EXE
+      0x4B67C: flags DS 0xB2F5 - the IF handler 0x323C6 reads 0xB2DF + op - the first FOUR cleared, "<>", then
+      "=" unless byte 0xC7DE; 0x4A8DE / 0x4A9CA set and clear it) - now so. Read from the three programs; seen in
+      the playsim (the new TESTRAN=<members>: Treasures' lair with Kriiador running goes on to the ending). Not
+      run in DOSBox. Not looked at: the Dark Queen's COMBAT with no monsters (its routine leaves all four clear).
+- [x] **The same in the other games?** - answered 2026-11-26 by sweep's new `combatif` (every COMBAT with the three
+      instructions after it): an IF straight after a COMBAT - Darkness 215 of 468, Treasures 63 of 272, the Dark
+      Queen 97 of 283; PoolRad (246), Curse (200), Secret (261), Champions (197), Death Knights (212), Gateway
+      (286): none, nor an IF within three instructions. Those six need no fight-end flags.
 - [x] v0.216.2 (the PortMaster session's Treasures play-through, 2026-11-24, its ending): **Treasures' PROGRAM 5
       did nothing** - its program (GAME.OVR 0x28F4 -> ovl 0x4F +0x971, read) makes the whole party well there:
       feeblemind, blindness, the diseases and poison off, the dead with a Constitution left resurrected, the stoned
@@ -586,7 +601,7 @@ the Project as claude/TODO.md.
       taken for a flight: the skeleton's fight came again at each visit and Geildarr was never met. Now
       `Vm::fight_flags` at end_fight (variant.tr). Read from the code, played in the playsim: the skeleton,
       "Thanks ...", Geildarr's guards, Milzorr's congratulations, journal 11 and 10. Not run in DOSBox.
-- [ ] **The same in the other games?** (2026-11-17; Darkness done v0.211.7 - its routine is Treasures', byte for byte) Does each original's fight end set the compare flags, and
+- [x] (answered 2026-11-26, the file's top) **The same in the other games?** (2026-11-17; Darkness done v0.211.7 - its routine is Treasures', byte for byte) Does each original's fight end set the compare flags, and
       do its scripts test them straight after COMBAT? Looked at: Treasures only. To do: Darkness, Death
       Knights, the Dark Queen (the same program family), then Gateway / Champions / Secret / Curse / PoolRad
       - find each one's IF handler's flag bytes and who writes them; scan every script for COMBAT followed
