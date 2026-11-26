@@ -376,6 +376,7 @@ enum Fix : uint8_t {
     kFixTrainAll,       // Training Every Class: a multi-class trains each ready class, no experience another class needs lost (Curse, Gateway)
     kFixHp255,          // Hit Points Past 255: training's maximum stops at 255 (Darkness, Treasures)
     kFixImportHp,       // Imported Hit Points: a PoolRad character's Constitution hit points survive a Constitution change (Curse)
+    kFixPoisonSave,     // Poison Save Bonus: the Constitution bonus lowers the poison number (the originals raise it; all but PoolRad)
     kFixCount
 };
 static_assert(kFixCount <= 64, "the fixes' bits");

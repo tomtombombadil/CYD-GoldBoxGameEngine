@@ -1711,7 +1711,11 @@ const FixInfo kFixes[kFixCount] = {
     {kFixImportHp, "Imported Hit Points", kCurse,
      "A character brought over from PoolRad keeps the hit points its Constitution gave when an item changes "
      "that Constitution (the Girdle of the Dwarves, an ioun stone). The original counts none of the levels "
-     "the character arrived with, so its hit points drop to the dice rolled."}
+     "the character arrived with, so its hit points drop to the dice rolled."},
+    {kFixPoisonSave, "Poison Save Bonus", kAll & ~kPool,
+     "Dwarves and halflings save against poison better for their Constitution, +1 to +5 (Players Handbook "
+     "pp. 15, 17), and so does a Constitution of 19 or more. The originals add that bonus to the number the "
+     "roll must reach, which makes the save harder instead."}
 };
 
 const AdndInfo kAdnd[kAdndCount] = {

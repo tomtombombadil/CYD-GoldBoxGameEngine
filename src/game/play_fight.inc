@@ -6351,7 +6351,7 @@ void end_fight(pic::Canvas& c)
     }
 #endif
     if (d->prof->variant.tr || hl() || (darkness_files() && !dkk())) {   // (hl(): the Dark Queen's profile has no
-        // darkness_files - until v0.220.1 its flags were never set, every win taken for a flight: Naulidis's dragons at
+        // darkness_files - until v0.221.1 its flags were never set, every win taken for a flight: Naulidis's dragons at
         // 1,22 put the party back a square each time)
         // Treasures, Darkness and the Dark Queen (the same routine: Darkness GAME.OVR 0x596E -
         // flags DS 0xB01E, byte 0x7FF5 - Treasures 0x6644, DQK.EXE 0x4B67C - flags DS 0xB2F5,

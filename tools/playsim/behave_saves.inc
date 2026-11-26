@@ -140,7 +140,10 @@ void sample_load()
         rules::recalc(r2, *names, d->facts);
         Making* m = nullptr;
         if (load_rules(m)) {
+            const uint64_t was_off = rules::fixes_off();          // (the original's poison number: Poison Save Bonus off)
+            rules::set_fixes_off(was_off | 1ull << rules::kFixPoisonSave);
             classes::class_bonuses(r2, m->tables);
+            rules::set_fixes_off(was_off);
             rules::recalc(r2, *names, d->facts);
             delete m;
         }

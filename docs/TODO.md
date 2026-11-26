@@ -115,7 +115,7 @@
       step ahead (9 uses: Turef's trapdoor never moved the party - "you slip into the next room" left it on the
       trapdoor; Kalaman's / Quazle's pushes), CALL 2DCB the 3D view again when something moved (97 uses). Host test
       test_vm_knights_call (fails without the fix).
-- [x] v0.220.1 (the Dark Queen play-through, Naulidis): **the Dark Queen's fight-end flags were never set** - v0.219.1
+- [x] v0.221.1 (the Dark Queen play-through, Naulidis): **the Dark Queen's fight-end flags were never set** - v0.219.1
       gave them to it, but its test was darkness_files(), which the Queen's profile doesn't set; so every COMBAT's
       "IF <>" took a win for a flight. Naulidis's dragon room at 1,22 (block 14 event 7: COMBAT, IF <>, back a
       square) put the party back after each win, the way south shut. Now hl() too. Checked: the playsim - the fight
@@ -1013,8 +1013,12 @@ the Project as claude/TODO.md.
         Points (`kFixImportHp`, Curse, on by default) - no former class: every level counted
         (the same test 64; NOFIXES=1 40). Host test in test_dax (fix off / on). Not checked: the
         ioun stone (same routine), an imported character taken on to Secret.
-  - [ ] Curse's dwarf poison save: Thorin's shows 14 in Curse vs 10 in PoolRad (classes.cpp
-        adds the Constitution bonus to the save number "as the games do") - check it.
+  - [x] v0.221.0 (the PortMaster session, 2026-11-26): Curse's dwarf poison save 14 vs PoolRad's 10 -
+        the ORIGINAL's sum (Curse GAME.OVR 0x3B654: the bonus ADDED to the number; 0x36382: the save made
+        when roll + changes >= the number), a bonus that hurts. Game Fixes' Poison Save Bonus
+        (`kFixPoisonSave`, all but PoolRad, on by default) takes it off the number instead (PHB pp. 15,
+        17). behave classes checks both ways. Read in Curse's code only - the other games' sums are
+        the engine's earlier readings ("as the games do"); the fix turns whatever the engine added.
   - [ ] Curse's camp on the travel map (seen 2026-11-19, outside Zhentil Keep): the camp is drawn over the
         map with no party list, so View / Drop act on the first member only - the player can't pick anyone
         else there. DOSBox: does the original's travel camp show the party list (as Death Knights' PROGRAM 9
