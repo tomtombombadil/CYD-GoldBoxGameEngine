@@ -115,6 +115,11 @@
       step ahead (9 uses: Turef's trapdoor never moved the party - "you slip into the next room" left it on the
       trapdoor; Kalaman's / Quazle's pushes), CALL 2DCB the 3D view again when something moved (97 uses). Host test
       test_vm_knights_call (fails without the fix).
+- [x] v0.221.1 (the Dark Queen play-through, Naulidis): **the Dark Queen's fight-end flags were never set** - v0.219.1
+      gave them to it, but its test was darkness_files(), which the Queen's profile doesn't set; so every COMBAT's
+      "IF <>" took a win for a flight. Naulidis's dragon room at 1,22 (block 14 event 7: COMBAT, IF <>, back a
+      square) put the party back after each win, the way south shut. Now hl() too. Checked: the playsim - the fight
+      won, the party stays at 1,22, the room's won flag (0x9E 0x20) set; before: back at 1,21, flag clear.
 - [x] v0.219.6 (the Dark Queen play-through): **Save Slot Info read the Dark Queen's position from the wrong place**
       - past its party in the QSV (0,0) - and kept 4 bits; x, y, facing are at 0x400 (the loaded position matched
       there). Not seen on a screen yet: [ ] Tom - Load / Save Which in the Dark Queen shows the slot's square.
