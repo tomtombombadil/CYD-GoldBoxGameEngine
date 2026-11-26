@@ -6431,8 +6431,8 @@ void peek_read(SavePeek& p, char slot)
             if (src.read_at(0, b, 1) == 1) p.area = b[0];
         }
         if (src.read_at(pos, b, 3) == 3) {
-            p.x = b[0] & 15;
-            p.y = b[1] & 15;
+            p.x = dkk() ? b[0] : b[0] & 15;      // (the Dark Queen's maps are bigger than 16 x 16)
+            p.y = dkk() ? b[1] : b[1] & 15;
             p.dir = b[2] & 6;
         }
         p.block = peek_word(src, 0x4BF2);

@@ -3475,6 +3475,29 @@ static void test_vm_knights_call()
         CHECK(gs.x == 0 && gs.y == 0 && h.redraws == 0);
     }
     {
+        // A script's write to the party's x / y (0x34 / 0x35): 4 bits on the
+        // 16 x 16 games, the whole byte on the Dark Queen's (big_maps -
+        // Naulidis, 20 x 39, arrives at 11,17; v0.219.2)
+        for (int big = 0; big < 2; ++big) {
+            gs = ecl::GameState{};
+            DrawHost h;
+            Bytes c;
+            for (int i = 0; i < 5; ++i) { c.push_back(0); op_addr(c, 0x8000 + 20); }
+            c.push_back(0x09); op_imm(c, 11); op_addr(c, 0x34);
+            c.push_back(0x09); op_imm(c, 17); op_addr(c, 0x35);
+            c.push_back(0x00);
+            memcpy(gs.code, c.data(), c.size());
+            gs.code_len = static_cast<uint32_t>(c.size());
+            static ecl::OpSet bset;
+            bset = *p->ecl_ops;
+            bset.big_maps = big != 0;
+            ecl::Vm vm(gs, h, bset);
+            CHECK(vm.init_script());
+            vm.run(vm.entry(0));
+            CHECK(gs.x == 11 && gs.y == (big ? 17 : 1));
+        }
+    }
+    {
         gs = ecl::GameState{};
         gs.x = 3; gs.y = 3; gs.dir = 2;
         DrawHost h;

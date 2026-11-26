@@ -475,8 +475,8 @@ void Vm::dkk_write(uint16_t a, uint16_t v, int size)
         return;
     }
     switch (a) {
-    case 0xC04B: s_.x = b & 15; s_.moved = true; break;
-    case 0xC04C: s_.y = b & 15; s_.moved = true; break;
+    case 0xC04B: s_.x = b & pos_mask(); s_.moved = true; break;
+    case 0xC04C: s_.y = b & pos_mask(); s_.moved = true; break;
     case 0xC04D: s_.dir = (b % 4) * 2; s_.moved = true; break;
     case 0xC04F: if (set_.pool_map) s_.roof = b; break;      // (Pool: its DS 0x6AB1, a plain variable)
     default: break;
@@ -543,8 +543,8 @@ void Vm::dk_write(uint16_t a, uint16_t v, int size)
             s_.dir = s_.area1[0x21] ? (b % 4) * 2 : b & 7;
             s_.moved = true;
             return;
-        case 0x34: s_.x = b & 15; s_.moved = true; return;
-        case 0x35: s_.y = b & 15; s_.moved = true; return;
+        case 0x34: s_.x = b & pos_mask(); s_.moved = true; return;
+        case 0x35: s_.y = b & pos_mask(); s_.moved = true; return;
         case 0x3A:                      // the frame's style: BORDERS block (4: 0)
             if (b < 5 && b != s_.area1[0x39]) {
                 s_.area1[0x39] = b;
@@ -673,8 +673,8 @@ void Vm::set(uint16_t a, uint16_t v)
     if (set_.facing_alias && a == set_.facing_alias) a = 0xC04D;
     switch (a) {
     case 0x03DE: sound_kind_ = v; break;
-    case 0xC04B: s_.x = static_cast<int8_t>(v) & 15; s_.moved = true; break;
-    case 0xC04C: s_.y = static_cast<int8_t>(v) & 15; s_.moved = true; break;
+    case 0xC04B: s_.x = static_cast<int8_t>(v) & pos_mask(); s_.moved = true; break;
+    case 0xC04C: s_.y = static_cast<int8_t>(v) & pos_mask(); s_.moved = true; break;
     case 0xC04D: s_.dir = (v % 4) * 2; s_.moved = true; break;
     case 0xC04F: if (set_.pool_map) s_.roof = static_cast<uint8_t>(v); break;   // (Pool: its DS 0x6AB1, a plain variable)
     case 0xC059: view_bytes_[0] = static_cast<uint8_t>(v); break;     // (seen at the next redraw)
@@ -1642,8 +1642,8 @@ bool Vm::dk_step(Stop& r)
             // "moved" flag), 0x2DCB the square's flags and, when something
             // moved, the 3D view again (0x8981); 0xC018 the wall ahead)
             if (w == 0xC01E) {
-                s_.x = (s_.x + (s_.dir == 2 ? 1 : s_.dir == 6 ? -1 : 0)) & 15;
-                s_.y = (s_.y + (s_.dir == 4 ? 1 : s_.dir == 0 ? -1 : 0)) & 15;
+                s_.x = (s_.x + (s_.dir == 2 ? 1 : s_.dir == 6 ? -1 : 0)) & pos_mask();
+                s_.y = (s_.y + (s_.dir == 4 ? 1 : s_.dir == 0 ? -1 : 0)) & pos_mask();
                 s_.moved = true;
                 h_.square();
             } else if (w == 0x2DCB) {
@@ -1657,8 +1657,8 @@ bool Vm::dk_step(Stop& r)
         if (w == 1) {
             h_.redraw();
         } else if (w == 2) {                    // a step ahead
-            s_.x = (s_.x + (s_.dir == 2 ? 1 : s_.dir == 6 ? -1 : 0)) & 15;
-            s_.y = (s_.y + (s_.dir == 4 ? 1 : s_.dir == 0 ? -1 : 0)) & 15;
+            s_.x = (s_.x + (s_.dir == 2 ? 1 : s_.dir == 6 ? -1 : 0)) & pos_mask();
+            s_.y = (s_.y + (s_.dir == 4 ? 1 : s_.dir == 0 ? -1 : 0)) & pos_mask();
             s_.moved = true;
             h_.redraw();
         } else if (w == 3) {                    // the picture's next frame
@@ -2380,8 +2380,8 @@ Stop Vm::step()
             // here and at a step / turn - its ovr4 0x2DAF)
             if (set_.pool_map) h_.square();
         } else if (w == 0xC01E) {
-            s_.x = (s_.x + (s_.dir == 2 ? 1 : s_.dir == 6 ? -1 : 0)) & 15;
-            s_.y = (s_.y + (s_.dir == 4 ? 1 : s_.dir == 0 ? -1 : 0)) & 15;
+            s_.x = (s_.x + (s_.dir == 2 ? 1 : s_.dir == 6 ? -1 : 0)) & pos_mask();
+            s_.y = (s_.y + (s_.dir == 4 ? 1 : s_.dir == 0 ? -1 : 0)) & pos_mask();
             s_.moved = true;
             if (set_.step_square) h_.square();
         } else if (w == 0xC01A && set_.step_square) {
