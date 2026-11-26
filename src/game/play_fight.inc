@@ -6350,7 +6350,9 @@ void end_fight(pic::Canvas& c)
                 if (b.f[i].status() == party::Okay) b.f[i].rec[0x195] = party::Running;
     }
 #endif
-    if (d->prof->variant.tr || (darkness_files() && !dkk())) {
+    if (d->prof->variant.tr || hl() || (darkness_files() && !dkk())) {   // (hl(): the Dark Queen's profile has no
+        // darkness_files - until v0.220.1 its flags were never set, every win taken for a flight: Naulidis's dragons at
+        // 1,22 put the party back a square each time)
         // Treasures, Darkness and the Dark Queen (the same routine: Darkness GAME.OVR 0x596E -
         // flags DS 0xB01E, byte 0x7FF5 - Treasures 0x6644, DQK.EXE 0x4B67C - flags DS 0xB2F5,
         // byte 0xC7DE; found 2026-11-21, the Silver Blades cave's Worldstone: "COMBAT, IF <>"

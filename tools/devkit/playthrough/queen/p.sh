@@ -5,6 +5,8 @@ P=/tmp/claude-0/qplay/card
 cd $P && rm -f out/*.ppm
 # EVENV="RUNAT=... RUNSET=... TELE=..." (a script event started by hand) only for runs whose tokens start with EVTOK
 EX=(); [ -n "$EVENV" ] && [ -n "$EVTOK" ] && [[ "$1" == "$EVTOK"* ]] && read -ra EX <<< "$EVENV"
-env GAME=${GAMEN:-7} MANUAL=1 "${EX[@]}" "${@:2}" timeout ${PTIME:-900} ${SIM:-/tmp/claude-0/ag7/bin/splay} "$P/The Dark Queen of Krynn" "$1?" > ${RUNLOG:-/tmp/claude-0/qplay/run.log} 2>&1
+# (each run its own dice unless SEED is given: a walk is many runs from one save, and the same dice each
+# time hid the refugees' talks - a 1 in 7 at every step came out the same)
+env GAME=${GAMEN:-7} MANUAL=1 SEED=${SEED:-$RANDOM} "${EX[@]}" "${@:2}" timeout ${PTIME:-900} ${SIM:-/tmp/claude-0/ag7/bin/splay} "$P/The Dark Queen of Krynn" "$1?" > ${RUNLOG:-/tmp/claude-0/qplay/run.log} 2>&1
 grep -E "^  \? screen|^   now|MENU prompt|TEXT|LIST" ${RUNLOG:-/tmp/claude-0/qplay/run.log} | tail -${TAILN:-6} | cut -c1-220
 f=$(ls $P/out/*.ppm 2>/dev/null | sort -V | tail -1); [ -n "$f" ] && convert $f -scale 200% /tmp/claude-0/qplay/last.png
