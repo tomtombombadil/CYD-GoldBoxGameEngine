@@ -144,3 +144,18 @@ key first ("./L...").
   them; AUTOPICK "No" walks past them.
 - PROGRAM 5 (engine 0.216.2): everyone made well, then a key - the ending's "all are healed", the demo's fight.
 - After the ending the script puts the party on the overland at 54;7,1 and play goes on.
+
+2026-11-25 (the journal ledger closed; the underground rooms; Fireshear's pocket)
+- ovwalk.sh kept a walk's texts only when a fight or the dwarves came up: an overland event that is plain text
+  (the old sage, journal 4) left no line in the transcript. It now writes every TEXT / JOURNAL line of a walk.
+  The ledger is counted from the transcript's "JOURNAL J n" lines against every "#n" a script's text names.
+- The overland's place table (script 51: 9B3A map, 9B50 x, 9B66 y; 22 places): 17 the Tower of Twilight, 18 - 21
+  the old tunnels (56;3,6  54;10,8  52;0,10  51;14,10) - all four load script 50.
+- Script 50 (the Crossroads / Hall of Ten Doors / Room of Three Doors): four 5 x 5 rooms; the step script runs
+  on the square the party LEAVES - a step the way the square's flag says (6 - 9: (flag - 6) & 3; 0 N 1 E 2 S 3 W)
+  moves the party to another room, the same place in it, with no fight; any other way is a fight. The way out is
+  a room's edge row (flags A - D: flag - 10), stood on and left the way it says. doors.sh <slot> [steps] does it.
+- Fireshear's mines are several closed regions, each under its own shaft: the pocket with 11,9 and 13,10 is under
+  the town's shaft at 12,8.
+- A save made while a Yes / No waits starts the script's event again at the next load: tokens, then SAVENOW only
+  on the exploring menu.
