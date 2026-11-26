@@ -1181,6 +1181,9 @@ bool q_overland() { return d && vm && hl() && vm->get(0x24) == 1 && !vm->get(0x2
 bool marker_overland() { return dk_overland() || kr_overland() || q_overland(); }
 // Gateway's wilderness (gateway_facts.md 14): area word 0x4BE6 = 0
 bool gw_wild() { return d && vm && d->prof->variant.tile_wild && !vm->get(0x4BE6); }
+// Treasures' overland is up (its OVER.DAX map): a step there takes no minutes of its own - the script adds the
+// ground's hours (DOSBox, Search on: 6,1 11:07 -> 7,1 22:07 -> 8,1 09:07; in a town ten minutes a step)
+bool tr_overland() { return d && d->prof->variant.tr && d->gs.area1[0x3F] && d->tr_over; }
 // Gateway's way ahead (GAME.OVR 0x4712F +0x82A, kept in area word 0x4CF6 as
 // the square's values are taken): the facing side's door state (plane 3),
 // a side without a wall open (1) in 3D only; its scripts' steps stop on 0
@@ -15422,7 +15425,7 @@ bool do_move()
             step_party(step_dir);
             can_bash = can_pick = can_knock = true;
             // A minute a step, ten when searching (clock slot 1 / 2)
-            vm->advance_clock((vm->get(0x7ECA) & 1) ? 2 : 1, 1);
+            if (!tr_overland()) vm->advance_clock((vm->get(0x7ECA) & 1) ? 2 : 1, 1);
         }
     }
     vm->set(0x7EC9, 0);
@@ -15513,7 +15516,7 @@ void door_choice(char k)
         sfx(sound::kStep);
         step_party(step_dir);
         can_bash = can_pick = can_knock = true;
-        vm->advance_clock((vm->get(0x7ECA) & 1) ? 2 : 1, 1);
+        if (!tr_overland()) vm->advance_clock((vm->get(0x7ECA) & 1) ? 2 : 1, 1);
         if (vm->get(0x4BE6)) sfx(sound::kStep);
     }
     door_done();
