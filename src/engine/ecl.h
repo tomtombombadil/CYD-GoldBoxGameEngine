@@ -129,6 +129,11 @@ struct OpSet {
     // original's mistake: with the Game Fixes as the selected one's) -
     // ecl::queen_damage
     bool queen_damage = false;
+    // The Dark Queen's maps are up to 255 squares a side (GEO.GLB): a write
+    // to the party's x / y (0x34 / 0x35) keeps its whole byte - the 16 x 16
+    // games keep 4 bits (Naulidis, 20 x 39: arriving at 11,17 put the party
+    // at 11,1 in the palace; v0.219.2)
+    bool big_maps = false;
     // Champions' character codes for coins (its operand loader GAME.OVR
     // 0x9330 / writer 0x96AD): 0xBB its record's 0xEB (coin 0, silver),
     // 0xBD copper, 0xBF bronze, 0xC1 platinum, 0xC3 steel - turned into

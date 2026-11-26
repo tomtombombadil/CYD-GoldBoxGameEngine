@@ -426,6 +426,7 @@ private:
     bool shop_goods_ = false;           // SHOP n waits: its goods on the item list, gone when it is left
     bool duel_ = false;                 // CALL 0x8000 / 0x8001 since the last fight
     const OpSet& set_;
+    int pos_mask() const { return set_.big_maps ? 0xFF : 15; }   // (the party's x / y: OpSet::big_maps)
     uint16_t entry_[5] = {};
     uint32_t pc_ = 0;               // offset in the code
     uint32_t stack_[32];

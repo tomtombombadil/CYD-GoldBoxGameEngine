@@ -515,7 +515,7 @@ static void test_view()
     // east type 2 (piece 1); (3, 3) - one ahead - its west wall type 3
     const int mw = 12, mh = 9, n = mw * mh;
     Bytes g(geo::kHlibHeader + 4 * n, 0);
-    g[0] = mw, g[1] = mh;
+    g[0] = mh, g[1] = mw;                                  // (the height first)
     g[2] = 12, g[3] = 0xFF, g[4] = 0xFF;
     g[geo::kHlibHeader + 3 + 4 * mw] = 0x12;               // plane 0: north 1, east 2
     g[geo::kHlibHeader + n + 3 + 3 * mw] = 0x03;           // plane 1: west 3

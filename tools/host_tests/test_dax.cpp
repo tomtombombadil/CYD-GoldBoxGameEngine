@@ -3475,6 +3475,29 @@ static void test_vm_knights_call()
         CHECK(gs.x == 0 && gs.y == 0 && h.redraws == 0);
     }
     {
+        // A script's write to the party's x / y (0x34 / 0x35): 4 bits on the
+        // 16 x 16 games, the whole byte on the Dark Queen's (big_maps -
+        // Naulidis, 20 x 39, arrives at 11,17; v0.219.2)
+        for (int big = 0; big < 2; ++big) {
+            gs = ecl::GameState{};
+            DrawHost h;
+            Bytes c;
+            for (int i = 0; i < 5; ++i) { c.push_back(0); op_addr(c, 0x8000 + 20); }
+            c.push_back(0x09); op_imm(c, 11); op_addr(c, 0x34);
+            c.push_back(0x09); op_imm(c, 17); op_addr(c, 0x35);
+            c.push_back(0x00);
+            memcpy(gs.code, c.data(), c.size());
+            gs.code_len = static_cast<uint32_t>(c.size());
+            static ecl::OpSet bset;
+            bset = *p->ecl_ops;
+            bset.big_maps = big != 0;
+            ecl::Vm vm(gs, h, bset);
+            CHECK(vm.init_script());
+            vm.run(vm.entry(0));
+            CHECK(gs.x == 11 && gs.y == (big ? 17 : 1));
+        }
+    }
+    {
         gs = ecl::GameState{};
         gs.x = 3; gs.y = 3; gs.dir = 2;
         DrawHost h;
@@ -5062,12 +5085,13 @@ static void test_geo_view()
         CHECK(geo::step(m, sx, sy, geo::East) && sx == 0 && sy == 0);
         CHECK(geo::step(m, sx, sy, geo::North) && sx == 0 && sy == 15);
     }
-    // HLIB maps (Dark Queen's GEO.GLB entries): w, h, 6 header bytes, then
-    // four planes of w x h bytes; any size up to kMaxSquares, no wrapping
+    // HLIB maps (Dark Queen's GEO.GLB entries): h, w (the height first -
+    // v0.219.1: Naulidis 20 wide, 39 tall), 6 header bytes, then four planes
+    // of w x h bytes, x + y * w; any size up to kMaxSquares, no wrapping
     for (int big = 0; big < 2; ++big) {
         const int w = big ? 30 : 10, h = big ? 21 : 12, n = w * h;
         std::vector<uint8_t> g(geo::kHlibHeader + 4 * n + 2, 0);
-        g[0] = static_cast<uint8_t>(w), g[1] = static_cast<uint8_t>(h);
+        g[0] = static_cast<uint8_t>(h), g[1] = static_cast<uint8_t>(w);
         for (int k = 0; k < 6; ++k) g[2 + k] = static_cast<uint8_t>(k + 1);
         auto sq = [&](int plane, int x, int y) -> uint8_t& { return g[geo::kHlibHeader + plane * n + x + y * w]; };
         sq(0, w - 1, h - 1) = 0x52;          // north 5, east 2
