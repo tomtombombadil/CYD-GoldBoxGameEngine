@@ -132,7 +132,9 @@ struct Sides {
     // 0 open, 1 wall, 3 door (one square's own side)
     int code(int x, int y, int dir) const
     {
-        if (x < 0 || y < 0 || x >= geo::kSize || y >= geo::kSize)
+        // (the map's own size: the Dark Queen's maps reach 28 x 28 - until v0.217.2 16 x 16, and a fight past
+        // its 16th column / row was all walls but the party's row: the monsters shut in pockets, no fight)
+        if (x < 0 || y < 0 || x >= m->w || y >= m->h)
             return ends || (y == py && (dir == 2 || dir == 6)) ? 0 : 1;
         if (geo::wall(*m, x, y, dir) == 0) return 0;
         return geo::door(*m, x, y, dir) == 0 ? 1 : 3;
@@ -211,7 +213,7 @@ void draw_block(Battle& b, const Sides& s, int mx, int my, int ddx, int ddy, cre
     else t = E != 0 ? 14 : Q == 0 ? 23 : 10;
     p.set(6, 1, t);
     // 5. Tables and chairs in rooms
-    if (s.rooms && mx >= 0 && my >= 0 && mx < geo::kSize && my < geo::kSize && (geo::flags(*s.m, mx, my) & 0x40)) {
+    if (s.rooms && mx >= 0 && my >= 0 && mx < s.m->w && my < s.m->h && (geo::flags(*s.m, mx, my) & 0x40)) {
         const int walls = (N == 1) + (E == 1) + (S == 1) + (W == 1);
         bool room = true;
         if (walls == 0) room = false;
@@ -353,7 +355,7 @@ void build_indoors(Battle& b, const Tables& t, const geo::Map& m, int px, int py
             // (Gateway: a square off the map is no part of the field - its
             // squares stay 0, the field's edge, the way out of the fight)
             const int x = px + ddx, y = py + ddy;
-            if (t.field_ends_at_map && (x < 0 || y < 0 || x >= geo::kSize || y >= geo::kSize)) continue;
+            if (t.field_ends_at_map && (x < 0 || y < 0 || x >= m.w || y >= m.h)) continue;
             draw_block(b, s, x, y, ddx, ddy, d);
         }
 }

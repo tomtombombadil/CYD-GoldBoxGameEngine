@@ -90,6 +90,11 @@
       with no record of its own in the save. Also the file is now cut at the original's size, 7965 bytes (its saves
       are always that size). Checked: the engine's save of the Death Knights winners loads in the original (DOSBox,
       Load Saved Game: the party list as the original's own import). Host test.
+- [x] v0.217.2 (the same, the purple worms' cave): **a fight past a map's 16th column / row was no fight** - the
+      indoor field builder took every square past 15 for off the map (walls), so in the Dark Queen's 28 x 28 maps the
+      field was walls but the party's row: the umber hulks shut in pockets, 15 rounds of nothing, "won" with 0
+      experience. The map's own size now. Host test test_field_big_map (fails without the fix). The playsim's
+      MAPPATH had the same 16 x 16 limit (walks said "no way").
 - [ ] The Dark Queen's import, record by record against the original's own (DOSBox import of the same Death Knights
       party): the engine differs at 0x9F, 0xBC, 0xBD, 0xC3, 0xC4 / 0xC5, 0xC7 / 0xC8 (original 0, engine 2), a knight's
       memorized 0x12A, the elves' known spells 0x15B-0x164. Which of them play: not worked out

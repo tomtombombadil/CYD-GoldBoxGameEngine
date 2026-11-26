@@ -353,6 +353,30 @@ static void settle(int choice = 0, int max_ms = 60000)
     for (int t = 0; t < max_ms; t += 20) {
         g_now += 20;
         play::tick(g_now, C);
+        // MONSTATE=1: each fighter's square, status and HP as each round starts (and as the fight ends)
+        static const bool monstate = getenv("MONSTATE") != nullptr;
+        static int ms_round = -1;
+        if (monstate && play::fg && play::ml && play::screen == play::Screen::Fight && play::fg->b.tables &&
+            play::fg->st != play::FSt::Results && play::fg->st != play::FSt::Destroyed && play::fg->b.round != ms_round) {   // (the monsters' records go before the results)
+            const auto& b = play::fg->b;
+            ms_round = b.round;
+            if (b.round == 0)       // (and the field once: # wall / obstacle, . floor, fighters by index 0-9 a-z)
+                for (int y = 0; y < combat::kH; ++y) {
+                    printf("  MS %2d ", y);
+                    for (int x = 0; x < combat::kW; ++x) {
+                        const int w = b.who[y][x];
+                        const uint8_t* g = combat::tile(b, *b.tables, x, y);
+                        char c = !b.ground[y][x] ? ' ' : (!g || g[0] == 0xFF) ? '#' : '.';
+                        if (w) c = w - 1 < 10 ? static_cast<char>('0' + w - 1) : static_cast<char>('a' + (w - 11) % 26);
+                        putchar(c);
+                    }
+                    printf("\n");
+                }
+            printf("  MONSTATE round %d:", b.round);
+            for (int i = 0; i < b.n; ++i)
+                if (b.f[i].size) printf(" %d@%d,%d s%d h%d", i, b.f[i].x, b.f[i].y, b.f[i].status(), (int)b.f[i].rec[0x1A4]);
+            printf("\n");
+        }
         static const bool pageshots = getenv("PAGESHOTS") != nullptr;   // PAGESHOTS=1: every fight page shown, to pages/ (the auto differ's frames)
         if (pageshots && play::fg) {
             static int last_at = -1, n = 0;
@@ -2835,13 +2859,14 @@ int main(int argc, char** argv)
         int tx = 0, ty = 0;
         sscanf(getenv("MAPPATH"), "%d,%d", &tx, &ty);
         const geo::Map& mp = play::d->map;
-        static int from3[16 * 16];
-        static bool avoid3[16 * 16];
-        for (int& v : from3) v = -1;
-        for (bool& v : avoid3) v = false;
+        // (the map's own size: the Dark Queen's reach 28 x 28 - until 2026-11-26 16 x 16, its walks found "no way")
+        const int W = mp.w > 0 ? mp.w : 16, H = mp.h > 0 ? mp.h : 16;
+        std::vector<int> from3(W * H, -1);
+        std::vector<char> avoid3(W * H, 0);
+        auto sq = [&](int x, int y) { return ((y % H + H) % H) * W + ((x % W + W) % W); };
         for (const char* q = getenv("MAPAVOID"); q && *q;) {
             int x, y;
-            if (sscanf(q, "%d,%d", &x, &y) == 2) avoid3[(y & 15) * 16 + (x & 15)] = true;
+            if (sscanf(q, "%d,%d", &x, &y) == 2) avoid3[sq(x, y)] = 1;
             q = strchr(q, ';');
             if (q) ++q;
         }
@@ -2856,29 +2881,28 @@ int main(int argc, char** argv)
             q = strchr(q, ';');
             if (q) ++q;
         }
-        static int link3[16 * 16];     // the link taken into a square (-1: an ordinary step)
-        for (int& v : link3) v = -1;
+        std::vector<int> link3(W * H, -1);     // the link taken into a square (-1: an ordinary step)
         const int sx = play::d->gs.x, sy = play::d->gs.y;
-        std::vector<int> q{sy * 16 + sx};
-        from3[sy * 16 + sx] = 1 << 30;
-        const int goal = (ty & 15) * 16 + (tx & 15);
+        std::vector<int> q{sq(sx, sy)};
+        from3[sq(sx, sy)] = 1 << 30;
+        const int goal = sq(tx, ty);
         for (size_t k = 0; k < q.size() && from3[goal] < 0; ++k) {
             for (size_t li = 0; li < links.size(); ++li) {
                 const Link& l = links[li];
-                const int kk = (l.y2 & 15) * 16 + (l.x2 & 15);
-                if (q[k] != (l.y & 15) * 16 + (l.x & 15) || from3[kk] >= 0) continue;
+                const int kk = sq(l.x2, l.y2);
+                if (q[k] != sq(l.x, l.y) || from3[kk] >= 0) continue;
                 from3[kk] = static_cast<int>(k) * 8 + l.d;
                 link3[kk] = static_cast<int>(li);
                 q.push_back(kk);
             }
             for (int dir = 0; dir < 8; dir += 2) {
-                int x = q[k] % 16, y = q[k] / 16;
+                int x = q[k] % W, y = q[k] / W;
                 const int ox = x, oy = y;
                 // (MAPLOCKED=1: locked doors passable too - the party bashes / picks them)
                 const int pg = geo::passage(mp, x, y, dir);
                 if ((pg != 1 && !(pg == 2 && getenv("MAPLOCKED")) && !(pg >= 3 && getenv("MAPSECRET"))) || !geo::step(mp, x, y, dir)) continue;   // (MAPSECRET=1: the other passages too - secret doors)
                 if (abs(x - ox) + abs(y - oy) != 1 && !getenv("MAPWRAP")) continue;   // (no wrapping unless MAPWRAP=1: the edges are the scripts')
-                const int kk = y * 16 + x;
+                const int kk = sq(x, y);
                 if (from3[kk] >= 0 || (avoid3[kk] && kk != goal)) continue;
                 from3[kk] = static_cast<int>(k) * 8 + dir;
                 q.push_back(kk);

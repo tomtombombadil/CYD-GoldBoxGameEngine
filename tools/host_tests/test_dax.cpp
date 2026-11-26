@@ -1904,6 +1904,32 @@ static void test_add_fighter()
     CHECK(combat::add_fighter(b) == nullptr && b.n == 3);
 }
 
+// An indoor field past a map's 16th column / row (the Dark Queen's 28 x 28 maps; v0.217.2): a map with no
+// walls gives an open field there - until then every square past 15 was wall but the party's row
+static void test_field_big_map()
+{
+    static uint8_t planes[4 * 28 * 28];
+    memset(planes, 0, sizeof planes);
+    static geo::Map m;
+    m = geo::Map{};
+    m.big = planes;
+    m.w = m.h = 28;
+    m.wraps = false;
+    m.loaded = true;
+    static combat::Battle b;
+    b = combat::Battle{};
+    static combat::Tables t;
+    t = combat::Tables{};
+    create::Dice d(5);
+    combat::build_indoors(b, t, m, 24, 21, d, false);
+    // the party's block (21 + 0, 10) and the ones north / north-east of it: plain floor through
+    int walls = 0;
+    for (int y = 2; y < 15; ++y)
+        for (int x = 18; x < 32; ++x) walls += b.ground[y][x] != 23;      // (23 = plain floor + 1)
+    CHECK(walls == 0);
+    m.big = nullptr;
+}
+
 // Quick Actions' file lines (engine/quickacts.*; Tom, 2026-11-09)
 static void test_quickacts()
 {
@@ -10006,6 +10032,7 @@ int main()
     test_canvas4();
     test_canvas_bg();
     test_add_fighter();
+    test_field_big_map();
     test_pool_items();
     if (failures) {
         printf("%d check(s) failed\n", failures);
