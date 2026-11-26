@@ -9,7 +9,7 @@ for i in $(seq 1 60); do
   TAILN=0 $P/bin/p.sh "$T" SAVE=$S > /dev/null
   now=$(grep -aE "^ +now [0-9]+," $P/run.log | tail -1 | sed -E 's/^ +now ([0-9]+,[0-9]+) (.).*/\1 \2/')
   st=$(grep -aE "^  \? screen" $P/run.log | tail -1)
-  if echo "$st" | grep -q "Attack Flee"; then T0="$T"; for sd in 0 1 2 3 4 5 6 7 8 9; do AT=500 $P/bin/auto.sh "$T0/A" SAVE=$S QASPELLS=1 $([ $sd -gt 0 ] && echo SEED=$sd) > /dev/null; grep -aq "fight\] won" $P/run.log && break; echo "  (fight lost, seed $sd - again)"; done; T="$(cat $P/tok.txt)"; TAILN=0 $P/bin/p.sh "$T" SAVE=$S SAVENOW=J >/dev/null; grep -aE "TEXT \(clear\)|fight\] won|a fight:|LOAD MONSTER|LOOT take" $P/run.log | grep -v "CLEAR SKIES" | uniq | cut -c1-300 >> $P/transcript.txt; $P/bin/fix.sh J 1 >/dev/null; S=J; T="|BLR"; echo "  (a fight at $now, fixed)"; continue; fi
+  if echo "$st" | grep -q "Attack Flee"; then T0="$T"; for sd in 0 1 2 3 4 5 6 7 8 9; do AT=500 $P/bin/auto.sh "$T0/A" SAVE=$S QASPELLS=1 $([ $sd -gt 0 ] && echo SEED=$sd) > /dev/null; grep -aq "fight\] won" $P/run.log && break; echo "  (fight lost, seed $sd - again)"; done; T="$(cat $P/tok.txt)"; TAILN=0 $P/bin/p.sh "$T" SAVE=$S SAVENOW=J >/dev/null; grep -aE "TEXT|JOURNAL|fight\] won|a fight:|LOAD MONSTER|LOOT take" $P/run.log | grep -v "CLEAR SKIES" | uniq | cut -c1-300 >> $P/transcript.txt; $P/bin/fix.sh J 1 >/dev/null; S=J; T="|BLR"; echo "  (a fight at $now, fixed)"; continue; fi
   if echo "$st" | grep -q "Listen to them"; then T="$T./L..."; TAILN=0 $P/bin/p.sh "$T" SAVE=$S ALLTEXT=1 >/dev/null; grep -aE "TEXT \(clear\)" $P/run.log | grep -v "CLEAR SKIES" | uniq | tail -5 | cut -c1-500 >> $P/transcript.txt; echo "  (listened at $now)"; continue; fi
   if echo "$st" | grep -q "|Yes No"; then echo "ASKED at $now: $(grep -a 'TEXT (clear)' $P/run.log | tail -1 | cut -c1-80)"; break; fi
   [ -z "$now" ] && now="$START"
@@ -17,4 +17,5 @@ for i in $(seq 1 60); do
   [ -z "$plan" ] && { echo "AT GOAL $now"; break; }
   T="$T$(echo "$plan" | sed -E 's/^(([LRB]?F){1,3}).*/\1/')"
 done
+TAILN=0 $P/bin/p.sh "$T" SAVE=$S > /dev/null; grep -aE "TEXT|JOURNAL" $P/run.log | grep -v "CLEAR SKIES" | uniq | cut -c1-500 >> $P/transcript.txt
 echo "$T" > $P/tok.txt; echo "$T" | cut -c1-150
