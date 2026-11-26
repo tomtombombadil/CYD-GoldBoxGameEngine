@@ -385,7 +385,7 @@
       waiting at a menu with no words): the old build fails it in Darkness, the new passes Curse, Darkness,
       Gateway, Treasures (seed 11, 5000 actions, NFIGHT=60). **Companion** (Tom, 2026-11-20): a class that can
       train magenta (was yellow), the member's name magenta too (the chosen one stays white).
-- [ ] navcheck, found while checking the above and there before it (the build before fails the same): Curse's and
+- [x] (they were navcheck's own false alarms, put right in v0.211.5 - all nine games 0 failures then; run again 2026-11-26, Curse and Darkness, seed 11, 5000 actions: 0) navcheck, found while checking the above and there before it (the build before fails the same): Curse's and
       Darkness's "Save Which Game" - N1 / N3 / N5 (the word moved to isn't lit; Select not on the highlight) - and
       Darkness's "Choose Spell" N4 (Down leaves the lit line). To look at: the check against Save Slot Info's
       screen, or a real fault. navcheck not yet run on PoolRad, Secret, Champions, Knights, Queen for N7.
