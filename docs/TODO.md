@@ -3403,3 +3403,9 @@ the Project as claude/TODO.md.
       put right (Gateway's list colour to the at-or-past limit rule; the original's Restoration cases run
       with AD&D 1E's Level Drain & Restoration held off - a drain an earlier check left in the level book
       had fitted one case).
+- [x] 2026-11-26 (the PortMaster session): **every behave suite run in all nine games** on 0.221.2
+      (toggles_build.sh, toggles.sh: own, matrix, levels, economy, features, rules4, toggles) - 0 failures
+      once the oracles were there (most were gone from scratch: 60 "oracle missing" lines; new
+      `tools/devkit/oracles_all.sh` makes them all). Left by design: `behave levels` values / multi have an
+      oracle for Curse, Darkness and Treasures only. Not run: fightfuzz, campfuzz, navcheck, the events oracle
+      (oracle_events.txt has no generator in the repo).
