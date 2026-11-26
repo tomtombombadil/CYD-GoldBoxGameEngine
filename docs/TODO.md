@@ -115,6 +115,9 @@
       step ahead (9 uses: Turef's trapdoor never moved the party - "you slip into the next room" left it on the
       trapdoor; Kalaman's / Quazle's pushes), CALL 2DCB the 3D view again when something moved (97 uses). Host test
       test_vm_knights_call (fails without the fix).
+- [x] v0.219.6 (the Dark Queen play-through): **Save Slot Info read the Dark Queen's position from the wrong place**
+      - past its party in the QSV (0,0) - and kept 4 bits; x, y, facing are at 0x400 (the loaded position matched
+      there). Not seen on a screen yet: [ ] Tom - Load / Save Which in the Dark Queen shows the slot's square.
 - [x] v0.219.4 (the Dark Queen play-through, Naulidis): **the Queen's door bits read as the DAX games' locked
       doors** - in its maps a walled side is open on its low bit (1 or 3) and shut on 0 / 2 (DOSBox: 16,22 east,
       state 3, walked through; 9,19 east, state 2, not); the engine took 3 as barred and 2 as locked, so the
@@ -163,8 +166,9 @@
       party): the engine differs at 0x9F, 0xBC, 0xBD, 0xC3, 0xC4 / 0xC5, 0xC7 / 0xC8 (original 0, engine 2), a knight's
       memorized 0x12A, the elves' known spells 0x15B-0x164. Which of them play: not worked out
       (tools/devkit/playthrough/queen/qsv.py compares two QSVs).
-- [ ] Caergoth's warehouse 7,13: entered from 7,12 (door 1), its north side door 3 - the engine can't leave it.
-      Whether the original traps the party too: not checked (DOSBox walks lost step in the text waits).
+- [ ] Caergoth's warehouse 7,13: entered from 7,12 (door 1), its north side door 3 - the engine couldn't leave it.
+      Since v0.219.4 a door state 3 is open in the Queen's maps (checked in DOSBox at Naulidis) - most likely
+      the same cause; walk it again when the play-through passes there.
 - [ ] Turef: Skomp's boar square 9,4 answers only a step east from 8,4 - a side the playsim's MAPPATH (and
       `map_secret`'s plain-wall rule) takes for wall. Check what the Companion map draws there.
 - [x] v0.214.10 (the PortMaster session's Treasures play-through, 2026-11-23): **a shop's goods came up in the next
