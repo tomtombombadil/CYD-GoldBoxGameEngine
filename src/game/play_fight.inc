@@ -6332,20 +6332,39 @@ void end_fight(pic::Canvas& c)
         r = won ? combat::Won : ran ? combat::Fled : combat::Lost;
         plat::log("[fight] the arena: %s\n", won ? "won" : ran ? "fled" : "lost");
     }
-    if (d->prof->variant.tr || (darkness_files() && !dkk() && !hl())) {
-        // Treasures and Darkness (the same routine: Darkness GAME.OVR 0x596E - flags DS
-        // 0xB01E, byte 0x7FF5 - Treasures 0x6644; found 2026-11-21, the Silver Blades
-        // cave's Worldstone: "COMBAT, IF <>" took every win for a flight, so the
-        // Worldstone's texts and flag never came):
-        // the fight's end sets the script's compare flags - "=" unless
-        // a member of the party ran from it, then "<>" (GAME.OVR 0x5884: any
-        // member's status 3 -> byte 0x72AB; 0x6645 / 0x6684 / 0x670A). Its
-        // scripts test them straight after COMBAT: Llorkh's dungeon, the giant
-        // skeleton and Geildarr - "IF <>, GOTO back to the last square"
-        bool ran = false;
-        for (int i = 0; i < b.party_size; ++i)
-            if (b.f[i].status() == party::Running) ran = true;
-        vm->fight_flags(!ran);
+#ifdef CYD_TEST_HOOKS
+    // (the playsim: TESTRAN=<member digits> - those members' status "running" as the fight ends, to see what
+    // the scripts make of a member's flight; TESTRANALL=1: every member still okay too - the party fled)
+    if (const char* e = getenv("TESTRAN")) {
+        for (; *e; ++e)
+            if (*e >= '0' && *e - '0' < b.party_size) b.f[*e - '0'].rec[0x195] = party::Running;
+        if (getenv("TESTRANALL"))
+            for (int i = 0; i < b.party_size; ++i)
+                if (b.f[i].status() == party::Okay) b.f[i].rec[0x195] = party::Running;
+    }
+#endif
+    if (d->prof->variant.tr || (darkness_files() && !dkk())) {
+        // Treasures, Darkness and the Dark Queen (the same routine: Darkness GAME.OVR 0x596E -
+        // flags DS 0xB01E, byte 0x7FF5 - Treasures 0x6644, DQK.EXE 0x4B67C - flags DS 0xB2F5,
+        // byte 0xC7DE; found 2026-11-21, the Silver Blades cave's Worldstone: "COMBAT, IF <>"
+        // took every win for a flight, so the Worldstone's texts and flag never came):
+        // the fight's end sets the script's compare flags - "=", or "<>" when the party FLED:
+        // a member ran and no member is left okay or animated (Treasures GAME.OVR 0x5884: a
+        // member's status 3 sets byte 0x72AB, then 0x59D9: any member okay or animated clears
+        // it; Darkness 0x4D97, DQK.EXE 0x4A8DE / 0x4A9CA the same - read 2026-11-26: until
+        // then one member running was enough here, and a fight the others won was taken for a
+        // flight: Treasures' lair put the party back a square, its first fight to do again).
+        // Its scripts test them straight after COMBAT: Llorkh's dungeon, the giant skeleton
+        // and Geildarr - "IF <>, GOTO back to the last square"; 63 of Treasures' COMBATs, 215
+        // of Darkness's, 97 of the Dark Queen's (sweep `combatif`; no other game has one).
+        // The Dark Queen clears only the first four flags (0x4B68F).
+        bool ran = false, stands = false;
+        for (int i = 0; i < b.party_size; ++i) {
+            const int st = b.f[i].status();
+            if (st == party::Running) ran = true;
+            if (st == party::Okay || st == party::Animated) stands = true;
+        }
+        vm->fight_flags(!(ran && !stands), hl() ? 4 : 6);
     }
     int out = 0;
     for (int i = b.party_size; i < b.n; ++i)

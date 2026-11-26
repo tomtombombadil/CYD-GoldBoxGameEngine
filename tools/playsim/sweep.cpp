@@ -1005,6 +1005,68 @@ static void sweep_classes()
 }
 
 // ---- events: every ECL block, every square
+// combatif: every script block's COMBAT (op 0x24) with the three instructions after it; "!! IF" where an IF
+// (0x16 - 0x1B) comes straight after - a script that reads the compare flags the fight's end left (Treasures /
+// Darkness: `Vm::fight_flags`). Which games' scripts do it, and where.
+static void sweep_combatif()
+{
+    using namespace play;
+    if (!boot()) { printf("no boot\n"); return; }
+    const bool queen = getenv("GAME") && atoi(getenv("GAME")) == 7;
+    int fights = 0, ifs = 0;
+    for (int area = 1; area <= 8; ++area) {
+        char path[300];
+        std::vector<int> ids;
+        if (queen) {
+            if (area != 1) continue;
+            snprintf(path, sizeof path, "/GOLDBOX/%s/DISK3/ECL.GLB", game_dir.substr(game_dir.rfind('/') + 1).c_str());
+            plat::File f = plat::open(path, "r");
+            if (!f) continue;
+            plat::FileSource src(f);
+            hlib::Library lib;
+            if (hlib::open(src, 0, static_cast<uint32_t>(src.size()), lib) == hlib::Status::Ok)
+                for (int i = lib.first_item(); i < lib.count; ++i) ids.push_back(hlib::id_of(src, lib, i));
+            f.close();
+        } else {
+            snprintf(path, sizeof path, "/GOLDBOX/%s/ECL%d.DAX", game_dir.substr(game_dir.rfind('/') + 1).c_str(), area);
+            plat::File f = plat::open(path, "r");
+            if (!f) continue;
+            plat::FileSource src(f);
+            static dax::Index dir;
+            if (dax::read_index(src, dir) == dax::Status::Ok)
+                for (int i = 0; i < dir.count; ++i) ids.push_back(dir.entries[i].id);
+            f.close();
+        }
+        for (int block : ids) {
+            d->gs.game_area = static_cast<uint8_t>(area);
+            vm->set(0x7F12, d->gs.game_area);
+            d->gs.script = static_cast<uint8_t>(block);
+            if (!host->load_script(d->gs.script, d->gs.code, &d->gs.code_len)) continue;
+            const auto& gs = d->gs;
+            for (uint32_t at = 0; at < gs.code_len;) {
+                ecl::Insn in;
+                if (!ecl::decode(ecl::code_of(gs), gs.code_len, at, *d->prof->ecl_ops, in)) { ++at; continue; }
+                at = in.next;
+                if (in.op != 0x24) continue;
+                ++fights;
+                printf("ECL%d block %d %04X COMBAT ->", area, block, 0x8000 + in.at);
+                uint32_t q = in.next;
+                bool hit = false;
+                for (int k = 0; k < 3 && q < gs.code_len; ++k) {
+                    ecl::Insn n;
+                    if (!ecl::decode(ecl::code_of(gs), gs.code_len, q, *d->prof->ecl_ops, n)) break;
+                    printf(" %02X", n.op);
+                    if (k == 0 && n.op >= 0x16 && n.op <= 0x1B) hit = true;
+                    q = n.next;
+                }
+                if (hit) ++ifs;
+                printf("%s\n", hit ? "   !! IF" : "");
+            }
+        }
+    }
+    printf("combatif: %d COMBATs, %d with an IF straight after\n", fights, ifs);
+}
+
 static void sweep_events(int only)
 {
     for (int area = 1; area <= 8; ++area) {          // (Curse 1-6, Pool 1-8)
@@ -1910,6 +1972,7 @@ int main(int argc, char** argv)
     else if (mode == "items") sweep_items(argc > 3 ? argv[3] : "items.bin");
     else if (mode == "testchars") sweep_testchars();
     else if (mode == "classes") sweep_classes();
+    else if (mode == "combatif") sweep_combatif();
     else if (mode == "events") sweep_events(arg);
     else if (mode == "saveload") sweep_saveload();
     else if (mode == "session") sweep_session();

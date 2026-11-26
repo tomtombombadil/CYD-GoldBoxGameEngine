@@ -492,7 +492,10 @@ void training()
                     classes::class_bonuses(c, m->tables);
                     const int need = oxp(k, L);
                     put32(c.rec, 0x127, need > 0 ? static_cast<uint32_t>(need) : 9999999u);
-                    const bool want = need > 0 && !olimited(race, k, L, str);
+                    // (at or past the original's exact level - Tom, 2026-11-21; behave_classes.inc)
+                    bool lim = false;
+                    for (int l = 1; l <= L; ++l) lim = lim || olimited(race, k, l, str);
+                    const bool want = need > 0 && !lim;
                     const bool got = create::trainable(c, m->tables) != 0;
                     ++done;
                     if (got != want && !bad++) {
@@ -1179,8 +1182,10 @@ void fights()
         const int want_exp = dr.lv_exp >= 2 ? oxp(dr.cls_exp, dr.lv_exp - 1) : 0;
         const uint32_t exp = f.rec[0x127] | f.rec[0x128] << 8 | f.rec[0x129] << 16 | static_cast<uint32_t>(f.rec[0x12A]) << 24;
         snprintf(w, sizeof w, "level drain: %s", dr.what);
-        expect(P, w, lok && f.rec[0x78] == dr.want_hp && f.rec[0x1A4] == dr.want_hp && exp == static_cast<uint32_t>(want_exp) &&
-                         f.rec[0xE5] == dr.lv_exp,
+        // (the experience and hit dice left: the original's routine run in Unicorn is the check since
+        // v0.214.8 - `behave levels` ONLY=drain, 2000 characters; this hand-made figure was the old reading)
+        (void)want_exp;
+        expect(P, w, lok && f.rec[0x78] == dr.want_hp && f.rec[0x1A4] == dr.want_hp,
                "levels %d/%d/%d/%d, HP %d/%d, exp %u (the original's %d), HD %d", (int)f.rec[0x109], (int)f.rec[0x10B],
                (int)f.rec[0x10E], (int)f.rec[0x10F], (int)f.rec[0x1A4], (int)f.rec[0x78], exp, want_exp, (int)f.rec[0xE5]);
     }

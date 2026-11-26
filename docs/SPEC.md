@@ -2985,6 +2985,10 @@ a PC, PortMaster handhelds):
   - `CYD_NO_RACE_LIMITS` (Tom, 2026-11-21): **Disable Race Level Limits**, a cheat the
     player opts into (off by default; the Cheats page's "No Race Limits" key): no race
     stops a class's levels; the games' own last levels stay.
+    A race's limit holds AT OR PAST its level (the originals test "level == limit", where
+    nobody is past it): a character the cheat took past its limit stays stopped with the cheat
+    off again - and so does an over-limit character from an edited save, which the originals
+    would train on (ours; the behave checks expect it).
   - `CYD_MAX_HP` (Tom, 2026-11-06): **Max Hit Points**, a cheat the
     player opts into - the Settings key (with its help) and the same
     switch on the Cheats tab (both show and change `Settings::max_hp`; OFF
