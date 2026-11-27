@@ -6847,6 +6847,7 @@ void find_guys(char from = 'C')
         find_pool_guys(d->save_dir, 1);
         if (CYD_MORE_CHARACTERS && opts.more_guys && import_dir[0] && strcasecmp(import_dir, d->save_dir) != 0)
             find_pool_guys(import_dir, 2);
+        sort_guys();                    // (by name - DOSBox's listing, as find_secret_guys)
         return;
     }
     plat::File dir = plat::open(d->save_dir, "r");
@@ -6975,7 +6976,10 @@ void find_secret_guys()
         ++d->guys;
     }
     dir.close();
-    if (hl()) sort_guys();
+    // (by name, as every list of the player's characters: the originals run in
+    // DOSBox, whose directory listing is in name order - Treasures' Add from
+    // Gateway in DOSBox, 2026-11-27: BRON DURK ELWYN HALDAR MARA ZOLTAN)
+    sort_guys();
 }
 
 void secret_to_darkness(party::Character& ch);
