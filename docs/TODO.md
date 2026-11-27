@@ -1,6 +1,6 @@
 # Open tasks (Tom and Claude)
 
-- [x] v0.221.20 (the Dark Queen play-through, the Tower of Flame; DOSBox beside the engine on the same save):
+- [x] v0.221.21 (the Dark Queen play-through, the Tower of Flame; DOSBox beside the engine on the same save):
       **the tower's level events never ran** - its step script (65, 0x8AB8) picks each level's events (the iron
       flower that ends the tower, the fire giants, the foundry, the cells ...) when script place 0x3D isn't 0, and
       the engine read the game block's byte there (always 0). The Queen's operand loader (DQK.EXE 0x40B57, cases at
