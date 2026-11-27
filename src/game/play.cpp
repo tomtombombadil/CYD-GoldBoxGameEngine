@@ -15755,7 +15755,8 @@ void handle(ecl::Stop r)
         look_pending = false;
         vm->set(0x7ECA, look_search);
     }
-    if (!vm->get(0x4BE6) && !pool_overland() && !marker_overland() && !gw_wild()) {
+    // (a Krynn outpost too - its script again after a camp's EXIT: Throtl's Inn, from a save made there - DOSBox)
+    if (!vm->get(0x4BE6) && !pool_overland() && !marker_screen() && !gw_wild()) {
         // Outdoors the scripts run the show: go round again, unless nothing
         // happened (a script with nothing to do would spin forever)
         if (++idle_cycles < 3) {

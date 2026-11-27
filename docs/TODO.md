@@ -3504,6 +3504,12 @@ the Project as claude/TODO.md.
       "Unable to load 1 from 8x8d0"). Playsim (Darkness): Take, Exit - the treasure's menu, Take lit; Exit again -
       the question. navcheck Curse / Darkness / Gateway 0. Not run in DOSBox: Curse, Secret, Gateway, the Krynn
       games (the same menu code in the engine).
+- [x] v0.221.19 (found checking v0.221.18 by the port's buttons): **a save made in Throtl's Inn, loaded: the Inn's camp
+      left to "Move Encamp"** with no town - the original (DOSBox, the same save) is back at "Where do you wish to
+      go?". PROGRAM 9 ends the script; on the overland the engine then waits for the player - an outpost's script goes
+      round again as any outdoor menu place's (`marker_screen()` there now). A new game's way had worked by chance.
+      Checked: the same save in the engine's test program - the Inn, Exit, the Armoury after it; host tests; behave
+      Champions / Knights; navcheck and a monkey run in both, 0.
 - [x] v0.221.18 (Tom, 2026-11-27, on his RG40XX H: "the graphics are all messed up in Champions"): **Champions' outposts
       drawn as the overland** - Throtl's Armoury after Buy / Exit and the town menu after it lost the frame's divider,
       the party list and the place line; the Inn showed the overland map, and the map stayed behind the town's picture
