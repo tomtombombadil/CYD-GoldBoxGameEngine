@@ -1021,8 +1021,14 @@ the Project as claude/TODO.md.
         stats and spells; then "Kill the priests first": both casters' wands at the high
         priests). The ending (PROGRAM 8) played through to "You have won!" and the party menu.
         Curse's play-through is complete.
-  - [ ] The Scroll of Prot. Paralyzation read outside a fight gives no effect (the spell row's
-        effect is 0 in the engine's table) - DOSBox: what does the original's do?
+  - [x] The Scroll of Prot. Paralyzation (the PortMaster session, 2026-11-27): it DOES give an effect -
+        0x6D - in the engine as in the original (DOSBox: readied, Used in camp, saved - the character's
+        .FX file has the same new entry, 6D 00 00 06, in both; Used unreadied: nothing, in both).
+        What 0x6D does (Curse GAME.OVR: handler table DS 0x6FC0 + 4 x effect, 0x6D -> 0x1208B ->
+        0xFF00): it cancels an effect 0x34 (paralysed) being given through the add-with-event routine
+        (0x37302, event 9) - the spells' path; a monster's paralysing touch (effect 0x43's handler
+        0x11395: a save, then the plain add 0x36412) is not stopped. The engine: Curse's
+        mon.no_paralyze = 0x6D, checked in `resisted` (spells) only - the same.
   - [ ] A Shadowdale save came back in Curse's script 81 with town 1 - a dead end there (no
         Journey list, no Inn: towns 0-4 are script 80's); not reproduced. If seen again: the
         steps that made it.
