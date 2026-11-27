@@ -2293,14 +2293,14 @@ static void behave_itemtest()
     pt->clear();
     int listed = 0;
     for (int i = 0; i < d->guys; ++i) {
-        if (strncmp(d->guy_name[i], "ITEMTEST", 8)) continue;
+        if (strncmp(d->gy->name[i], "ITEMTEST", 8)) continue;
         ++listed;
         const int n0 = pt->count;
         add_character(i, C);
         note_until = 0;
         screen = Screen::Game;
         char what[64];
-        snprintf(what, sizeof what, "%s (%s) added", d->guy_name[i], d->guy_file[i]);
+        snprintf(what, sizeof what, "%s (%s) added", d->gy->name[i], d->gy->file[i]);
         expect("itemtest", what, pt->count == n0 + 1, "party %d", pt->count);
     }
     if (!expect("itemtest", "ITEMTEST characters on the card", listed > 0)) {

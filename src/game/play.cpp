@@ -99,6 +99,7 @@ struct Data {
     ~Data()
     {
         delete hl_col;
+        delete gy;
         delete ov;
         delete ovc;
         delete anim_idx;
@@ -201,17 +202,23 @@ struct Data {
                   kQmark, kDrop, kForever, kSure, kDump, kOutBack, kFarewell, kRelief, kYesNo,
                   kCantModify, kModify, kKeepExit, kFromSaved, kNewFile, kRosterWords };
     char           roster[kRosterWords][40] = {};
-    // Characters that can be added (.GUY files in the save folder)
-    static constexpr int kMaxGuys = 48;
-    char           guy_file[kMaxGuys][13] = {};
-    char           guy_name[kMaxGuys][16] = {};
-    bool           guy_added[kMaxGuys] = {};
-    // Add from Pool (import_facts.md): a Pool of Radiance record (285
-    // bytes) - in the save folder (as the original) or in the player's
-    // Pool of Radiance folder on the card (the engine's convenience)
-    uint8_t        guy_src[kMaxGuys] = {};      // 0 the save folder's .GUY, 1 a Pool file there, 2 one in Pool's folder,
+    // Characters that can be added (.GUY files in the save folder) - on the heap
+    // only while Add Character needs them (2026-11-27: 48 a fixed part of Data
+    // hid entries of a save folder with many slots; 128 now, 4 KB, freed at
+    // Begin - guys_free)
+    static constexpr int kMaxGuys = 128;
+    struct Guys {
+        char    file[kMaxGuys][13] = {};
+        char    name[kMaxGuys][16] = {};
+        bool    added[kMaxGuys] = {};
+        // Add from Pool (import_facts.md): a Pool of Radiance record (285
+        // bytes) - in the save folder (as the original) or in the player's
+        // Pool of Radiance folder on the card (the engine's convenience)
+        uint8_t src[kMaxGuys] = {};             // 0 the save folder's .GUY, 1 a Pool file there, 2 one in Pool's folder,
                                                 // 3 a Curse .GUY in Secret's folder, 4 one in Curse's
-    char           guy_letter[kMaxGuys] = {};   // a Pool saved game's letter (CHRDAT<letter>n.SAV)
+        char    letter[kMaxGuys] = {};          // a Pool saved game's letter (CHRDAT<letter>n.SAV)
+    };
+    Guys*          gy = nullptr;
     char           guy_from = 'C';              // the list's source: C(urse) / P(ool)
     int            guys = 0;
     char           w_magic[44] = {}, w_level[9][12] = {}, w_special[12] = {};
@@ -4085,13 +4092,13 @@ void list_line(int i, char* out, size_t cap)
         return;
     }
     if (screen == Screen::AddList) {
-        if (d->guy_letter[i] && add_info_on())  // (Character Info: the name and the slot - the rest in the half beside)
-            snprintf(out, cap, "%s%-15s %c", d->guy_added[i] ? rw(Data::kAdded) : "", d->guy_name[i], d->guy_letter[i]);
-        else if (d->guy_letter[i])                   // a Pool saved game's: "NAME           from saved game A"
-            snprintf(out, cap, "%s%-15s%s%c", d->guy_added[i] ? rw(Data::kAdded) : "", d->guy_name[i], rw(Data::kFromSaved),
-                     d->guy_letter[i]);
+        if (d->gy->letter[i] && add_info_on())  // (Character Info: the name and the slot - the rest in the half beside)
+            snprintf(out, cap, "%s%-15s %c", d->gy->added[i] ? rw(Data::kAdded) : "", d->gy->name[i], d->gy->letter[i]);
+        else if (d->gy->letter[i])                   // a Pool saved game's: "NAME           from saved game A"
+            snprintf(out, cap, "%s%-15s%s%c", d->gy->added[i] ? rw(Data::kAdded) : "", d->gy->name[i], rw(Data::kFromSaved),
+                     d->gy->letter[i]);
         else
-            snprintf(out, cap, "%s%s", d->guy_added[i] ? rw(Data::kAdded) : "", d->guy_name[i]);
+            snprintf(out, cap, "%s%s", d->gy->added[i] ? rw(Data::kAdded) : "", d->gy->name[i]);
         return;
     }
     if (screen == Screen::CreatePick) {
@@ -6414,7 +6421,7 @@ void yes_no_key(char k, pic::Canvas& c)
         }
         if (what == Ask::QDeleteSure && k == 'Y' && plist.index >= 0 && plist.index < d->guys) {
             char base[16];
-            strncpy(base, d->guy_file[plist.index], sizeof base - 1);
+            strncpy(base, d->gy->file[plist.index], sizeof base - 1);
             base[sizeof base - 1] = 0;
             if (char* dot = strrchr(base, '.')) *dot = 0;
             delete_character(base);
@@ -6836,11 +6843,11 @@ void find_pool_guys(const char* where, uint8_t src)
             char name[16];
             create::pool_name(rec, name, sizeof name);
             if (in_party(name)) continue;
-            strncpy(d->guy_file[d->guys], nm, sizeof d->guy_file[0] - 1);
-            strcpy(d->guy_name[d->guys], name);
-            d->guy_added[d->guys] = false;
-            d->guy_src[d->guys] = src;
-            d->guy_letter[d->guys] = pass && n == 12 ? static_cast<char>(toupper(nm[6])) : 0;
+            strncpy(d->gy->file[d->guys], nm, sizeof d->gy->file[0] - 1);
+            strcpy(d->gy->name[d->guys], name);
+            d->gy->added[d->guys] = false;
+            d->gy->src[d->guys] = src;
+            d->gy->letter[d->guys] = pass && n == 12 ? static_cast<char>(toupper(nm[6])) : 0;
             ++d->guys;
         }
         dir.close();
@@ -6871,19 +6878,34 @@ void find_curse_guys(const char* where, uint8_t src, bool members)
         memcpy(name, rec + 1, len);
         name[len] = 0;
         if (in_party(name)) continue;
-        strncpy(d->guy_file[d->guys], nm, sizeof d->guy_file[0] - 1);
-        strcpy(d->guy_name[d->guys], name);
-        d->guy_added[d->guys] = false;
-        d->guy_src[d->guys] = src;
-        d->guy_letter[d->guys] = member ? static_cast<char>(toupper(nm[6])) : 0;
+        strncpy(d->gy->file[d->guys], nm, sizeof d->gy->file[0] - 1);
+        strcpy(d->gy->name[d->guys], name);
+        d->gy->added[d->guys] = false;
+        d->gy->src[d->guys] = src;
+        d->gy->letter[d->guys] = member ? static_cast<char>(toupper(nm[6])) : 0;
         ++d->guys;
     }
     dir.close();
 }
 
+// The Add list's block (Data::Guys): made when a list is built, gone at Begin
+bool guys_alloc()
+{
+    if (!d->gy) d->gy = new (std::nothrow) Data::Guys;
+    if (!d->gy) memlog::note("Add Character: not enough memory for the list");
+    return d->gy != nullptr;
+}
+void guys_free()
+{
+    delete d->gy;
+    d->gy = nullptr;
+    d->guys = 0;
+}
+
 void find_guys(char from = 'C')
 {
     d->guys = 0;
+    if (!guys_alloc()) return;
     d->guy_from = from;
     if (from == 'C' && secret_files()) {
         const bool more = CYD_MORE_CHARACTERS && opts.more_guys;
@@ -6927,11 +6949,11 @@ void find_guys(char from = 'C')
             memcpy(name, q + 0x68, len);
             name[len] = 0;
             if (in_party(name)) continue;
-            strncpy(d->guy_file[d->guys], nm, sizeof d->guy_file[0] - 1);
-            strcpy(d->guy_name[d->guys], name);
-            d->guy_added[d->guys] = false;
-            d->guy_src[d->guys] = 0;
-            d->guy_letter[d->guys] = 0;
+            strncpy(d->gy->file[d->guys], nm, sizeof d->gy->file[0] - 1);
+            strcpy(d->gy->name[d->guys], name);
+            d->gy->added[d->guys] = false;
+            d->gy->src[d->guys] = 0;
+            d->gy->letter[d->guys] = 0;
             ++d->guys;
             continue;
         }
@@ -6956,11 +6978,11 @@ void find_guys(char from = 'C')
             if (strcmp(pn, name) == 0) in_party = true;
         }
         if (in_party) continue;
-        strncpy(d->guy_file[d->guys], nm, sizeof d->guy_file[0] - 1);
-        strcpy(d->guy_name[d->guys], name);
-        d->guy_added[d->guys] = false;
-        d->guy_src[d->guys] = 0;
-        d->guy_letter[d->guys] = member ? static_cast<char>(toupper(nm[6])) : 0;
+        strncpy(d->gy->file[d->guys], nm, sizeof d->gy->file[0] - 1);
+        strcpy(d->gy->name[d->guys], name);
+        d->gy->added[d->guys] = false;
+        d->gy->src[d->guys] = 0;
+        d->gy->letter[d->guys] = member ? static_cast<char>(toupper(nm[6])) : 0;
         ++d->guys;
     }
     dir.close();
@@ -6972,17 +6994,17 @@ void find_guys(char from = 'C')
 void sort_guys()
 {
     auto before = [](int a, int b) {
-        if ((d->guy_letter[a] != 0) != (d->guy_letter[b] != 0)) return d->guy_letter[a] == 0;
-        return d->guy_letter[a] ? strcasecmp(d->guy_file[a], d->guy_file[b]) < 0
-                                : strcmp(d->guy_name[a], d->guy_name[b]) < 0;
+        if ((d->gy->letter[a] != 0) != (d->gy->letter[b] != 0)) return d->gy->letter[a] == 0;
+        return d->gy->letter[a] ? strcasecmp(d->gy->file[a], d->gy->file[b]) < 0
+                                : strcmp(d->gy->name[a], d->gy->name[b]) < 0;
     };
     for (int i = 1; i < d->guys; ++i)
         for (int j = i; j > 0 && before(j, j - 1); --j) {
             char f[13], nm2[16];
-            memcpy(f, d->guy_file[j], 13); memcpy(d->guy_file[j], d->guy_file[j - 1], 13); memcpy(d->guy_file[j - 1], f, 13);
-            memcpy(nm2, d->guy_name[j], 16); memcpy(d->guy_name[j], d->guy_name[j - 1], 16); memcpy(d->guy_name[j - 1], nm2, 16);
-            const char l = d->guy_letter[j]; d->guy_letter[j] = d->guy_letter[j - 1]; d->guy_letter[j - 1] = l;
-            const uint8_t sr = d->guy_src[j]; d->guy_src[j] = d->guy_src[j - 1]; d->guy_src[j - 1] = sr;
+            memcpy(f, d->gy->file[j], 13); memcpy(d->gy->file[j], d->gy->file[j - 1], 13); memcpy(d->gy->file[j - 1], f, 13);
+            memcpy(nm2, d->gy->name[j], 16); memcpy(d->gy->name[j], d->gy->name[j - 1], 16); memcpy(d->gy->name[j - 1], nm2, 16);
+            const char l = d->gy->letter[j]; d->gy->letter[j] = d->gy->letter[j - 1]; d->gy->letter[j - 1] = l;
+            const uint8_t sr = d->gy->src[j]; d->gy->src[j] = d->gy->src[j - 1]; d->gy->src[j - 1] = sr;
         }
 }
 
@@ -7017,11 +7039,11 @@ void find_secret_guys()
         memcpy(name, rec + 1, len);
         name[len] = 0;
         if (in_party(name)) continue;
-        strncpy(d->guy_file[d->guys], nm, sizeof d->guy_file[0] - 1);
-        strcpy(d->guy_name[d->guys], name);
-        d->guy_added[d->guys] = false;
-        d->guy_src[d->guys] = 5;
-        d->guy_letter[d->guys] = member ? static_cast<char>(toupper(static_cast<unsigned char>(nm[6]))) : 0;
+        strncpy(d->gy->file[d->guys], nm, sizeof d->gy->file[0] - 1);
+        strcpy(d->gy->name[d->guys], name);
+        d->gy->added[d->guys] = false;
+        d->gy->src[d->guys] = 5;
+        d->gy->letter[d->guys] = member ? static_cast<char>(toupper(static_cast<unsigned char>(nm[6]))) : 0;
         ++d->guys;
     }
     dir.close();
@@ -7035,11 +7057,11 @@ void secret_to_darkness(party::Character& ch);
 bool load_secret_guy(int i, party::Character& ch)
 {
     char base[16], path[200];
-    strncpy(base, d->guy_file[i], sizeof base - 1);
+    strncpy(base, d->gy->file[i], sizeof base - 1);
     base[sizeof base - 1] = 0;
     char* dot = strrchr(base, '.');
     if (dot) *dot = 0;
-    snprintf(path, sizeof path, "%s/%s", import_dir, d->guy_file[i]);
+    snprintf(path, sizeof path, "%s/%s", import_dir, d->gy->file[i]);
     plat::File f = plat::open(path, "r");
     if (!f) return false;
     bool ok;
@@ -7076,13 +7098,13 @@ void q_find_deletable()
     find_guys();
     int n = 0;
     for (int i = 0; i < d->guys; ++i) {
-        if (d->guy_added[i]) continue;
+        if (d->gy->added[i]) continue;
         if (n != i) {
-            memcpy(d->guy_file[n], d->guy_file[i], sizeof d->guy_file[0]);
-            memcpy(d->guy_name[n], d->guy_name[i], sizeof d->guy_name[0]);
-            d->guy_src[n] = d->guy_src[i];
+            memcpy(d->gy->file[n], d->gy->file[i], sizeof d->gy->file[0]);
+            memcpy(d->gy->name[n], d->gy->name[i], sizeof d->gy->name[0]);
+            d->gy->src[n] = d->gy->src[i];
         }
-        d->guy_added[n++] = false;
+        d->gy->added[n++] = false;
     }
     d->guys = n;
     if (plist.index >= n) plist.index = n ? n - 1 : 0;
@@ -7138,22 +7160,22 @@ void add_checked(int i, party::Character& ch, pic::Canvas& c);
 bool load_guy(int i, party::Character& ch)
 {
     if (i < 0 || i >= d->guys) return false;
-    if (d->guy_src[i] == 5) {
+    if (d->gy->src[i] == 5) {
         return load_secret_guy(i, ch);
     }
-    if (d->guy_src[i] == 3 || d->guy_src[i] == 4) {
+    if (d->gy->src[i] == 3 || d->gy->src[i] == 4) {
         return load_curse_guy(i, ch);
     }
-    if (d->guy_src[i] != 0) {
+    if (d->gy->src[i] != 0) {
         return load_pool_guy(i, ch);
     }
     char base[16];
-    strncpy(base, d->guy_file[i], sizeof base - 1);
+    strncpy(base, d->gy->file[i], sizeof base - 1);
     base[sizeof base - 1] = 0;
     char* dot = strrchr(base, '.');
     if (dot) *dot = 0;
     plat::File f;
-    if (!open_save_file(d->guy_file[i], f)) return false;
+    if (!open_save_file(d->gy->file[i], f)) return false;
     bool ok;
     if (hl()) {
         // (the Dark Queen's NAME.QCH: all of it in the one file)
@@ -7176,7 +7198,7 @@ bool load_guy(int i, party::Character& ch)
         // (Death Knights: its spells are a file of their own, NAME.WIZ -
         // until 2026-11-09 an added character came without them)
         char rp[160];
-        save_path(d->guy_file[i], rp, sizeof rp);
+        save_path(d->gy->file[i], rp, sizeof rp);
         dkk_read_spells(rp, ch);
     }
     char fn[24];
@@ -7198,7 +7220,7 @@ bool load_guy(int i, party::Character& ch)
 
 void add_character(int i, pic::Canvas& c)
 {
-    if (i < 0 || i >= d->guys || d->guy_added[i] || pt->count >= party::kMaxParty) return;
+    if (i < 0 || i >= d->guys || d->gy->added[i] || pt->count >= party::kMaxParty) return;
     party::Character& ch = pt->m[pt->count];
     add_info_drop();
     if (!load_guy(i, ch)) return;
@@ -7261,7 +7283,7 @@ void add_checked(int i, party::Character& ch, pic::Canvas& c)
     }
     ++pt->count;
     vm->set(0x7F3E, static_cast<uint16_t>(pt->count));
-    d->guy_added[i] = true;
+    d->gy->added[i] = true;
     // (Pool: the one added is the party menu's selected member - DOSBox)
     if (d->prof->game == games::Game::PoolOfRadiance) pt->selected = pt->count - 1;
     if (pcs + 1 >= 6 || pt->count >= party::kMaxParty) {
@@ -7301,7 +7323,7 @@ void add_from_tap(int x, int y, pic::Canvas& c)
         // Gateway's)
         d->guys = 0;
         d->guy_from = 'S';
-        find_secret_guys();
+        if (guys_alloc()) find_secret_guys();
         if (!d->guys) {
             screen = Screen::PartyMenu;
             draw_party_menu(c);
@@ -7618,7 +7640,7 @@ bool load_making() { return load_rules(mk); }
 bool load_curse_guy(int i, party::Character& ch)
 {
     char path[200];
-    snprintf(path, sizeof path, "%s/%s", d->guy_src[i] == 4 ? import_dir : d->save_dir, d->guy_file[i]);
+    snprintf(path, sizeof path, "%s/%s", d->gy->src[i] == 4 ? import_dir : d->save_dir, d->gy->file[i]);
     plat::File f = plat::open(path, "r");
     if (!f) return false;
     bool ok;
@@ -7671,8 +7693,8 @@ void learn_class_spells()
 bool load_pool_guy(int i, party::Character& ch)
 {
     char path[200];
-    const char* where = d->guy_src[i] == 2 ? import_dir : d->save_dir;
-    snprintf(path, sizeof path, "%s/%s", where, d->guy_file[i]);
+    const char* where = d->gy->src[i] == 2 ? import_dir : d->save_dir;
+    snprintf(path, sizeof path, "%s/%s", where, d->gy->file[i]);
     plat::File f = plat::open(path, "r");
     if (!f) return false;
     uint8_t rec[create::kPoolRecordSize];
@@ -7689,7 +7711,7 @@ bool load_pool_guy(int i, party::Character& ch)
     // A NAME.CHA's NAME.SPC: the racial effects only (a saved game's
     // CHRDAT??.SPC isn't found by the name - as the original)
     char base[16];
-    strncpy(base, d->guy_file[i], sizeof base - 1);
+    strncpy(base, d->gy->file[i], sizeof base - 1);
     base[sizeof base - 1] = 0;
     char* dot = strrchr(base, '.');
     if (dot && strcasecmp(dot, ".CHA") == 0) {
@@ -10069,8 +10091,8 @@ void list_tap(int x, int y, pic::Canvas& c)
             char f[32], t[64];
             ow(d->prof->party.del_ask, f, sizeof f);
             const char* pc = strstr(f, "%s");
-            if (pc) snprintf(t, sizeof t, "%.*s%s%s", static_cast<int>(pc - f), f, d->guy_name[l.index], pc + 2);
-            else snprintf(t, sizeof t, "%s%s", f, d->guy_name[l.index]);
+            if (pc) snprintf(t, sizeof t, "%.*s%s%s", static_cast<int>(pc - f), f, d->gy->name[l.index], pc + 2);
+            else snprintf(t, sizeof t, "%s%s", f, d->gy->name[l.index]);
             ask_yes_no(c, Ask::QDelete, t);
         }
         return;
@@ -15925,6 +15947,7 @@ void back_from_view(pic::Canvas& c)
 // new game's start script (as the games do when no script ran yet)
 void begin_adventuring()
 {
+    if (d) guys_free();                         // (the Add list's block - not needed while playing)
     pic::Canvas& c = *cv;
     if (cheat == Cheat::Trainer) {
         // (the Cheats tab's Trainer: back to the exploring menu as it was)
@@ -18952,10 +18975,10 @@ void add_info_draw(pic::Canvas& c)
         line(t, 20, 10);
     }
     // Where it comes from (a saved game's member), its state when not well
-    if (d->guy_letter[i]) {
+    if (d->gy->letter[i]) {
         char w[40];
         const char* fs = rw(Data::kFromSaved);
-        snprintf(w, sizeof w, "%s%c", fs && fs[0] ? fs : "from saved game ", d->guy_letter[i]);
+        snprintf(w, sizeof w, "%s%c", fs && fs[0] ? fs : "from saved game ", d->gy->letter[i]);
         char* p = w;
         while (*p == ' ') ++p;
         p[0] = static_cast<char>(toupper(p[0]));
@@ -19205,6 +19228,10 @@ bool make_room(unsigned kb, const char* what)
         audio_stop();
         if (lclips) lclips->clear();                // (the recordings waiting to play: their memory too)
         if (dropped("the sound playing")) return true;
+    }
+    if (d && d->gy && screen != Screen::AddList) {
+        guys_free();                                // (the Add list's block: made again when a list is built)
+        if (dropped("the Add list")) return true;
     }
     if (hw && !fg && screen == Screen::Game) {
         delete hw;

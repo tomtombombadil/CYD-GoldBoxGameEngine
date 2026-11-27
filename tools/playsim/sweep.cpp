@@ -860,19 +860,19 @@ static void sweep_testchars()
     find_guys(secret_files() ? 'S' : 'C');          // (the game's own Add Character list; Secret's: its own)
     int found = 0;
     for (int i = 0; i < d->guys; ++i)
-        if (!strncmp(d->guy_name[i], "ITEMTEST", 8)) {
+        if (!strncmp(d->gy->name[i], "ITEMTEST", 8)) {
             ++found;
             party::Character& ch = pt->m[pt->count];
             ch = party::Character{};
             plat::File f;
-            if (!open_save_file(d->guy_file[i], f)) continue;
+            if (!open_save_file(d->gy->file[i], f)) continue;
             {
                 plat::FileSource src(f);
                 party::read_record(src, ch, rec_format());
             }
             f.close();
             char base[16];
-            strncpy(base, d->guy_file[i], sizeof base - 1);
+            strncpy(base, d->gy->file[i], sizeof base - 1);
             base[sizeof base - 1] = 0;
             if (char* dot = strrchr(base, '.')) *dot = 0;
             char fn[24];
@@ -884,7 +884,7 @@ static void sweep_testchars()
             }
             char nm[20];
             ch.name(nm, sizeof nm);
-            printf("   read back %s (%s): %d items, level %d\n", nm, d->guy_file[i], ch.n_items, ch.rec[0xE5]);
+            printf("   read back %s (%s): %d items, level %d\n", nm, d->gy->file[i], ch.n_items, ch.rec[0xE5]);
         }
     if (found != static_cast<int>(made.size())) problem("not all the characters are listed by Add Character");
 }

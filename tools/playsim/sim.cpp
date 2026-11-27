@@ -888,7 +888,7 @@ int main(int argc, char** argv)
     if (getenv("SIZES")) { printf("Fight %zu Battle %zu Page %zu Monster %zu Data %zu World %zu GameState %zu Party %zu Names %zu Ground %zu\n", sizeof(play::Fight), sizeof(combat::Battle), sizeof(play::Page), sizeof(combat::Monster), sizeof(play::Data), sizeof(view3d::World), sizeof(ecl::GameState), sizeof(party::Party), sizeof(items::Names), sizeof(*play::ground));
         printf("Fight: words %zu pages %zu icons %zu thrown %zu; Data: roster %zu guys %zu item words %zu; Battle fighters %zu (%zu each); Character %zu Vm %zu Making %zu\n",
                sizeof(((play::Fight*)0)->wbuf), sizeof(((play::Fight*)0)->page), sizeof(((play::Fight*)0)->icon), sizeof(((play::Fight*)0)->thrown),
-               sizeof(((play::Data*)0)->roster), sizeof(((play::Data*)0)->guy_file) + sizeof(((play::Data*)0)->guy_name), sizeof(((play::Data*)0)->iw),
+               sizeof(((play::Data*)0)->roster), sizeof(play::Data::Guys), sizeof(((play::Data*)0)->iw),
                sizeof(((combat::Battle*)0)->f), sizeof(combat::Fighter), sizeof(party::Character), sizeof(ecl::Vm), sizeof(play::Making));
         return 0; }
     // argv[1]: the game folder on the PC; its parent stands for /GOLDBOX
@@ -1139,7 +1139,7 @@ int main(int argc, char** argv)
         printf("  add menu [%s%s]\n", play::menu.prompt, play::menu.s);
         tap_word(getenv("ADDFROM") ? getenv("ADDFROM")[0] : 'P');      // ADDFROM=C: Curse's list
         printf("  screen %d, %d to add\n", (int)play::screen, play::d->guys);
-        for (int i = 0; i < play::d->guys; ++i) { char t[48]; play::list_line(i, t, sizeof t); printf("    %d [%s] src %d\n", i, t, play::d->guy_src[i]); }
+        for (int i = 0; i < play::d->guys; ++i) { char t[48]; play::list_line(i, t, sizeof t); printf("    %d [%s] src %d\n", i, t, play::d->gy->src[i]); }
         shot("pool_list");
         for (const char* q = getenv("ADDPOOL"); *q; ) {
             const int i = atoi(q);

@@ -99,7 +99,8 @@
       instructions after it): an IF straight after a COMBAT - Darkness 215 of 468, Treasures 63 of 272, the Dark
       Queen 97 of 283; PoolRad (246), Curse (200), Secret (261), Champions (197), Death Knights (212), Gateway
       (286): none, nor an IF within three instructions. Those six need no fight-end flags.
-- [ ] `behave` (Curse): "events: triggers" has no oracle file - oracle_events.txt's generator is not in the repo
+- [x] (2026-11-27: not rebuilt - a second ECL reader; the check skips without the file, Curse's triggers checked by
+      its play-through to the end and sweep `events`) `behave` (Curse): "events: triggers" has no oracle file - oracle_events.txt's generator is not in the repo
       (lost with the old scratch, 2026-11-08?). The other 6,004 Curse checks and PoolRad's 430 pass (2026-11-26).
 - [x] v0.216.2 (the PortMaster session's Treasures play-through, 2026-11-24, its ending): **Treasures' PROGRAM 5
       did nothing** - its program (GAME.OVR 0x28F4 -> ovl 0x4F +0x971, read) makes the whole party well there:
@@ -970,7 +971,7 @@ the Project as claude/TODO.md.
       ITEMTEST_characters.zip: Curse's six in its SAVE folder, Pool's five
       beside its SAVGAMA.DAT; what each carries in ITEMTEST.txt) and
       report what doesn't work as in the originals.
-- [ ] Keep play testing Pool of Radiance and Curse; report anything that
+- [x] (closed 2026-11-27, Tom: done - both played through) Keep play testing Pool of Radiance and Curse; report anything that
       plays differently from the originals. New in v0.89.0 for Pool:
       potions / wands / the Manual, Gauntlets of Ogre Power, the cloaks
       and rings - worth a look.
@@ -1117,18 +1118,25 @@ the Project as claude/TODO.md.
         (0x37302, event 9) - the spells' path; a monster's paralysing touch (effect 0x43's handler
         0x11395: a save, then the plain add 0x36412) is not stopped. The engine: Curse's
         mon.no_paralyze = 0x6D, checked in `resisted` (spells) only - the same.
+  - [x] (2026-11-27) The drow gear vanishing on the way to the overland (the play-through's open question): the
+        original's own - Curse's scripts DESTROY ITEMS the drow mace / chain mail / long sword (types 0x5E / 0x60 /
+        0x61) at the way out, "YOUR DARK ELF ITEMS FADE AWAY IN THE SUNLIGHT." (ECL5 blocks 48 / 53; ECL4 34 / 37 the
+        chain and sword). The engine runs them.
   - [ ] A Shadowdale save came back in Curse's script 81 with town 1 - a dead end there (no
         Journey list, no Inn: towns 0-4 are script 80's); not reproduced. If seen again: the
         steps that made it.
   - [x] The Cheats tab at Curse's travel menu and menu-only towns too (Tom, 2026-11-16) -
         v0.204.0
-  - [ ] Curse's sphere duel in the Wizard's Tower: a fighter (Aldric) won it though its text
+  - [x] (2026-11-27: the script's own - ECL5 block 51 0x9387-0x940C reads the challenger's figures (op 0x2A) and
+        rolls d100 against them, a non-caster at a 5-point handicap: a fighter can win by the dice, in the original
+        too; the engine runs the same script) Curse's sphere duel in the Wizard's Tower: a fighter (Aldric) won it though its text
         says only a mage controls the sphere - what decides the outcome in the original?
   - [x] Tom: the big Curse fights - answered (2026-11-16): take every item, sell plain ones and
         identify the high-priced (the Merchant cheat), give magic items to who uses them best,
         Modify the party (the Trainer cheat), go in at full strength; a smarter driver (drv3.py).
         Dracandros's courtyard won so. Auto Join on take - v0.205.0.
-  - [ ] DOSBox: after the Thieves' Guild master's PROGRAM 9 camp the engine runs his speech
+  - [x] (2026-11-27: byte_1D8AA is coab's can_draw_bigpic - a drawing flag; PROGRAM 9 camps, then EXIT (coab
+        CMD_Program): the square's script runs again at the next step, as the engine) DOSBox: after the Thieves' Guild master's PROGRAM 9 camp the engine runs his speech
         and the fight at the party's next step (4C17 = 1); the original sets byte_1D8AA = 1
         there - does it run the square's script at once after the camp?
   - [x] v0.220.0 (the PortMaster session, 2026-11-26): the Girdle of the Dwarves cutting Thorin's
@@ -1150,10 +1158,13 @@ the Project as claude/TODO.md.
         map with no party list, so View / Drop act on the first member only - the player can't pick anyone
         else there. DOSBox: does the original's travel camp show the party list (as Death Knights' PROGRAM 9
         camp does, v0.210.1)? Then the same for Curse.
-  - [ ] (2026-11-27, the PortMaster session) fightfuzz Curse seed 11, fight 0 (FUZZONE=0; two salamanders): "!! RULE R10"
+  - [ ] (not reproduced here, 2026-11-27: seed 11 fight 0 ends cleanly with this repo's save A - no LEDERA in it - and
+        150 more Curse fuzz fights, seeds 11-16 x 25, 0 rule breaks; the port's games folder had another save) (2026-11-27, the PortMaster session) fightfuzz Curse seed 11, fight 0 (FUZZONE=0; two salamanders): "!! RULE R10"
         - past round 120, no attack since 65, LEDERA and a fleeing SALAMANDER left; the same before v0.221.12 (not the
         aim change). Why no 15 rounds' end there?
-  - [ ] Add Character lists 48 entries at most (a save folder with many slots hides some).
+  - [x] v0.222.2: Add Character lists 48 entries at most (a save folder with many slots hides some) - now 128, the
+        list's block on the heap only while the party menu needs it (gone at Begin / make_room; Data 1.5 KB smaller).
+        Checked: playsim, Curse's save folder with 76 .GUY files: 81 entries listed (was 48); behave toggles E3.
   - [x] v0.221.12 (the fight's aim below). (2026-11-26, the PortMaster session, the original in DOSBox with the engine's save - the playsim's GIVE: in camp,
         Use on a Dust NOT readied does nothing one can see, the list stays; readied, Use takes it - gone from the
         list, nothing said. So "nothing happened" is the original's own for an item not readied. Not tried: in a

@@ -1100,9 +1100,10 @@ void add_curse()
         }
         fwrite(g.rec, 1, party::kRecordSize, f);
         fclose(f);
+        if (!guys_alloc()) return;
         d->guys = 1;
-        snprintf(d->guy_file[0], sizeof d->guy_file[0], "TESTGUY.GUY");
-        d->guy_src[0] = 0;
+        snprintf(d->gy->file[0], sizeof d->gy->file[0], "TESTGUY.GUY");
+        d->gy->src[0] = 0;
         static party::Character ch;
         const bool ok = load_curse_guy(0, ch);
         plat::remove(path);
