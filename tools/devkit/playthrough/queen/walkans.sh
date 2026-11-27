@@ -10,6 +10,7 @@ for i in $(seq 1 ${WN:-16}); do
   grep -q "AT GOAL" $P/w.out && break
   if echo "$s" | grep -q "Yes No"; then echo "$l" | grep -q "$NO" && T="$T/N" || T="$T/Y"
   elif echo "$s" | grep -q "wait 13 \|wait 1 "; then T="$T."
+  elif echo "$s" | grep -q "|Select] wait 12"; then T="$T%${WHO:-0}/S"   # (a WHO question: member WHO, default the first)
   else
     # (another menu on the way: the first PICK word it shows, by its letter - WPICK=0 leaves it to adv.sh)
     k=""; [ "${WPICK:-1}" = 1 ] && for w in $(echo "$PICK" | tr ',' ' '); do

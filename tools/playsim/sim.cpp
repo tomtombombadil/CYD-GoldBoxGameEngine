@@ -278,7 +278,7 @@ static void item_ops(const char* ops)
     for (const char* q = ops; *q; ++q) {
         if (*q == '#') list();
         else if (*q == '@') { ++q; play::tap(16, (4 + (*q - '0')) * 8 + 2, C); }
-        else if (*q >= '0' && *q <= '9') play::plist.index = *q - '0';
+        else if (*q >= '0' && *q <= '9') { int n = *q - '0'; while (q[1] >= '0' && q[1] <= '9') n = n * 10 + (*++q - '0'); play::plist.index = n; }   // (a list line: 1 or 2 digits)
         else { tap_word(*q); printf("  after %c: screen %d menu [%s%s]\n", *q, (int)play::screen, play::menu.prompt, play::menu.s); }
         g_now += 5000; play::tick(g_now, C);
     }
