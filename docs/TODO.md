@@ -982,9 +982,14 @@ the Project as claude/TODO.md.
       Not checked: monsters and NPCs from the monsters' files (their records
       carry Strength too - giants 18/00); the damage figure in DOSBox.
 - [ ] Treasures, small ones: "Cannot use <item>" is not shown for an item
-      left behind at the transfer; Add Character's list doesn't mark the
-      added with "*" as the original (check), and lists by the folder's order,
-      not the alphabet.
+      left behind at the transfer (not seen: in DOSBox, 2026-11-27, Gateway's BRON, DURK, ELWYN, HALDAR, MARA,
+      ZOLTAN came over with no such line - a character with an item Treasures drops is needed).
+      [x] v0.221.15: Add Character's list marks the added "* " (DOSBox, Treasures from Gateway: "* BRON" with the
+      highlight kept on it) - the mark's GAME.OVR word was missing in Death Knights', Darkness's and Treasures'
+      profiles; and every Add list is by name - the earlier game's (and PoolRad's in Curse) came in the folder's
+      order (DOSBox lists them by name: BRON DURK ELWYN HALDAR MARA ZOLTAN). Seen by the port's buttons:
+      Treasures - Add - Gateway, the list by name, "* BRON" after Add. host tests; behave Curse, PoolRad,
+      Darkness, Treasures, Knights.
 - [x] v0.205.1 - Gateway played to its end (the PortMaster session, 2026-11-17;
       the original in DOSBox beside the engine, its code read). Ascore's arena
       is a MAZE fight (script word 0x4D01 = 1): the fight doesn't end with the
@@ -999,7 +1004,10 @@ the Project as claude/TODO.md.
       Yartar). Checked: the field, the south way out, the experience (20 a
       member when none leaves, 24 when one of seven does) and all six ending
       pages against DOSBox screenshots.
-- [ ] **The other games' PROGRAM 8** (found 2026-11-17): only Curse and
+- [x] (2026-11-27, the PortMaster session: no other game's scripts call it - sweep `combatif` with OPSCAN=38 lists
+      every PROGRAM n in each game's ECL files: PROGRAM 8 only in PoolRad, Curse and Gateway, whose endings are
+      done; Champions, Knights, Darkness and Treasures never reach it - their endings go by other means, e.g.
+      Treasures' PROGRAM 5.) **The other games' PROGRAM 8** (found 2026-11-17): only Curse and
       PoolRad have an ending in the profile (Secret: none needed - it has no PROGRAM 8, 2026-11-20); Champions, Death Knights,
       Darkness, Treasures run Curse's pages with no words (`won = {}`) and
       then stop the script at the party menu. Each game's handler (Gateway's:
@@ -3496,7 +3504,9 @@ the Project as claude/TODO.md.
       and weapon Aim ("Range = 0"), and after each Target of a several-pick aim it is back on the caster. DOSBox,
       Curse's tavern fight: Bless, the Dust of Disappearance, Cause Light Wounds and Magic Missile open on the caster,
       a weapon's Aim on the fighter ("Range = 0", no Target word there); the Dust's aim back on Mathew after each
-      Target (Darkness's weapon Aim was seen so before, v0.211.6). The engine opened a spell against enemies on the
+      Target (Darkness's weapon Aim was seen so before, v0.211.6). PoolRad too (DOSBox, the slums' kobolds at 7,1
+      from an engine save): a weapon's Aim ("Range = 0"), Sleep, and Bless - aimed when it goes off after "Begins
+      Casting", as the engine does - all open on the caster. The engine opened a spell against enemies on the
       nearest enemy, others on the nearest other. Playsim, the Dust: T, N T, N N T, N N N T - MATHEW, MARK, TRAVIS,
       SHARA invisible, the same four as the original's save. The Dark Queen unchanged (not seen). The test pumps
       (sim's fight loop, sweep's) step off the fighter to the nearest foe themselves. Also: Gateway's maze fight

@@ -1065,6 +1065,14 @@ static void sweep_combatif()
                 ecl::Insn in;
                 if (!ecl::decode(ecl::code_of(gs), gs.code_len, at, *d->prof->ecl_ops, in)) { ++at; continue; }
                 at = in.next;
+                // (OPSCAN=hex: every use of that instruction and its first operand instead -
+                // e.g. 38 = PROGRAM, which games' scripts reach an ending's PROGRAM 8)
+                if (const char* os = getenv("OPSCAN")) {
+                    if (in.op == static_cast<uint8_t>(strtol(os, nullptr, 16)))
+                        printf("ECL%d block %d %04X op %02X operand %s%u\n", area, block, 0x8000 + in.at, in.op,
+                               in.count && !in.ops[0].immediate() ? "@" : "", in.count ? in.ops[0].word() : 0u);
+                    continue;
+                }
                 if (in.op != 0x24) continue;
                 ++fights;
                 printf("ECL%d block %d %04X COMBAT ->", area, block, 0x8000 + in.at);
