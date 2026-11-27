@@ -37,5 +37,7 @@ grep -E "TEXT|JOURNAL|won:|lost" $P/run.log | tail -${TXTN:-10} | cut -c1-120
 echo "$st" | cut -c1-110
 # (left in the camp's menu - a treasure's Exit then an E: out of it, and saved)
 [ -z "$NOCAMPEXIT" ] && echo "$st" | grep -q "screen 7 menu \[|Save View" && { T="$T/E"; st="  ? screen 0 menu [|Move Area"; }
-echo "$st" | grep -q "screen 0 menu \[|Move Area\|screen 0 menu \[|Move Encamp\|screen 0 menu \[|Area Cast View" && { TAILN=0 $P/bin/p.sh "$T" SAVE=$S SAVENOW=$S ALLTEXT=1 $EXTRA > /dev/null; grep "saved now" $P/run.log; grep -E "TEXT|JOURNAL|\[fight\]" $P/run.log >> $P/story.log; }
+# (only with nothing waiting - wait 0: the exploring menu stays up under a script's typed question, and a save
+# there kept the question's state half done - the Hulderfolk's MAHENE, 2026-11-27)
+echo "$st" | grep -q "wait 0 " && echo "$st" | grep -q "screen 0 menu \[|Move Area\|screen 0 menu \[|Move Encamp\|screen 0 menu \[|Area Cast View\|screen 0 menu \[|Encamp\]" && { TAILN=0 $P/bin/p.sh "$T" SAVE=$S SAVENOW=$S ALLTEXT=1 $EXTRA > /dev/null; grep "saved now" $P/run.log; grep -E "TEXT|JOURNAL|\[fight\]" $P/run.log >> $P/story.log; }
 echo "$T" > $P/tt.txt
