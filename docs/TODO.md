@@ -1014,9 +1014,15 @@ the Project as claude/TODO.md.
       Gateway; (c) the view's limits at a field's west / east edge are taken
       as the ground's bounding box - only the south edge was seen in DOSBox;
       (d) a charmed last member: the fight ends "won" with nobody on the
-      party's side standing (every game's rule? check one in DOSBox). (e) the
+      party's side standing (every game's rule? check one in DOSBox). 2026-11-27 (the PortMaster session):
+      `combat::finish` now takes a charmed member for no survivor (Lost); and Gateway's end loop
+      (GAME.OVR 0x736D) DROPS a member still on the enemies' side (record 0x197 = 1) from the party -
+      before or after the charm's effect is taken off? The engine puts every member back (0x197 = 0,
+      `fight_cleanup_party`). Not seen in DOSBox. (e) done, v0.221.14: the
       original drops the fallen from the party when a fight is fled, except
-      in a maze fight (GAME.OVR 0x7468-0x74E2) - what does the engine do?
+      in a maze fight (GAME.OVR 0x7468-0x74E2: a member not running dropped only while the
+      maze word, +0x402 = 0x4D01, is 0 - the same offset as 0xCA1E's no-Flee test); the
+      engine dropped them in a maze fight too. By the code only (no fled maze fight played).
 - [ ] Gateway, from the PortMaster session's play-through (2026-11-16, DOSBox
       beside the engine at Ascore's arena, v0.203.11): (1) done, v0.205.1:
       no "Flee" question in a maze fight only (GAME.OVR 0xCA1E). (2) done,
@@ -3486,6 +3492,16 @@ the Project as claude/TODO.md.
       "Unable to load 1 from 8x8d0"). Playsim (Darkness): Take, Exit - the treasure's menu, Take lit; Exit again -
       the question. navcheck Curse / Darkness / Gateway 0. Not run in DOSBox: Curse, Secret, Gateway, the Krynn
       games (the same menu code in the engine).
+- [x] v0.221.14 (the PortMaster session, 2026-11-27): **the aim opens on the fighter itself** - every spell, item
+      and weapon Aim ("Range = 0"), and after each Target of a several-pick aim it is back on the caster. DOSBox,
+      Curse's tavern fight: Bless, the Dust of Disappearance, Cause Light Wounds and Magic Missile open on the caster,
+      a weapon's Aim on the fighter ("Range = 0", no Target word there); the Dust's aim back on Mathew after each
+      Target (Darkness's weapon Aim was seen so before, v0.211.6). The engine opened a spell against enemies on the
+      nearest enemy, others on the nearest other. Playsim, the Dust: T, N T, N N T, N N N T - MATHEW, MARK, TRAVIS,
+      SHARA invisible, the same four as the original's save. The Dark Queen unchanged (not seen). The test pumps
+      (sim's fight loop, sweep's) step off the fighter to the nearest foe themselves. Also: Gateway's maze fight
+      fled keeps its fallen (below, (e)). Checked: host tests; behave all games but the Queen (Curse's one failure is
+      the missing events oracle, as before); navcheck Curse / Darkness 0; fightfuzz Curse / Gateway 0.
 - [x] v0.221.12 (the PortMaster session, 2026-11-27): **the party's own spells and items in a fight were cast on the
       whole side with no aim** when the spell's table row names the party (byte 7 = 4: Bless, Haste, Invisibility 10'
       Radius, the Dust of Disappearance ...). The original aims them as any other: its fight's target routine reads only
