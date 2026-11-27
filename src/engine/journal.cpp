@@ -704,7 +704,8 @@ namespace {
 struct WholeWork {
     Output* out;
     uint32_t base = 0;
-    int w = 0, h = 0;
+    int w = 0, h = 0;                  // the piece's size (the JPEG's, or the part of it kept)
+    int cx = 0, cy = 0;                // where that part starts in the JPEG
     int band_y = -1, band_h = 16;
     uint8_t* band = nullptr;
     bool ok = true;
@@ -713,10 +714,13 @@ struct WholeWork {
 void whole_flush(WholeWork& w)
 {
     if (w.band_y < 0 || !w.ok) return;
-    int rows = w.band_h;
-    if (w.band_y + rows > w.h) rows = w.h - w.band_y;
-    if (rows <= 0) return;
-    w.ok = w.out->write_at(w.base + static_cast<uint32_t>(w.band_y) * w.w, w.band, static_cast<size_t>(rows) * w.w);
+    // the band's rows inside the part kept (JPEG rows band_y ..)
+    int r0 = w.cy > w.band_y ? w.cy - w.band_y : 0;
+    int r1 = w.band_h;
+    if (w.band_y + r1 > w.cy + w.h) r1 = w.cy + w.h - w.band_y;
+    if (r1 <= r0) return;
+    w.ok = w.out->write_at(w.base + static_cast<uint32_t>(w.band_y + r0 - w.cy) * w.w,
+                           w.band + static_cast<size_t>(r0) * w.w, static_cast<size_t>(r1 - r0) * w.w);
 }
 
 bool whole_block(int x, int y, int bw, int bh, const uint8_t* rgb, void* ctx)
@@ -730,12 +734,39 @@ bool whole_block(int x, int y, int bw, int bh, const uint8_t* rgb, void* ctx)
     for (int r = 0; r < bh && r < w.band_h; ++r) {
         const uint8_t* s = rgb + static_cast<size_t>(r) * bw * 3;
         for (int c = 0; c < bw; ++c, s += 3) {
-            const int px = x + c;
+            const int px = x + c - w.cx;
+            if (px < 0) continue;
             if (px >= w.w) break;
             w.band[static_cast<size_t>(r) * w.w + px] = index_of(s[0], s[1], s[2]);
         }
     }
     return w.ok;
+}
+
+// Part of a JPEG (data [at0, at0 + len) of src) - x, y, w, h of its pixels - as a piece at `at`
+bool write_part(dax::ByteSource& src, uint32_t at0, uint32_t len, void* pool, Output& out, uint32_t at, int x, int y,
+                int w, int h)
+{
+    jpeg::Info ji;
+    if (!jpeg::probe(src, at0, len, pool, ji) || x < 0 || y < 0 || w <= 0 || h <= 0 || w > 1700 ||
+        x + w > ji.width || y + h > ji.height)
+        return false;
+    WholeWork ww;
+    ww.out = &out;
+    ww.base = at;
+    ww.w = w;
+    ww.h = h;
+    ww.cx = x;
+    ww.cy = y;
+    ww.band_h = ji.mcu_h;
+    ww.band = static_cast<uint8_t*>(malloc(static_cast<size_t>(ww.w) * ww.band_h));
+    bool ok = ww.band && jpeg::decode(src, at0, len, pool, nullptr, whole_block, &ww) && ww.ok;
+    if (ok) {
+        whole_flush(ww);
+        ok = ww.ok;
+    }
+    free(ww.band);
+    return ok;
 }
 
 bool write_whole(dax::ByteSource& js, void* pool, Output& out, uint32_t at, int* w, int* h)
@@ -868,6 +899,36 @@ bool make_gbc(dax::ByteSource& dat, GbcPictures& pics, const char* id, Output& o
             put16(er + 2, x.number);
             put16(er + 4, static_cast<unsigned>(pi));
             put16(er + 6, 1);
+            // A section shown as its page's picture (its text unreadable): the PDF open in the text file's place
+            PagePicture pp;
+            if (xs && fix_picture(fix, x.kind, x.number, &pp)) {
+                extra->close();
+                xs = nullptr;
+                bool done = false;
+                dax::ByteSource* ps = extra->open_pdf();
+                pdf::Doc* doc = ps ? new (std::nothrow) pdf::Doc : nullptr;
+                int* pages = doc ? new (std::nothrow) int[pdf::kMaxPages] : nullptr;
+                pdf::Image img;
+                if (pages && pdf::open(*ps, *doc) && pp.page <= pdf::pages(*ps, *doc, pages, pdf::kMaxPages) &&
+                    pp.page >= 1 && pdf::page_image(*ps, *doc, pages[pp.page - 1], img, pp.image) && img.jpeg &&
+                    write_part(*ps, img.data_at, img.data_len, pool, out, at, pp.x, pp.y, pp.w, pp.h)) {
+                    uint8_t* pr = table + 8 * ne + 8 * pi++;
+                    put16(pr, static_cast<unsigned>(pp.w));
+                    put16(pr + 2, static_cast<unsigned>(pp.h));
+                    put32(pr + 4, at);
+                    at += static_cast<uint32_t>(pp.w) * pp.h;
+                    done = true;
+                }
+                delete[] pages;
+                delete doc;
+                extra->close_pdf();
+                xs = extra->open();
+                if (done) {
+                    if (progress) progress(k - n, ne, ctx);
+                    continue;
+                }
+                // (the page's picture couldn't be had: the text, as it is)
+            }
             size_t len = x.len < 16383 ? x.len : 16383;
             ok = xs && xs->read_at(x.at, reinterpret_cast<uint8_t*>(text), len) == len;
             if (ok) len = fix_text(fix, x.kind, x.number, text, len, 16383);

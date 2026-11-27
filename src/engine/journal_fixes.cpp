@@ -311,4 +311,27 @@ size_t fix_text(uint32_t key, char kind, int number, char* text, size_t len, siz
     return len;
 }
 
+bool fix_picture(uint32_t key, char kind, int number, PagePicture* out)
+{
+    // The Dark Queen's Introduction, the General's letter: printed on a
+    // parchment picture, its OCR two broken lines (Tom, 2026-11-26: "use a
+    // picture of the letter/page, handling it just like we handle the GOG
+    // journals") - the left page of PDF page 3's spread, 1650 x 1275
+    struct Def {
+        uint32_t journal;
+        char kind;
+        int number;
+        PagePicture pic;
+    };
+    static const Def kDefs[] = {
+        {kDarkQueen, 'I', 1, {3, 0, 40, 170, 796, 1066}},
+    };
+    for (const Def& d : kDefs)
+        if (d.journal == key && d.kind == kind && d.number == number) {
+            *out = d.pic;
+            return true;
+        }
+    return false;
+}
+
 } // namespace journal

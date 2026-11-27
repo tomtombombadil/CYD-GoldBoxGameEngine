@@ -208,6 +208,10 @@ struct ExtraText {
     virtual ~ExtraText() = default;
     virtual dax::ByteSource* open() = 0;
     virtual void close() = 0;
+    // The journal's PDF (a section shown as its page's picture -
+    // fix_picture): opened only while the text file is closed
+    virtual dax::ByteSource* open_pdf() { return nullptr; }
+    virtual void close_pdf() {}
     const Section* items = nullptr;
     int n = 0;
 };

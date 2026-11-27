@@ -2504,6 +2504,13 @@ How it works (v0.12.0, Curse):
   dropped. A journal is known by its Game.dat (an FNV-1a of its first 4 KB): another copy is left as it is.
   Not mended: the Dark Queen's Introduction (the General's letter is printed over a picture; its OCR text is
   two broken lines).
+  v0.221.9 (Tom, 2026-11-26: "use a picture/image of the letter/page, handling it just like we handle the GOG
+  journals"): **the Dark Queen's Introduction is its page's picture** - `fix_picture` names a section shown as
+  part of a PDF page's picture (the Dark Queen's 'I' 1: page 3, the spread's left page, 796 x 1066 from 40, 170 -
+  the heading "A Letter from the General", the parchment and the seal); `make_gbc` closes the sections' text
+  file, opens the PDF in its slot (`ExtraText::open_pdf`), decodes the page's JPEG keeping that part
+  (`write_part`) and writes it as the entry's one picture piece. When the page's picture can't be had, the
+  entry's text as before. Journal ids "gbc7" (the board), the port's "gbc8": made again.
   **The book view for a typeset PDF**: BOOK.TXT a PDF page at a time in
   the text-entry viewer (Zoom = Small / Medium / Large text; Prev / Next
   a screenful, then the page before / after; the label "3 of 21" - the

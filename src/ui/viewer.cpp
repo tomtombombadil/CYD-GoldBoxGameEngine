@@ -1108,7 +1108,11 @@ struct SectText : journal::ExtraText {
     char path[160] = {};
     fs::File f;
     library::FileSource* src = nullptr;
-    ~SectText() { close(); }
+    ~SectText()
+    {
+        close();
+        close_pdf();
+    }
     dax::ByteSource* open() override
     {
         close();
@@ -1122,6 +1126,25 @@ struct SectText : journal::ExtraText {
         delete src;
         src = nullptr;
         if (f) f.close();
+    }
+    // The PDF (a section shown as its page's picture - the Dark Queen's letter), in the text file's slot
+    char pdf[200] = {};
+    fs::File pf;
+    library::FileSource* psrc = nullptr;
+    dax::ByteSource* open_pdf() override
+    {
+        close_pdf();
+        if (!pdf[0]) return nullptr;
+        pf = sd_fs().open(pdf, "r");
+        if (!pf) return nullptr;
+        psrc = new (std::nothrow) library::FileSource(pf);
+        return psrc;
+    }
+    void close_pdf() override
+    {
+        delete psrc;
+        psrc = nullptr;
+        if (pf) pf.close();
     }
 };
 
@@ -1182,7 +1205,7 @@ void journal_id(const library::GameDir& g, char* out, size_t cap)
 }
 
 // The id a Steam / SNEG journal's JOURNAL.DAT is made with: Game.dat's and
-// the PDF's sizes ("gbc6": v0.221.6's - the Steam journals' text corrected; "gbc5": v0.221.3's - the PDF's text
+// the PDF's sizes ("gbc7": v0.221.9's - the Dark Queen's letter a picture; "gbc6": v0.221.6's - the Steam journals' text corrected; "gbc5": v0.221.3's - the PDF's text
 // read with its standard fonts' widths; "gbc4": v0.162's,
 // with the PDF's sections; "gbc3": v0.161's, Game.dat's entries only - both made again)
 bool gbc_journal_id(const library::GameDir& g, char* id, size_t cap)
@@ -1193,7 +1216,7 @@ bool gbc_journal_id(const library::GameDir& g, char* id, size_t cap)
     if (!f) return false;
     const unsigned dat = static_cast<unsigned>(f.size());
     f.close();
-    snprintf(id, cap, "gbc6:%u:%u", dat, g.journal[0] ? static_cast<unsigned>(g.journal_size) : 0u);
+    snprintf(id, cap, "gbc7:%u:%u", dat, g.journal[0] ? static_cast<unsigned>(g.journal_size) : 0u);
     return true;
 }
 
@@ -1207,11 +1230,11 @@ bool journal_stale(const library::GameDir& g)
     journal_id(g, have, sizeof have);
     // (none at all: never made, or a failure the log reported - the next
     // Rescan tries; not every start)
-    // ... and only one an older version made: a "gbc6" one without its
+    // ... and only one an older version made: a "gbc7" one without its
     // book (the text couldn't be read - memory) waits for a Rescan rather
     // than slowing every start
     if (!have[0]) return false;
-    return strncmp(have, "gbc6:", 5) != 0;
+    return strncmp(have, "gbc7:", 5) != 0;
 }
 
 // The PDF's text into BOOK.TXT, its sections into SECT.TMP (sect_path)
@@ -1302,6 +1325,7 @@ void prepare_journal_gbc(const library::GameDir& g)
         scan_log_resume();
         say_book(g, binfo, have_book, millis() - t0);
         sect.items = secs;
+        snprintf(sect.pdf, sizeof sect.pdf, "%s/%s", games::kRootDir, g.journal);
         sect.n = have_book ? binfo.sections : 0;
     } else if (g.journal[0]) {
         scan_say("Not enough memory to read the journal PDF's text now.", false, nullptr);
@@ -1389,6 +1413,7 @@ void prepare_journal_text(const library::GameDir& g)
         SdOutput out;
         out.f = sd_fs().open(out_path, "w");
         sect.items = secs;
+        snprintf(sect.pdf, sizeof sect.pdf, "%s/%s", games::kRootDir, g.journal);
         sect.n = binfo.sections;
         NoGameDat none;
         GbcJpegs pics;
