@@ -3511,6 +3511,16 @@ the Project as claude/TODO.md.
       "Unable to load 1 from 8x8d0"). Playsim (Darkness): Take, Exit - the treasure's menu, Take lit; Exit again -
       the question. navcheck Curse / Darkness / Gateway 0. Not run in DOSBox: Curse, Secret, Gateway, the Krynn
       games (the same menu code in the engine).
+- [x] v0.221.20 (Tom OK'd, 2026-11-27: the port's TODO "library.cpp is tied to Arduino's files"): **the scan's rules for
+      where a folder's game is are on the platform layer** - `src/game/game_find.h` (header only, so the port's and the
+      Android app's build lists need nothing new): the .DAX files in the folder or one / two down, the HLIB games'
+      DISK1-3 up to three down, Unlimited Adventures passed over, _CYD / Launcher / GBC skipped. The boards'
+      `app/library.cpp` and the port's `src/library.cpp` both call it. A walk down keeps one folder open and a name
+      a level (the sub-folders taken by name, so the same one wins on every card). Checked: host tests (new cases in
+      test_platform: GOG, Steam, DISK1-3, UA, none, no files left open); the port's old and new scans on the 19 GOG /
+      Steam folders, the same; the 2.8" classic firmware in QEMU - the same games found (GOG Curse, Steam CURSE,
+      the Steam Dark Queen, UA passed over), loop()'s stack 3,008 bytes left at its lowest (1,024 before), heap and
+      static RAM as before.
 - [x] v0.221.19 (found checking v0.221.18 by the port's buttons): **a save made in Throtl's Inn, loaded: the Inn's camp
       left to "Move Encamp"** with no town - the original (DOSBox, the same save) is back at "Where do you wish to
       go?". PROGRAM 9 ends the script; on the overland the engine then waits for the player - an outpost's script goes
