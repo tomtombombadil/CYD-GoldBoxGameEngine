@@ -3568,6 +3568,7 @@ const Profile kProfiles[] = {
                .name = kP | 0xE8F8, .ac_hp = kP | 0xE903, .cfg = "DKK.CFG", .save_which = kP | 0xED76,
                .slots = kP | 0xF0C0, .saving = kP | 0x1001D, .camp_menu = 0xF3AC, .makes_camp = kP | 0xD397,
                .add_from = kP | 0xD073, .add_sources = kP | 0xF017, .add_prompt = kP | 0xD088, .add = kP | 0xF036,
+               .added = 0x1843D,   // (GAME.OVR "* " - the added one's mark on the Add list; DOSBox, Treasures 2026-11-27)
                .overwrite = kP | 0xD32E, .qmark = kP | 0xD339,
                .drop = kP | 0xCFEA, .forever = kP | 0xCFF5, .sure = kP | 0xD000, .farewell = kP | 0xD02A,
                .relief = kP | 0xD03F,
@@ -3803,6 +3804,7 @@ const Profile kProfiles[] = {
                .name = 0x34652, .ac_hp = 0x34657, .cfg = "POOL4.CFG", .save_which = kP | 0xC7BF,
                .slots = kP | 0xCD2F, .saving = 0x1317B, .camp_menu = 0xD115, .makes_camp = kP | 0xBFBF,
                .add_from = kP | 0xBAC8, .add_sources = kP | 0xCC8B, .add_prompt = kP | 0xBAF1, .add = kP | 0xCCB4,
+               .added = 0x17583,   // (GAME.OVR "* " - the added one's mark on the Add list; DOSBox, Treasures 2026-11-27)
                .drop = 0x16445, .forever = 0x1644B, .sure = 0x16456, .dump = 0x16465, .out_back = 0x1646F,
                .farewell = 0x1647A, .relief = 0x1648E, .yes_no = kP | 0xC9D4,
                .cant_modify = kP | 0xBA9F, .modify = kP | 0xC6F2, .keep_exit = kP | 0xCC62,
@@ -4261,6 +4263,7 @@ const Profile kProfiles[] = {
                .name = 0x3E525, .ac_hp = 0x3E52A, .cfg = "TREASURE.CFG", .save_which = kP | 0xEDEE,
                .slots = kP | 0xF37E, .saving = 0x18760, .camp_menu = 0xF81A, .makes_camp = kP | 0xE5BE,
                .add_from = kP | 0xE0A8, .add_sources = kP | 0xF2D6, .add_prompt = kP | 0xE0D2, .add = kP | 0xF300,
+               .added = 0x1CCFA,   // (GAME.OVR "* " - the added one's mark on the Add list; DOSBox, Treasures 2026-11-27)
                .drop = 0x1BB9C, .forever = 0x1BBA2, .sure = 0x1BBAD, .dump = 0x1BBBC, .out_back = 0x1BBC6,
                .farewell = 0x1BBD1, .relief = 0x1BBE5, .yes_no = kP | 0xF010,
                .cant_modify = kP | 0xE07E, .modify = kP | 0xED1C, .keep_exit = kP | 0xF2AC,
