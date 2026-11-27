@@ -2491,8 +2491,19 @@ How it works (v0.12.0, Curse):
   was 0 wide and each piece the OCR placed by itself read as a word; **a gap between pieces is a word space
   past a fifth of the smaller of the two letters' sizes** (the Steam Champions / Death Knights layers' small
   "of" set close before "the": "ofthe"). Checked against pdftotext on all nine SNEG PDFs: only Treasures,
-  Champions, Death Knights and the Dark Queen change. The OCR's own misreadings ("~i INTRODUCTION ~",
-  "part}'1") are in the PDFs' text layers and stay.
+  Champions, Death Knights and the Dark Queen change.
+  v0.221.6 (Tom, 2026-11-26: "Correct the Steam journal scanning errors ... That's important!"): **the Steam
+  journals' text corrected** (`engine/journal_fixes.cpp`, applied by `make_gbc` to every entry it writes): the
+  Gold Box Companion's Game.dat was typed - its typists' slips ("My names is Jarbarkas", "beleive",
+  "Zhentarium"), its apostrophes often a space ("I ll", "didn t", "intruder s"); the sections taken from the PDFs
+  are the scans' OCR ("~i INTRODUCTION ~", "part}'1", "Uorkh" for Llorkh, a tavern tale's ornament read as "0 ",
+  " ." for "."). 188 fixes for an entry each, found by setting each made journal beside the PDF's text and a
+  second OCR of its pages (tesseract) and checked by eye; the printed journal's own spellings are kept. Three
+  rules for these nine journals only: a lone s / t / d / m / ll / ve / re after a word joined with an apostrophe
+  (not Gateway: its ciphered notes), a tale's ornament before "Tavern Tale" dropped, a space before a stop
+  dropped. A journal is known by its Game.dat (an FNV-1a of its first 4 KB): another copy is left as it is.
+  Not mended: the Dark Queen's Introduction (the General's letter is printed over a picture; its OCR text is
+  two broken lines).
   **The book view for a typeset PDF**: BOOK.TXT a PDF page at a time in
   the text-entry viewer (Zoom = Small / Medium / Large text; Prev / Next
   a screenful, then the page before / after; the label "3 of 21" - the

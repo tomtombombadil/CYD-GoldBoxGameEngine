@@ -23,6 +23,7 @@
 #include "engine/gbc_icons.h"
 #include "engine/inflate.h"
 #include "engine/journal.h"
+#include "engine/journal_fixes.h"
 #include "engine/jpeg.h"
 #include "engine/pdf.h"
 #include "engine/pdf_text.h"
@@ -4401,6 +4402,31 @@ static void test_pdf_std14()
         CHECK(std::fabs(lines.l[0].x_end - (112.3f + (444 + 250 + 500 + 444 + 333 + 278 + 500) * 0.016f)) < 0.05f);
         CHECK(lines.t[1] == "of the");                  // (the gap measured by the smaller "of")
     }
+}
+
+// The Steam journals' corrections (journal_fixes.cpp): an entry's own fixes, the apostrophes typed as spaces,
+// a tale's ornament, a space before a stop; another journal's text untouched
+static void test_journal_fixes()
+{
+    char t[256];
+    auto run = [&](uint32_t key, char kind, int number, const char* in) {
+        const size_t n = strlen(in);
+        memcpy(t, in, n);
+        const size_t m = journal::fix_text(key, kind, number, t, n, sizeof t - 1);
+        t[m] = 0;
+        return std::string(t);
+    };
+    const uint32_t treasures = 0xc17e5f3bu, champions = 0x57472e23u, gateway = 0xaacc44c2u;
+    CHECK(run(treasures, 'J', 10, "\"My names is Jarbarkas.") == "\"My name is Jarbarkas.");
+    CHECK(run(treasures, 'J', 11, "\"My names is Jarbarkas.") == "\"My names is Jarbarkas.");     // (J10's alone)
+    CHECK(run(treasures, 'I', 1, "~i INTRODUCTION ~\nUorkh and Uorkh") == "INTRODUCTION\nLlorkh and Llorkh");
+    CHECK(run(champions, 'T', 1, "0 Tavern Tale 1\n\"I ll win it back from you .\"") ==
+          "Tavern Tale 1\n\"I'll win it back from you.\"");
+    CHECK(run(champions, 'J', 1, "I didn t, they re off, the intruder s heads") == "I didn't, they're off, the intruder's heads");
+    CHECK(run(champions, 'J', 1, "a 2 d 6, a sword, A sharp") == "a 2 d 6, a sword, A sharp");
+    CHECK(run(gateway, 'J', 36, "te t al t") == "te t al t");             // (Gateway's ciphered notes)
+    CHECK(run(0x12345678u, 'J', 1, "I ll go .") == "I ll go .");            // (an unknown journal: as it is)
+    CHECK(run(0, 'J', 10, "My names is") == "My names is");
 }
 
 static void test_journal_typeset()
@@ -10226,6 +10252,7 @@ int main()
     test_journal_gbc();
     test_journal_typeset();
     test_pdf_std14();
+    test_journal_fixes();
     test_icon_looks();
     test_gbc_icons();
     test_geo_view();

@@ -1182,7 +1182,8 @@ void journal_id(const library::GameDir& g, char* out, size_t cap)
 }
 
 // The id a Steam / SNEG journal's JOURNAL.DAT is made with: Game.dat's and
-// the PDF's sizes ("gbc5": v0.221.3's - the PDF's text read with its standard fonts' widths; "gbc4": v0.162's,
+// the PDF's sizes ("gbc6": v0.221.6's - the Steam journals' text corrected; "gbc5": v0.221.3's - the PDF's text
+// read with its standard fonts' widths; "gbc4": v0.162's,
 // with the PDF's sections; "gbc3": v0.161's, Game.dat's entries only - both made again)
 bool gbc_journal_id(const library::GameDir& g, char* id, size_t cap)
 {
@@ -1192,7 +1193,7 @@ bool gbc_journal_id(const library::GameDir& g, char* id, size_t cap)
     if (!f) return false;
     const unsigned dat = static_cast<unsigned>(f.size());
     f.close();
-    snprintf(id, cap, "gbc5:%u:%u", dat, g.journal[0] ? static_cast<unsigned>(g.journal_size) : 0u);
+    snprintf(id, cap, "gbc6:%u:%u", dat, g.journal[0] ? static_cast<unsigned>(g.journal_size) : 0u);
     return true;
 }
 
@@ -1206,11 +1207,11 @@ bool journal_stale(const library::GameDir& g)
     journal_id(g, have, sizeof have);
     // (none at all: never made, or a failure the log reported - the next
     // Rescan tries; not every start)
-    // ... and only one an older version made: a "gbc5" one without its
+    // ... and only one an older version made: a "gbc6" one without its
     // book (the text couldn't be read - memory) waits for a Rescan rather
     // than slowing every start
     if (!have[0]) return false;
-    return strncmp(have, "gbc5:", 5) != 0;
+    return strncmp(have, "gbc6:", 5) != 0;
 }
 
 // The PDF's text into BOOK.TXT, its sections into SECT.TMP (sect_path)
