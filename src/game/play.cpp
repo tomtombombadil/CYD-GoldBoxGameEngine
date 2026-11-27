@@ -5192,6 +5192,44 @@ void camp_words(char* out, size_t cap)
 }
 
 int camp_bigpic = -1;               // a big picture the camp took down (shown again as it breaks)
+// (Curse's travel map is several BIGPIC blocks, and its script doesn't draw them again after a camp:
+// the screen's rows over the text window wait on the card while the camp is up - _CYD/CAMP.TMP)
+bool camp_rows_saved = false;
+void camp_rows_path(char* out, size_t cap) { snprintf(out, cap, "%s/_CYD/CAMP.TMP", games::kRootDir); }
+void camp_save_rows(pic::Canvas& c)
+{
+    char path[96];
+    camp_rows_path(path, sizeof path);
+    camp_rows_saved = false;
+    plat::File f = plat::open(path, "w");
+    if (!f) return;
+    uint8_t row[pic::kScreenW];
+    bool ok = c.w <= pic::kScreenW;
+    for (int y = 0; ok && y < 17 * 8; ++y) {
+        c.get_row(0, y, c.w, row);
+        ok = f.write(row, static_cast<size_t>(c.w)) == static_cast<size_t>(c.w);
+    }
+    f.close();
+    camp_rows_saved = ok;
+}
+bool camp_restore_rows(pic::Canvas& c)
+{
+    if (!camp_rows_saved) return false;
+    camp_rows_saved = false;
+    char path[96];
+    camp_rows_path(path, sizeof path);
+    plat::File f = plat::open(path, "r");
+    if (!f) return false;
+    uint8_t row[pic::kScreenW];
+    bool ok = c.w <= pic::kScreenW;
+    for (int y = 0; ok && y < 17 * 8; ++y) {
+        ok = f.read(row, static_cast<size_t>(c.w)) == c.w;
+        if (ok) c.put_row(0, y, c.w, row);
+    }
+    f.close();
+    plat::remove(path);
+    return ok;
+}
 // (the camp's own screen meanwhile - the party list - even on a Krynn overland)
 bool camp_over_big() { return camping && camp_bigpic >= 0; }
 void host_picture(int id, int head);
@@ -5203,17 +5241,22 @@ void draw_camp_screen(pic::Canvas& c)
     pic_shown = false;
     head_shown = body_shown = -1;
     camping = true;
-    if ((bigpic >= 0 && krynn_rules()) || camp_bigpic >= 0) {
+    // (Curse's camp on the travel map - "Enter city Journey on Camp": the camp's own screen too, its
+    // picture, the party list and the position line; the map back as it breaks - DOSBox, 2026-11-26,
+    // at the edge of Tilverton. Until v0.221.11 the map stayed up with the camp's words under it)
+    const bool curse_travel = bigpic >= 0 && d->prof->game == games::Game::CurseOfTheAzureBonds;
+    if ((bigpic >= 0 && krynn_rules()) || curse_travel || camp_bigpic >= 0) {
         // A camp over a big picture (Death Knights' start: its region map,
         // then "Do you wish to rest?" - PROGRAM 9; Tom, 2026-11-18: no party
         // list, and the screens of Magic / View stayed up): the camp's own
         // screen, the picture back when the camp breaks - Champions' and
         // Death Knights' maps (the Dark Queen's camp, DOSBox: the exploring
         // screen; queen_facts_5 13))
+        if (curse_travel && camp_bigpic < 0 && cheat != Cheat::Sanctuary) camp_save_rows(c);
         if (bigpic >= 0) camp_bigpic = bigpic;
         bigpic = -1;
         draw_frame(c);
-        c.fill(8, 8, 120, 120, 0);
+        if (!curse_game()) c.fill(8, 8, 120, 120, 0);      // (Curse's: the view's yellow frame stays round the picture - DOSBox)
         if (prof_camp_pic()) draw_own_pic(camp_pic());      // (Death Knights: PIC 59 - DOSBox)
         draw_panel(c);
         return;
@@ -5327,6 +5370,7 @@ void leave_camp(pic::Canvas& c)
     camping = false;
     if (cheat == Cheat::Sanctuary) {
         pic_shown = false;
+        if (curse_game() && camp_bigpic >= 0) bigpic = camp_bigpic;     // (Curse's travel map is up again)
         camp_bigpic = -1;               // (the cheat puts back the screen it found)
         cheat_end(c);                   // (the Cheats tab's Sanctuary: back where the party was)
         return;
@@ -5341,9 +5385,15 @@ void leave_camp(pic::Canvas& c)
     if (camp_bigpic >= 0) {
         const int id = camp_bigpic;
         camp_bigpic = -1;
-        host_picture(id, 0xFF);
+        if (!curse_game()) {
+            host_picture(id, 0xFF);
+        } else {
+            bigpic = id;                // (Curse's travel map: the rows it took down, as they were)
+            if (camp_restore_rows(c)) dirty(0, 17 * 8);
+            else host_picture(id, 0xFF);
+        }
     }
-    draw_position(c);
+    if (!(curse_game() && bigpic >= 0)) draw_position(c);     // (no position line over Curse's travel map - DOSBox)
     if (camp_from_script) {
         camp_from_script = false;
         waiting = false;
@@ -15312,7 +15362,9 @@ void after_move_redraw(bool step = false)
         d->gs.wall_ahead = static_cast<uint8_t>(geo::wall(d->map, d->gs.x, d->gs.y, d->gs.dir));
     gw_way_ahead();
     draw_view(*cv);
-    draw_panel(*cv);
+    // (Curse's travel map stays up through a script's move - after its camp
+    // breaks above all: the party list isn't drawn over it - DOSBox)
+    if (!(curse_game() && bigpic >= 0)) draw_panel(*cv);
 }
 
 // The step the player asked for (dir = the way the party goes)
