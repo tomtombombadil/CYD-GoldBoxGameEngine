@@ -1173,13 +1173,22 @@ bool krynn_rules();
 bool dk_overland() { return d && vm && d->prof->variant.dk_overland_pics && vm->get(0x24) == 1 && !vm->get(0x22); }
 // Champions' overland (champions_facts.md 3): area word 0x4BE6 = 0 - the
 // big picture the scripts show (the region's map) with the party's marker
+// (a Krynn outpost - Throtl's, Gargath's: a menu in the overland's mode, 0x4BE6 = 0 too, its own small picture
+// shown over the map; the original draws the exploring frame, the party and the place line there, its camp the
+// camp's picture - DOSBox, Champions' Throtl after a new game: the Armoury's lists, the Inn. Until a picture is
+// shown again it is a town; the overland map's BIGPIC ends it)
+bool kr_town = false;
 bool kr_overland() { return d && vm && krynn_rules() && !vm->get(0x4BE6); }
+// (the overland's map on the screen: not in an outpost)
+bool kr_map_up() { return kr_overland() && !kr_town; }
 // The Dark Queen's overland of Taladas (queen_facts_5.md 13): Darkness's
 // bytes - 0x24 = 1 and not 3D; the map picture the script shows (BIGPIC
 // 240 / 241, its id in 0x3E) with the party's marker at 0x25 / 0x26
 bool q_overland() { return d && vm && hl() && vm->get(0x24) == 1 && !vm->get(0x22); }
 // Any game's overland with a marker on a map picture
 bool marker_overland() { return dk_overland() || kr_overland() || q_overland(); }
+// The screen is a marker overland's (its map - not a Krynn outpost's menu)
+bool marker_screen() { return dk_overland() || kr_map_up() || q_overland(); }
 // Gateway's wilderness (gateway_facts.md 14): area word 0x4BE6 = 0
 bool gw_wild() { return d && vm && d->prof->variant.tile_wild && !vm->get(0x4BE6); }
 // Treasures' overland is up (its OVER.DAX map): a step there takes no minutes of its own - the script adds the
@@ -1305,7 +1314,7 @@ void kr_marker(pic::Canvas& c, bool on)
         kr_mx = -1;
     }
     const bool q = q_overland();
-    if (!on || !(kr_overland() || q)) return;
+    if (!on || !(kr_map_up() || q)) return;
     // (the Dark Queen: game bytes 0x25 / 0x26 - its marker ALWAYS.TLB's part 29)
     const int x = ((vm->get(q ? 0x25 : 0x4BC3) & 0xFF) + 1) * 8, y = ((vm->get(q ? 0x26 : 0x4BC4) & 0xFF) + 1) * 8;
     if (x > pic::kScreenW - 8 || y > 17 * 8) return;
@@ -1663,7 +1672,7 @@ void draw_view(pic::Canvas& c)
         draw_dk_overland(c);
         return;
     }
-    if (kr_overland() && !pic_shown && bigpic < 0) {
+    if (kr_map_up() && !pic_shown && bigpic < 0) {
         draw_kr_overland(c);
         return;
     }
@@ -1745,7 +1754,7 @@ void draw_position(pic::Canvas& c)
 {
     if (pos_kept) return;
     krynn_moons(&c);            // (Champions: a day passed - the moons' tiles; its clock routine)
-    if (marker_overland() && !(q_overland() && pic_shown) && !camp_over_big()) return;   // (the Dark Queen's: under an event picture the exploring screen)
+    if (marker_screen() && !(q_overland() && pic_shown) && !camp_over_big()) return;   // (the Dark Queen's: under an event picture the exploring screen)
     if (d->prof->variant.tr && !tr_position) return;
     const ecl::GameState& g = d->gs;
     if (hl()) {
@@ -1851,7 +1860,7 @@ void draw_panel(pic::Canvas& c)
 {
     // (Darkness's / Champions' overland: its map in the panel's place; the
     // Dark Queen's under an event picture: the exploring screen's panel)
-    if (marker_overland() && !(q_overland() && pic_shown) && !camp_over_big()) return;   // (a camp over the overland: the party)
+    if (marker_screen() && !(q_overland() && pic_shown) && !camp_over_big()) return;   // (a camp over the overland: the party)
     if (hl()) {
         // (Dark Queen: the party box only - the compass is below it)
         const qview::Box& b = qview::kPartyBox;
@@ -1923,7 +1932,7 @@ void draw_frame(pic::Canvas& c)
     c.clear(0);
     krynn_moons();
     kr_marker_lost();
-    if (marker_overland() && !camp_over_big()) {
+    if (marker_screen() && !camp_over_big()) {
         layout::outer(c, d->tables, d->frame_tiles);
         layout::bar(c, d->tables, d->frame_tiles, 16);
     } else {
@@ -3002,6 +3011,7 @@ void learn_class_spells();
 bool load_game(char slot)
 {
     load_problem = nullptr;
+    kr_town = false;
     cheat_drop();                           // (from the Trainer's party menu: the cheat is over)
     vault_loaded(slot);                     // (Darkness, Gateway: the slot's own vault)
     char name[24];
@@ -5256,7 +5266,9 @@ void draw_camp_screen(pic::Canvas& c)
         if (bigpic >= 0) camp_bigpic = bigpic;
         bigpic = -1;
         draw_frame(c);
-        if (!curse_game()) c.fill(8, 8, 120, 120, 0);      // (Curse's: the view's yellow frame stays round the picture - DOSBox)
+        // (Curse's and Champions': the view's frame stays round the picture - DOSBox; Champions' camp on its
+        // overland, 2026-11-27: the exploring frame, the campfire in the view's box)
+        if (!curse_game() && d->prof->game != games::Game::ChampionsOfKrynn) c.fill(8, 8, 120, 120, 0);
         if (prof_camp_pic()) draw_own_pic(camp_pic());      // (Death Knights: PIC 59 - DOSBox)
         draw_panel(c);
         return;
@@ -14760,6 +14772,8 @@ struct Host : ecl::Host {
             dirty(0, large ? 17 * 8 : 14 * 8);
             return;
         }
+        // (Krynn: a small picture in the overland's mode is an outpost's; the map ends it)
+        if (krynn_rules() && !vm->get(0x4BE6)) kr_town = !(head == 0xFF && id >= big);
         if (head == 0xFF && id >= big && dk_overland()) {
             // Darkness's overland map: with the party's marker, the screen it is
             anim_stop();
@@ -15455,6 +15469,7 @@ bool do_move()
         return true;
     }
     if (kr_overland()) {
+        kr_town = false;                    // (a step: the overland's map, whatever was shown)
         // Champions' overland (GAME.OVR ovl 0x92 +0x8D5): the square before
         // the step in 0x4BF0 / 0x4BF1, eight directions (DS 0x1ED6 / 0x1EDF),
         // held to 0-37 / 0-14, twelve hours a step (clock slot 3), the marker

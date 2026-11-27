@@ -3519,7 +3519,7 @@ const Profile kProfiles[] = {
      .variant = {.program_words = true, .bars = {20, 23, 24, 25, 20, 23, 24, 25},
                  // (appraise_div 2: its gems 5 25 50 250 500 2500 steel, its jewels
                  // half Curse's - GAME.OVR 0x2D4F1 / 0x2D772)
-                 .bigpic_from = 0x70, .appraise_div = 2, .fight_unswapped = true, .party_menu_col = 9, .krynn = true, .shop_words_stay = true,
+                 .bigpic_from = 0x70, .camp_pic = 59, .appraise_div = 2, .fight_unswapped = true, .party_menu_col = 9, .krynn = true, .shop_words_stay = true,
                  .press_words = {0x1A8E, 0x1AB2}, .order_words = {0x26DB3, 0x26DC1, 0x26DCF},
                  .yell_words = {0xB5DE, 0x33FBF},
                  .burst_words = {0x1248C, 0x12496, 0x1299C}, .acid_words = {0x12C0A, 0x1387E},
