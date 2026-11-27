@@ -9733,9 +9733,12 @@ void shop_tap(int x, int y, pic::Canvas& c)
             shop_menu(c);
             break;
         case 'E':
-            // (Pool: "Take: Money Items Exit"'s Exit is back to the treasure's
-            // menu - DOSBox, the alerted goblin guards)
-            if (pool_files() && treasure_on() && strcmp(menu.prompt, tw(profile::kTakeColon)) == 0) {
+            // ("Take: Money Items Exit"'s Exit is back to the treasure's menu -
+            // DOSBox: PoolRad, the alerted goblin guards; Treasures, the old
+            // tower's fight, 2026-11-26. Until v0.221.4 only PoolRad's: the
+            // others left the treasure from there - "There is still treasure
+            // left" - and the PortMaster port's Back with it)
+            if (treasure_on() && menu.prompt[0] && ground->any_money() && ground->n) {
                 shop_menu(c);
                 break;
             }
