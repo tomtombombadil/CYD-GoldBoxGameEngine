@@ -989,7 +989,10 @@ the Project as claude/TODO.md.
       Yartar). Checked: the field, the south way out, the experience (20 a
       member when none leaves, 24 when one of seven does) and all six ending
       pages against DOSBox screenshots.
-- [ ] **The other games' PROGRAM 8** (found 2026-11-17): only Curse and
+- [x] (2026-11-27, the PortMaster session: no other game's scripts call it - sweep `combatif` with OPSCAN=38 lists
+      every PROGRAM n in each game's ECL files: PROGRAM 8 only in PoolRad, Curse and Gateway, whose endings are
+      done; Champions, Knights, Darkness and Treasures never reach it - their endings go by other means, e.g.
+      Treasures' PROGRAM 5.) **The other games' PROGRAM 8** (found 2026-11-17): only Curse and
       PoolRad have an ending in the profile (Secret: none needed - it has no PROGRAM 8, 2026-11-20); Champions, Death Knights,
       Darkness, Treasures run Curse's pages with no words (`won = {}`) and
       then stop the script at the party menu. Each game's handler (Gateway's:
