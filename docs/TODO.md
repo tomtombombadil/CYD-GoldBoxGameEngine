@@ -1058,7 +1058,7 @@ the Project as claude/TODO.md.
         (`kFixPoisonSave`, all but PoolRad, on by default) takes it off the number instead (PHB pp. 15,
         17). behave classes checks both ways. Read in Curse's code only - the other games' sums are
         the engine's earlier readings ("as the games do"); the fix turns whatever the engine added.
-  - [ ] Curse's camp on the travel map (seen 2026-11-19, outside Zhentil Keep): the camp is drawn over the
+  - [x] v0.221.11: Curse's camp on the travel map (seen 2026-11-19, outside Zhentil Keep): the camp is drawn over the
         map with no party list, so View / Drop act on the first member only - the player can't pick anyone
         else there. DOSBox: does the original's travel camp show the party list (as Death Knights' PROGRAM 9
         camp does, v0.210.1)? Then the same for Curse.
@@ -1068,6 +1068,11 @@ the Project as claude/TODO.md.
         list, nothing said. So "nothing happened" is the original's own for an item not readied. Not tried: in a
         fight; whether Mira's was readied.) Curse's hideout leader fight: Mira's unidentified Dust (Dust of Disappearance) - Use in the
         fight left the items list up and nothing happened; what does the original do?
+        2026-11-27, the engine in a fight (playsim, save A's tavern fight, FIGHTOPS View Items Ready Use): readied, Use
+        takes the turn - "MATHEW uses an item", then each member "is invisible" - the dust works there. So Mira's
+        "nothing happened" fits a Dust not readied (as in camp, the original's own). Still not seen: the original's
+        fight (no fight save for DOSBox here). The playsim's fight loop now goes on while a fighter's View is open
+        (it ended there and read the parked 3D view - a crash of the harness only).
 - [x] PoolRad play-through to the end (Tom, 2026-11-16; the Project's
       claude/playthrough_poolrad.md): a new party, the clerk's chain to
       "CONGRATULATIONS! YOUR QUEST IS OVER!" - no engine bug found. Big

@@ -622,7 +622,7 @@ static void run_fight()
             const char* fops = getenv("FIGHTOPS");      // taps while the fight waits: letters, &rr rows; then Quick
             const uint32_t fight_t0 = g_now;            // (the fight's time on the game clock, at its results)
             const uint32_t ftick = getenv("FTICK") ? (uint32_t)atoi(getenv("FTICK")) : 50;     // (FTICK=ms: the fight's tick)
-            for (int k = 0; k < 200000 && (play::screen == play::Screen::Fight || play::screen == play::Screen::SpellList || play::screen == play::Screen::Items); ++k) {
+            for (int k = 0; k < 200000 && (play::screen == play::Screen::Fight || play::screen == play::Screen::SpellList || play::screen == play::Screen::Items || (play::fg && play::screen == play::Screen::View)); ++k) {
                 g_now += ftick;
                 play::tick(g_now, C);
                 if (!play::fg) continue;
