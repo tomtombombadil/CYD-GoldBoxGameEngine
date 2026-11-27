@@ -1,6 +1,6 @@
 # Open tasks (Tom and Claude)
 
-- [x] v0.221.15 (the Dark Queen, the New Aurim palace; DOSBox beside the engine): **a saved game with an NPC didn't
+- [x] v0.221.16 (the Dark Queen, the New Aurim palace; DOSBox beside the engine): **a saved game with an NPC didn't
       load in the original** ("INSERT DISK 2" / "DISK READ ERROR" - Grunschka joined). The original's own join (DOSBox,
       the same save, saved there) writes the NPC's MONCHA number at record 0xBD; the engine's record had no place for it
       on save (now 0xBD = the engine's 0x126) and lost the NPC's race and 0x5E (its whole Ext kept now). Also ADD NPC
