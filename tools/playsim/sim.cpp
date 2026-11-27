@@ -726,7 +726,13 @@ static void run_fight()
                 if (play::fg->st == play::FSt::Aim) {
                     static int aims = 0;
                     if (aims++ < 3) { char t[16]; snprintf(t, 16, "faim%d", aims); shot(t); printf("  [aim: menu %s%s]\n", play::menu.prompt, play::menu.s); }
-                    if (!tap_word('T')) tap_word('E');
+                    // (the aim opens on the fighter itself since v0.221.13: off it with Next, then Target -
+                    // a whole round of Next with nothing to take: Exit)
+                    static int nexts = 0;
+                    const bool on_self = play::fg->ci >= 0 && play::fg->ci < play::fg->n_cand && play::fg->cand[play::fg->ci] == play::fg->cur;
+                    if (nexts > play::fg->n_cand + 1) { nexts = 0; tap_word('E'); }
+                    else if (on_self || !tap_word('T')) { ++nexts; if (!tap_word('N')) { nexts = 0; tap_word('E'); } }
+                    else nexts = 0;
                     continue;
                 }
                 if (play::fg->st == play::FSt::OldAge) {     // (old age's sentences: a key each)

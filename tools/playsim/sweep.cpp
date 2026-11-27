@@ -304,7 +304,25 @@ static bool pump(int max_iter = 400000)
                     printf("  [aim %d: %s%s cand %d (%d of %d) sq %d at %d,%d -> %d,%d spell %02X]\n", tries, menu.prompt, menu.s, ct, fg->ci,
                            fg->n_cand, sq, af.x, af.y, ct >= 0 ? fg->b.f[ct].x : -1, ct >= 0 ? fg->b.f[ct].y : -1, fg->spell);
                 }
+                // (the aim opens on the fighter itself since v0.221.13 - the originals'; the
+                // test's first pick the nearest other, as before)
+                // (the test's first pick the nearest foe when there is one, the nearest other else)
+                const bool shown = !fg->manual && fg->ci >= 0 && fg->ci < fg->n_cand;
+                const bool on_self = shown && fg->cand[fg->ci] == fg->cur;
+                const bool on_own = shown && fg->b.f[fg->cand[fg->ci]].team() == fg->b.f[fg->cur].team();
+                bool foe_shown = false;
+                for (int k = 0; k < fg->n_cand; ++k)
+                    if (fg->b.f[fg->cand[k]].team() != fg->b.f[fg->cur].team()) foe_shown = true;
+                static bool seeking = false;
+                static long aim_key = -1;           // (a new aim: another fighter, spell or round)
+                const long key = (long)fg->cur * 1000000L + (long)fg->spell * 1000L + fg->b.round;
+                const bool fresh = key != aim_key;
+                aim_key = key;
+                if (tries == 1 || fresh) seeking = true;
+                if (seeking && (!on_own || tries > fg->n_cand)) seeking = false;
                 if (tries > 40) tap_word('E');
+                else if (seeking && foe_shown) tap_word('N');
+                else if ((tries == 1 || fresh) && on_self && fg->n_cand > 1) tap_word('N');
                 else if (tries % 3 == 0 || !tap_word('T')) tap_word('N');
                 break;
             }

@@ -4817,9 +4817,9 @@ void start_aim(pic::Canvas& c)
         fg->cand[at] = k;
         dist[at] = sq;
     }
-    fg->ci = fg->n_cand > 1 ? 1 : 0;        // the nearest other than themselves
-    // (Darkness, DOSBox: its aim starts on the fighter itself, "range = 0")
-    if (d->prof->fight.words[profile::kAimDk] && !fg->spell) fg->ci = 0;
+    // The aim starts on the fighter itself, "Range = 0" (DOSBox: Darkness; Curse, 2026-11-27 - a
+    // weapon's Aim and every spell's); the Dark Queen (its own engine, not seen): the nearest other
+    fg->ci = d->prof->game == games::Game::DarkQueenOfKrynn && fg->n_cand > 1 ? 1 : 0;
     fg->manual = false;
     fg->st = FSt::Aim;
     aim_menu(c);
@@ -6504,8 +6504,10 @@ void end_fight(pic::Canvas& c)
     // (Pool: the first member is the selected one after a fight - ovr6
     // +0x1296; the treasure's Detect is then theirs)
     if (pool_files() && pt->count) pt->selected = 0;
-    // Left behind (a flight): the fallen stay
-    if (r == combat::Fled)
+    // Left behind (a flight): the fallen stay - not after a maze fight (Gateway
+    // GAME.OVR 0x7468-0x74E2: a member not running is dropped only while the
+    // script's maze word, 0x4D01, is 0; Ascore's arena keeps its fallen)
+    if (r == combat::Fled && !fg->maze)
         for (int i = pt->count - 1; i >= 0; --i)
             if (pt->m[i].health() != party::Okay && pt->m[i].health() != party::Animated) leave_party(i);
     for (int i = 0; i < pt->count; ++i) rules::recalc(pt->m[i], *names, d->facts);
@@ -6984,9 +6986,10 @@ void begin_targeting(pic::Canvas& c, int sp)
                          fs->does != combat::SpellDoes::Mirror && fs->does != combat::SpellDoes::CureBlind &&
                          (fs->does != combat::SpellDoes::Affect || e.targets == spells::kCombat);
     fg->ci = -1;
-    // (one for their own side starts on the caster - Curse in DOSBox, 2026-11-27:
-    // Bless and the Dust of Disappearance's aim open on the one casting)
-    for (int k = 0; k < fg->n_cand && fg->ci < 0 && !hostile && d->prof->game != games::Game::DarkQueenOfKrynn; ++k)
+    // (the aim opens on the caster, whatever the spell - Curse in DOSBox, 2026-11-27:
+    // Bless, the Dust of Disappearance, Cause Light Wounds and Magic Missile all open on
+    // the one casting; Treasures' weapon Aim lists the fighter first too, v0.211.6)
+    for (int k = 0; k < fg->n_cand && fg->ci < 0 && d->prof->game != games::Game::DarkQueenOfKrynn; ++k)
         if (fg->cand[k] == fg->cur) fg->ci = k;
     for (int k = 0; k < fg->n_cand && fg->ci < 0; ++k)
         if (fg->cand[k] != fg->cur && (!hostile || fg->b.f[fg->cand[k]].team() != fg->b.f[fg->cur].team())) fg->ci = k;
@@ -7089,6 +7092,13 @@ void spell_target(pic::Canvas& c, int t)
         cast_now(c);
         return;
     }
+    // (the next pick starts on the caster again - Curse in DOSBox, 2026-11-27: the Dust's
+    // aim back on Mathew after each Target)
+    for (int k = 0; k < fg->n_cand && d->prof->game != games::Game::DarkQueenOfKrynn; ++k)
+        if (fg->cand[k] == fg->cur) {
+            fg->ci = k;
+            fg->manual = false;
+        }
     aim_menu(c);
 }
 
