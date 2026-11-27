@@ -105,6 +105,47 @@ void piece(pic::Canvas& c, const World& w, int group, int type, int row, int col
             }
 }
 
+} // namespace
+
+uint16_t archways(const World& w)
+{
+    constexpr int kSide = (kCell0 + kCells) * 8;
+    uint8_t* buf = static_cast<uint8_t*>(malloc(2 * kSide * kSide));
+    if (!buf) return 0;
+    uint16_t bits = 0;
+    for (int type = 1; type <= 15; ++type) {
+        if (!w.walls[(type - 1) / kPieces].loaded) continue;
+        // drawn twice, over two backgrounds: a pixel the same in both is drawn, one that differs shows through
+        memset(buf, 0x55, kSide * kSide);
+        memset(buf + kSide * kSide, 0xAA, kSide * kSide);
+        pic::Canvas a{buf, kSide, kSide}, b{buf + kSide * kSide, kSide, kSide};
+        piece(a, w, 6, type, 1, 2);
+        piece(b, w, 6, type, 1, 2);
+        int x0 = kSide, y0 = kSide, x1 = -1, y1 = -1;
+        for (int y = 0; y < kSide; ++y)
+            for (int x = 0; x < kSide; ++x)
+                if (buf[y * kSide + x] == buf[kSide * kSide + y * kSide + x]) {
+                    if (x < x0) x0 = x;
+                    if (x > x1) x1 = x;
+                    if (y < y0) y0 = y;
+                    if (y > y1) y1 = y;
+                }
+        if (x1 < 0 || x1 - x0 < 16 || y1 - y0 < 16) continue;     // (nothing drawn, or a sliver)
+        // the middle: its central 40% across, its lower 60% down
+        const int mx0 = x0 + (x1 - x0) * 3 / 10, mx1 = x0 + (x1 - x0) * 7 / 10;
+        const int my0 = y0 + (y1 - y0) * 4 / 10, my1 = y1;
+        int open = 0, all = 0;
+        for (int y = my0; y <= my1; ++y)
+            for (int x = mx0; x <= mx1; ++x, ++all)
+                open += buf[y * kSide + x] != buf[kSide * kSide + y * kSide + x];
+        if (all && open * 10 >= all * 6) bits |= static_cast<uint16_t>(1u << type);
+    }
+    free(buf);
+    return bits;
+}
+
+namespace {
+
 int left_of(int dir) { return (dir + 6) & 7; }
 int right_of(int dir) { return (dir + 2) & 7; }
 

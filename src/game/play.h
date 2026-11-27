@@ -291,6 +291,9 @@ bool map_walked(int x, int y, int dir);
 // the step - or one the party has walked through. Worked out again after
 // each script's run, when asked while nothing waits.
 bool map_secret(int x, int y, int dir);
+// That side is an archway: passable, its wall's picture see-through in the middle (Tom, 2026-11-27: drawn as an
+// archway, not a door) - the loaded wall sets' pictures, worked out once a map and walls
+bool map_arch(int x, int y, int dir);
 void describe(char* line1, char* line2, int cap);
 
 // ---- The Companion panel's Party and Battle views (CYD_COMPANION_VIEWS;

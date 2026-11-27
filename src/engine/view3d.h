@@ -115,6 +115,12 @@ bool load_walls(dax::ByteSource& src, const dax::Index& idx, int set, uint8_t bl
 // counting as 10 (101, 102, ...: Pool's program).
 int tiles_block(uint8_t walldef_block, int n, int i);
 
+// The wall types that are archways (Tom, 2026-11-27: the Companion's maps drew them as doors): each of types 1-15
+// drawn head-on (near, as piece group 6) from the loaded wall sets - an archway's middle is see-through (a door's
+// and a wall's are drawn). A bit a type (1 << type); 0 when no wall set is loaded. Takes a 112 x 112 canvas on the
+// heap while it works.
+uint16_t archways(const World& w);
+
 bool load_horizon(dax::ByteSource& src, const dax::Index& idx, uint8_t block, World& w);
 
 // Darkness: 8X8D1 block `block` (VGA, 256 tiles) into w's tile sets, in

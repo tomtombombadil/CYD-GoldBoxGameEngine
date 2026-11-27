@@ -141,6 +141,10 @@ struct Data {
     // map_epoch they were worked out at, -1 none)
     uint8_t        secret[geo::kMaxSquares / 2] = {};
     int            secret_at = -1;
+    // The archways' wall types (view3d::archways), for map_arch: worked out again for another map or other walls
+    uint16_t       arch = 0;
+    int            arch_at = -1;
+    uint32_t       arch_sig = 0;
     ecl::GameState& gs;
     dax::Index     idx;
     uint8_t        sky[16] = {};
@@ -21692,6 +21696,27 @@ bool map_secret(int x, int y, int dir)
         vm->wait() == ecl::Wait::None)
         secrets_work_out();
     return d->secret[i / 2] >> ((i & 1) * 4 + ((dir & 6) >> 1)) & 1;
+}
+
+// A side of the 3D map that is an archway (Tom, 2026-11-27: the Companion's maps drew them as doors): passable,
+// its wall type's picture see-through in the middle (view3d::archways - the loaded wall sets' pictures)
+bool map_arch(int x, int y, int dir)
+{
+    if (peek_on() || !d || !d->map.loaded || pool_overland() || map() != &d->map) return false;
+    const int w = d->map.w ? d->map.w : geo::kSize, h = d->map.h ? d->map.h : geo::kSize;
+    if (x < 0 || y < 0 || x >= w || y >= h) return false;
+    const int t = geo::wall(d->map, x, y, dir);
+    if (!t || geo::door(d->map, x, y, dir) == 0) return false;
+    // (the walls the view has now: loaded later than the map, swapped by a script - worked out again then)
+    uint32_t sig = 1;
+    for (const view3d::WallSet& ws : d->world.walls)
+        sig = sig * 31u + (ws.loaded ? 1u + ws.id[0][60] + ws.id[2][60] * 7u + ws.id[4][62] * 13u + ws.id[1][100] * 17u : 0u);
+    if (d->arch_at != map_epoch || d->arch_sig != sig) {
+        d->arch = view3d::archways(d->world);
+        d->arch_at = map_epoch;
+        d->arch_sig = sig;
+    }
+    return d->arch >> t & 1;
 }
 
 bool map_walked(int x, int y, int dir)

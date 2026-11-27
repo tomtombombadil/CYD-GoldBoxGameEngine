@@ -3559,6 +3559,12 @@ the game's Settings (As Original: all of them).
   ballista nests (7,3 / 8,3 / 9,3, 3,4 / 3,5, 4,1: "A RUINED BALLISTA
   LIES HERE."), which the walkthrough draws as solid, and 6,1 S / 5,1 N,
   which it draws as a wall / a door (all walked through in DOSBox).
+  v0.222.2 (Tom, 2026-11-27: the Companion's maps drew archways as doors): **archways** - a passable side whose
+  wall type's picture is see-through in its middle (`view3d::archways`: each type drawn head-on, near, over two
+  backgrounds - the central 40% across, lower 60% down, at least 60% showing through) is drawn as an opening, the
+  wall line's middle half away (`play::map_arch`; the board's map, the port's Companion). Found by comparing the
+  cluebooks (tools/cluebook): Curse's Yulash types 1 and 13, Champions' map 80 type 2 - stone and brick arches;
+  stairs and portcullises are not (drawn dark / barred, not see-through).
 - **Secret's outdoor fights** (v0.210.0): Secret has no terrain table
   (our facts); the engine read its flags from leftover memory, so its
   outdoor fields varied with what was there before (found by the toggle

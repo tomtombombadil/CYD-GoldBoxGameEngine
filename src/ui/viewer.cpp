@@ -2925,11 +2925,12 @@ struct MapSource {
     bool teleport;      // a tap on a square moves the party there (Walk Test)
     bool (*place)(int, int);    // a place on that square (null: none)
     bool (*walked)(int, int, int);  // that side is a secret door (play::map_secret; null: none)
+    bool (*arch)(int, int, int) = nullptr;     // that side is an archway (play::map_arch; null: none)
 };
 bool walk_any_side(int, int, int) { return true; }    // (the Walk Test: every secret door shown, as before)
 const MapSource kWalkMap{walk::map, walk::pos_x, walk::pos_y, walk::dir, walk::describe, true, nullptr, walk_any_side};
 const MapSource kPlayMap{play::map, play::pos_x, play::pos_y, play::dir, play::describe, false, play::map_place,
-                         play::map_secret};
+                         play::map_secret, play::map_arch};
 
 // Any place on the map now shown (the legend's "Place")
 bool map_has_places(const MapSource& ms)
@@ -3036,6 +3037,13 @@ void draw_map_grid(lgfx::LovyanGFX& g, const geo::Map& map, const MapSource& ms,
                     if (across) g.drawFastHLine(lx, ly, cell + 1, style::kText);
                     else g.drawFastVLine(lx, ly, cell + 1, style::kText);
                     if (!door) continue;
+                    if (ms.arch && ms.arch(x, y, d)) {
+                        // An archway (Tom, 2026-11-27): an opening in the wall line - its middle half away
+                        const int q = cell / 4;
+                        if (across) clip_fill(lx + q, ly, cell - 2 * q + 1, 1, style::kBackground);
+                        else clip_fill(lx, ly + q, 1, cell - 2 * q + 1, style::kBackground);
+                        continue;
+                    }
                     if (door == 1 && (plain >> w & 1)) {
                         // Drawn as the area's wall: a secret door only where the square's step script lets
                         // the party through (play::map_secret - the kobold caves' rock, Tom 2026-11-22)
