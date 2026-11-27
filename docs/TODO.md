@@ -1,5 +1,14 @@
 # Open tasks (Tom and Claude)
 
+- [x] v0.221.8 (the Dark Queen, Kristophan - Eshalla's cloak; DOSBox beside the engine): **a script's treasure
+      was lost** - TREASURE's items read Darkness's ITEM0.DAX rows, which the Queen hasn't: now ITEM.DAT's row n - 1
+      (`q_treasure_row`); and **the treasure menu was "Exit" alone after every fight and reward** (its View Take Pool
+      / Take: / items words were Darkness's only - now the Queen's own, `dk_ui()`): every Queen treasure so far
+      could not be taken. Also as the original: the chest picture (PIC 129) over the view and the place box empty;
+      the reward page's words (the experience, then "the party has found treasure" on row 10), its marble frame
+      and box, "Press [Return] to continue." (was a blank line); the item list in the same frame; a member who may
+      train magenta in the party list. Checked palette entry by entry against DOSBox: the treasure screen, the
+      reward page and the item list differ only in the engine's highlight.
 - [x] v0.221.5 (the Dark Queen play-through, the Luminari lighthouse; DOSBox beside the engine on the same
       save): (1) **a door drawn alone** - a door side (piece 3 of a wall set, door bits set) is a part placed in
       the slot, and the original draws it over the set's plain wall; drawn alone the corridor showed round the

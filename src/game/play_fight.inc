@@ -1683,8 +1683,26 @@ void end_fight_art()
 // ---- Drawing
 // The results' "press <enter>/<return> to continue" (Gateway's lit as a
 // menu's one choice - DOSBox)
+// A fight's / a treasure's page of words: the games' outer frame; the Dark Queen's marble bars and its box from
+// 8 to 183 (DOSBox: Eshalla's reward - "each character receives", "the party has found treasure"; its item list)
+void result_frame(pic::Canvas& c)
+{
+    if (hl()) {
+        q_draw_frame(c, false);
+        q_pm_box(c, 183);
+        dirty(0, pic::kScreenH);
+        return;
+    }
+    c.clear(0);
+    layout::outer(c, d->tables, d->frame_tiles);
+}
+
 void press_enter_line(pic::Canvas& c)
 {
+    if (hl()) {
+        press_line(c, 15);              // (its "Press [Return] to continue." - the engine's line was empty)
+        return;
+    }
     clear_menu_line(c);
     if (gateway()) {
         const char* t = fw(profile::kPressEnter);
@@ -6495,8 +6513,7 @@ void end_fight(pic::Canvas& c)
     fight_clear_monsters();
     palette_fight(false);
     // The result screen
-    c.clear(0);
-    layout::outer(c, d->tables, d->frame_tiles);
+    result_frame(c);
     if (arena) {
         // "You have won the duel." / "You have lost the duel." (Curse: "...
         // the fight.", its result word 0x80; fled: "The party has fled."),
@@ -6537,8 +6554,7 @@ void end_fight(pic::Canvas& c)
 // A fight's "The party has won!" ... "experience points." page
 void results_page(pic::Canvas& c)
 {
-    c.clear(0);
-    layout::outer(c, d->tables, d->frame_tiles);
+    result_frame(c);
     put(c, fw(fg->res_word), 1, 3, 10);
     char t[48];
     if (!no_exp_lines()) {
@@ -6583,8 +6599,7 @@ bool npc_share_page(pic::Canvas& c)
         any = true;
     }
     if (!any) return false;
-    c.clear(0);
-    layout::outer(c, d->tables, d->frame_tiles);
+    result_frame(c);
     int row = 0;
     for (int i = 0; i < pt->count; ++i) {
         const uint8_t* r = pt->m[i].rec;
@@ -6699,9 +6714,21 @@ void fight_treasure_only(pic::Canvas& c)
 // The treasure's "The party has found Treasure!" page (no fight)
 void treasure_page(pic::Canvas& c)
 {
-    c.clear(0);
-    layout::outer(c, d->tables, d->frame_tiles);
+    result_frame(c);
     char t[48];
+    if (hl()) {
+        // (the Dark Queen: the experience first, then "the party has found treasure" on row 10 - DOSBox)
+        if (!no_exp_lines()) {
+            snprintf(t, sizeof t, "%s%d", fw(profile::kEachReceives), fg->share);
+            put(c, t, 1, 5, 10);
+            put(c, fw(profile::kExpPoints), 1, 7, 10);
+        }
+        put(c, fw(profile::kFoundTreasure), 1, 10, 10);
+        press_enter_line(c);
+        fg->st = FSt::Results;
+        dirty(0, pic::kScreenH);
+        return;
+    }
     if (fw(profile::kFoundTreasure2)[0]) {
         // Secret: the experience first, "The party has found " "treasure!" under it
         snprintf(t, sizeof t, "%s%s", fw(profile::kFoundTreasure), fw(profile::kFoundTreasure2));
@@ -8077,7 +8104,7 @@ void treasure_take(pic::Canvas& c)
         char prompt[12], words[24];
         snprintf(prompt, sizeof prompt, "%s", tw(profile::kTakeColon));
         snprintf(words, sizeof words, "%s", tw(profile::kMoneyItems));
-        if (darkness_files()) {
+        if (dk_ui()) {
             sw(profile::kDkTakeColon, prompt, sizeof prompt);
             sw(profile::kDkMoneyItems, words, sizeof words);
         }
@@ -8093,8 +8120,7 @@ void treasure_take(pic::Canvas& c)
 
 void draw_loot(pic::Canvas& c)
 {
-    c.clear(0);
-    layout::outer(c, d->tables, d->frame_tiles);
+    result_frame(c);
     plist.row0 = 1;
     plist.row1 = 22;
     plist.col0 = 1;
@@ -8109,7 +8135,7 @@ void draw_loot(pic::Canvas& c)
     char prompt[12], what[8];
     snprintf(prompt, sizeof prompt, "%s", tw(profile::kItemsColon));
     snprintf(what, sizeof what, "%s", tw(profile::kTakeW));
-    if (darkness_files()) {
+    if (dk_ui()) {
         snprintf(prompt, sizeof prompt, "%s", d->w_items);         // ("items : " "Take")
         sw(profile::kDkTakeKey, what, sizeof what);
     }
@@ -8173,7 +8199,7 @@ void treasure_menu(pic::Canvas& c)
 {
     char words[48];
     char a[40], b2[16];
-    if (darkness_files()) {
+    if (dk_ui()) {
         // Darkness (facts_shops.md 4, 5): one string each - the treasure's
         // "View Take Pool Share Detect Exit" (Take with something there,
         // Share with coins, Detect with Detect Magic memorized), the vault's
@@ -8285,6 +8311,7 @@ void open_treasure(pic::Canvas& c)
         c.fill(17 * 8, 15 * 8, 22 * 8, 8, 0);       // (Gateway's treasure: no place and time - DOSBox; Pool's too)
         dirty_rows(15, 15);
     }
+    if (hl() && !vault) q_place_blank(c);     // (the Dark Queen's: the place box empty - DOSBox)
     treasure_menu(c);
 }
 

@@ -970,6 +970,24 @@ __attribute__((noinline)) void q_shop_items(int n, items::Ground& g)
     plat::log("[play] SHOP %d: %d items\n", n, g.n);
 }
 
+// TREASURE's item n (a script's reward - Eshalla's cloak in Kristophan): ITEM.DAT's row n - 1 as the shops'
+// numbers; 0 none. The engine had no Queen rows here: every item a script set out was lost and the treasure
+// step never came (DOSBox: her cloak's Take screen)
+__attribute__((noinline)) void q_treasure_row(int n, items::Ground& g)
+{
+    if (n < 1 || g.n >= items::kMaxGround) return;
+    plat::File f;
+    if (!open_hl("ITEM.DAT", f)) return;
+    uint8_t row[17];
+    {
+        plat::FileSource src(f);
+        if (src.read_at(static_cast<uint32_t>(n - 1) * 17, row, sizeof row) != sizeof row) row[0] = 0xFF;
+    }
+    f.close();
+    if (row[0] == 0xFF) return;
+    party::queen_item_in(row, g.item[g.n++]);
+}
+
 // ---- Its icon picker (Alter's Icon, creation's icon step; queen_facts_5.md
 // 15, DOSBox): CBODY.TLB's 49 pictures 0-48 (the record's icon byte 0x142;
 // + 128 the attack frame) in a 7 x 7 grid of raised cells, 24 x 24 from 8, 8 -

@@ -4622,6 +4622,9 @@ const Profile kProfiles[] = {
                .ids = {0, 0, 3, 10, 7, 6, 10, 8, 9, 10, 11, 12, 13, 0, 0, 0}, .quiet_turns = true, .to_block = -3,
                .glb = true},
      .variant = {.bigpic_from = 0xF0,                // (Play on since darkqueen5)
+                 // (the treasure: PIC 129, the chest - DOSBox, Eshalla's cloak in Kristophan: every pixel of the
+                 // view against the engine's PIC ids 5-150)
+                 .treasure_pic = 129,
                  // (the camp: PIC 128 in the view - its picture routine's mode 2, 0xB6F6)
                  .camp_pic = 128,
                  // (its Appraise, DQK.EXE 0x49D87 / 0x4A03C - their case tables:

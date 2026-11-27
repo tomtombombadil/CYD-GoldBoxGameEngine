@@ -53,6 +53,7 @@ bool make_room(unsigned kb, const char* what);   // (below: drops what reads aga
 void tidy_memory();
 bool fighting();                                 // (below: a fight is on)
 int font_wanted();                               // (below: the letters the text is in)
+uint8_t ready_bits(int i);                       // (below: the classes a member may train - the Party view's)
 
 namespace {
 
@@ -1731,6 +1732,14 @@ bool dk_overland();
 void krynn_moons(pic::Canvas* c = nullptr);
 bool dkk();
 bool krynn_rules();
+// (the Dark Queen's treasure screen: its place box empty - DOSBox, Eshalla's cloak)
+void q_place_blank(pic::Canvas& c)
+{
+    const qview::Box& b = qview::kPlaceBox;
+    c.fill(b.x, b.y, b.w, b.h, 0);
+    dirty_rows(12, 16);
+}
+
 bool pos_kept = false;      // (the status line left as it was - Then::NewFirst)
 void draw_position(pic::Canvas& c)
 {
@@ -1820,7 +1829,8 @@ void draw_party(pic::Canvas& c, int col, bool mark_sel = true, bool box = false)
         char t[24];
         ch.name(t, sizeof t);
         const bool sel = i == pt->selected && mark_sel;
-        const uint8_t fg = q && sel ? 11 : sel ? 15 : !ch.in_combat() ? 12 : ch.enemy() ? 14 : q ? 7 : gw_trainable(ch) ? 13 : 11;
+        // (the Dark Queen: a member who may train magenta - DOSBox, after Eshalla's reward Molly, Kal and Sirrion)
+        const uint8_t fg = q && sel ? 11 : sel ? 15 : !ch.in_combat() ? 12 : ch.enemy() ? 14 : q ? (ready_bits(i) ? 13 : 7) : gw_trainable(ch) ? 13 : 11;
         if (sel && box) hl_text(c, t, col, row);
         else put(c, t, col, row, fg);
         const int ac = ch.ac_raw();
@@ -8201,6 +8211,7 @@ void draw_shop(pic::Canvas& c)
         c.fill(17 * 8, 15 * 8, 22 * 8, 8, 0);       // (Gateway's treasure: no place and time - DOSBox)
         dirty_rows(15, 15);
     }
+    if (hl() && treasure_on() && !vault_on()) q_place_blank(c);
     shop_menu(c);
 }
 
@@ -14325,6 +14336,7 @@ bool program_ds(uint16_t ds, uint8_t* out, size_t n)
 }
 
 void q_shop_items(int n, items::Ground& g);
+void q_treasure_row(int n, items::Ground& g);
 __attribute__((noinline)) void dk_add_rows(const uint8_t* rows, int n, bool identify, items::Ground& g)
 {
     const auto& pi = d->prof->items;
@@ -14892,7 +14904,8 @@ struct Host : ecl::Host {
     void item_row(int row, items::Ground& g) override
     {
         const uint8_t r = static_cast<uint8_t>(row);
-        dk_add_rows(&r, 1, false, g);
+        if (hl()) q_treasure_row(r, g);
+        else dk_add_rows(&r, 1, false, g);
     }
     void load_items(int block, items::Ground& g) override
     {
