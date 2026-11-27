@@ -26,7 +26,9 @@ for i in $(seq 1 ${ITER:-30}); do
   # (a script's PROGRAM 9 camp - Tas's "DO YOU REST?": Exit, and the story goes on; 2026-11-23, a save there
   # left the party at the citadel's default square with the story skipped)
   elif echo "$st" | grep -q "screen 7 .*wait 14 "; then T="$T/E"
-  elif echo "$st" | grep -q "screen 5 \|screen 25 "; then T="$T/E"
+  # (a treasure menu the auto run left: whatever is still there is said, never left silently - 2026-11-27,
+  # the Dark Queen's menu had no Take and every treasure was exited unseen)
+  elif echo "$st" | grep -q "screen 5 \|screen 25 "; then echo "!! treasure left: $st" | tee -a $P/story.log >&2; T="$T/E"
   elif echo "$st" | grep -q "|Move Aim\|Aim Use"; then :
   elif [ -n "$PICK" ] && w=$(echo "$st" | sed -E 's/.*menu \[[^|]*\|([^]]*)\].*/\1/') && k=$(for c in $(echo "$PICK" | tr ',' ' '); do echo "$w" | grep -qw "$c" && { echo "$c"; break; }; done) && [ -n "$k" ]; then T="$T/${k:0:1}"
   else break; fi
