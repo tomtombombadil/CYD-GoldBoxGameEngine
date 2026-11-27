@@ -6,6 +6,7 @@
 #include <cstring>
 #include <strings.h>
 
+#include "game/game_find.h"
 #include "hal/sdcard.h"
 
 namespace library {
@@ -27,16 +28,6 @@ const char* base_name(const char* path)
 {
     const char* s = strrchr(path, '/');
     return s ? s + 1 : path;
-}
-
-int count_dax(fs::File& dir)
-{
-    int n = 0;
-    for (fs::File f = dir.openNextFile(); f; f = dir.openNextFile()) {
-        if (!f.isDirectory() && is_dax(base_name(f.name()))) ++n;
-        f.close();
-    }
-    return n;
 }
 
 // How good a file is as the game's icon: 3 goggame-*.ico, 2 goggame-*.dll,
@@ -110,84 +101,6 @@ void say(Progress p, void* ctx, bool replace, const char* fmt, ...)
     if (p) p(line, replace, ctx);
 }
 
-// .TLB / .GLB files in dir and up to `depth` folders below it
-int count_hlib(fs::File& dir, int depth)
-{
-    int n = 0;
-    for (fs::File f = dir.openNextFile(); f; f = dir.openNextFile()) {
-        if (f.isDirectory()) {
-            if (depth > 0) n += count_hlib(f, depth - 1);
-        } else if (is_hlib(base_name(f.name()))) {
-            ++n;
-        }
-        f.close();
-    }
-    return n;
-}
-
-// The first folder exactly `depth` levels below /GOLDBOX/<rel> (0: rel
-// itself) holding .DAX files: its path relative to /GOLDBOX into out, and
-// how many. The subfolders' names are read first and the listing closed
-// before going down (the card has 4 file slots).
-int dax_at_depth(fs::FS& fs, const char* rel, int depth, char* out, size_t cap)
-{
-    char path[160];
-    snprintf(path, sizeof path, "%s/%s", games::kRootDir, rel);
-    fs::File dir = fs.open(path);
-    if (!dir || !dir.isDirectory()) return 0;
-    if (depth == 0) {
-        const int n = count_dax(dir);
-        dir.close();
-        if (n > 0) strlcpy(out, rel, cap);
-        return n;
-    }
-    char names[16][40];
-    int k = 0;
-    for (fs::File f = dir.openNextFile(); f; f = dir.openNextFile()) {
-        if (f.isDirectory() && k < 16) strlcpy(names[k++], base_name(f.name()), sizeof names[0]);
-        f.close();
-    }
-    dir.close();
-    for (int i = 0; i < k; ++i) {
-        char sub[96];
-        if (snprintf(sub, sizeof sub, "%s/%s", rel, names[i]) >= static_cast<int>(sizeof sub)) continue;
-        const int n = dax_at_depth(fs, sub, depth - 1, out, cap);
-        if (n > 0) return n;
-    }
-    return 0;
-}
-
-// The HLIB games keep their files in DISK1-3: the first folder up to
-// `depth` levels below /GOLDBOX/<rel> (0: rel itself) holding a DISK1
-// folder, relative to /GOLDBOX, into out (GOG: the game's folder; the SNEG
-// release: <folder>/GAME/DQK)
-bool disk_root(fs::FS& fs, const char* rel, int depth, char* out, size_t cap)
-{
-    char path[160];
-    snprintf(path, sizeof path, "%s/%s/DISK1", games::kRootDir, rel);
-    if (fs.exists(path)) {
-        strlcpy(out, rel, cap);
-        return true;
-    }
-    if (depth == 0) return false;
-    snprintf(path, sizeof path, "%s/%s", games::kRootDir, rel);
-    fs::File dir = fs.open(path);
-    if (!dir || !dir.isDirectory()) return false;
-    char names[16][40];
-    int k = 0;
-    for (fs::File f = dir.openNextFile(); f; f = dir.openNextFile()) {
-        if (f.isDirectory() && k < 16) strlcpy(names[k++], base_name(f.name()), sizeof names[0]);
-        f.close();
-    }
-    dir.close();
-    for (int i = 0; i < k; ++i) {
-        char sub[96];
-        if (snprintf(sub, sizeof sub, "%s/%s", rel, names[i]) >= static_cast<int>(sizeof sub)) continue;
-        if (disk_root(fs, sub, depth - 1, out, cap)) return true;
-    }
-    return false;
-}
-
 } // namespace
 
 ScanResult scan(GameDir* out, int max, int* n, Progress progress, void* ctx)
@@ -206,39 +119,27 @@ ScanResult scan(GameDir* out, int max, int* n, Progress progress, void* ctx)
     }
 
     for (fs::File d = root.openNextFile(); d && *n < max; d = root.openNextFile()) {
-        if (d.isDirectory() && strcasecmp(base_name(d.name()), kCacheDir) != 0 &&
-            strcasecmp(base_name(d.name()), "Launcher") != 0) {     // (the SNEG Launcher: its box art, below)
+        if (d.isDirectory() && !game_find::passed_over(base_name(d.name()))) {
+            // (the Launcher's box art: below)
             say(progress, ctx, false, "Looking in %s...", base_name(d.name()));
             GameDir& g = out[*n];
             strlcpy(g.folder, base_name(d.name()), sizeof g.folder);
-            strlcpy(g.data_dir, g.folder, sizeof g.data_dir);
-            int dax = count_dax(d);
-            // A whole install copied as it is: the game files may sit one
-            // folder down (GOG: next to DOSBox's own folder) or two (the
-            // Steam / SNEG releases: <folder>/GAME/<SHORT> - Tom, 2026-10-10);
-            // the shallowest folder with them wins
-            for (int depth = 1; dax == 0 && depth <= 2; ++depth)
-                dax = dax_at_depth(fs, g.folder, depth, g.data_dir, sizeof g.data_dir);
-            g.format = Format::Dax;
-            if (dax == 0) {
-                char path[96];
-                snprintf(path, sizeof path, "%s/%s", games::kRootDir, g.folder);
-                fs::File again = fs.open(path);
-                if (again && again.isDirectory()) dax = count_hlib(again, 3);   // (SNEG: GAME/<SHORT>/DISK1-3)
-                if (again) again.close();
-                g.format = Format::Hlib;
-                if (dax > 0) disk_root(fs, g.folder, 2, g.data_dir, sizeof g.data_dir);   // (where DISK1-3 are)
+            // Where its game files are: game/game_find.h (the port's scan
+            // uses the same rules)
+            game_find::Found fd;
+            const game_find::Look lk = game_find::look(g.folder, fd);
+            strlcpy(g.data_dir, fd.data_dir, sizeof g.data_dir);
+            g.format = fd.hlib ? Format::Hlib : Format::Dax;
+            const int dax = fd.files;
+            if (lk == game_find::Look::NotOurs) {
+                // (Tom, 2026-10-24: not part of this engine on any board -
+                // its folder on the card is passed over)
+                say(progress, ctx, true, "Unlimited Adventures isn't part of this engine - passed over");
+                d.close();
+                continue;
             }
             if (dax > 0) {
-                g.game = games::from_folder_name(g.folder);
-                if (g.game == games::Game::Unknown && strcmp(g.data_dir, g.folder) != 0)
-                    g.game = games::from_folder_name(base_name(g.data_dir));    // (.../GAME/CURSE)
-                if (g.game == games::Game::UnlimitedAdventures) {
-                    // (Tom, 2026-10-24: not part of this engine on any board -
-                    // its folder on the card is passed over)
-                    say(progress, ctx, true, "Unlimited Adventures isn't part of this engine - passed over");
-                    continue;
-                }
+                g.game = fd.game;
                 g.dax_files = dax;
                 g.icon[0] = 0;
                 g.journal[0] = 0;

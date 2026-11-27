@@ -2,6 +2,7 @@
 // and writes, as the board's card gives them. CI builds it with
 //   g++ -std=c++17 -Wall -Werror -fsanitize=address,undefined -Itools/host -Isrc
 //       -o test_platform tools/host_tests/test_platform.cpp tools/host/*.cpp src/engine/dax.cpp
+#include "game/game_find.h"
 #include "game/tidy.h"
 #include "host.h"
 #include "platform/file.h"
@@ -201,6 +202,44 @@ int main()
             for (; *l; ++l) plat::remove((std::string(games::kRootDir) + "/" + *l).c_str());
         const std::string rm = "rm -rf '" + std::string(root) + "/Pools of Darkness' '" + std::string(root) +
                                "/The Dark Queen of Krynn' '" + std::string(root) + "/Launcher'";
+        CHECK(system(rm.c_str()) == 0);
+    }
+    // Where a folder's game is (game/game_find.h, the boards' and the
+    // port's scan): GOG, Steam's GAME/<SHORT>, the Dark Queen's DISK1-3,
+    // Unlimited Adventures passed over, a folder with none
+    {
+        auto put = [&](const std::string& rel) {
+            std::string path = std::string(games::kRootDir) + "/" + rel;
+            for (size_t k = strlen(games::kRootDir) + 1; (k = path.find('/', k)) != std::string::npos; ++k)
+                plat::mkdir(path.substr(0, k).c_str());
+            plat::File f = plat::open(path.c_str(), "w");
+            f.close();
+        };
+        for (const char* f : {"Curse of the Azure Bonds/ECL1.DAX", "Curse of the Azure Bonds/GEO1.DAX",
+                              "Curse of the Azure Bonds/DOSBOX/x.txt", "CURSE/GAME/CURSE/ECL1.DAX",
+                              "CURSE/GAME/CURSE/SAVE/a.sav", "CURSE/Documentation/j.pdf", "CURSE/GBC/Games/02. Curse/Game.dat",
+                              "Disk Set/GAME/DQK/DISK1/CPIC.TLB", "Disk Set/GAME/DQK/DISK2/MONCHA.GLB",
+                              "Disk Set/GAME/DQK/DISK3/x.TLB", "Disk Set/GAME/DQK/DQK.EXE", "Unlimited Adventures/DISK1/A.TLB",
+                              "Odd/a/ZZ.DAX", "Odd/b/ZZ.DAX", "Odd/b/YY.DAX", "Nothing/readme.txt"})
+            put(f);
+        game_find::Found f;
+        CHECK(game_find::look("Curse of the Azure Bonds", f) == game_find::Look::Game && !f.hlib && f.files == 2 &&
+              strcmp(f.data_dir, "Curse of the Azure Bonds") == 0 && f.game == games::Game::CurseOfTheAzureBonds);
+        CHECK(game_find::look("CURSE", f) == game_find::Look::Game && f.files == 1 &&
+              strcmp(f.data_dir, "CURSE/GAME/CURSE") == 0 && f.game == games::Game::CurseOfTheAzureBonds);
+        CHECK(game_find::look("Disk Set", f) == game_find::Look::Game && f.hlib && f.files == 3 &&
+              strcmp(f.data_dir, "Disk Set/GAME/DQK") == 0 && f.game == games::Game::DarkQueenOfKrynn);
+        CHECK(game_find::look("Unlimited Adventures", f) == game_find::Look::NotOurs);
+        CHECK(game_find::look("Odd", f) == game_find::Look::Game && f.files == 1 && strcmp(f.data_dir, "Odd/a") == 0 &&
+              f.game == games::Game::Unknown);          // (the first by name)
+        CHECK(game_find::look("Nothing", f) == game_find::Look::NoGame);
+        CHECK(game_find::look("Not there", f) == game_find::Look::NoGame);
+        CHECK(pc::open_files() == 0);
+        CHECK(game_find::passed_over("_cyd") && game_find::passed_over("Launcher") && game_find::passed_over("GBC") &&
+              !game_find::passed_over("CURSE"));
+        const std::string rm = "rm -rf '" + std::string(root) + "/Curse of the Azure Bonds' '" + std::string(root) +
+                               "/CURSE' '" + std::string(root) + "/Disk Set' '" + std::string(root) +
+                               "/Unlimited Adventures' '" + std::string(root) + "/Odd' '" + std::string(root) + "/Nothing'";
         CHECK(system(rm.c_str()) == 0);
     }
     // (tidy up)
