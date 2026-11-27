@@ -2912,6 +2912,8 @@ void draw_map_legend(lgfx::LovyanGFX& g, int x, int y, bool places = false)
     g.drawString("Locked", x, y);
     g.setTextColor(style::kCyan);
     g.drawString("Secret", x + 8 * 6, y);
+    g.setTextColor(style::kGold);
+    g.drawString("One-way", x + 16 * 6, y);
 }
 int comp_map_x() { return pic::kScreenW + (ui::width() - pic::kScreenW - kCompCell * geo::kSize) / 2; }
 
@@ -3001,8 +3003,9 @@ void draw_companion(const MapSource& ms = kWalkMap)
 
 // The map's walls and doors, the party a triangle pointing the way it faces.
 // Black behind (Tom, 2026-10-10: the best contrast); walls a pixel wide,
-// doors a 3-pixel band on the wall line a pixel short at each end, so the
-// wall shows there (Tom, v0.84.0: a door in a wall); drawn after the walls
+// doors a 3-pixel band on the wall line a quarter short at each end, so the
+// wall shows there (Tom, v0.84.0 / 2026-11-27: a door in a wall; a one-way
+// door half of one and an arrow, an archway an opening with serifs); drawn after the walls
 // so a neighbour's wall doesn't cover them. A secret door (a passage drawn
 // as the area's ordinary wall - the data has no mark of its own; SPEC 12)
 // is the maps' S on the wall line. The party: bright green (Tom).
@@ -3037,29 +3040,76 @@ void draw_map_grid(lgfx::LovyanGFX& g, const geo::Map& map, const MapSource& ms,
                     if (across) g.drawFastHLine(lx, ly, cell + 1, style::kText);
                     else g.drawFastVLine(lx, ly, cell + 1, style::kText);
                     if (!door) continue;
+                    // (the map look, Tom 2026-11-27: every door leaves a little wall at each end)
+                    const int q = cell / 4, n = cell - 2 * q + 1;
                     if (ms.arch && ms.arch(x, y, d)) {
-                        // An archway (Tom, 2026-11-27): an opening in the wall line - its middle half away
-                        const int q = cell / 4;
-                        if (across) clip_fill(lx + q, ly, cell - 2 * q + 1, 1, style::kBackground);
-                        else clip_fill(lx, ly + q, 1, cell - 2 * q + 1, style::kBackground);
+                        // An archway (Tom, 2026-11-27): an opening in the wall line, a serif across the line
+                        // where each piece of wall ends, a pixel of wall clear of the corner; too small for that,
+                        // a plain opening
+                        const int a = (cell + 3) / 4, gap = cell - 2 * a + 1;
+                        if (a < 3 || gap < 2) {
+                            if (across) clip_fill(lx + q, ly, n, 1, style::kBackground);
+                            else clip_fill(lx, ly + q, 1, n, style::kBackground);
+                        } else if (across) {
+                            clip_fill(lx + a, ly, gap, 1, style::kBackground);
+                            clip_fill(lx + a - 1, ly - 1, 1, 3, style::kText);
+                            clip_fill(lx + a + gap, ly - 1, 1, 3, style::kText);
+                        } else {
+                            clip_fill(lx, ly + a, 1, gap, style::kBackground);
+                            clip_fill(lx - 1, ly + a - 1, 3, 1, style::kText);
+                            clip_fill(lx - 1, ly + a + gap, 3, 1, style::kText);
+                        }
                         continue;
                     }
+                    // A one-way door (Tom, 2026-11-27): passable from this square, the same wall solid from the
+                    // next - half a door on this side, an arrow into the next square pointing away from the wall
+                    const int nx = x + geo::dx(d), ny = y + geo::dy(d), back = (d + 4) & 7;
+                    const bool oneway = nx >= 0 && ny >= 0 && nx < geo::kSize && ny < geo::kSize &&
+                                        geo::wall(*m, nx, ny, back) && !geo::door(*m, nx, ny, back);
+                    const int here = d == 0 || d == 6 ? 1 : -1;     // (this square below / right of the line: +1)
+                    auto arrow = [&]() {
+                        if (!oneway || cell < 7) return;
+                        const int len = cell / 2 > 3 ? cell / 2 : 3, mid = cell / 2, out = -here;
+                        for (int k = 0; k < len; ++k) {
+                            const int t = 2 + k;
+                            if (across) clip_fill(lx + mid, ly + out * t, 1, 1, style::kGold);
+                            else clip_fill(lx + out * t, ly + mid, 1, 1, style::kGold);
+                        }
+                        for (int k = 1; k <= 2; ++k) {
+                            const int t = 1 + len - k;
+                            if (across) {
+                                clip_fill(lx + mid - k, ly + out * t, 1, 1, style::kGold);
+                                clip_fill(lx + mid + k, ly + out * t, 1, 1, style::kGold);
+                            } else {
+                                clip_fill(lx + out * t, ly + mid - k, 1, 1, style::kGold);
+                                clip_fill(lx + out * t, ly + mid + k, 1, 1, style::kGold);
+                            }
+                        }
+                    };
                     if (door == 1 && (plain >> w & 1)) {
                         // Drawn as the area's wall: a secret door only where the square's step script lets
                         // the party through (play::map_secret - the kobold caves' rock, Tom 2026-11-22)
                         if (!ms.walked || !ms.walked(x, y, d)) continue;
-                        // A secret door: the S across the middle of the line
-                        const int ox = across ? lx + cell / 2 - 2 : lx - 2;
-                        const int oy = across ? ly - 3 : ly + cell / 2 - 3;
+                        // A secret door: the S across the middle of the line, turned on a wall running up
+                        // and down (Tom, 2026-11-27)
                         for (int r = 0; r < 7; ++r)
                             for (int c = 0; c < 5; ++c)
-                                if (kSecretS[r] >> (4 - c) & 1) clip_fill(ox + c, oy + r, 1, 1, style::kCyan);
+                                if (kSecretS[r] >> (4 - c) & 1) {
+                                    if (across) clip_fill(lx + cell / 2 - 2 + c, ly - 3 + r, 1, 1, style::kCyan);
+                                    else clip_fill(lx - 3 + (6 - r), ly + cell / 2 - 2 + c, 1, 1, style::kCyan);
+                                }
+                        arrow();
                         continue;
                     }
-                    // A door: 3 pixels across the wall line, a pixel short at each end
+                    // A door: 3 pixels across the wall line, a little wall left at each end (locked: red -
+                    // codes 2 and 3 alike, Tom); a one-way door the half on this square's side
                     const uint16_t col = door == 1 ? style::kGold : style::kWarn;
-                    if (across) clip_fill(lx + 1, ly - 1, cell - 1, 3, col);
-                    else clip_fill(lx - 1, ly + 1, 3, cell - 1, col);
+                    if (oneway) {
+                        if (across) clip_fill(lx + q, here > 0 ? ly : ly - 1, n, 2, col);
+                        else clip_fill(here > 0 ? lx : lx - 1, ly + q, 2, n, col);
+                        arrow();
+                    } else if (across) clip_fill(lx + q, ly - 1, n, 3, col);
+                    else clip_fill(lx - 1, ly + q, 3, n, col);
                 }
             }
     // The places (PoolRad's wilderness): a square in the middle of theirs
@@ -3071,14 +3121,21 @@ void draw_map_grid(lgfx::LovyanGFX& g, const geo::Map& map, const MapSource& ms,
                     g.fillRect(mx + x * cell + (cell - ps + 1) / 2, my + y * cell + (cell - ps + 1) / 2, ps, ps,
                                style::kPlace);
     }
-    // The party: a triangle pointing the way it faces
-    const int cx = mx + ms.x() * cell + cell / 2, cy = my + ms.y() * cell + cell / 2;
-    const int r = cell / 2 - 1;
-    const int dir = ms.dir();
-    const int fx = cx + geo::dx(dir) * r, fy = cy + geo::dy(dir) * r;
-    const int lx = cx + geo::dx((dir + 6) & 7) * r - geo::dx(dir) * r, ly = cy + geo::dy((dir + 6) & 7) * r - geo::dy(dir) * r;
-    const int rx = cx + geo::dx((dir + 2) & 7) * r - geo::dx(dir) * r, ry = cy + geo::dy((dir + 2) & 7) * r - geo::dy(dir) * r;
-    g.fillTriangle(fx, fy, lx, ly, rx, ry, style::kParty);
+    // The party: an arrowhead the way it faces, fitted between the square's walls a pixel clear of each
+    // (Tom, 2026-11-27: balanced every way round) - its tip two pixels wide where the room across is even
+    {
+        const int sx = mx + ms.x() * cell, sy = my + ms.y() * cell;
+        const int dir = ms.dir(), fx = geo::dx(dir), fy = geo::dy(dir);
+        const int na = cell - 1, np = cell - 1, len = na - 2, base = np % 2 == 0 ? 2 : 1;
+        for (int i = 0; i < len; ++i) {
+            int wd = base + 2 * (i / 2);
+            if (wd > np - 2) wd = np - 2;
+            if (wd < 1) wd = 1;
+            const int a = 1 + (np - wd) / 2, along = (fx > 0 || fy > 0) ? na - 1 - i : 2 + i;
+            if (fx) g.drawFastVLine(sx + along, sy + a, wd, style::kParty);
+            else g.drawFastHLine(sx + a, sy + along, wd, style::kParty);
+        }
+    }
 }
 
 bool draw_battle_page();    // (below: in a fight, Companion Views on - the battlefield instead)

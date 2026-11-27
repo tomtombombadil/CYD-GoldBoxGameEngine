@@ -3651,10 +3651,15 @@ the Project as claude/TODO.md.
       counted in this - the game runs them.
 - [ ] Door code 2 (red, "Locked" in the Companion): an ordinary door in the cluebooks (no lock symbol in them).
 - [ ] The markers (numbers on the squares, the legend's words) at the scan, from the player's own cluebook.
-- [ ] Concealed (one-way) doors (Tom, 2026-11-27: they open from one side only, are often seen only from that side,
+- [x] (v0.222.3) One-way doors (Tom, 2026-11-27 18:05: NOT "concealed doors" - he misspoke; what a concealed door is: asked.
+      They open from one side only, are often seen only from that side,
       and there is no way back): in the maps, a side passable from one square (door code 1, a few 2 / 3) whose twin
       on the next square is solid (door 0) - Pool 90, Curse 139, Secret 48, Darkness 111, Champions 58, Death
-      Knights 46, Gateway 73, Treasures 100 sides (Steam; the map's wrap counted). To be drawn as concealed, the
-      way through shown. Door codes: 2 locked (Bash by strength, Pick Locks, Knock), 3 a harder lock (Bash only at
+      Knights 46, Gateway 73, Treasures 100 sides (Steam; the map's wrap counted). Drawn (Tom, 2026-11-27 17:58):
+      half a normal door on the side it is entered from, an arrow pointing away from the wall on the side it comes
+      out - mock-up to Tom first. Codes 2 and 3 stay one red on the map (Tom). 18:05 (Tom): the S turned 90 degrees
+      on an up-and-down wall; every door leaves a little wall at each end (the half door shows as half); 18:06 / 18:08
+      an archway's wall ends get serifs, a pixel of wall clear of the corner; 18:13 the party arrow balanced (a pixel
+      clear of each wall, a two-pixel tip in an even room). Built: viewer.cpp draw_map_grid; the port's panel.cpp. Door codes: 2 locked (Bash by strength, Pick Locks, Knock), 3 a harder lock (Bash only at
       18/91 strength and up, no Pick Locks; Knock - Pool: any magic-user) - rules::bash_door, door_choice.
 

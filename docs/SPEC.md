@@ -3565,6 +3565,12 @@ the game's Settings (As Original: all of them).
   wall line's middle half away (`play::map_arch`; the board's map, the port's Companion). Found by comparing the
   cluebooks (tools/cluebook): Curse's Yulash types 1 and 13, Champions' map 80 type 2 - stone and brick arches;
   stairs and portcullises are not (drawn dark / barred, not see-through).
+  v0.222.3 (Tom, 2026-11-27, from mock-ups): **the map's look** - a door leaves a quarter of the side's wall at each
+  end; an archway's opening narrower, a serif across the line where each piece of wall ends, a pixel of wall clear of
+  the corner; the secret door's S turned on a wall running up and down; **one-way doors** (a side passable from this
+  square whose twin on the next is solid - from the map's own bytes): half a door on the side they open from, an arrow
+  in the next square pointing away from the wall (legend "One-way"); locked codes 2 and 3 one red; the party's arrow
+  fitted between the square's walls a pixel clear of each, a two-pixel tip where the room across is even.
 - **Secret's outdoor fights** (v0.210.0): Secret has no terrain table
   (our facts); the engine read its flags from leftover memory, so its
   outdoor fields varied with what was there before (found by the toggle
