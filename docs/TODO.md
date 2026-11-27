@@ -8,10 +8,19 @@
       MENU's "WHAT DO YOU DO?" line was empty** (its word, DS 0x7791, wasn't in the profile). (3) **a hurt
       member's HP cyan**, a whole one's grey (were yellow). Same as the original: the locked door's Knock fails
       with Garin (its script tests the caster's thief level, as the original - DOSBox "remains locked").
-- [ ] Claude (the Dark Queen, DOSBox, Hizden 7,15 at night): **a roofless square's backdrop** - the original
-      shows a starry sky over grass where the square's flags lack 0x80; the engine draws the script's indoor look
-      (BACK.TLB 1-16 hold no sky). Where the sky comes from (and by day) not found yet. Also: the VGA canvas's
-      boxes are brown (107,75,67) where the original's are grey (89,81,77) - the PSRAM boards only.
+- [x] v0.221.7 (the Dark Queen, DOSBox beside the engine - Hizden 7,15 at night, the lighthouse's door):
+      (1) **the backdrop by square** (DQK.EXE 0x60AFC): a roofed square (flags 0x80) the map header's
+      second triple by a pick from the door plane's bits 3 and 1, a roofless one the sky (BACK 0x22) or the
+      triple's third; the night picture (+1) before 6 and from 20 o'clock - the engine drew the script's look
+      everywhere (Hizden's streets had a ceiling at night; now the starry sky over grass, pixel for pixel);
+      (2) **the frame's colours** by the game block's frame style 0x3A (41 + 0 / 1 / 2 / 3; 0x1339C) - always
+      42 before, so the 256-colour boards' frame, marble and boxes were off (brown boxes); and a part's table
+      from 0 (walls, backdrops, pictures) no longer overwrites the first 32 entries (the EGA colours, the
+      frame's); (3) **the place box**: the square hidden while the game block's 0x1A is set (the lighthouse;
+      0x3140F), "SEARCHING" under it with Search on (0x31524); (4) **the marble bar** above and below the
+      place box (FRAME's piece 7 at rows 96 / 128 - the top one was black). Checked: the whole screen against
+      DOSBox's on the 256-colour canvas, palette entry by entry - 0 entries differ at Hizden and the lighthouse
+      (what's left: our menu highlight).
 - [x] v0.219.3 (the PortMaster session, 2026-11-26): **spell names cut at 23 letters** - Treasures' grimoire read
       "Invisibility, 10' Radiu", "Protection From Evil, 1", "Protection From Normal"; the original (DOSBox, the
       same save, Zoltan's grimoire) shows them whole. The names' reader kept Curse's 23; now as long as the table's

@@ -38,7 +38,11 @@ bool load_colours(hlib::ByteSource& src, uint32_t pos, uint32_t len, Colours& c,
             pal->first = h.first;
             pal->count = static_cast<uint16_t>(n);
         }
-        for (int i = 0; i < n && h.first + i < 256; ++i) {
+        // (a part's table from 0 that isn't a whole palette - the wall sets', the backdrops', the event
+        // pictures' - leaves the screen's first 32 as they are: the EGA colours and the frame's 16-31 stay -
+        // DOSBox, Hizden and the lighthouse: entries 0-15 the EGA ones, 16-31 the frame's)
+        const int skip = h.first == 0 && h.count < 256 ? 32 : 0;
+        for (int i = skip; i < n && h.first + i < 256; ++i) {
             uint8_t rgb[3] = {};
             hlib::colour_rgb(src, h, i, rgb);     // (8 bits a channel)
             pal->rgb[h.first + i] = pic::Rgb{rgb[0], rgb[1], rgb[2]};

@@ -43,6 +43,11 @@ struct Look {
 };
 // The map's own sets (its header's first triple) with this backdrop
 Look look_of(const geo::Map& m, uint16_t back);
+// The backdrop the original draws at a square (DQK.EXE ovl 0xC, 0x60AFC; the square's two picks from the door
+// plane's bits 3 and 1 - 0x610E7): roofed (flags 0x80) the header's second triple by the pick (3: none);
+// roofless the sky (BACK 0x22) for pick 0, else the triple's third. A sky / backdrop of 0x20 on gets its night
+// picture (+1) before 6 and from 20 o'clock. 0 = none.
+uint16_t back_of(const geo::Map& m, int x, int y, int hour);
 
 // The libraries: the wall sets are looked for in walls[0] (8X8DB), then
 // walls[1] (8X8DC); either may be null

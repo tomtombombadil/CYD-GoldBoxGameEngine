@@ -1746,8 +1746,11 @@ void draw_position(pic::Canvas& c)
         c.fill(b.x, b.y, b.w, b.h, 0);
         char line[24];
         snprintf(line, sizeof line, "%d,%d", g.x, g.y);
-        if (!q_overland()) put(c, line, 26, 13, 7);    // (none in its overland - DOSBox)
+        // (the square only while the game block's 0x1A is 0 - DQK.EXE 0x3140F: the Luminari lighthouse hides
+        // it; "SEARCHING" on the line under it while Search is on, 0x19 bit 0 - 0x31524; DOSBox both)
+        if (!q_overland() && vm->get(0x1A) == 0) put(c, line, 26, 13, 7);    // (none in its overland - DOSBox)
         if (camping) put(c, "CAMPING", 26, 14, 7);     // (its status line while camping - DOSBox)
+        else if (vm->get(0x19) & 1) put(c, "SEARCHING", 26, 14, 7);
         const int h24 = vm->get(0x4BC9) % 24, h12 = h24 % 12 ? h24 % 12 : 12;
         snprintf(line, sizeof line, "%d:%d%d %s", h12, vm->get(0x4BC8) % 10, vm->get(0x4BC7) % 10, h24 < 12 ? "AM" : "PM");
         put(c, line, 26, 15, 7);

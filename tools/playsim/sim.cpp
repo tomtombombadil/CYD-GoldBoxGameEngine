@@ -160,6 +160,11 @@ static void shot(const char* tag)
     }
     const pic::Rgb* vpal = nullptr;
     if (C.vga && play::palette(&vpal, true)) {
+        if (getenv("IDXDUMP")) {        // IDXDUMP=1: the snapshot's palette indexes (<name>.idx) and its palette (.pal)
+            std::string n(name);
+            if (FILE* g = fopen((n + ".idx").c_str(), "wb")) { fwrite(all.data(), 1, all.size(), g); fclose(g); }
+            if (FILE* g = fopen((n + ".pal").c_str(), "wb")) { for (int i = 0; i < 256; ++i) { fputc(vpal[i].r, g); fputc(vpal[i].g, g); fputc(vpal[i].b, g); } fclose(g); }
+        }
         for (uint8_t v : (getenv("LCD") ? lcd : all)) { const pic::Rgb& c = vpal[v]; fputc(c.r, f); fputc(c.g, f); fputc(c.b, f); }
         fclose(f);
         if (getenv("COMPANION")) panel_shot(name);

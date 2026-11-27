@@ -137,6 +137,15 @@ struct HeapSrc {
 
 // The screen: the exploring frame (the view's frame, the compass, the
 // moons) or, for the party menu, the marble with one box
+// FRAME's colour part for the screen: 41 + the game block's frame style (DQK.EXE 0x1339C: style 3 -> 43,
+// 4 -> 42, 5 / 6 -> 44, any other 41; the style is the game block's 0x3A, as its 8 is the hour, 0x19
+// Search). DOSBox: Hizden and the lighthouse 41 (style 1), Palanthas 42.
+int q_frame_colours()
+{
+    const int s = vm ? vm->get(0x3A) : 0;
+    return 41 + (s == 3 ? 2 : s == 4 ? 1 : s == 5 || s == 6 ? 3 : 0);
+}
+
 __attribute__((noinline)) void q_draw_frame(pic::Canvas& c, bool explore)
 {
     q_strip_drop();
@@ -149,7 +158,8 @@ __attribute__((noinline)) void q_draw_frame(pic::Canvas& c, bool explore)
         HeapSrc sa(fa, a), sb(fb, b);
         int moons[3];
         q_moons(moons);
-        qview::draw_frame(c, sa.s, sb.s, explore ? d->gs.dir : -1, explore ? moons : nullptr, q_col(), q_pal());
+        qview::draw_frame(c, sa.s, sb.s, explore ? d->gs.dir : -1, explore ? moons : nullptr, q_col(), q_pal(),
+                          q_frame_colours());
         q_take();
     }
     if (a) fa.close();
@@ -168,7 +178,7 @@ __attribute__((noinline)) void q_compass(pic::Canvas& c)
         plat::FileSource src(f);
         const int16_t paper = c.paper;
         c.paper = -1;
-        qview::draw_compass(c, src, d->gs.dir, q_col(), qview::kFrameColours, q_pal());
+        qview::draw_compass(c, src, d->gs.dir, q_col(), q_frame_colours(), q_pal());
         q_take();
         c.paper = paper;
     }
@@ -201,7 +211,8 @@ __attribute__((noinline)) void q_draw_view(pic::Canvas& c, bool area)
         libs.walls[0] = sa.s;
         libs.walls[1] = sb.s;
         libs.back = sc.s;
-        qview::draw(c, libs, d->map, d->gs.x, d->gs.y, d->gs.dir, qview::look_of(d->map, d->save.look), q_col(),
+        qview::draw(c, libs, d->map, d->gs.x, d->gs.y, d->gs.dir, qview::look_of(d->map, qview::back_of(d->map, d->gs.x, d->gs.y, vm->get(0x4BC9) % 24)),
+                    q_col(),
                     q_pal());
         q_take();
     }

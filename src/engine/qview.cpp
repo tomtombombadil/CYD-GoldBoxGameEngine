@@ -101,6 +101,18 @@ Look look_of(const geo::Map& m, uint16_t back)
     return l;
 }
 
+uint16_t back_of(const geo::Map& m, int x, int y, int hour)
+{
+    const int d = geo::door(m, x, y, 0) | (geo::door(m, x, y, 2) << 2);    // (the plane's byte: N bits 0-1, E 2-3)
+    const int pick = ((d & 8) >> 2) | ((d & 2) >> 1);
+    int b;
+    if (geo::flags(m, x, y) & 0x80) b = pick == 3 ? 0xFF : m.head[3 + pick];
+    else b = pick == 0 ? 0x22 : m.head[5];
+    if (b == 0xFF) return 0;
+    if (b >= 0x20 && (hour < 6 || hour >= 20)) ++b;
+    return static_cast<uint16_t>(b);
+}
+
 int part_of(int piece, int slot)
 {
     if (piece < 0 || piece > 4 || slot < 0 || slot >= kSlots) return -1;
@@ -181,6 +193,15 @@ bool draw_frame(pic::Canvas& c, hlib::ByteSource* frame, hlib::ByteSource* gen, 
     if (frame) {
         ok = ok && fr;
         // (the party menu's screen - no facing, no moons: the four bars only)
+        // (the exploring screen: FRAME's piece 7, a marble bar, across the screen at rows 96 and 128 - over the
+        // lower marble, under the boxes' frames: the place box's top and bottom edges - DOSBox, Hizden and the
+        // lighthouse; the engine left the top one black)
+        if (dir >= 0 || moons) {
+            uint32_t q, l;
+            hlib::Part p;
+            if (hlib::entry(*frame, lib, 7, q, l) && hlib::read_part(*frame, q, l, p))
+                for (int y : {96, 128}) hlpic::draw(*frame, p, col, c, hlpic::place_x(p, 0), hlpic::place_y(p, y));
+        }
         const int n = dir < 0 && !moons ? 4 : static_cast<int>(sizeof kPieces);
         for (int k = 0; k < n; ++k) ok = ok && tile_part(*frame, lib, kPieces[k], col, c);
         // (the needles: north, south, west, east)
