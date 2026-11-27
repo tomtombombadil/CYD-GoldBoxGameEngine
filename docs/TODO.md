@@ -3504,6 +3504,25 @@ the Project as claude/TODO.md.
       "Unable to load 1 from 8x8d0"). Playsim (Darkness): Take, Exit - the treasure's menu, Take lit; Exit again -
       the question. navcheck Curse / Darkness / Gateway 0. Not run in DOSBox: Curse, Secret, Gateway, the Krynn
       games (the same menu code in the engine).
+- [x] v0.221.19 (found checking v0.221.18 by the port's buttons): **a save made in Throtl's Inn, loaded: the Inn's camp
+      left to "Move Encamp"** with no town - the original (DOSBox, the same save) is back at "Where do you wish to
+      go?". PROGRAM 9 ends the script; on the overland the engine then waits for the player - an outpost's script goes
+      round again as any outdoor menu place's (`marker_screen()` there now). A new game's way had worked by chance.
+      Checked: the same save in the engine's test program - the Inn, Exit, the Armoury after it; host tests; behave
+      Champions / Knights; navcheck and a monkey run in both, 0.
+- [x] v0.221.18 (Tom, 2026-11-27, on his RG40XX H: "the graphics are all messed up in Champions"): **Champions' outposts
+      drawn as the overland** - Throtl's Armoury after Buy / Exit and the town menu after it lost the frame's divider,
+      the party list and the place line; the Inn showed the overland map, and the map stayed behind the town's picture
+      after it. An outpost is a script's menu in the overland's mode (area word 0x4BE6 = 0), so every redraw took it
+      for the overland. Now a small picture shown there makes it a town (`kr_town`) until the overland map's BIGPIC
+      or a step on the map; the drawing asks `marker_screen()` / `kr_map_up()` (the steps, keys and cheats still go
+      by `kr_overland()`). And Champions' camp has its campfire (PIC 59, as Death Knights') inside the view's frame.
+      DOSBox (a new game from the GOG save: Load A, Begin, the story to Throtl's menu), the same steps in the
+      engine's test program, the screens set side by side: the Armoury (Buy's list, Exit, Exit), the Inn (the camp,
+      its Exit), the Hall (the party menu, Begin), the Commandant, Next's page, the Temple (Heal's list, Exit), Leave -
+      No - Encamp on the overland and its Exit. All alike but one: after the Inn's camp the original's place line
+      still says "CAMPING" until the town is entered again (the engine clears it) - left. Checked: host tests;
+      behave Champions / Knights; navcheck Champions / Knights 0; a monkey on Champions' overland start 0.
 - [x] v0.221.14 (the PortMaster session, 2026-11-27): **the aim opens on the fighter itself** - every spell, item
       and weapon Aim ("Range = 0"), and after each Target of a several-pick aim it is back on the caster. DOSBox,
       Curse's tavern fight: Bless, the Dust of Disappearance, Cause Light Wounds and Magic Missile open on the caster,
