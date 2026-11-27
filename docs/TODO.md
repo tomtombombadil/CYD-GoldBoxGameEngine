@@ -1,5 +1,17 @@
 # Open tasks (Tom and Claude)
 
+- [x] v0.221.5 (the Dark Queen play-through, the Luminari lighthouse; DOSBox beside the engine on the same
+      save): (1) **a door drawn alone** - a door side (piece 3 of a wall set, door bits set) is a part placed in
+      the slot, and the original draws it over the set's plain wall; drawn alone the corridor showed round the
+      door, and on the 16-colour boards through its dark planks (their EGA table makes them see-through - it
+      looked like bars). Now so (`qview` side); 13,15 east from three facings, VGA and 16 colours. (2) **WHAT
+      MENU's "WHAT DO YOU DO?" line was empty** (its word, DS 0x7791, wasn't in the profile). (3) **a hurt
+      member's HP cyan**, a whole one's grey (were yellow). Same as the original: the locked door's Knock fails
+      with Garin (its script tests the caster's thief level, as the original - DOSBox "remains locked").
+- [ ] Claude (the Dark Queen, DOSBox, Hizden 7,15 at night): **a roofless square's backdrop** - the original
+      shows a starry sky over grass where the square's flags lack 0x80; the engine draws the script's indoor look
+      (BACK.TLB 1-16 hold no sky). Where the sky comes from (and by day) not found yet. Also: the VGA canvas's
+      boxes are brown (107,75,67) where the original's are grey (89,81,77) - the PSRAM boards only.
 - [x] v0.219.3 (the PortMaster session, 2026-11-26): **spell names cut at 23 letters** - Treasures' grimoire read
       "Invisibility, 10' Radiu", "Protection From Evil, 1", "Protection From Normal"; the original (DOSBox, the
       same save, Zoltan's grimoire) shows them whole. The names' reader kept Curse's 23; now as long as the table's

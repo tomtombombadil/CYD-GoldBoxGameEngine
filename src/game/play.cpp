@@ -1826,7 +1826,9 @@ void draw_party(pic::Canvas& c, int col, bool mark_sel = true, bool box = false)
         put(c, t, 0x20 + aw, row, q ? 7 : 10);
         const int hp = ch.hp();
         snprintf(t, sizeof t, "%d", hp);
-        put(c, t, 0x24 + (hp <= 9 ? 2 : hp <= 99 ? 1 : 0), row, hp < ch.hp_max() ? 14 : q ? 7 : 10);
+        // (the Dark Queen: a hurt member's HP cyan, a whole one's grey - DOSBox, Hizden and the lighthouse;
+        // the engine's were yellow)
+        put(c, t, 0x24 + (hp <= 9 ? 2 : hp <= 99 ? 1 : 0), row, hp < ch.hp_max() ? (q ? 11 : 14) : q ? 7 : 10);
     }
     c.fill(col * 8, row * 8, (39 - col) * 8, 8, 0);
     dirty_rows(2, row);

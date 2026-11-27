@@ -54,6 +54,16 @@ struct Drawer {
     int coloured = -1;          // the set whose colours are in col now
     bool any = false;
 
+    // A side of a square: its wall type t, its door bits. A door piece (piece 3 of a set) is a smaller part
+    // placed in the slot - the original draws it over the set's plain wall (piece 0): DOSBox, the Luminari
+    // lighthouse's locked door at 13,15 east, three facings - drawn alone, the corridor showed round the door
+    // (and on the 16-colour boards through its dark planks, which their EGA table makes see-through)
+    void side(int t, int door, int slot, int dx)
+    {
+        if (door && t >= 1 && t <= 15 && (t - 1) % 5 == 3) wall(t - 3, slot, dx);
+        wall(t, slot, dx);
+    }
+
     void wall(int t, int slot, int dx)
     {
         if (t < 1 || t > 15) return;
@@ -75,6 +85,11 @@ struct Drawer {
             any = true;
     }
 };
+
+void side(Drawer& d, const geo::Map& m, int x, int y, int dir, int slot, int dx)
+{
+    d.side(geo::wall(m, x, y, dir), geo::door(m, x, y, dir), slot, dx);
+}
 
 } // namespace
 
@@ -120,13 +135,13 @@ bool draw(pic::Canvas& c, const Libs& libs, const geo::Map& m, int x, int y, int
         const int fs = kFrontSlot[a], fw = kPlace[fs].w;
         for (int n = kFronts[a]; n >= 0; --n)
             for (int l : {-n, n}) {
-                d.wall(geo::wall(m, sq_x(a, l), sq_y(a, l), ahead), fs, l * fw);
+                side(d, m, sq_x(a, l), sq_y(a, l), ahead, fs, l * fw);
                 if (n == 0) break;
             }
         for (int n = kSides[a]; n >= 0; --n)
             for (int l : {-n, n}) {
-                if (l <= 0) d.wall(geo::wall(m, sq_x(a, l), sq_y(a, l), left), kLeftSlot[a], l * fw);
-                if (l >= 0) d.wall(geo::wall(m, sq_x(a, l), sq_y(a, l), right), kRightSlot[a], l * fw);
+                if (l <= 0) side(d, m, sq_x(a, l), sq_y(a, l), left, kLeftSlot[a], l * fw);
+                if (l >= 0) side(d, m, sq_x(a, l), sq_y(a, l), right, kRightSlot[a], l * fw);
                 if (n == 0) break;
             }
     }

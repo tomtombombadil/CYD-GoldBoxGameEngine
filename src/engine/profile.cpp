@@ -4615,7 +4615,9 @@ const Profile kProfiles[] = {
      // silent as Darkness's
      // (JOURNAL n: DQK.EXE 0x43572 prints "This is recorded as journal entry %s." - DS 0x78A1 - then
      // its "~Press button or enter to continue" and a key; the engine splits the sentence at its %s)
-     .script_words = {0, 0, 0, 0, 0, 0, 0, qw(0x78A1)},
+     // (WHAT MENU's question: DS 0x7791, pushed by its op 0x31 at DQK.EXE 0x422C4 - DOSBox, the lighthouse's
+     // locked door: the text line, then "WHAT DO YOU DO?" on the next; the engine's line was empty)
+     .script_words = {0, 0, 0, 0, 0, 0, 0, qw(0x78A1), 0, qw(0x7791)},
      .clips = {.file = "DISK1/SOUNDS.GLB", .hz = 7418, .first = 3, .last = 15,
                .ids = {0, 0, 3, 10, 7, 6, 10, 8, 9, 10, 11, 12, 13, 0, 0, 0}, .quiet_turns = true, .to_block = -3,
                .glb = true},
