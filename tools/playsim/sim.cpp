@@ -726,7 +726,7 @@ static void run_fight()
                 if (play::fg->st == play::FSt::Aim) {
                     static int aims = 0;
                     if (aims++ < 3) { char t[16]; snprintf(t, 16, "faim%d", aims); shot(t); printf("  [aim: menu %s%s]\n", play::menu.prompt, play::menu.s); }
-                    // (the aim opens on the fighter itself since v0.221.13: off it with Next, then Target -
+                    // (the aim opens on the fighter itself since v0.221.14: off it with Next, then Target -
                     // a whole round of Next with nothing to take: Exit)
                     static int nexts = 0;
                     const bool on_self = play::fg->ci >= 0 && play::fg->ci < play::fg->n_cand && play::fg->cand[play::fg->ci] == play::fg->cur;

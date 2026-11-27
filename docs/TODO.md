@@ -1008,7 +1008,7 @@ the Project as claude/TODO.md.
       `combat::finish` now takes a charmed member for no survivor (Lost); and Gateway's end loop
       (GAME.OVR 0x736D) DROPS a member still on the enemies' side (record 0x197 = 1) from the party -
       before or after the charm's effect is taken off? The engine puts every member back (0x197 = 0,
-      `fight_cleanup_party`). Not seen in DOSBox. (e) done, v0.221.13: the
+      `fight_cleanup_party`). Not seen in DOSBox. (e) done, v0.221.14: the
       original drops the fallen from the party when a fight is fled, except
       in a maze fight (GAME.OVR 0x7468-0x74E2: a member not running dropped only while the
       maze word, +0x402 = 0x4D01, is 0 - the same offset as 0xCA1E's no-Flee test); the
@@ -3482,7 +3482,7 @@ the Project as claude/TODO.md.
       "Unable to load 1 from 8x8d0"). Playsim (Darkness): Take, Exit - the treasure's menu, Take lit; Exit again -
       the question. navcheck Curse / Darkness / Gateway 0. Not run in DOSBox: Curse, Secret, Gateway, the Krynn
       games (the same menu code in the engine).
-- [x] v0.221.13 (the PortMaster session, 2026-11-27): **the aim opens on the fighter itself** - every spell, item
+- [x] v0.221.14 (the PortMaster session, 2026-11-27): **the aim opens on the fighter itself** - every spell, item
       and weapon Aim ("Range = 0"), and after each Target of a several-pick aim it is back on the caster. DOSBox,
       Curse's tavern fight: Bless, the Dust of Disappearance, Cause Light Wounds and Magic Missile open on the caster,
       a weapon's Aim on the fighter ("Range = 0", no Target word there); the Dust's aim back on Mathew after each

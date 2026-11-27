@@ -304,7 +304,7 @@ static bool pump(int max_iter = 400000)
                     printf("  [aim %d: %s%s cand %d (%d of %d) sq %d at %d,%d -> %d,%d spell %02X]\n", tries, menu.prompt, menu.s, ct, fg->ci,
                            fg->n_cand, sq, af.x, af.y, ct >= 0 ? fg->b.f[ct].x : -1, ct >= 0 ? fg->b.f[ct].y : -1, fg->spell);
                 }
-                // (the aim opens on the fighter itself since v0.221.13 - the originals'; the
+                // (the aim opens on the fighter itself since v0.221.14 - the originals'; the
                 // test's first pick the nearest other, as before)
                 // (the test's first pick the nearest foe when there is one, the nearest other else)
                 const bool shown = !fg->manual && fg->ci >= 0 && fg->ci < fg->n_cand;
