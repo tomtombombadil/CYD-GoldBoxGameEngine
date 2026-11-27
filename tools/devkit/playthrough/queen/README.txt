@@ -33,6 +33,8 @@ Lessons (the cave, 2026-11-26):
   can't be raised there (no Resurrection): avoid their deaths (WINFIGHT).
 - Script 14 (Naulidis) dispatches its squares by an ON GOTO on 1:009B with the addresses inline: evinline.py
   lists them; tour.sh walks a list of squares (STOPRE ends it at a text).
+  reach.sh SLOT [x,y]: the map's reachable squares, the first of each square code, nearest first (a tour's
+  list; MAPAVOID=x,y;... keeps walks off a square - the Flame Tower's fire platforms).
 - Naulidis (20 x 39): the party arrives at 11,17 in the refugees' halls (before v0.219.2 a 4-bit mask put it at
   11,1 inside the palace). The safe halls' barred doors (4,9 / 6,17) open to SHOUT (PICK=Shout - Bash loops);
   the hinge for the cracked door is in the workshop at 17,25; the portals (14-16,7) lead up into the palace.
