@@ -90,6 +90,9 @@ enum Ext : uint8_t {
     // The Dark Queen: its record's 0x5E (not known yet; MONCHA's Grunschka 0x11, kept by
     // the original's ADD NPC - DOSBox, 2026-11-27)
     kExtQ5E = 120,
+    // The Dark Queen: its record's 0xC5 + 1 (0: never set) - the member's slot 0-7 in the party, the
+    // lowest free one as it joins (DQK.EXE 0x365F1); 0x0D in a new character's file
+    kExtQSlot = 121,
 };
 
 struct Character {

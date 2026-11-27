@@ -5,6 +5,7 @@
 #include "engine/hlib.h"
 #include "engine/hlpic.h"
 #include "engine/qview.h"
+#include "engine/qimport.h"
 
 #include <cstdio>
 #include <cstring>
@@ -594,11 +595,43 @@ static void test_view()
     geo::release(m);
 }
 
+// The Dark Queen's import maps (qimport): its switches are RUN from the program window - here a made-up
+// far function at CS offset 0x10 that turns 5 into 9 and leaves the rest
+static void test_qimport()
+{
+    // push bp; mov bp,sp; mov ax,[bp+6]; cmp ax,5; jnz +3; mov ax,9; pop bp; retf
+    static const uint8_t code[] = {0x55, 0x8B, 0xEC, 0x8B, 0x46, 0x06, 0x3D, 0x05, 0x00, 0x75, 0x03,
+                                   0xB8, 0x09, 0x00, 0x5D, 0xCB};
+    std::vector<uint8_t> win(0x40, 0x90);
+    memcpy(win.data() + 0x10, code, sizeof code);
+    profile::QImport q;
+    q.base = 0x1000; q.lo = 0x1000; q.hi = 0x1040; q.words = q.effects = q.spells = 0x10;
+    static qimport::Maps m;
+    CHECK(qimport::make(win.data(), win.size(), q, m));
+    CHECK(m.word[5] == 9 && m.word[6] == 6 && m.word[0x85] == 0x85 && m.effect[5] == 9 && m.spell[5] == 9);
+    static party::Character c;
+    c = party::Character{};
+    c.n_items = 2;
+    c.items[0][0x2E] = 0x34; c.items[0][0x2F] = 5; c.items[0][0x3D] = 5; c.items[0][0x3E] = 7;   // (a spell; type 0x34)
+    c.items[1][0x2E] = 0x27; c.items[1][0x3C] = 0x85; c.items[1][0x3E] = 0x80;                  // (a scroll's spells)
+    c.n_affects = 1;
+    c.affects[0][0] = 5;
+    c.rec[0x1E] = 5; c.rec[0x1F] = 0x85; c.rec[0x1E + 80] = 3;     // (memorized: mapped, being learnt, past 74)
+    c.rec[0x79 + 4] = 1;                                            // (spell 5 known)
+    qimport::convert(c, m);
+    CHECK(c.items[0][0x2E] == 0x33 && c.items[0][0x2F] == 9 && c.items[0][0x3D] == 9 && c.items[0][0x3E] == 0);
+    CHECK(c.items[1][0x3C] == 0x89 && c.items[1][0x3E] == 0x80);
+    CHECK(c.affects[0][0] == 9);
+    CHECK(c.rec[0x1E] == 9 && c.rec[0x1F] == 0x85 && c.rec[0x1E + 80] == 0);
+    CHECK(c.rec[0x79 + 4] == 0 && c.rec[0x79 + 8] == 1);
+}
+
 int main()
 {
     test_library();
     test_pictures();
     test_view();
+    test_qimport();
     if (failures) {
         printf("%d failure(s)\n", failures);
         return 1;

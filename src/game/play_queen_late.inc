@@ -791,6 +791,9 @@ void q_rolled(pic::Canvas& c)
     mk->dice.max = CYD_MAX_HP && opts.max_hp;      // (the Max Hit Points cheat: a new character's dice too - Tom)
     create::roll(mk->ch, mk->tables, mk->facts, mk->dice);
     mk->ch.rec[0x142] = static_cast<uint8_t>(create::queen_icon(mk->q_sex, mk->q_race, mk->q_cls, align));
+    // (its flags 0xC7 / 0xC8 - the engine's 0x14B / flags 2: 2 / 2, DQK.EXE 0x3D50B)
+    mk->ch.rec[0x14B] = 2;
+    mk->ch.ext[party::kExtFlags2] = 2;
     rules::recalc(mk->ch, *names, d->facts);
     screen = Screen::QRolled;
     show_new_character(c);

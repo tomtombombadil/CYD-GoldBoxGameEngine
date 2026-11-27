@@ -2701,6 +2701,18 @@ int main(int argc, char** argv)
             printf("  screenmem %-8s left: %6.1f KB, screen %d\n", nm, now2 / 1024.0, (int)play::screen);
         }
     }
+    if (getenv("ITEMNAMES") && play::names)     // ITEMNAMES=1: each member's items by name
+        for (int i = 0; i < play::pt->count; ++i) {
+            char nm[32];
+            play::pt->m[i].name(nm, sizeof nm);
+            printf("  member %d %s items:", i, nm);
+            for (int k = 0; k < play::pt->m[i].n_items; ++k) {
+                char in[64];
+                play::names->name(items::Item{play::pt->m[i].items[k]}, in, sizeof in);
+                printf(" [%s]", in);
+            }
+            printf("\n");
+        }
     if (getenv("PARTYDUMP"))            // PARTYDUMP=1: each member's memorized spells (record 0x1E on)
         for (int i = 0; i < play::pt->count; ++i) {
             char nm[32];

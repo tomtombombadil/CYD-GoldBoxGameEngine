@@ -286,6 +286,9 @@ struct EffectName {
     uint32_t at;
 };
 
+// The Dark Queen's import maps' code (Profile::variant.q_import; qimport.h)
+struct QImport { uint32_t base = 0, lo = 0, hi = 0; uint16_t words = 0, effects = 0, spells = 0; };
+
 struct Profile {
     games::Game  game;
     const char*  release;        // shown to the player, e.g. "GOG"
@@ -885,6 +888,12 @@ struct Profile {
     // Dark Queen: Inv's names - a far table of 40 (its file offset) - and
     // its "Empty!"
     uint32_t queen_inv = 0, inv_empty = 0;
+    // Dark Queen: its import of a Death Knights character (DQK.EXE 0x33EC5 the record, 0x3497B the items,
+    // 0x34858 the effects) puts some numbers through three far functions of its own - C switches - before
+    // they are the Queen's: an item's name words, its spells, an effect number. File offsets of the code
+    // window holding the three (lo..hi), its segment's base (CS:0 - the switches' tables are CS-relative)
+    // and each function's CS offset; run in engine/x86 at the import
+    QImport  q_import = {};
     // Death Knights of Krynn (deathknights_facts.md): Darkness's engine at its
     // EGA stage with Krynn's rules - its characters (216-byte records .GAM
     // with a 220-byte spell part .WIZ, items .JNK of 63 bytes, effects

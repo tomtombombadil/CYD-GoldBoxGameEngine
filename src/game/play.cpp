@@ -24,6 +24,7 @@
 #include "engine/classes.h"
 #include "engine/combat.h"
 #include "engine/create.h"
+#include "engine/qimport.h"
 #include "engine/levelbook.h"
 #include "engine/items.h"
 #include "engine/magic.h"
@@ -3280,12 +3281,44 @@ void gateway_to_treasures(party::Character& ch)
     dk_import_values(ch);
     rules::recalc(ch, *names, d->facts);
 }
+// The Dark Queen's import: its items' words / spells / specials and its effects' numbers through the
+// program's own switches (qimport.h; the profile's window of DQK.EXE, read and run here, then let go)
+__attribute__((noinline)) void queen_import_numbers(party::Character& ch)
+{
+    const profile::QImport& q = d->prof->variant.q_import;
+    if (!q.base) return;
+    const size_t n = q.hi - q.lo;
+    uint8_t* w = static_cast<uint8_t*>(malloc(n));
+    qimport::Maps* m = static_cast<qimport::Maps*>(malloc(sizeof(qimport::Maps)));
+    plat::File f;
+    bool ok = w && m && open_file(d->prof->program, f);
+    if (ok) {
+        ok = f.seek(q.lo) && f.read(w, n) == static_cast<int>(n);
+        f.close();
+    }
+    if (ok && qimport::make(w, n, q, *m)) {
+        qimport::convert(ch, *m);
+        plat::log("[play] the Dark Queen's import: words 0x54 -> 0x%02X, effect 7 -> 0x%02X, spell 0x73 -> 0x%02X\n",
+                  m->word[0x54], m->effect[7], m->spell[0x73]);
+    } else plat::log("[play] the Dark Queen's import maps: not made - the items and effects left as they were\n");
+    free(w);
+    free(m);
+}
+
 void import_convert(party::Character& ch)
 {
     if (hl()) {
-        // (Dark Queen: the Death Knights record as it is, its figures worked
-        // out as Death Knights' load does - how the original converts it is
-        // not known yet: queen_facts_2.md 11)
+        // (Dark Queen: the Death Knights record as it is - DQK.EXE's import 0x33EC5 copies it field by field,
+        // as party::from_dkk / to_queen do - and its figures worked out as Death Knights' load does. Beyond the
+        // copy: the knight's best level into the Queen's place for it (0x9F = the record's 0x54; its own 0x4E
+        // went there first), the party slot as it was (0xC5 = 0x72), the portrait its creation would pick
+        // (the six Death Knights winners imported in DOSBox: each one's create::queen_icon), the flags as
+        // they were - 0 / 0, not creation's 2 / 2)
+        ch.ext[party::kExtBestLevels + 1] = ch.ext[party::kExtDkBestKnight];
+        ch.ext[party::kExtQSlot] = static_cast<uint8_t>(ch.rec[0x143] + 1);
+        ch.rec[0x142] = static_cast<uint8_t>(create::queen_icon(ch.rec[0x119], ch.ext[party::kExtRace],
+                                                                 ch.rec[0x75] == 7 ? 1 : ch.rec[0x75], ch.rec[0x11B]));
+        queen_import_numbers(ch);
         rules::recalc(ch, *names, d->facts);
         return;
     }

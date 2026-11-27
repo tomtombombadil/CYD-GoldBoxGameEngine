@@ -213,6 +213,7 @@ constexpr uint16_t kQueenExt[][3] = {
     {0xC8, kExtFlags2, 1}, {0x5E, kExtQ5E, 1},
 };
 
+
 } // namespace
 
 void from_queen(const uint8_t* q, Character& c)
@@ -228,6 +229,7 @@ void from_queen(const uint8_t* q, Character& c)
     memcpy(r + 1, q + 0x68, n);
     for (const auto& run : kQueenRuns) memcpy(r + run[1], q + run[0], run[2]);
     for (const auto& run : kQueenExt) memcpy(c.ext + run[1], q + run[0], run[2]);
+    c.ext[kExtQSlot] = static_cast<uint8_t>(q[0xC5] + 1);
     r[0x74] = race_from_krynn(q[0x58]);
     r[0x125] = 1;                       // (uses Strength: every character)
     // The class: its knight (1, the druid's place) is the engine's Krynn
@@ -323,12 +325,10 @@ void to_queen(const Character& c, uint8_t* q)
     q[0x08] = static_cast<uint8_t>(c.n_items);
     q[0x09] = 0;
     queen_spells_out(c, q);
-    // (a new character's record: its creation's 0xC5, 0xC7 and 0xC8 - not
-    // known what they are; queen_facts_4.md 5)
-    if (!q[0xC5] && !q[0xC7] && !q[0xC8]) {
-        q[0xC5] = 0x0D;
-        q[0xC7] = q[0xC8] = 2;
-    }
+    // (0xC5: the party slot - a new character's 0x0D, its creation's; its flags 0xC7 / 0xC8 are the
+    // engine's 0x14B / flags 2: creation's 2 / 2, an imported Death Knights character's own - 0 / 0 in the
+    // original's import, DQK.EXE 0x34513 / 0x34535)
+    q[0xC5] = c.ext[kExtQSlot] ? static_cast<uint8_t>(c.ext[kExtQSlot] - 1) : 0x0D;
     // (the effects pointer: only whether there are any matters to a load)
     if (!c.n_affects) memset(q + 4, 0, 4);
     else if (!(q[4] | q[5] | q[6] | q[7])) q[7] = 0x5E;

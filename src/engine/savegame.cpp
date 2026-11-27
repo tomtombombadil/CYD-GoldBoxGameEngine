@@ -179,9 +179,10 @@ static bool queen_member_in(dax::ByteSource& src, const uint8_t* rec, uint32_t& 
 
 // ... and written: the record over `q` (the fields the engine doesn't keep
 // as they are there - zeros for a new one), its items, its effects
-static bool queen_member_out(Sink& out, const party::Character& c, uint8_t* q)
+static bool queen_member_out(Sink& out, const party::Character& c, uint8_t* q, int slot = -1)
 {
     party::to_queen(c, q);
+    if (slot >= 0) q[0xC5] = static_cast<uint8_t>(slot);
     bool ok = out.put(q, party::kQueenRecordSize);
     for (int k = 0; ok && k < c.n_items; ++k) {
         uint8_t it[kQueenItem];
@@ -313,6 +314,22 @@ bool write_queen(Sink& out, const ecl::GameState& gs, const Header& h, const par
     uint8_t* q = new (std::nothrow) uint8_t[party::kQueenRecordSize];
     if (!q) return false;
     bool ok = true;
+    // (each member's party slot 0-7: its own when no one before it has it, else the lowest free one - as
+    // DQK.EXE gives one to a member joining, 0x365F1)
+    int slot[party::kMaxParty];
+    unsigned used = 0;
+    for (int i = 0; i < p.count && i < party::kMaxParty; ++i) {
+        const int own = p.m[i].ext[party::kExtQSlot] - 1;
+        slot[i] = own >= 0 && own < 8 && !(used & 1u << own) ? own : -1;
+        if (slot[i] >= 0) used |= 1u << slot[i];
+    }
+    for (int i = 0; i < p.count && i < party::kMaxParty; ++i)
+        if (slot[i] < 0) {
+            int s = 0;
+            while (s < 7 && (used & 1u << s)) ++s;
+            slot[i] = s;
+            used |= 1u << s;
+        }
     for (int i = 0; ok && i < p.count; ++i) {
         const party::Character& c = p.m[i];
         char nm[20];
@@ -324,7 +341,7 @@ bool write_queen(Sink& out, const ecl::GameState& gs, const Header& h, const par
                     memset(q, 0, party::kQueenRecordSize);
                 break;
             }
-        ok = queen_member_out(out, c, q);
+        ok = queen_member_out(out, c, q, i < party::kMaxParty ? slot[i] : -1);
     }
     delete[] q;
     // the rest, as it was - up to the original's file size: DQK.EXE writes
