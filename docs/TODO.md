@@ -3489,7 +3489,9 @@ the Project as claude/TODO.md.
       and weapon Aim ("Range = 0"), and after each Target of a several-pick aim it is back on the caster. DOSBox,
       Curse's tavern fight: Bless, the Dust of Disappearance, Cause Light Wounds and Magic Missile open on the caster,
       a weapon's Aim on the fighter ("Range = 0", no Target word there); the Dust's aim back on Mathew after each
-      Target (Darkness's weapon Aim was seen so before, v0.211.6). The engine opened a spell against enemies on the
+      Target (Darkness's weapon Aim was seen so before, v0.211.6). PoolRad too (DOSBox, the slums' kobolds at 7,1
+      from an engine save): a weapon's Aim ("Range = 0"), Sleep, and Bless - aimed when it goes off after "Begins
+      Casting", as the engine does - all open on the caster. The engine opened a spell against enemies on the
       nearest enemy, others on the nearest other. Playsim, the Dust: T, N T, N N T, N N N T - MATHEW, MARK, TRAVIS,
       SHARA invisible, the same four as the original's save. The Dark Queen unchanged (not seen). The test pumps
       (sim's fight loop, sweep's) step off the fighter to the nearest foe themselves. Also: Gateway's maze fight
