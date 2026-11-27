@@ -1,5 +1,12 @@
 # Open tasks (Tom and Claude)
 
+- [x] v0.221.20 (the Dark Queen play-through, the Tower of Flame; DOSBox beside the engine on the same save):
+      **the tower's level events never ran** - its step script (65, 0x8AB8) picks each level's events (the iron
+      flower that ends the tower, the fire giants, the foundry, the cells ...) when script place 0x3D isn't 0, and
+      the engine read the game block's byte there (always 0). The Queen's operand loader (DQK.EXE 0x40B57, cases at
+      0x40BB3) answers 0x3D from the party's square on the map's plane 3 ((b & 8) >> 2 | (b & 2) >> 1 - overlay
+      0x807); DOSBox at level 2's 3,4: the iron flower, the engine now the same (OpSet::queen_sq, geo::queen_bits;
+      host test). The play-through then ran to THE END (the windship, Aldinanachru's celebration, Tremor).
 - [x] v0.221.17 (the Dark Queen, the New Aurim palace's spy passage): **the Dark Queen's maps didn't wrap round at their
       edges** - the queen's fireplace leads to 27,24 (map 34, 28 wide), its way on is east off the edge to 0,24 and the
       stairs down at 1,24; the engine stopped the step and the party was shut in. DOSBox (the same save): east twice,
