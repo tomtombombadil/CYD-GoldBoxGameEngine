@@ -3582,3 +3582,15 @@ the Project as claude/TODO.md.
       party list is drawn over the map. Playsim from a save at the travel map (SAVE=A AREA=1 BLOCK=80 SAVENOW=D):
       Camp, View, Exit, Exit; Camp, Rest 3 hours, Exit - the map as before; screenshots set beside DOSBox's.
       host tests, navcheck (Curse, Champions, Knights; MCAMP=4) 0.
+
+## The cluebook maps (Tom, 2026-11-27: the Companion's maps from the cluebooks, with their markers)
+- [x] A checking tool (tools/cluebook): each Steam cluebook map found and matched to its game map by itself.
+- [ ] Reading each side's symbol (wall / door / secret door / archway / stairs) reliably in every book's style -
+      the dotted grid lines and room numbers fool the first tries.
+- [ ] Pools of Darkness: maps drawn as four quarters; the Dark Queen's (HLIB); the GOG cluebooks (Tom added them).
+- [ ] The secret-door rule (play::map_secret: a passable side of a plain wall type, the step script asked) against
+      the cluebooks' S-hooks. First look by eye: Curse 11 of its 18 marks on an S-hook (the rest an ordinary door,
+      plain walls, two on the map's outer edge), Champions 4 of 6 (2 ordinary doors). The script's own refusals not
+      counted in this - the game runs them.
+- [ ] Door code 2 (red, "Locked" in the Companion): an ordinary door in the cluebooks (no lock symbol in them).
+- [ ] The markers (numbers on the squares, the legend's words) at the scan, from the player's own cluebook.
