@@ -972,9 +972,14 @@ the Project as claude/TODO.md.
       Not checked: monsters and NPCs from the monsters' files (their records
       carry Strength too - giants 18/00); the damage figure in DOSBox.
 - [ ] Treasures, small ones: "Cannot use <item>" is not shown for an item
-      left behind at the transfer; Add Character's list doesn't mark the
-      added with "*" as the original (check), and lists by the folder's order,
-      not the alphabet.
+      left behind at the transfer (not seen: in DOSBox, 2026-11-27, Gateway's BRON, DURK, ELWYN, HALDAR, MARA,
+      ZOLTAN came over with no such line - a character with an item Treasures drops is needed).
+      [x] v0.221.15: Add Character's list marks the added "* " (DOSBox, Treasures from Gateway: "* BRON" with the
+      highlight kept on it) - the mark's GAME.OVR word was missing in Death Knights', Darkness's and Treasures'
+      profiles; and every Add list is by name - the earlier game's (and PoolRad's in Curse) came in the folder's
+      order (DOSBox lists them by name: BRON DURK ELWYN HALDAR MARA ZOLTAN). Seen by the port's buttons:
+      Treasures - Add - Gateway, the list by name, "* BRON" after Add. host tests; behave Curse, PoolRad,
+      Darkness, Treasures, Knights.
 - [x] v0.205.1 - Gateway played to its end (the PortMaster session, 2026-11-17;
       the original in DOSBox beside the engine, its code read). Ascore's arena
       is a MAZE fight (script word 0x4D01 = 1): the fight doesn't end with the
