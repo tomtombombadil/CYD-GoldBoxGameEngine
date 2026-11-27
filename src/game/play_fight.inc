@@ -8191,7 +8191,9 @@ void take_loot(int i, pic::Canvas& c)
     const bool piled = !heavy && CYD_AUTO_JOIN && opts.auto_join && rules::pile_onto(*ch, ground->item[at], secret_files());
     if (heavy || (!piled && full)) {
 #ifdef CYD_TEST_HOOKS
-        plat::log("[play] take refused, left %d\n", ground->n);
+        plat::log("[play] take refused, left %d (%s: item weight %d x %d, carried %d, limit %d, items %d)\n", ground->n,
+                  heavy ? "weight" : "slots", items::Item{ground->item[at]}.weight(), items::Item{ground->item[at]}.count(),
+                  ch->rec[0x187] | ch->rec[0x188] << 8, rules::max_encumbrance(*ch) + 1500, ch->n_items);
 #endif
         note(c, d->w_over);
         return;
