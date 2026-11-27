@@ -16,7 +16,9 @@
 set -e
 R=$(cd "$(dirname "$0")/../.." && pwd)
 OUT=${1:-/tmp/claude-0/ag14/shots}
-QEMU=${QEMU:-/tmp/claude-0/ag14/qemu/qemu/bin/qemu-system-xtensa}
+# (Espressif QEMU esp_develop_9.2.2_20250817 or later: the 20250228 build finds no octal PSRAM -
+# "PSRAM chip is not connected", then "Display init failed" - 2026-11-27, old and new firmware alike)
+QEMU=${QEMU:-/tmp/claude-0/qemu9/qemu/bin/qemu-system-xtensa}
 SIM=${SIM:-/tmp/claude-0/ag7/bin/qm14sim}
 W=${WORK:-/tmp/claude-0/ag14/qshots}
 mkdir -p "$OUT" "$W"

@@ -108,6 +108,11 @@ The games draw a 320x200 screen. The canvas is presented:
 - **The movement keys on an overland** (Tom, 2026-11-22, v0.214.0; `play::move_keys`): drawn as they act -
     PoolRad's wilderness: the turn keys greyed, Turn Around a down arrow; Champions' / Death Knights' / the Dark
     Queen's: the turn keys diagonal arrows (north-west / north-east), Turn Around a down arrow; elsewhere as in 3D.
+    Since v0.222.0 (Tom, 2026-11-27: "We should be able to use the Combat movement button layout"): on those
+    overlands the fight's 8-way pad - 480x320 a 3 x 3 pad in the movement pad's place (no Select in its middle),
+    320x240 / 5.0" the fight's row in keypad order (7 8 9 4 Menu-Keys 6 1 2 3, Map and Game beside it); each
+    arrow a step that way (`play::overland_dir`, new in play.h - the PortMaster port keeps its D-pad); PoolRad's
+    wilderness steps four ways only, its diagonals greyed (they do nothing). Darkness's overland turns: its keys stay.
 - **Keys only for what isn't on screen**, changing with what the game does:
   - 320x240 (Walk Test): one row of 8 square keys (~37x34) under the game.
     Exploring: Side-step Left, Turn Left, Forward, Turn Right, Side-step
@@ -3391,12 +3396,15 @@ the game's Settings (As Original: all of them).
   2026-11-17: "Flasks of oil are non-magical and as ordinary as a Molotov
   Cocktail"; `rules::kEnhCoins` / `kEnhOil`).
   - **Thrown Weapons**: a hurled weapon takes Dexterity's missile bonus to
-    hit and Strength's damage bonus. The originals give darts and javelins
-    (ITEMS flags 0x10 without melee's 4) neither (`rules::recalc`). A weapon
-    both melee and thrown (dagger, hand axe, spear: flags 4 and 0x10) keeps
-    Strength to hit and damage in melee; thrown at one not next to the
-    thrower its to-hit takes Dexterity's missile bonus in place of
-    Strength's, its damage Strength's (`combat::attack`,
+    hit and no Strength (DMG p.64 "Strength Bonus Considerations" /
+    "Dexterity Penalty And Bonus Considerations"; PHB p.9 - corrected
+    2026-11-27, it gave Strength's damage before). The originals give darts
+    and javelins (ITEMS flags 0x10 without melee's 4) neither, PoolRad's no
+    Dexterity (`rules::recalc`). A weapon both melee and thrown (dagger,
+    hand axe, spear: flags 4 and 0x10) keeps Strength to hit and damage in
+    melee; thrown at one not next to the thrower its to-hit takes
+    Dexterity's missile bonus in place of Strength's, and its damage no
+    Strength (the originals keep Strength) (`combat::attack`,
     `rules::thrown_hit_shift`; the party's members - monsters' records are
     their own). Darts throw 3 a round in every game (the ITEMS file's 6 half
     attacks - as the originals).
@@ -3413,10 +3421,17 @@ the game's Settings (As Original: all of them).
     originals' routines (checked against them run in Unicorn). Checks: sweep `behave levels` ONLY=adnd (A1-A8
     against the books, 1500 characters a game; fails in all seven games with ADNDOFF=200), fight_check R21 (the
     rule in fuzzed fights: the book's lines against the levels and hit points lost).
-  - **Raising the Dead**: Raise Dead and Resurrection take no Constitution
-    (the 1E books have no such cost - Tom). The originals take a point for
-    Raise Dead (spell and temple: Secret's, the Darkness-type temples) -
-    kept with the rule off. The generic temples since v0.210.1 as their
+  - **Raising the Dead** (corrected 2026-11-27 against PHB p.12: "each such
+    revivification reduces the character's constitution score by 1" - the
+    rule had made raising free since 2026-11-17): every raising - Raise
+    Dead or Resurrection, spell, temple, Darkness's Repair, Treasures'
+    PROGRAM 5 - takes one point of Constitution (its own and the one in
+    use) and nothing else; the generic temples' hit-point cut below is not
+    taken. Not done: the book's Resurrection Survival roll (PHB p.12 - a
+    failed roll is dead forever) and its limit of raisings by the starting
+    Constitution (Tom: TODO). The originals take a point for Raise Dead
+    (spell and temple: Secret's, the Darkness-type temples), none for
+    Resurrection / Repair / PROGRAM 5 - kept with the rule off. The generic temples since v0.210.1 as their
     GAME.OVR routines (Curse 0x51AA, Champions 0x5880, PoolRad 0x4B22,
     Gateway 0x607E; `CureFacts::temple_raise`): a point of Constitution -
     PoolRad its one Constitution, the others only the one IN USE (back at

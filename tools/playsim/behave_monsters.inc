@@ -148,13 +148,11 @@ Values expected(const uint8_t* r, const uint8_t (*it)[items::kRecordSize], int n
         v.b1 += sd;
     } else {
         const items::TypeInfo& ti = names->type(weapon[0x2E]);
-        const bool thrown_1e = (ti.flags & 0x10) && !(ti.flags & 0x04) && rules::adnd(rules::kAdndThrown);   // (Thrown Weapons, AD&D 1E Rules: Dex to hit, Str to damage)
+        const bool thrown_1e = (ti.flags & 0x10) && !(ti.flags & 0x04) && rules::adnd(rules::kAdndThrown);   // (Thrown Weapons, AD&D 1E Rules: Dex to hit, no Str - DMG p.64)
         if ((ti.flags & 0x02) || thrown_1e) v.hit += ov("dex_react", dex);
         v.b1 = ti.bonus;
         if (ti.flags & 0x04) {
             v.hit += sh;
-            v.b1 += sd;
-        } else if (thrown_1e) {
             v.b1 += sd;
         }
         int plus = sb(weapon[0x32]);

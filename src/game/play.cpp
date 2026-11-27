@@ -8745,11 +8745,9 @@ void secret_cure(int i, pic::Canvas& c)
             // maximum hit points stay - DOSBox, Guy 95 at Con 18 -> 17
             // keeps 95), then 1 HP
             rules::remove_affects(ch, f.poisoned);
-            // (AD&D 1E Rules: no Constitution lost - Tom, 2026-11-17)
-            if (!rules::adnd(rules::kAdndRaise)) {
-                if (ch.rec[0x18] > 0) --ch.rec[0x18];
-                if (ch.rec[0x19] > 0) --ch.rec[0x19];
-            }
+            // (the originals' and AD&D 1E's, PHB p.12)
+            if (ch.rec[0x18] > 0) --ch.rec[0x18];
+            if (ch.rec[0x19] > 0) --ch.rec[0x19];
             rules::recalc(ch, *names, d->facts);
             ch.rec[0x1A4] = 1;
             ch.rec[0x195] = party::Okay;
@@ -8949,7 +8947,7 @@ void dk_cure(int i, pic::Canvas& c)
         if (ch.rec[0x18] == 0) break;
         rules::remove_affects(ch, f.poisoned);
         okay();
-        if (!rules::adnd(rules::kAdndRaise)) --ch.rec[0x18];     // (AD&D 1E Rules: no Constitution lost)
+        --ch.rec[0x18];                                 // (the original's and AD&D 1E's, PHB p.12)
         rules::recalc(ch, *names, d->facts);
         ch.rec[0x1A4] = 1;
         say = profile::kDkRaised;
@@ -9008,6 +9006,10 @@ void dk_repair()
         }
         if (ch.health() == party::Dead && ch.rec[0x74] != 2 && ch.rec[0x18] > 0) {
             rules::remove_affects(ch, f.poisoned);         // (Resurrection, spell 105)
+            if (rules::adnd(rules::kAdndRaise)) {          // (AD&D 1E: a point of Constitution, PHB p.12)
+                --ch.rec[0x18];
+                if (ch.rec[0x19] > 0) --ch.rec[0x19];
+            }
             ch.rec[0x195] = party::Okay;
             ch.rec[0x196] = 1;
             ch.rec[0x1A4] = ch.rec[0x78];
@@ -11406,6 +11408,10 @@ void program_heal()
         }
         if (ch.health() == party::Dead && r[0x18] && ch.race() != d->prof->magic.facts.elf_race) {
             rules::remove_affects(ch, cf.poisoned);
+            if (rules::adnd(rules::kAdndRaise)) {           // (AD&D 1E: a point of Constitution, PHB p.12)
+                --r[0x18];
+                if (r[0x19] > 0) --r[0x19];
+            }
             r[0x195] = party::Okay;
             r[0x196] = 1;
         }
@@ -19842,6 +19848,8 @@ void draw(pic::Canvas& c)
     dirty(0, pic::kScreenH);
 }
 
+namespace { int g_over_dir = -1; }      // (overland_dir's way, for act's Forward on a Krynn overland)
+
 bool act(Act a, pic::Canvas& c)
 {
     if (!d) return false;
@@ -19886,7 +19894,7 @@ bool act(Act a, pic::Canvas& c)
         // 0x88 set the facing and step - DQK.EXE file 0x4413C)
         int dir = -1;
         switch (a) {
-        case Act::Forward:    dir = 0; break;
+        case Act::Forward:    dir = g_over_dir >= 0 ? g_over_dir : 0; break;
         case Act::TurnRight:  dir = 1; break;
         case Act::StepRight:  dir = 2; break;
         case Act::TurnAround: dir = 4; break;
@@ -20284,6 +20292,23 @@ MoveKeys move_keys()
     if (kr_overland() || q_overland()) return MoveKeys::Steps6;
     if (pool_overland()) return MoveKeys::Steps4;
     return MoveKeys::Turns;
+}
+
+bool overland_dir(int dir, pic::Canvas& c)
+{
+    const MoveKeys k = move_keys();
+    if (k == MoveKeys::Turns || dir < 0 || dir > 7) return false;
+    if (k == MoveKeys::Steps4) {
+        // (PoolRad's wilderness: the four arrow keys - poolrad_overland_facts 0)
+        static const int8_t kAct[8] = {static_cast<int8_t>(Act::Forward), -1, static_cast<int8_t>(Act::StepRight), -1,
+                                       static_cast<int8_t>(Act::TurnAround), -1, static_cast<int8_t>(Act::StepLeft), -1};
+        return kAct[dir] >= 0 && act(static_cast<Act>(kAct[dir]), c);
+    }
+    // (the Krynn overlands: a key for every way - the Dark Queen's 0x81-0x88, DQK.EXE file 0x4413C)
+    g_over_dir = dir;
+    const bool r = act(Act::Forward, c);
+    g_over_dir = -1;
+    return r;
 }
 
 void set_present_now(void (*fn)()) { g_present_now = fn; }

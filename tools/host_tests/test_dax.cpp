@@ -7531,14 +7531,22 @@ static void test_spells()
     CHECK(cast(2, spells::Does::Heal, 1, 3, 8, 20) == 1 && out[0].what == spells::Said::Fully && b.hp() == 20);
     b.rec[0x195] = party::Dead;
     CHECK(cast(2, spells::Does::Heal, 1, 1, 8, 0) == 0);
-    // Raised: 1 HP - as the originals a point of Constitution; with the AD&D 1E
-    // Rules' Raising the Dead none (Tom, 2026-11-17); an elf can't be
+    // Raised: 1 HP and a point of Constitution - the originals' and, with the
+    // AD&D 1E Rules' Raising the Dead, PHB p.12's; an elf can't be
     rules::set_adnd(rules::kAdndAll & ~rules::kAdndRaise);
     CHECK(cast(6, spells::Does::Raise, 1) == 1 && out[0].what == spells::Said::Raised);
     CHECK(b.health() == party::Okay && b.hp() == 1 && b.rec[0x18] == 9 && b.rec[0x19] == 9 && b.in_combat());
     b.rec[0x195] = party::Dead;
     rules::set_adnd(rules::kAdndAll);
-    CHECK(cast(6, spells::Does::Raise, 1) == 1 && b.health() == party::Okay && b.rec[0x18] == 9 && b.rec[0x19] == 9);
+    CHECK(cast(6, spells::Does::Raise, 1) == 1 && b.health() == party::Okay && b.rec[0x18] == 8 && b.rec[0x19] == 8);
+    // Resurrection (Darkness's handler): full hit points; no Constitution lost
+    // as the original, a point with Raising the Dead (PHB p.12)
+    b.rec[0x195] = party::Dead;
+    rules::set_adnd(rules::kAdndAll & ~rules::kAdndRaise);
+    CHECK(cast(6, spells::Does::Resurrect, 1) == 1 && b.health() == party::Okay && b.hp() == 20 && b.rec[0x19] == 8);
+    b.rec[0x195] = party::Dead;
+    rules::set_adnd(rules::kAdndAll);
+    CHECK(cast(6, spells::Does::Resurrect, 1) == 1 && b.health() == party::Okay && b.rec[0x18] == 7 && b.rec[0x19] == 7);
     // PoolRad's camp Animate Dead (GAME.OVR 0x29087, its stand-up 0x2C753):
     // the dead get up at their most hit points, "gets back up", then animated
     {

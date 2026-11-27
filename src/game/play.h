@@ -113,10 +113,16 @@ bool walking();
 // pad drawn so): Turns - turn / step as in a 3D area (Darkness's overland
 // turns too); Steps4 - PoolRad's wilderness: Forward / the side-steps /
 // Turn Around step north / east / west / south, the turn keys nothing;
-// Steps6 - Champions' / the Dark Queen's overland: those four, the turn
-// keys a step north-west / north-east
+// Steps6 - Champions' / Death Knights' / the Dark Queen's overland: those
+// four, the turn keys a step north-west / north-east - and all eight ways by
+// overland_dir (the name kept for the PortMaster port)
 enum class MoveKeys : uint8_t { Turns, Steps4, Steps6 };
 MoveKeys move_keys();
+// On an overland whose keys step (move_keys() not Turns; Tom, 2026-11-27: the
+// board's movement keys there are the fight's 8-way pad): a step that way (0
+// north ... 7 north-west) as the original's key for it does; false - not now,
+// or no such key in that game (PoolRad's wilderness: the four arrows only)
+bool overland_dir(int dir, pic::Canvas& c);
 // A step's scripts still running with nothing for the player yet (a script
 // between its waits, an empty PRINTCLEAR being shown): the map over the
 // game screen can stay up while ticks finish it

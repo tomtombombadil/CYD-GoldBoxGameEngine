@@ -2762,8 +2762,12 @@ enum WalkKey { kWTurnL, kWStepL, kWFwd, kWStepR, kWTurnR, kWAround, kWArea, kWNe
                kWD0, kWD1, kWD2, kWD3, kWD4, kWD5, kWD6, kWD7, kWFSel, kWKeys };
 constexpr int kWMoveKeys = kWUp;        // the Walk Test has no cursor keys
 
-enum class Row : uint8_t { Walk, Move, Cursor, Fight };
+enum class Row : uint8_t { Walk, Move, Cursor, Fight, Over };
 bool pad_fight = false;                 // 480x320: the fight's pad shown in the movement pad's place
+bool pad_over = false;                  // ... for an overland's steps (Tom, 2026-11-27: the fight's layout)
+// An overland whose keys step - the fight's 8-way pad for them (Tom, 2026-11-27: "We should be able to use the
+// Combat movement button layout"; PoolRad's wilderness: its diagonals greyed)
+bool over_pad() { return play::move_keys() != play::MoveKeys::Turns && !play::fight_pad(); }
 Row row = Row::Walk;                    // what 320x240's row shows
 
 bool comp_on();         // (below: the Companion Views comfort is on)
@@ -2802,18 +2806,18 @@ ui::Rect walk_key(int k)
         int keys[kMaxSeg], ws[kMaxSeg], n = 0;
         auto add = [&](int key, int w) { keys[n] = key; ws[n] = w; ++n; };
         const bool left = cfg->left_hand;
-        if (row == Row::Fight) {
-            // The numeric keypad's order: 7 8 9 4 Select 6 1 2 3
+        if (row == Row::Fight || row == Row::Over) {
+            // The numeric keypad's order: 7 8 9 4 Select 6 1 2 3 (an overland: Menu Keys in Select's place)
             static const int kPad[9] = {kWD7, kWD0, kWD1, kWD6, kWFSel, kWD2, kWD5, kWD4, kWD3};
             // Companion Views (Tom, 2026-11-01): a Map key for the battlefield.
             // The arrows narrow; Select, Map and Game just wide enough for
             // their words (the small font: "Select" 36 px, "Game" 24)
-            const bool map = comp_on();
+            const bool map = comp_on() || row == Row::Over;
             const int sel_w = map ? 42 : 52, map_w = map ? 26 : 0, gaps = gp * (map ? 12 : 11);
             const int dw = (pic::kScreenW - gaps - sel_w - map_w - (map ? 30 : 40)) / 8;
             const int game_w = pic::kScreenW - gaps - sel_w - map_w - dw * 8;
             if (!left) { add(kWArea, game_w); if (map) add(kWMap, map_w); }
-            for (int key : kPad) add(key, key == kWFSel ? sel_w : dw);
+            for (int key : kPad) add(key == kWFSel && row == Row::Over ? kWCursor : key, key == kWFSel ? sel_w : dw);
             if (left) { if (map) add(kWMap, map_w); add(kWArea, game_w); }
         } else {
             const int w = (pic::kScreenW - gp * 10) / 9;
@@ -2850,7 +2854,9 @@ ui::Rect walk_key(int k)
     // A fight's pad in the movement pad's place: 3 x 3, Select in the middle
     // (the numeric keypad: 7 8 9 / 4 5 6 / 1 2 3)
     const bool fight_key = k >= kWD0 && k <= kWFSel;
-    if (fight_key != pad_fight && (fight_key || k <= kWAround)) return ui::Rect{};
+    const bool pad = pad_fight || pad_over;
+    if (fight_key != pad && (fight_key || k <= kWAround)) return ui::Rect{};
+    if (k == kWFSel && pad_over) return ui::Rect{};     // (an overland: no Select in the pad's middle)
     if (fight_key) {
         static const int kCol[9] = {1, 2, 2, 2, 1, 0, 0, 0, 1}, kRow[9] = {0, 0, 1, 2, 2, 2, 1, 0, 1};
         const int fh = (h_all - gp * 2) / 3;
@@ -3098,6 +3104,7 @@ void draw_walk_keys(const char* side_label, const char* area_label, bool cursor)
     side_keys[0] = area_label;
     side_keys[1] = side_label;
     pad_fight = cursor && play::fight_pad();
+    pad_over = cursor && ui::large() && over_pad();
     if (ui::large()) {
         // (the movement pad's place: its keys or the fight's - cleared first)
         const int gp = ui::gap();
@@ -3107,7 +3114,7 @@ void draw_walk_keys(const char* side_label, const char* area_label, bool cursor)
         // The row: cleared first (it changes between the movement and cursor keys)
         row = !cursor ? Row::Walk
               : pad_fight ? Row::Fight
-              : play::walking() == row_flip ? Row::Cursor : Row::Move;
+              : play::walking() == row_flip ? Row::Cursor : over_pad() ? Row::Over : Row::Move;
         // (v0.64.0: the keys forgotten too - the movement row's Forward key, under the cursor row's
         // Select, took Select's tap ring: a small key's ghost on it)
         ui::clear_area({0, pic::kScreenH, pic::kScreenW, ui::height() - pic::kScreenH});
@@ -3115,6 +3122,12 @@ void draw_walk_keys(const char* side_label, const char* area_label, bool cursor)
     if (pad_fight) {
         for (int k = kWD0; k <= kWD7; ++k) ui::key_compass(walk_key(k), k - kWD0);
         ui::key_small(walk_key(kWFSel), "Select");
+    } else if (pad_over || row == Row::Over) {
+        // (an overland's steps: every way the game has a key for - PoolRad's wilderness the four arrows)
+        pad_look = play::move_keys();
+        for (int k = kWD0; k <= kWD7; ++k)
+            ui::key_compass(walk_key(k), k - kWD0,
+                            pad_look == play::MoveKeys::Steps4 && (k - kWD0) & 1 ? ui::KeyStyle::Dim : ui::KeyStyle::Normal);
     } else if (row != Row::Cursor || ui::large()) {
         // (an overland's keys as they act there - Tom, 2026-11-22: PoolRad's turn keys greyed, Turn
         // Around a down arrow; Champions' / the Dark Queen's turn keys their diagonal steps)
@@ -3141,7 +3154,7 @@ void draw_walk_keys(const char* side_label, const char* area_label, bool cursor)
         ui::key_small(walk_key(kWRight), "Right");
         ui::key_small(walk_key(kWDown), "Down");
     }
-    if (!ui::large() && row == Row::Move) ui::key_small(walk_key(kWCursor), "Menu\nKeys");
+    if (!ui::large() && (row == Row::Move || row == Row::Over)) ui::key_small(walk_key(kWCursor), "Menu\nKeys");
     if (!ui::large() && row == Row::Cursor) ui::key_small(walk_key(kWMove), "Move\nKeys");
     redraw_side_keys();
 }
@@ -6263,13 +6276,13 @@ void present_play()
             row_walking = w;
             row_flip = false;               // the game moved on: back to what it needs
         }
-        const Row want = play::fight_pad() ? Row::Fight : w == row_flip ? Row::Cursor : Row::Move;
+        const Row want = play::fight_pad() ? Row::Fight : w == row_flip ? Row::Cursor : over_pad() ? Row::Over : Row::Move;
         if (row != want) draw_walk_keys("Look", "Game", true);
-    } else if (play::fight_pad() != pad_fight) {
-        draw_walk_keys("Look", "Game", true);        // the fight's pad comes and goes
+    } else if (play::fight_pad() != pad_fight || over_pad() != pad_over) {
+        draw_walk_keys("Look", "Game", true);        // the fight's pad (an overland's) comes and goes
     }
     // (onto / off an overland: the movement keys as they act there)
-    if (play::move_keys() != pad_look && !play::fight_pad() && (ui::large() || row == Row::Move))
+    if (play::move_keys() != pad_look && !play::fight_pad() && (ui::large() || row == Row::Move || row == Row::Over))
         draw_walk_keys("Look", "Game", true);
     comp_update(big);
     strip_update();
@@ -6380,12 +6393,14 @@ void tap_play(const ui::Tap& t)
         // the game screen back
         // (Pool's step scripts clear the text with an empty PRINTCLEAR and
         // run on over a few ticks: the map stays while they do - loop())
-        for (int k = kWTurnL; k <= kWAround; ++k) {
+        for (int k = kWTurnL; k <= kWD7; ++k) {
+            if (k > kWAround && k < kWD0) continue;
             const ui::Rect r = walk_key(k);
             if (r.w == 0 || !r.contains(t.x, t.y) || play::fight_pad()) continue;
             if (play::walk_pending()) return;          // (the last step still finishing)
             if (!play::walking()) continue;
-            play::act(kActs[k], frame::canvas());
+            if (k >= kWD0) play::overland_dir(k - kWD0, frame::canvas());
+            else play::act(kActs[k], frame::canvas());
             if ((play::walking() || play::walk_pending()) && play::map()) {
                 int y0, y1;
                 play::take_dirty(y0, y1);           // (shown when the map closes)
@@ -6433,7 +6448,8 @@ void tap_play(const ui::Tap& t)
         // A journal entry the game mentioned: this tap shows it (the game still waits)
         if (play_journal()) return;
         if (k >= kWD0 && k <= kWD7) {
-            play::fight_dir(k - kWD0, frame::canvas());
+            if (play::fight_pad()) play::fight_dir(k - kWD0, frame::canvas());
+            else play::overland_dir(k - kWD0, frame::canvas());
             present_play();
             return;
         }

@@ -110,7 +110,7 @@ int base_power(const party::Character& c, const classes::Tables& t, int s)
     if (s <= 0) return 0;
     using classes::skill_level;
     // Secret's (GAME.OVR 0x3AFD7) has no paladin in either test - a paladin
-    // casts at 6th level; AD&D's (Curse's) paladin - 8 with the switch
+    // casts at 6th level; Curse's / PoolRad's paladin - 8 with the switch (not in the 1E books)
     // (Darkness / Treasures - GAME.OVR 0x36C2E / 0x40CC7 - the same, and by
     // their skill levels: the larger of a class's level and its former one)
     const bool pal_rule = !(t.lay.secret || t.lay.dk) || rules::fix(rules::kFixPalCast);
@@ -649,24 +649,26 @@ int cast(party::Party& p, int caster, int target, const CampSpell& cs, const cla
             cure(c, cures.poisoned);
             c.rec[kHealth] = party::Okay;
             c.rec[kInCombat] = 1;
-            // (the originals take a point of Constitution; AD&D 1E Rules: none -
-            // the 1E books have no such cost, Tom 2026-11-17)
-            if (!rules::adnd(rules::kAdndRaise)) {
-                if (c.rec[kConFull] == c.rec[kConNow]) --c.rec[kConFull];    // (no item raising it)
-                --c.rec[kConNow];
-                if (t.lay.dk) create::dk_con_recompute(c, t);          // (Darkness: the Constitution's hit points again)
-            }
+            // (a point of Constitution - the originals' and AD&D 1E's, PHB p.12)
+            if (c.rec[kConFull] == c.rec[kConNow]) --c.rec[kConFull];    // (no item raising it)
+            --c.rec[kConNow];
+            if (t.lay.dk) create::dk_con_recompute(c, t);          // (Darkness: the Constitution's hit points again)
             c.rec[kHp] = 1;
             o.say(who[k], Said::Raised);
         }
         break;
     case Does::Resurrect:
         // Darkness (GAME.OVR 0x2EF05): the dead only, no Constitution lost,
-        // no survival roll - as AD&D 1E (Tom, 2026-11-17: no Constitution
-        // cost in the PHB / DMG; the old Game Fixes point is gone)
+        // no survival roll. AD&D 1E Rules' Raising the Dead: a point of
+        // Constitution as every raising (PHB p.12)
         for (int k = 0; k < n; ++k) {
             party::Character& c = p.m[who[k]];
             if (c.health() != party::Dead || c.rec[kConNow] == 0 || c.race() == f.elf_race) continue;
+            if (rules::adnd(rules::kAdndRaise)) {
+                if (c.rec[kConFull] == c.rec[kConNow]) --c.rec[kConFull];
+                --c.rec[kConNow];
+                if (t.lay.dk) create::dk_con_recompute(c, t);
+            }
             cure(c, cures.poisoned);
             c.rec[kHealth] = party::Okay;
             c.rec[kInCombat] = 1;

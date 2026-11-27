@@ -742,7 +742,7 @@ void darts()
     memset(ch.items[0], 0, sizeof ch.items[0]);
     memcpy(ch.items[0], pile[0], items::kRecordSize);
     // (Thrown Weapons - the AD&D 1E Rules, Tom 2026-11-17: Dexterity's missile
-    // bonus to hit, Strength's damage; off: the original's - neither)
+    // bonus to hit, no Strength - DMG p.64; off: the original's - neither)
     static const int kStr[3][2] = {{18, 100}, {17, 0}, {12, 0}};
     static const int kDex[3] = {18, 16, 4};
     for (int s = 0; s < 3; ++s) {
@@ -761,15 +761,16 @@ void darts()
         // (a game whose darts already count Dexterity - ITEMS flags 2: the rule adds none to hit)
         const bool has_dex = play::names->type(dart).flags & 0x02;
         if (s == 0) printf("  (matrix: darts type %d flags %02X)\n", dart, play::names->type(dart).flags);
-        const int wh = has_dex ? 0 : adnd_dex_missile(kDex[s]), wd = adnd_str_dmg(kStr[s][0], kStr[s][1]);
-        snprintf(w, sizeof w, "darts x Dex %d, Str %d/%02d: %+d to hit, %+d damage with Thrown Weapons, none without",
-                 kDex[s], kStr[s][0], kStr[s][1], wh, wd);
+        const int wh = has_dex ? 0 : adnd_dex_missile(kDex[s]), wd = 0;
+        snprintf(w, sizeof w, "darts x Dex %d, Str %d/%02d: %+d to hit, no Strength damage with Thrown Weapons (DMG p.64), "
+                 "none without", kDex[s], kStr[s][0], kStr[s][1], wh);
         expect(P, w, hit[1] - hit[0] == wh && dmg[1] - dmg[0] == wd, "hit %d -> %d, damage %d -> %d", hit[0], hit[1], dmg[0],
                dmg[1]);
     }
     // A dagger (melee and thrown): Strength to hit and damage in the record
     // (melee); thrown at one 3 squares off, Dexterity's to hit in place of
-    // Strength's (Thrown Weapons), the same as melee without the rule
+    // Strength's and no Strength damage (Thrown Weapons, DMG p.64), the same
+    // as melee without the rule
     int dagger = 0;                              // (the first type both melee and thrown: Curse's hand axe 2)
     for (int t = 1; t < items::kTypes && !dagger; ++t)
         if (play::names->type(t).range > 1 && (play::names->type(t).flags & 0x14) == 0x14)
@@ -785,7 +786,7 @@ void darts()
         ch.rec[0x125] = 1;
         F(A).items = ch.items;
         F(A).n_items = 1;
-        int mods[2][2];                          // [rule][next to / thrown]
+        int mods[2][2], dmods[2][2];             // [rule][next to / thrown]: to hit, damage
         for (int on = 0; on < 2; ++on) {
             rules::set_adnd(on ? 0xFF : 0);
             rules::recalc(ch, *play::names, play::d->facts);
@@ -797,17 +798,15 @@ void darts()
                 combat::g_rolls = &log;
                 F(A).attacks[0] = 1;
                 F(A).attacks[1] = 0;
-                dice(2);
+                dice(20);                                // (a 20: the blow lands, its damage rolled)
                 play::fg->cur = A;
                 combat::attack(b, A, B, play::names, play::rng);
                 dice_off();
                 combat::g_rolls = nullptr;
-                mods[on][far] = -999;
+                mods[on][far] = dmods[on][far] = -999;
                 for (int k = 0; k < log.n; ++k)
-                    if (log.r[k].kind == combat::RollKind::Hit) {
-                        mods[on][far] = log.r[k].mod;
-                        break;
-                    }
+                    if (log.r[k].kind == combat::RollKind::Hit && mods[on][far] == -999) mods[on][far] = log.r[k].mod;
+                    else if (log.r[k].kind == combat::RollKind::Damage && dmods[on][far] == -999) dmods[on][far] = log.r[k].mod;
             }
         }
         rules::set_adnd(0xFF);
@@ -815,6 +814,12 @@ void darts()
         snprintf(w, sizeof w, "a dagger thrown x Dex 16, Str 18/00: %+d to hit against melee with Thrown Weapons, 0 without", want);
         expect(P, w, mods[0][0] != -999 && mods[1][1] - mods[1][0] == want && mods[0][1] == mods[0][0],
                "rule off: next to %d thrown %d; on: next to %d thrown %d", mods[0][0], mods[0][1], mods[1][0], mods[1][1]);
+        const int wantd = -adnd_str_dmg(18, 100);
+        snprintf(w, sizeof w, "a dagger thrown x Str 18/00: %+d damage against melee with Thrown Weapons (DMG p.64), 0 without",
+                 wantd);
+        expect(P, w, dmods[0][0] != -999 && dmods[1][0] != -999 && dmods[1][1] - dmods[1][0] == wantd &&
+                         dmods[0][1] == dmods[0][0],
+               "rule off: next to %d thrown %d; on: next to %d thrown %d", dmods[0][0], dmods[0][1], dmods[1][0], dmods[1][1]);
         F(A).items = keep;
         F(A).n_items = keep_n;
     } else {

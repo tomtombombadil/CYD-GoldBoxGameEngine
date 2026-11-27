@@ -1,5 +1,17 @@
 # Open tasks (Tom and Claude)
 
+- [ ] v0.222.0 **Tom: the overland's movement pad** (Tom, 2026-11-27: "We should be able to use the Combat movement
+      button layout"): on PoolRad's wilderness and Champions' / Death Knights' / the Dark Queen's overlands the
+      fight's 8-way pad - 480x320 the 3 x 3 pad (no Select in its middle), 320x240 / 5.0" the fight's row (7 8 9 4
+      Menu-Keys 6 1 2 3, Map and Game beside it); an arrow = a step that way (`play::overland_dir`, new in play.h -
+      the PortMaster port needn't call it). PoolRad's diagonals greyed (its wilderness steps four ways). Seen: QEMU
+      4.0" on PoolRad's wilderness (north 25,11 -> 25,10, east -> 26,10, a greyed diagonal nothing); the Krynn
+      overlands built only.
+- [ ] v0.222.0 **Tom: the overland map's size** (Tom, 2026-11-27: "test whether the display is big enough"): QEMU's
+      4.0" on PoolRad's wilderness - 9 px a square (the 3D maps' scale), walls 1 px, the places 4 px orange squares,
+      16 x 16 squares round the party; legible on the real pixels, but small, and the strip's lower half is empty.
+      A zoom (e.g. 10 x 10 squares at 15 px, the window following the party) is easy to add - your call after a
+      look on the board (screenshot sent 2026-11-27).
 - [x] v0.221.21 (the Dark Queen play-through, the Tower of Flame; DOSBox beside the engine on the same save):
       **the tower's level events never ran** - its step script (65, 0x8AB8) picks each level's events (the iron
       flower that ends the tower, the fire giants, the foundry, the cells ...) when script place 0x3D isn't 0, and
@@ -253,10 +265,11 @@
       a 34-item treasure showed 64, the list's cap). The original (DOSBox, the same save: the shop at 8,11, Exit, the
       guards' fight): two pages, the guards' own items, 2012 experience each as the engine without the goods. Fixed in
       the VM (the list cleared as SHOP n is left); host test. Every SHOP n game (Secret on) had it.
-- [ ] Curse / PoolRad shops (TREASURE then COMBAT with the shop flag): their goods stay on the list until the next
+- [x] (2026-11-27, no change: the original's shop leaves the list too - coab's CityShop never clears it, only
+      CLEARMONSTERS does; the engine is the same) Curse / PoolRad shops (TREASURE then COMBAT with the shop flag): their goods stay on the list until the next
       CLEARMONSTERS - what the original does on leaving such a shop is not checked (a script that fights without
       CLEARMONSTERS after a shop would show the goods as treasure). For the session that has those games' kits.
-- [ ] v0.214.0 **Tom: the overland's movement keys** (Tom, 2026-11-22): on PoolRad's wilderness the turn keys
+- [x] (replaced by v0.222.0's pad, above) v0.214.0 **Tom: the overland's movement keys** (Tom, 2026-11-22): on PoolRad's wilderness the turn keys
       greyed (they do nothing there) and Turn Around a down arrow (a step south); on Champions' / Death Knights' /
       the Dark Queen's overland the turn keys show their diagonal steps (north-west / north-east) and Turn Around a
       down arrow; Darkness's overland turns, so its keys stay. `play::move_keys()` (new in play.h - the PortMaster
@@ -266,13 +279,13 @@
       and a flash write cuts the PSRAM off - the RGB panel's picture is read from there. The 5.0\" now keeps its
       settings, display fixes and touch calibration on the card (/GOLDBOX/_CYD/*.bin; the old flash copy read until
       then - your settings carry over). Built only: QEMU's panel isn't a real RGB bus. Tom: the same keys again.
-- [ ] v0.213.2 **Tom: a fight's field after the Game menu** (Tom, 2026-11-22: PoolRad's wilderness field came back
+- [x] (Tom, 2026-11-27: good to go) v0.213.2 **Tom: a fight's field after the Game menu** (Tom, 2026-11-22: PoolRad's wilderness field came back
       black): the game screen drawn again (`draw_play`) put the plain EGA palette back and the fight's colour swap
       (0 / 8, Gateway's 8) was only applied when the fight began - now again on every redraw (viewer.cpp
       `fight_colours_apply`; every game's fights, every way back to the game screen). Checked: the board builds;
       the emulator's random encounter didn't come - try it on the board. The PortMaster port keeps its menu as an
       overlay (no palette reset): not affected.
-- [ ] v0.213.0 **Tom: try the Companion map on PoolRad's wilderness** (Tom, 2026-11-22: "Build it for PoolRad
+- [ ] (its size: v0.222.0's item above) v0.213.0 **Tom: try the Companion map on PoolRad's wilderness** (Tom, 2026-11-22: "Build it for PoolRad
       first and I'll test it"; SPEC 4): walk the wilderness - walls where a step is refused (sea, coast, the
       stinking river until the land is healed, the north edge), orange squares where the scripts have a place, the
       arrow where the party is; the window (16 of the area's 36 rows) holds while the party walks in it and centres
@@ -577,11 +590,25 @@ the Project as claude/TODO.md.
       every PDF, and anything unknown (listed). Report: _CYD/CLEANUP.TXT. On Tom's lists: about 11 MB a GOG set, 83 MB
       the Steam set (on copies of the Project's zips). Kept on purpose: Darkness's INTRO.ACF / .BMA (its intro movie,
       an open question above). Tom: run it on a card / device, then play a game of each release.
-- [ ] **The AD&D 1E books** (Tom uploaded them 2026-11-23: the Project's "1st Edition.zip" - PHB, DMG, Unearthed
+- [x] **The AD&D 1E books** (Tom uploaded them 2026-11-23: the Project's "1st Edition.zip" - PHB, DMG, Unearthed
       Arcana, Premium Editions; unzip to scratch /tmp/claude-0/books, pdftotext): level drain / Restoration done
       against them (the Project's claude/drain_restore_facts.md, with pages). Claude, next: every AD&D 1E Rules
       switch (Magic Missile, Multi-Class Hit Points, Thrown Weapons, Magic Items, Age with Time, Power Word Kill,
       Protection from Evil, Raising the Dead) and the Game Fixes' "AD&D" versions checked against the books' pages.
+      Done 2026-11-27 (v0.222.0): Magic Missile PHB p.67 (2 at 3rd, 3 at 5th - as the rule), Multi-Class Hit Points
+      PHB p.19 (the dice summed, Constitution, divided), Magic Items DMG p.124 / p.165 (Flame Tongue +1, +2 / +3 / +4),
+      Age with Time DMG p.13, Power Word Kill PHB p.93, Protection from Evil PHB p.44 / p.47 - as the rules. WRONG and
+      corrected: Thrown Weapons gave Strength's damage - DMG p.64: Strength's to-hit and damage don't apply to missiles
+      (Dexterity's to-hit does), PHB p.9: Strength's adjustments are for melee - now no Strength when thrown (a
+      dagger / hand axe / spear too); Raising the Dead made raising free - PHB p.12: "each such revivification reduces
+      the character's constitution score by 1" - now a point for every raising (Resurrection, Darkness's Repair,
+      Treasures' PROGRAM 5 too) and no temple hit-point cut. The one Game Fix that said "as AD&D says", Paladins'
+      Casting (paladin level - 8): not in the 1E books (PHB p.24's table only) - its help now says Curse's and
+      PoolRad's code. Not checked: the other Game Fixes (they follow the originals' own code, not the books).
+- [ ] Tom: Raising the Dead (AD&D 1E Rules, corrected 2026-11-27 to PHB p.12): the book also has the Resurrection
+      Survival roll (Constitution's percentage - a failed roll is dead forever) and a limit of raisings equal to the
+      starting Constitution. Add them to the rule? (Left out until you say.) And if you liked free raising, it can
+      come back as an Enhancement.
 - [ ] v0.210.5 (Tom, 2026-11-18 12:57, Death Knights' camp, Cinder): (1) memorizing Magic Missiles
       past the 1st-level slots dropped the 2nd / 3rd-level counts - the moon's extra spells (Cinder's
       robe's moon full: 2, shared by levels 1-5) were added into every level's count. The original
@@ -769,9 +796,6 @@ the Project as claude/TODO.md.
       its flags from leftover memory (behave secret failed when the run's folder path was longer - found by
       the toggle checks). Now no flags (plain grass, the default scatter). Check Secret's own outdoor
       builder in its GAME.OVR (Darkness's reads DS 0x097C[15]): which flags, if any, it uses.
-- [ ] The book's Page Width and single-column Column (v0.209.1): checked with the board's own column
-      code on every GOG / some SNEG journal page (tools/devkit/src/book_columns.cpp) and host tests; not
-      yet seen drawn (QEMU or a board). Tom: PoolRad's journal page 1 on Column, then Page Width / Whole.
 - [ ] For the PortMaster session (v0.209.1): play::Options `coin_exchange`, `oil_burns` (Enhancements now,
       `rules::enh`); kAdndItems is PoolRad's Flame Tongue only; Coin Exchange's old bit 0x20 is free.
 - [ ] Treasures play-through leftovers (2026-11-17): a fight page read "LORDSMAN goes down LORDSMAN" /
@@ -1136,12 +1160,18 @@ the Project as claude/TODO.md.
       Zhentil dwarf wave, Stojanow towers, the hall guards); three places
       reached by the playsim's TELE / AREA jumps (pyramid north wing and
       exit, Valjevo inner castle's upstairs). Open:
-  - [ ] DOSBox: Valjevo laundry "USE THE CLOTHING AS A DISGUISE?" - YES
+  - [x] (2026-11-27: the original's own - its IF tests the AND's result the other way round, coab's AndOr
+        sets the compare flags as the engine; kept, SPEC 12 not needed) DOSBox: Valjevo laundry "USE THE CLOTHING AS A DISGUISE?" - YES
         sets the disguise but prints "WELL THEN, GOOD LUCK", NO prints
         "THEY HELP YOU PUT ON THE CLOTHES" (ECL5 6 0x84DA / 0x8096: the
         script's AND then IF) - is the original's text the same way round?
-  - [ ] Side quests not played: the lizardmen keep, Bivant (Buccaneers),
-        the silver dragon, Valjevo's NE / NW quadrants.
+  - [x] Side quests not played: the lizardmen keep, Bivant (Buccaneers),
+        the silver dragon, Valjevo's NE / NW quadrants. [2026-11-27, v0.222.0: function-checked by sweep's `events`
+        on PoolRad - every script block of ECL1-8 entered, every square stepped on from every side (256 steps a
+        block, the GOG save A party, the party can't fall): no hang, no script fault; its two "out of time" fights
+        (ECL6 1, 2 against 56; ECL8 16, the lizardmen keep, 5 against 24) were the test's own - the party that can't
+        fall against two dozen lizard men past round 100 (TURNLOG: every turn taken, the lizard men hitting).
+        The six fights the play-through skipped by VMSET were lost by the party's Quick, not stuck.]
 - [x] v0.200.5 (Tom, 2026-11-14: "If you run into trouble with a savegame
       ... create a party quickly and save them"; the rest of the party
       menus beside the originals in DOSBox, a character made and added in
@@ -1556,8 +1586,10 @@ the Project as claude/TODO.md.
       (found 2026-11-06: DS 0x0F46 - copper 5, bronze 10, platinum 25,
       steel 50 to the 50; payments use them now) before its
       money joins in; (2) Tom's rates were 2e's (1 pp = 50 sp); the engine
-      keeps the games' own (1e: 1 gp = 20 sp) - tell Tom; (3) the wagon
-      driver (Pool 2:9's whole-party payer) not run in the playsim yet.
+      keeps the games' own (1e: 1 gp = 20 sp) - told Tom 2026-11-27; (3) [done 2026-11-27] the wagon
+      driver (Pool 2:9 0x94D9, its payer 0x8056) run in the playsim: 50 gold each paid the 250 from the first
+      five (the NPC's untouched), 30 each refused ("YOU DON'T GOT THE MONEY"), 20 platinum each paid; the same
+      with NOFIXES=1 (sim SETMONEY takes a list now).
 
 - [ ] Pool full play test, side by side with DOSBox (part 1, v0.160.3:
       Phlan's civilized area, 17 fixes; part 2, v0.160.4: lists, wall
@@ -1696,7 +1728,8 @@ the Project as claude/TODO.md.
       doors (Pick / Bash), Kuto's Well crossed, Podol's auction
       (Disguise, comments, a bid, the disguise blown, cancelled)
       matched; 77119bf a PICTURE counts as the encounter's picture
-      shown (Curse: check). Open: (e) a leader's loot order.
+      shown (Curse: check). Open: (e) a leader's loot order [closed 2026-11-27: settled in
+      the Project's playtest_poolrad.md - ovr4 +0x5B7 / ovr6 +0x10A's order, the engine the same].
       Part 13: matched the clerk after the cancelled auction (208 XP,
       250 gold + 200 platinum, the bishop's new commission), the
       bishop and Dirten joining, the harbour's boats and payer, the
@@ -1713,7 +1746,8 @@ the Project as claude/TODO.md.
       ADD NPC's side byte and View's Trade for NPCs. Not reached: the
       Kovel mansion inside, Valjevo, Scribe (no scroll yet), later
       commissions. The Add list's order (DOSBox: the newest .CHA first) not
-      checked further.
+      checked further [closed 2026-11-27: the original lists the folder in the DOS search's order - the disk's,
+      not a rule; the engine lists by name on purpose (a card's FAT order is arbitrary)].
       Part 14: the Kovel mansion - the wealthy block's guard rooms
       (eight orcs, the hay beds' orcs: 21 / 18 XP both), the patrol's
       Advance / Parlay (Nice: they wander off), the mansion (ECL3 14,
@@ -1751,7 +1785,9 @@ the Project as claude/TODO.md.
       re-syncs; kobolds 65 / 48 XP by dice), the graveyard's entry and
       a skeleton surprise (155 / 84 XP: the engine's turned skeletons
       fled - by dice). Fixed: ab240cc the step's position line drawn
-      again before "Locked." after a DAMAGE took it away. Open: (a) the
+      again before "Locked." after a DAMAGE took it away. Open: (a) [closed 2026-11-27: the original's
+      script menus scroll the party list on an arrow key (coab ovr008 sub_317AA -> scroll_team_list); the
+      engine's Left / Right move the menu's highlight, Up / Down the party list - Tom's cursor keys] the
       original's Right arrow at a script Yes / No menu (the thieves'
       trainer, Phlan 9,0) makes the first member selected (View shows
       Bakshi) - the engine keeps the selection; cause not found (the
@@ -2242,7 +2278,8 @@ the Project as claude/TODO.md.
       1.5 KB at a fight's start); slim the deepest frames if it drops
       under ~1 KB (fight_load_monster 1.2 KB, draw_overland 1.4 KB,
       load_party_text 1.3 KB, save_game 1.1 KB).
-- [ ] Tom: v0.104.2 - Pool's walls round Phlan's gateway / the
+- [x] (2026-11-27: Tom needn't - PoolRad's play-through walked Phlan's gateway, temples and the unsettled areas
+      and fought with Aim / Manual on empty squares) Tom: v0.104.2 - Pool's walls round Phlan's gateway / the
       temples, and Center in a fight (Aim, Manual, an empty square).
 - [ ] Tom: Secret test characters (2026-10-18, secret_itemtest.zip):
       its files into Secret's folder on the card beside SAVGAMA.DAT
@@ -2523,7 +2560,11 @@ the Project as claude/TODO.md.
       Dead rows (monster class) - an item carrying one would still say it.
       PoolRad's Animate Dead in camp skips the original's sight check
       (ovr23 +0x20E9 call) and its effect-allowed check (+0x21B6) as the
-      fights' version does. Death Knights' camp Blink taken as Gateway's
+      fights' version does. [Read 2026-11-27, GAME.OVR 0x29087 (ovr23 base 0x27018): +0x20E9 is 0x3E0:0x7A(member,
+      its field x, y, 1) - the corpse's square on the battlefield, which the engine's fight tests too (stand_up); in
+      camp the original reads the last fight's squares (left-over memory) - not followed. +0x21B6 is 0xB0:0x8E(member,
+      its max hit points) - the stand-up itself, which the engine does; the power is spent before it as the
+      engine's camp does. Nothing to change.] Death Knights' camp Blink taken as Gateway's
       (its camp code not read). 2026-11-15 (gaps): no item of any game
       carries one of those spells (testchars' item lists); PoolRad's camp
       Animate Dead stands the dead up as its own stand-up routine (ovr23

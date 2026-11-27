@@ -1453,12 +1453,17 @@ int main(int argc, char** argv)
             q = *c == ';' ? c + 1 : c;
         }
         if (getenv("SETMONEY")) {
-            // SETMONEY=coin:n: every member's coins of that kind n (0 copper ... 3 gold, 4 platinum; a play-through's cheat)
-            int coin = 3, v = 0;
-            sscanf(getenv("SETMONEY"), "%d:%d", &coin, &v);
-            for (int i = 0; i < play::pt->count && coin >= 0 && coin < 7; ++i) {
-                play::pt->m[i].rec[0xFB + coin * 2] = static_cast<uint8_t>(v);
-                play::pt->m[i].rec[0xFC + coin * 2] = static_cast<uint8_t>(v >> 8);
+            // SETMONEY=coin:n[,coin:n...]: every member's coins of that kind n (0 copper ... 3 gold, 4 platinum; a
+            // play-through's cheat)
+            for (const char* q = getenv("SETMONEY"); q && *q;) {
+                int coin = 3, v = 0;
+                if (sscanf(q, "%d:%d", &coin, &v) != 2) break;
+                for (int i = 0; i < play::pt->count && coin >= 0 && coin < 7; ++i) {
+                    play::pt->m[i].rec[0xFB + coin * 2] = static_cast<uint8_t>(v);
+                    play::pt->m[i].rec[0xFC + coin * 2] = static_cast<uint8_t>(v >> 8);
+                }
+                q = strchr(q, ',');
+                if (q) ++q;
             }
         }
         if (getenv("SETHP")) {
