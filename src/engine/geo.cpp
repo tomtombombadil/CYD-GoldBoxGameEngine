@@ -75,7 +75,10 @@ bool load_hlib(dax::ByteSource& src, uint32_t pos, uint32_t len, Map& out)
     }
     out.w = static_cast<uint8_t>(w);
     out.h = static_cast<uint8_t>(ht);
-    out.wraps = false;
+    // (its edges wrap round as the DAX games' maps: the New Aurim palace's spy passage -
+    // the queen's fireplace leads to 27,24, its way on east to 0,24 and the stairs at
+    // 1,24; DOSBox, 2026-11-27 - the engine had the party shut in there)
+    out.wraps = true;
     out.low_bit_doors = true;
     for (int k = 0; k < 6; ++k) out.head[k] = h[2 + k];
     // (a map of up to 256 squares: each plane in plane[k], x + y * w)

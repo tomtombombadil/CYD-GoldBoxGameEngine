@@ -1,5 +1,9 @@
 # Open tasks (Tom and Claude)
 
+- [x] v0.221.17 (the Dark Queen, the New Aurim palace's spy passage): **the Dark Queen's maps didn't wrap round at their
+      edges** - the queen's fireplace leads to 27,24 (map 34, 28 wide), its way on is east off the edge to 0,24 and the
+      stairs down at 1,24; the engine stopped the step and the party was shut in. DOSBox (the same save): east twice,
+      then north, "STAIRS. GO DOWN?" - so GEO.GLB maps wrap as the DAX games' (geo::load_hlib). Host test.
 - [x] v0.221.16 (the Dark Queen, the New Aurim palace; DOSBox beside the engine): **a saved game with an NPC didn't
       load in the original** ("INSERT DISK 2" / "DISK READ ERROR" - Grunschka joined). The original's own join (DOSBox,
       the same save, saved there) writes the NPC's MONCHA number at record 0xBD; the engine's record had no place for it

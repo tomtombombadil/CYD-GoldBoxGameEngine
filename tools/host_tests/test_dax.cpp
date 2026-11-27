@@ -5176,7 +5176,8 @@ static void test_geo_view()
     }
     // HLIB maps (Dark Queen's GEO.GLB entries): h, w (the height first -
     // v0.219.1: Naulidis 20 wide, 39 tall), 6 header bytes, then four planes
-    // of w x h bytes, x + y * w; any size up to kMaxSquares, no wrapping
+    // of w x h bytes, x + y * w; any size up to kMaxSquares; the edges wrap round (the
+    // New Aurim palace's spy passage, 27,24 east to 0,24 - DOSBox, v0.221.17)
     for (int big = 0; big < 2; ++big) {
         const int w = big ? 30 : 10, h = big ? 21 : 12, n = w * h;
         std::vector<uint8_t> g(geo::kHlibHeader + 4 * n + 2, 0);
@@ -5189,14 +5190,15 @@ static void test_geo_view()
         sq(3, 3, 2) = 0x80;                  // the west side's door bits 2: shut (the Queen's low bit - v0.219.4)
         dax::MemorySource gs(g.data(), static_cast<uint32_t>(g.size()));
         static geo::Map hm;
-        CHECK(geo::load_hlib(gs, 0, static_cast<uint32_t>(g.size()), hm) && hm.loaded && !hm.wraps);
+        CHECK(geo::load_hlib(gs, 0, static_cast<uint32_t>(g.size()), hm) && hm.loaded && hm.wraps);
         CHECK(hm.w == w && hm.h == h && (hm.big != nullptr) == (n > 256) && hm.head[0] == 1 && hm.head[5] == 6);
         CHECK(geo::wall(hm, w - 1, h - 1, geo::North) == 5 && geo::wall(hm, w - 1, h - 1, geo::East) == 2);
         CHECK(geo::wall(hm, 3, 2, geo::West) == 12 && geo::passage(hm, 3, 2, geo::West) == 0 && geo::flags(hm, 3, 2) == 0x85);
-        CHECK(geo::wall(hm, w, h - 1, geo::North) == 0 && geo::flags(hm, -1, 0) == 0);     // off the map: nothing
+        CHECK(geo::wall(hm, w, 2, geo::North) == geo::wall(hm, 0, 2, geo::North) && geo::flags(hm, -1, 2) == geo::flags(hm, w - 1, 2));
         int sx = w - 1, sy = 0;
-        CHECK(!geo::step(hm, sx, sy, geo::East) && sx == w - 1 && !geo::step(hm, sx, sy, geo::North) && sy == 0);
-        CHECK(geo::step(hm, sx, sy, geo::South) && sy == 1);
+        CHECK(geo::step(hm, sx, sy, geo::East) && sx == 0 && sy == 0);     // round: the far side
+        CHECK(geo::step(hm, sx, sy, geo::North) && sx == 0 && sy == h - 1);
+        CHECK(geo::step(hm, sx, sy, geo::South) && sy == 0);
         geo::unlock(hm, 3, 2, geo::West);
         CHECK(geo::door(hm, 3, 2, geo::West) == 1 && geo::door(hm, 2, 2, geo::East) == 1);
         CHECK(!geo::load_hlib(gs, 0, static_cast<uint32_t>(g.size()) - 4, hm) && !hm.loaded && !hm.big);   // short
