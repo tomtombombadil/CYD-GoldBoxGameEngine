@@ -54,3 +54,9 @@ Hizden (script 18, map 18) and the overland (script 5):
   blocked). Steps: F north, B south, < west, > east, L north-west, R north-east (play::move_keys()).
 - The lighthouse: R F F from Hizden's square, Yes (script 22, map 22 24 x 27; its floors script 23).
 
+- The Luminari lighthouse (scripts 22 / 23, map 22 24 x 27 - every floor a region of the one map):
+  regtour.sh SLOT RAW tours a region's event squares (PADS=20,21,...: stairs / teleporters last; MAPAVOID
+  the pits - script 22's code 02, script 23's 07 / 08 / 0C; 60-63 only warn), vis.sh rebuilds visited.txt
+  from tour logs. The archways need PICK=Step. The elf woman's hint (byte 0x13E = 7) counts 200 steps
+  each: steps.sh SLOT N (STEPS=FB, a safe straight square pair). Then with Search on the glimmer at 2,6 and
+  the illusory wall 1,6 lead to the lab (21,21); Fastillion at 21,24; out by the lab's pit 21,22.
