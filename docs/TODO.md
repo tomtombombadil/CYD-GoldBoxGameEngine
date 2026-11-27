@@ -3425,3 +3425,11 @@ the Project as claude/TODO.md.
       navcheck (150) in all nine games on 0.221.2 - 0 problems, after one false alarm of the check's own was put
       right: R18 took a readied item's own effect (the kender's hoopak, effect 7) for a fight-end loss when
       Quick's end readied the member's earlier weapon again (fight_check's party_ready).
+- [x] v0.221.4 (the PortMaster session, 2026-11-26): **Exit in a treasure's "Take: Money Items Exit" left the
+      whole treasure** ("There is still treasure left ...") in every game but PoolRad - the original goes back to
+      View Take Pool Share Exit (DOSBox, Treasures: the old tower's fight won on Quick, Take, Exit; PoolRad was
+      seen so before). Now every game's. Found by the port's Speed test in Darkness (a save one step before a
+      fight: SAVE=A AREA=1 BLOCK=20 TELE=2,1,0 SAVENOW=A - such a teleported save does NOT load in the original,
+      "Unable to load 1 from 8x8d0"). Playsim (Darkness): Take, Exit - the treasure's menu, Take lit; Exit again -
+      the question. navcheck Curse / Darkness / Gateway 0. Not run in DOSBox: Curse, Secret, Gateway, the Krynn
+      games (the same menu code in the engine).
