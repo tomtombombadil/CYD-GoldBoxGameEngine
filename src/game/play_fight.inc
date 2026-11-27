@@ -6948,8 +6948,13 @@ void begin_targeting(pic::Canvas& c, int sp)
         cast_now(c);
         return;
     }
-    if (e.targets == spells::kParty) {
-        // Their whole side
+    if (e.targets == spells::kParty && d->prof->game == games::Game::DarkQueenOfKrynn) {
+        // Their whole side (the Dark Queen's own engine, not checked; the DAX
+        // games aim these as any other - their fight's target routine reads
+        // only byte 6, the aim: Curse GAME.OVR 0x155DB, the same in Pool,
+        // Secret, Darkness, Gateway, Treasures, Champions, Knights; byte 7 is read only
+        // by the camp's. Seen in DOSBox, 2026-11-27: Curse's Dust of
+        // Disappearance aimed 4 picks, the 4 picked invisible, and Bless aims)
         const bool mine = fg->b.f[fg->cur].team();
         for (int k = 0; k < fg->b.n; ++k)
             if (fg->b.f[k].up() && fg->b.f[k].size && fg->b.f[k].team() == mine) fg->sp_t[fg->sp_n++] = k;
@@ -6979,6 +6984,10 @@ void begin_targeting(pic::Canvas& c, int sp)
                          fs->does != combat::SpellDoes::Mirror && fs->does != combat::SpellDoes::CureBlind &&
                          (fs->does != combat::SpellDoes::Affect || e.targets == spells::kCombat);
     fg->ci = -1;
+    // (one for their own side starts on the caster - Curse in DOSBox, 2026-11-27:
+    // Bless and the Dust of Disappearance's aim open on the one casting)
+    for (int k = 0; k < fg->n_cand && fg->ci < 0 && !hostile && d->prof->game != games::Game::DarkQueenOfKrynn; ++k)
+        if (fg->cand[k] == fg->cur) fg->ci = k;
     for (int k = 0; k < fg->n_cand && fg->ci < 0; ++k)
         if (fg->cand[k] != fg->cur && (!hostile || fg->b.f[fg->cand[k]].team() != fg->b.f[fg->cur].team())) fg->ci = k;
     for (int k = 0; k < fg->n_cand && fg->ci < 0; ++k)
