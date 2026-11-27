@@ -1063,7 +1063,7 @@ the Project as claude/TODO.md.
         else there. DOSBox: does the original's travel camp show the party list (as Death Knights' PROGRAM 9
         camp does, v0.210.1)? Then the same for Curse.
   - [ ] Add Character lists 48 entries at most (a save folder with many slots hides some).
-  - [ ] (2026-11-26, the PortMaster session, the original in DOSBox with the engine's save - the playsim's GIVE: in camp,
+  - [x] v0.221.12 (the fight's aim below). (2026-11-26, the PortMaster session, the original in DOSBox with the engine's save - the playsim's GIVE: in camp,
         Use on a Dust NOT readied does nothing one can see, the list stays; readied, Use takes it - gone from the
         list, nothing said. So "nothing happened" is the original's own for an item not readied. Not tried: in a
         fight; whether Mira's was readied.) Curse's hideout leader fight: Mira's unidentified Dust (Dust of Disappearance) - Use in the
@@ -3465,6 +3465,18 @@ the Project as claude/TODO.md.
       "Unable to load 1 from 8x8d0"). Playsim (Darkness): Take, Exit - the treasure's menu, Take lit; Exit again -
       the question. navcheck Curse / Darkness / Gateway 0. Not run in DOSBox: Curse, Secret, Gateway, the Krynn
       games (the same menu code in the engine).
+- [x] v0.221.12 (the PortMaster session, 2026-11-27): **the party's own spells and items in a fight were cast on the
+      whole side with no aim** when the spell's table row names the party (byte 7 = 4: Bless, Haste, Invisibility 10'
+      Radius, the Dust of Disappearance ...). The original aims them as any other: its fight's target routine reads only
+      byte 6 (Curse GAME.OVR 0x155DB; the same single reader in PoolRad, Secret, Darkness, Gateway, Treasures,
+      Champions, Knights - byte 7 is read only by the camp's), and Bless's own routine (0x2FC55) keeps the aimed ones of
+      the caster's side not next to an enemy. DOSBox (Curse, the tavern fight from the engine's save): the Dust opens
+      "AIM: Next Prev Manual Target Center Exit" on Mathew, four picks (Target on himself counts), Exit takes it - the
+      game saved after: the four picked "invisible" (effect 0x47, each its own 2d10 x 10), the other two not; Bless
+      aims, on Shara. Now: the aim's count by byte 6 (the Dust 4, Bless an area of 2), the aim opening on the caster
+      for a spell of their own side. The Dark Queen keeps the old way (its own engine, not checked). The computer's
+      spells are as they were (combat::ai_targets). Playsim: the Dust - aim, Target / Next, the picked "is invisible";
+      Bless - aim, "SHARA is Blessed". host tests; behave curse / poolrad / darkness / gateway.
 - [x] v0.221.11 (the PortMaster session, 2026-11-27): **Curse's camp on the travel map** ("Enter city Journey on
       Camp" - Camp) showed the camp's words under the map. The original (DOSBox, the edge of Tilverton, the stock
       party): the camp's own screen - the camp picture in the view's yellow frame, the party list, "7,13 E 00:00
