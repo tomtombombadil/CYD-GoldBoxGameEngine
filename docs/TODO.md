@@ -3462,3 +3462,11 @@ the Project as claude/TODO.md.
       "Unable to load 1 from 8x8d0"). Playsim (Darkness): Take, Exit - the treasure's menu, Take lit; Exit again -
       the question. navcheck Curse / Darkness / Gateway 0. Not run in DOSBox: Curse, Secret, Gateway, the Krynn
       games (the same menu code in the engine).
+- [x] v0.221.11 (the PortMaster session, 2026-11-27): **Curse's camp on the travel map** ("Enter city Journey on
+      Camp" - Camp) showed the camp's words under the map. The original (DOSBox, the edge of Tilverton, the stock
+      party): the camp's own screen - the camp picture in the view's yellow frame, the party list, "7,13 E 00:00
+      CAMPING" - and when the camp breaks the map back as it was, no party list or position line over it. Now the
+      same: the map's rows wait on the card (_CYD/CAMP.TMP) while the camp is up; after the camp's script move no
+      party list is drawn over the map. Playsim from a save at the travel map (SAVE=A AREA=1 BLOCK=80 SAVENOW=D):
+      Camp, View, Exit, Exit; Camp, Rest 3 hours, Exit - the map as before; screenshots set beside DOSBox's.
+      host tests, navcheck (Curse, Champions, Knights; MCAMP=4) 0.
