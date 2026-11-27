@@ -781,8 +781,9 @@ the Project as claude/TODO.md.
       Also for it (v0.209.0): play::Options has `fixes_off` (bit = rules::Fix), `adnd` (uint16, rules::Adnd
       bits) and `keep_mem`; the old fields still work (all switches on by default). rules::fix_info /
       adnd_info give each switch's name, games and help for the port's own Settings.
-- [ ] **Toggle checks before a release** (Tom, 2026-11-17: "check each toggle and verify its effect in each
-      game ... I have announced this repo and the PortMaster repo on reddit"). v0.210.0: every Game Fix /
+- [x] **Toggle checks** (Tom, 2026-11-17: "check each toggle and verify its effect in each
+      game ... I have announced this repo and the PortMaster repo on reddit"; 2026-11-27: not before every
+      release - the full run only when Tom asks, else only the switches a change touches). v0.210.0: every Game Fix /
       AD&D 1E Rule / engine Enhancement held off by itself in every game's suites (tools/devkit/toggles.sh,
       toggles_each.sh, toggles.py - the engine reports the switches each check asked: TOGGLEMAP), the
       Enhancements both ways (`behave toggles`, E1-E8), probes for the switches no check reached (`behave

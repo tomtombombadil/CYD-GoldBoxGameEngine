@@ -798,8 +798,10 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   Darkness-type), who may turn, Restoration and training's lost levels,
   Haste's ageing, poison / disease over a rest, the Krynn moons; facts in
   the Project's claude/rules_round4_facts.md.
-  **Toggle checks** (Tom, 2026-11-17: every switch, every game, before a
-  release): with -DCYD_TEST_HOOKS the engine notes each switch a check asks
+  **Toggle checks** (Tom, 2026-11-17; changed 2026-11-27: NOT before every
+  release - "a colossal waste of usage": the full run only when Tom asks,
+  otherwise only the switches a change touches - those whose code it alters
+  and those that act on what it alters): with -DCYD_TEST_HOOKS the engine notes each switch a check asks
   (TOGGLEMAP=1 ends each check line with them) and FIXOFF / ADNDOFF /
   ENHOFF (hex masks) hold switches off whatever the checks set.
   `tools/devkit/toggles_build.sh` (a binary a game: its behave part + the
