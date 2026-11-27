@@ -892,7 +892,7 @@ the Project as claude/TODO.md.
       beside Game Fixes? Meanwhile Camp Fix sits with the comforts
       (Settings key Camp Fix, features.h CYD_CAMP_FIX). Don't ask again -
       Tom's to decide.
-- [ ] Try (2026-11-01, not pushed yet): Pool's camp Fix (a hurt party,
+- [x] (closed 2026-11-27: superseded by PoolRad's play-through to the end - the Project's claude/playthrough_poolrad.md) Try (2026-11-01, not pushed yet): Pool's camp Fix (a hurt party,
       a cleric with Cure Light Wounds); the Game menu's Cheats tab -
       Healer (the temple's cures free), Merchant (every shop's goods,
       Next / Prev through them; Curse's half price), Sanctuary (a rest in
@@ -1602,7 +1602,7 @@ the Project as claude/TODO.md.
       five (the NPC's untouched), 30 each refused ("YOU DON'T GOT THE MONEY"), 20 platinum each paid; the same
       with NOFIXES=1 (sim SETMONEY takes a list now).
 
-- [ ] Pool full play test, side by side with DOSBox (part 1, v0.160.3:
+- [x] (closed 2026-11-27: superseded by PoolRad's play-through to the end - the Project's claude/playthrough_poolrad.md) Pool full play test, side by side with DOSBox (part 1, v0.160.3:
       Phlan's civilized area, 17 fixes; part 2, v0.160.4: lists, wall
       ahead, Locked menu keys, monsters' valueless items). Part 3
       (2026-10-31): part 2's "facing north" placement and "Silver 144" were
@@ -3387,7 +3387,7 @@ the Project as claude/TODO.md.
       computer never uses an item (their item routine is compiled out or
       never keeps one - round 8 - kept as the originals; a Game Fix to
       give monsters their wands back? not added: not an AD&D mistake).
-- [ ] Pool's story beyond the nomads' camp: targeted differ runs only
+- [x] (closed 2026-11-27: superseded by PoolRad's play-through to the end - the Project's claude/playthrough_poolrad.md) Pool's story beyond the nomads' camp: targeted differ runs only
       (scripted places), fights judged by the rule checks. 2026-11-07
       (part 17, claude/playtest_poolrad.md): every event square of
       Valjevo (5:3-7), the Buccaneers' base (6:1), Zhentil outpost (6:28),
