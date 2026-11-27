@@ -533,6 +533,8 @@ static void test_view()
         CHECK(geo::load_hlib(g2s, 0, static_cast<uint32_t>(g2.size()), dm));
         CHECK(geo::passage(dm, 3, 4, geo::North) == 0 && geo::passage(dm, 3, 4, geo::East) == 1);
         CHECK(geo::passage(dm, 3, 3, geo::West) == 0 && geo::passage(dm, 2, 4, geo::East) == 1);   // (no wall: open)
+        // (its script place 0x3D: plane 3's bit 3 as 2, bit 1 as 1 - DQK.EXE overlay 0x807)
+        CHECK(geo::queen_bits(dm, 3, 4) == 2 && geo::queen_bits(dm, 3, 3) == 0 && geo::queen_bits(dm, 2, 4) == 0);
         geo::release(dm);
         CHECK(!dm.low_bit_doors);
     }

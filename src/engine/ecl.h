@@ -129,6 +129,12 @@ struct OpSet {
     // original's mistake: with the Game Fixes as the selected one's) -
     // ecl::queen_damage
     bool queen_damage = false;
+    // The Dark Queen's operand loader (DQK.EXE 0x40B57, its cases at 0x40BB3):
+    // 0x3D is no game-block byte but the party's square on the map's plane 3
+    // ((b & 8) >> 2 | (b & 2) >> 1 - overlay 0x807, called at 0x40C7A); the
+    // Flame Tower's step script picks its level's events by it (script 65
+    // 0x8AB8: the iron flower at level 2's 3,4 - DOSBox, 2026-11-27)
+    bool queen_sq = false;
     // The Dark Queen's maps are up to 255 squares a side (GEO.GLB): a write
     // to the party's x / y (0x34 / 0x35) keeps its whole byte - the 16 x 16
     // games keep 4 bits (Naulidis, 20 x 39: arriving at 11,17 put the party

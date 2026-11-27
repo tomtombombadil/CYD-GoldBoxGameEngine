@@ -14842,12 +14842,14 @@ struct Host : ecl::Host {
         pic_shown = false;
         head_shown = body_shown = -1;
         d->gs.roof = geo::flags(d->map, d->gs.x, d->gs.y);
+        d->gs.sq_bits = geo::queen_bits(d->map, d->gs.x, d->gs.y);
         draw_view(*cv);
         draw_position(*cv);
     }
     void square() override
     {
         d->gs.roof = geo::flags(d->map, d->gs.x, d->gs.y);
+        d->gs.sq_bits = geo::queen_bits(d->map, d->gs.x, d->gs.y);
         d->gs.wall_ahead = static_cast<uint8_t>(geo::wall(d->map, d->gs.x, d->gs.y, d->gs.dir));
         gw_way_ahead();
     }
@@ -15373,6 +15375,7 @@ void after_move_redraw(bool step = false)
     pic_shown = false;
     head_shown = body_shown = -1;
     d->gs.roof = geo::flags(d->map, d->gs.x, d->gs.y);
+    d->gs.sq_bits = geo::queen_bits(d->map, d->gs.x, d->gs.y);
     // (Pool works the wall ahead out at a step, a turn and CALL C018 only -
     // a script's move leaves the old one: ovr8 0x19DB, ovr4 0x2DAF; the
     // tour's end saved 0 where the engine had 1)
@@ -15674,6 +15677,7 @@ void handle(ecl::Stop r)
             // up until the next key; DOSBox: Valjevo's laundry and kitchen.
             // The position line shows the new square - SPEC 12)
             d->gs.roof = geo::flags(d->map, d->gs.x, d->gs.y);
+            d->gs.sq_bits = geo::queen_bits(d->map, d->gs.x, d->gs.y);
             draw_position(c);
         } else {
             after_move_redraw();
@@ -16011,6 +16015,7 @@ void begin_adventuring()
         }
     }
     d->gs.roof = geo::flags(d->map, gs.x, gs.y);
+    d->gs.sq_bits = geo::queen_bits(d->map, gs.x, gs.y);
     draw_view(c);
     draw_panel(c);
     run_entry(4, Then::Begun);
@@ -21604,6 +21609,7 @@ __attribute__((noinline)) void secrets_work_out()
                     g.dir = dir;
                     g.wall_ahead = static_cast<uint8_t>(geo::wall(m, x, y, dir));
                     g.roof = geo::flags(m, x, y);
+                    g.sq_bits = geo::queen_bits(m, x, y);
                     const int nx = x + geo::dx(dir), ny = y + geo::dy(dir);
                     vm->set(0x7ED5, nx < 0 || nx >= m.w || ny < 0 || ny >= m.h ? 1 : 0);
                     vm->set(0x7EC9, 0);

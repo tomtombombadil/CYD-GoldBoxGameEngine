@@ -502,6 +502,7 @@ uint16_t Vm::dk_read(uint16_t a, int size) const
         case 0x32: return s_.wall_ahead;
         case 0x34: return static_cast<uint16_t>(s_.x);
         case 0x35: return static_cast<uint16_t>(s_.y);
+        case 0x3D: if (set_.queen_sq) return s_.sq_bits; break;
         }
         return s_.area1[a - 1];
     }
@@ -1151,7 +1152,7 @@ Stop Vm::resume()
 struct Vm::ProbeSave {
     uint8_t  area1[sizeof(GameState::area1)], area2[sizeof(GameState::area2)], table[sizeof(GameState::table)];
     int      x, y, dir;
-    uint8_t  wall_ahead, roof, game_area, script;
+    uint8_t  wall_ahead, roof, sq_bits, game_area, script;
     bool     moved;
     uint32_t pc;
     uint32_t stack[32];
@@ -1192,7 +1193,7 @@ bool Vm::begin_probe()
     memcpy(p.area2, s_.area2, sizeof p.area2);
     memcpy(p.table, s_.table, sizeof p.table);
     p.x = s_.x; p.y = s_.y; p.dir = s_.dir;
-    p.wall_ahead = s_.wall_ahead; p.roof = s_.roof; p.game_area = s_.game_area; p.script = s_.script;
+    p.wall_ahead = s_.wall_ahead; p.roof = s_.roof; p.sq_bits = s_.sq_bits; p.game_area = s_.game_area; p.script = s_.script;
     p.moved = s_.moved;
     p.pc = pc_;
     memcpy(p.stack, stack_, sizeof p.stack);
@@ -1216,7 +1217,7 @@ void Vm::probe_restore()
     memcpy(s_.area2, p.area2, sizeof p.area2);
     memcpy(s_.table, p.table, sizeof p.table);
     s_.x = p.x; s_.y = p.y; s_.dir = p.dir;
-    s_.wall_ahead = p.wall_ahead; s_.roof = p.roof; s_.game_area = p.game_area; s_.script = p.script;
+    s_.wall_ahead = p.wall_ahead; s_.roof = p.roof; s_.sq_bits = p.sq_bits; s_.game_area = p.game_area; s_.script = p.script;
     s_.moved = p.moved;
     pc_ = p.pc;
     memcpy(stack_, p.stack, sizeof p.stack);

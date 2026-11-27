@@ -1847,6 +1847,7 @@ constexpr ecl::OpSet kQueenEcl = [] {
     s.moons = true;                 // (its clock steps the moons a day at a time: DQK.EXE 0x60C8 -> 0x5E58)
     s.big_maps = true;              // (x / y bytes whole: its maps are bigger than 16 x 16)
     s.queen_damage = true;          // (its DAMAGE's saves - DQK.EXE 0x4256F, round 15)
+    s.queen_sq = true;              // (0x3D: the square's plane-3 bits - DQK.EXE 0x40C72)
     s.music_ids = 0x20;             // (its songs: SOUND 0x20-0x27 - music_facts.md)
     s.ending_program = 1;           // (its ending plays 0x27: DQK.EXE 0x387DD)
     s.ending_sound = 0x27;

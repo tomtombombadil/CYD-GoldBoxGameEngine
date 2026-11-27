@@ -125,6 +125,14 @@ uint8_t flags(const Map& m, int x, int y)
     return i < 0 ? 0 : m.pl(2)[i];
 }
 
+uint8_t queen_bits(const Map& m, int x, int y)
+{
+    const int i = at(m, x, y);
+    if (i < 0) return 0;
+    const uint8_t b = m.pl(3)[i];
+    return static_cast<uint8_t>((b & 8) >> 2 | (b & 2) >> 1);
+}
+
 uint16_t plain_walls(const Map& m)
 {
     uint16_t solid[16] = {}, open[16] = {};

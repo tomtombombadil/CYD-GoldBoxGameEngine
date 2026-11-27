@@ -85,6 +85,9 @@ int wall(const Map& m, int x, int y, int dir);
 // Door state (0-3) on that side.
 int door(const Map& m, int x, int y, int dir);
 uint8_t flags(const Map& m, int x, int y);
+// The Dark Queen's square bits (its script place 0x3D): plane 3's bit 3 as
+// 2, bit 1 as 1 (DQK.EXE overlay 0x807)
+uint8_t queen_bits(const Map& m, int x, int y);
 
 // 0 solid, 1 open, 2 locked, 3 barred: what stepping out of (x, y) towards
 // dir meets (1 where there is no wall).

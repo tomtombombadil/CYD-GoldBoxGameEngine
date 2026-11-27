@@ -61,6 +61,7 @@ struct GameState {
     uint8_t  game_area = 2;         // ECL<n>, GEO<n> ... files
     int      x = 7, y = 13, dir = 0;  // dir 0, 2, 4, 6
     uint8_t  wall_ahead = 0, roof = 0;
+    uint8_t  sq_bits = 0;           // (the Dark Queen's 0x3D: OpSet::queen_sq)
     bool     moved = false;          // a script set the position
     // The script's bytes: kCodeSize, or more when the state was made by
     // new_game_state with a bigger room (the array runs on past its end
