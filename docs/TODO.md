@@ -3630,7 +3630,12 @@ the Project as claude/TODO.md.
       the dotted grid lines and room numbers fool the first tries.
 - [ ] Pools of Darkness: maps drawn as four quarters; the Dark Queen's (HLIB); the GOG cluebooks (Tom added them).
 - [ ] The secret-door rule (play::map_secret: a passable side of a plain wall type, the step script asked) against
-      the cluebooks' S-hooks. First look by eye: Curse 11 of its 18 marks on an S-hook (the rest an ordinary door,
+      the cluebooks' S-hooks. Found 2026-11-27: the map data can't tell a secret door from a door (both door code 1,
+      the same both ways); the look is the wall type's picture. The cluebooks' symbols differ by book (Curse: the S
+      a secret door, the arch an archway; Champions: its arch-hook the secret door, archways drawn alike) - their
+      apparent misses were archways (Yulash's type 1, Champions map 80's type 2: arch pictures), their apparent
+      wrong ones plain walls the party walks through (Curse map 4's type 4, Champions map 64's type 2: no door in
+      the picture) - the engine right there, the cluebook drawing a door. Earlier notes: First look by eye: Curse 11 of its 18 marks on an S-hook (the rest an ordinary door,
       plain walls, two on the map's outer edge), Champions 4 of 6 (2 ordinary doors). The script's own refusals not
       counted in this - the game runs them.
 - [ ] Door code 2 (red, "Locked" in the Companion): an ordinary door in the cluebooks (no lock symbol in them).

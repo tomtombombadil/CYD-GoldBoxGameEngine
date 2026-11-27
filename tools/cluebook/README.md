@@ -23,3 +23,11 @@ most at 0.85 - 0.98, the next best map far lower: Curse 10 of 16 maps (20), Pool
 Gateway 20 of 30 (23.5), Treasures (24.5) still to finish, Pools of Darkness 2 of 32 (20 - each map drawn as four
 8 x 8 quarters apart: quarters to be tried). The Dark Queen's maps (HLIB, GEO.GLB) not yet. The rest: wilderness
 maps, maps drawn in pieces, parts of maps.
+
+Reading the sides (2026-11-27): `readall.py <game> <pdf> 0.6` registers each found map closely (`refine.py`: the
+engine's walls on the drawn lines, at 200 dpi) and reads each side (`sides.py`: the line found at the side's ends,
+then the middle - a box breaks the line and has long straight edges, a hook or arch leaves it whole); `compare.py`
+counts the engine's codes against them. The game's own pictures: `mapload.cpp` (each area script's map and wall
+sets - ecl::find_map_load), `looks.cpp` (each map's 15 wall types' pictures, hashed: alike = the same look),
+`wallpic.cpp` (a wall block's five pieces drawn head-on, PPM). The last two #include engine/view3d.cpp (its piece()
+is file-local) - a developer's tool's licence, never the engine's way.
