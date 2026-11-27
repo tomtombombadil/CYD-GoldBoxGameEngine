@@ -229,13 +229,23 @@
       field was walls but the party's row: the umber hulks shut in pockets, 15 rounds of nothing, "won" with 0
       experience. The map's own size now. Host test test_field_big_map (fails without the fix). The playsim's
       MAPPATH had the same 16 x 16 limit (walks said "no way").
-- [ ] The Dark Queen's import, record by record against the original's own (DOSBox import of the same Death Knights
-      party): the engine differs at 0x9F, 0xBC, 0xBD, 0xC3, 0xC4 / 0xC5, 0xC7 / 0xC8 (original 0, engine 2), a knight's
-      memorized 0x12A, the elves' known spells 0x15B-0x164. Which of them play: not worked out
-      (tools/devkit/playthrough/queen/qsv.py compares two QSVs).
-- [ ] Caergoth's warehouse 7,13: entered from 7,12 (door 1), its north side door 3 - the engine couldn't leave it.
-      Since v0.219.4 a door state 3 is open in the Queen's maps (checked in DOSBox at Naulidis) - most likely
-      the same cause; walk it again when the play-through passes there.
+- [x] v0.221.22: **the Dark Queen's import of Death Knights characters** now as the original's (DQK.EXE 0x33EC5 the
+      record, 0x3497B the items, 0x34858 the effects, 0x35181 the spells): item name words, item spells / specials,
+      effect numbers and spell numbers go through three switches of DQK.EXE's own, RUN from the player's program in
+      engine/x86 (qimport.*, profile q_import) - before, an imported knight's Solamnic Plate read "Stone", the scrolls
+      "Gaze Resistance Mage", a sword "+4 vs Giants" for "vs Reptiles", and the spells kept Death Knights' numbers.
+      Also the knight's best level (0x9F; it had shown as a memorized spell at place 92), the party slot 0xC5 (the
+      lowest free one, as a member joins - 0x365F1), the portrait creation picks (0xC4), the flags 0xC7 / 0xC8 as
+      they were (0 / 0; creation's 2 / 2 now set by the engine's creation). Checked: the Death Knights winners
+      imported by the engine and by the original (DOSBox) - every record, item and effect byte the same but 0xBC /
+      0xC3, which DQK.EXE never reads. Parties imported before v0.221.22 keep their old items' numbers. Host test.
+- [x] v0.221.22: **the Dark Queen's fight field drew a shut door (state 2) as a door** - its field builder (DQK.EXE
+      0x2BD62) asks the step's own test: a walled side with its low door bit is a door, 0 / 2 a wall. Host test.
+- [x] 2026-11-27 (the Dark Queen's open items): Caergoth's warehouse 7,13 - in and out by its north side since
+      v0.219.4 (the engine); Hawkbluff's Davik "turn that didn't turn" - the kit's press swallowed by the text; the
+      same keys in DOSBox and the engine (up, Return, X, right, right) give the same screens; the encounter zones
+      (0x3D) of the areas played before v0.221.21 - random encounters only, no event hangs on them (scripts 14, 15,
+      34, 46, 52 and the shared rest code 9F21 checked), not replayed.
 - [ ] Turef: Skomp's boar square 9,4 answers only a step east from 8,4 - a side the playsim's MAPPATH (and
       `map_secret`'s plain-wall rule) takes for wall. Check what the Companion map draws there.
 - [x] v0.214.10 (the PortMaster session's Treasures play-through, 2026-11-23): **a shop's goods came up in the next
