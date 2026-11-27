@@ -1,5 +1,13 @@
 # Open tasks (Tom and Claude)
 
+- [x] v0.221.12 (the Dark Queen, Kristophan's gate after the Tombs; DOSBox beside the engine): **a step after a step
+      script that moved or turned the party went the old way** - the gate script walks the party out east and faces it
+      east; the original then takes the key's step that way (37,16 E, "There is a small house here", then "Where do you
+      want to go?"), the engine stepped south from 36,16 into the wall square 36,17 and the city could not be left.
+      Now the step is taken in the facing the script left (`move_dir`, every game; sweep events with EVMAP=1 old / new
+      compared on every game). Kit: the playsim's "_" ticks log their texts with ALLTEXT; adv.sh saves only with
+      nothing waiting (a typed question under the exploring menu was saved half done); qtalk.sh, tele.sh, hwalk.sh,
+      ovpath.py, tourloop.sh.
 - [x] v0.221.10 (the Dark Queen, Kristophan's dragonstrike): **a DAMAGE's lines had no words** - "NAME5" for
       "  NAME is hit FOR 5 points of Damage." (the Queen's profile had no DAMAGE words; DQK.EXE 0x4184B-0x41888 prints
       "  %s%s" + " dies. " / "  %s%s%s%s" + " is hit FOR " / " points of Damage." - DS 0x7759 / 0x776C / 0x7779).

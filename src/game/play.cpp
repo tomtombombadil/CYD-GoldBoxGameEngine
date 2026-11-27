@@ -15317,6 +15317,11 @@ void after_move_redraw(bool step = false)
 
 // The step the player asked for (dir = the way the party goes)
 int step_dir = 0;
+// The facing the step script left the party in: the step is taken that way, from where the script left it (the
+// original's step after its script - the Dark Queen's Kristophan gate: the script walks the party out east and
+// faces it east, and the key's step south becomes a step east onto 37,16; DOSBox, 2026-11-27 - the engine
+// stepped south into the wall square 36,17)
+int move_dir = -1;
 // A side-step (ours: "the same checks as a step into that square" - SPEC
 // 12): its step script sees the party facing the way it goes (the facing
 // and the wall ahead, C04D / C04E), as a step forward that way would; the
@@ -15443,6 +15448,8 @@ bool do_move()
         return true;
     }
     bool locked = false;
+    if (move_dir >= 0 && d->map.loaded) step_dir = move_dir;
+    move_dir = -1;
     if (vm->get(0x7EC9) < 0xFF && d->map.loaded) {
         const int p = way(g.x, g.y, step_dir);
         locked = p >= 2;       // locked or barred: the party would need to bash or pick it
@@ -15557,6 +15564,8 @@ void handle(ecl::Stop r)
         begin_wait(c);
         return;
     }
+    // (the facing the step script left: the step is taken that way - below)
+    if (then == Then::Move) move_dir = d->gs.dir;
     side_back();                         // (a side-step's script done: the party's own facing again)
     waiting = false;
     w.col = w.r.x0;                      // EXIT puts the text cursor back

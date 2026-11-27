@@ -2442,7 +2442,16 @@ int main(int argc, char** argv)
         }
 #endif
         if (*m == '_') {                // "_": a second of ticks, a snapshot
-            for (int t = 0; t < 50; ++t) { g_now += 20; play::tick(g_now, C); }
+            for (int t = 0; t < 50; ++t) {
+                g_now += 20;
+                play::tick(g_now, C);
+                // (ALLTEXT: the texts the ticks bring too - a rest's interruption and its camp script, 2026-11-27)
+                static std::string tick_text;
+                if (getenv("ALLTEXT") && play::vm && play::vm->wait() == ecl::Wait::Print && tick_text != play::vm->text()) {
+                    tick_text = play::vm->text();
+                    printf("  TEXT%s: %s\n", play::vm->clear() ? " (clear)" : "", play::vm->text());
+                }
+            }
             shot("after_time");
             continue;
         }
