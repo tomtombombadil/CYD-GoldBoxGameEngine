@@ -3641,8 +3641,9 @@ the Project as claude/TODO.md.
 - [ ] Pools of Darkness: maps drawn as four quarters; the Dark Queen's (HLIB); the GOG cluebooks (Tom added them).
 - [ ] The secret-door rule (play::map_secret: a passable side of a plain wall type, the step script asked) against
       the cluebooks' S-hooks. Found 2026-11-27: the map data can't tell a secret door from a door (both door code 1,
-      the same both ways); the look is the wall type's picture. The cluebooks' symbols differ by book (Curse: the S
-      a secret door, the arch an archway; Champions: its arch-hook the secret door, archways drawn alike) - their
+      the same both ways); the look is the wall type's picture. The cluebooks' symbols (Tom, 2026-11-27): a secret door is
+      an S laid over the wall line (its upper half one side, its lower half the other); an archway a U turned across
+      the line, bisecting it (which way it opens means nothing) - their
       apparent misses were archways (Yulash's type 1, Champions map 80's type 2: arch pictures), their apparent
       wrong ones plain walls the party walks through (Curse map 4's type 4, Champions map 64's type 2: no door in
       the picture) - the engine right there, the cluebook drawing a door. Earlier notes: First look by eye: Curse 11 of its 18 marks on an S-hook (the rest an ordinary door,
@@ -3650,3 +3651,10 @@ the Project as claude/TODO.md.
       counted in this - the game runs them.
 - [ ] Door code 2 (red, "Locked" in the Companion): an ordinary door in the cluebooks (no lock symbol in them).
 - [ ] The markers (numbers on the squares, the legend's words) at the scan, from the player's own cluebook.
+- [ ] Concealed (one-way) doors (Tom, 2026-11-27: they open from one side only, are often seen only from that side,
+      and there is no way back): in the maps, a side passable from one square (door code 1, a few 2 / 3) whose twin
+      on the next square is solid (door 0) - Pool 90, Curse 139, Secret 48, Darkness 111, Champions 58, Death
+      Knights 46, Gateway 73, Treasures 100 sides (Steam; the map's wrap counted). To be drawn as concealed, the
+      way through shown. Door codes: 2 locked (Bash by strength, Pick Locks, Knock), 3 a harder lock (Bash only at
+      18/91 strength and up, no Pick Locks; Knock - Pool: any magic-user) - rules::bash_door, door_choice.
+
