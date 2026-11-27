@@ -1,6 +1,6 @@
 # Open tasks (Tom and Claude)
 
-- [x] v0.221.12 (the Dark Queen, Kristophan's gate after the Tombs; DOSBox beside the engine): **a step after a step
+- [x] v0.221.13 (the Dark Queen, Kristophan's gate after the Tombs; DOSBox beside the engine): **a step after a step
       script that moved or turned the party went the old way** - the gate script walks the party out east and faces it
       east; the original then takes the key's step that way (37,16 E, "There is a small house here", then "Where do you
       want to go?"), the engine stepped south from 36,16 into the wall square 36,17 and the city could not be left.
