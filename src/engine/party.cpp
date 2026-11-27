@@ -200,12 +200,17 @@ constexpr uint16_t kQueenRuns[][3] = {
     // Curse's 0x11C-0x124 in the same order; its 0xBC is not Curse's
     // uses-strength: its figures take Strength always - queen_facts_4.md 6)
     {0xB3, 0x11C, 9},
+    // (0xBD: an NPC's MONCHA number - ADD NPC's, Curse's 0x126; 0 for a player's
+    // character. The original's own join wrote it (DOSBox, Grunschka 0x71); with 0 a
+    // saved game with an NPC didn't load in the original: "INSERT DISK 2" / "DISK
+    // READ ERROR", 2026-11-27)
+    {0xBD, 0x126, 1},
 };
 // Dark Queen offset, Ext place, length
 constexpr uint16_t kQueenExt[][3] = {
     {0x58, kExtRace, 1}, {0x19A, kExtKnight, 1}, {0x19B, kExtGod, 1}, {0x19D, kExtRobe, 1}, {0xCC, kExtMagicRes, 1},
     {0x9E, kExtBestLevels, 7}, {0x48, kExtBestXp, 4}, {0xBE, kExtBestHp, 1}, {0xCD, kExtTrain, 1},
-    {0xC8, kExtFlags2, 1},
+    {0xC8, kExtFlags2, 1}, {0x5E, kExtQ5E, 1},
 };
 
 } // namespace

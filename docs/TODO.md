@@ -1,5 +1,15 @@
 # Open tasks (Tom and Claude)
 
+- [x] v0.221.15 (the Dark Queen, the New Aurim palace; DOSBox beside the engine): **a saved game with an NPC didn't
+      load in the original** ("INSERT DISK 2" / "DISK READ ERROR" - Grunschka joined). The original's own join (DOSBox,
+      the same save, saved there) writes the NPC's MONCHA number at record 0xBD; the engine's record had no place for it
+      on save (now 0xBD = the engine's 0x126) and lost the NPC's race and 0x5E (its whole Ext kept now). Also ADD NPC
+      works the class values out again when the file's control byte is 0x80+ and the NPC has a class (Curse's facts;
+      the Queen in DOSBox: Grunschka, a 25th-level fighter, 1 attack in MONCHA, 2 a round once joined - and the class
+      flags). Not followed: the original gives her saves 0 0 0 0 (its rows past 18th - Game Fixes' QSaves18 already),
+      the icon slot 0xC5 (6 there, the engine 0; the original loads either), movement 0x199. Checked: the engine's save
+      with Grunschka loads in the original (party menu lists her). Host test. Kit: the playsim's SCRLOG, MAPREACH on
+      maps past 16 x 16; autoloop.sh, obey.sh (a walk the script steers: "NOT THAT WAY").
 - [x] v0.221.13 (the Dark Queen, Kristophan's gate after the Tombs; DOSBox beside the engine): **a step after a step
       script that moved or turned the party went the old way** - the gate script walks the party out east and faces it
       east; the original then takes the key's step that way (37,16 E, "There is a small house here", then "Where do you

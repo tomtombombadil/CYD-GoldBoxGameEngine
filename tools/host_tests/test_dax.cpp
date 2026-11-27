@@ -5697,6 +5697,22 @@ static void test_party()
             const uint32_t second = savegame::kQueenHead + party::kQueenRecordSize + 2 * savegame::kQueenItem +
                                     2 * savegame::kQueenEffect;
             CHECK(qn.v[second + 8] == 1 && qn.v[second + 0x68] == 'n');
+            // an NPC's MONCHA number (0xBD) and 0x5E kept through the engine's own
+            // record - a save with a joined NPC written with 0 there didn't load in the
+            // original ("INSERT DISK 2", Grunschka, 2026-11-27)
+            {
+                static party::Party np;
+                np = qp;
+                np.m[1].rec[0x126] = 0x71;
+                np.m[1].ext[party::kExtQ5E] = 0x11;
+                VecSink nn;
+                CHECK(savegame::write_queen(nn, qgs, qh, np, nullptr) && nn.v[second + 0xBD] == 0x71 && nn.v[second + 0x5E] == 0x11 &&
+                      nn.v[savegame::kQueenHead + 0xBD] == 0);
+                dax::MemorySource ns(nn.v.data(), static_cast<uint32_t>(nn.v.size()));
+                static party::Party back;
+                CHECK(savegame::read_queen(ns, qgs, qh, back) && back.m[1].rec[0x126] == 0x71 &&
+                      back.m[1].ext[party::kExtQ5E] == 0x11 && back.m[0].rec[0x126] == 0);
+            }
             // the rest cut at the original's file size
             std::vector<uint8_t> big(q);
             big.insert(big.end(), 9000, 0x55);

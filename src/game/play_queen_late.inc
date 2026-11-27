@@ -206,7 +206,7 @@ __attribute__((noinline)) bool q_save(char slot, const savegame::Header& h, cons
 // the first 0x52 bytes zero), a u8 effect count, a u8 item count, the
 // effects (5 bytes: Curse's first five), the items (17 bytes), a pad byte.
 __attribute__((noinline)) bool q_load_monster(int id, uint8_t* rec, uint8_t* sx, uint8_t* items, int* n_items,
-                                              int items_cap, uint8_t* aff, int* n_aff, int aff_cap)
+                                              int items_cap, uint8_t* aff, int* n_aff, int aff_cap, uint8_t* ext)
 {
     *n_items = *n_aff = 0;
     plat::File f;
@@ -247,6 +247,8 @@ __attribute__((noinline)) bool q_load_monster(int id, uint8_t* rec, uint8_t* sx,
             memcpy(rec, tmp->rec, party::kRecordSize);
             sx[0] = tmp->ext[party::kExtFlags2];        // (its flags 2: record 0xC8)
             sx[1] = tmp->ext[party::kExtMagicRes];
+            // (an NPC's whole Ext - its race, 0x5E ...: ADD NPC; the original keeps them)
+            if (ext) memcpy(ext, tmp->ext, party::kExtSize);
             delete tmp;
         }
         const int nf = q[party::kQueenRecordSize], ni = q[party::kQueenRecordSize + 1];

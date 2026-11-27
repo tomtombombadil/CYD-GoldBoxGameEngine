@@ -287,12 +287,10 @@ bool npc_join(int id)
         uint8_t sx[2] = {};
         int ni = 0, na = 0;
         if (!q_load_monster(id, ch.rec, sx, &ch.items[0][0], &ni, party::kMaxItems, &ch.affects[0][0], &na,
-                            static_cast<int>(sizeof ch.affects / party::kAffectSize))) {
+                            static_cast<int>(sizeof ch.affects / party::kAffectSize), ch.ext)) {
             plat::log("[play] ADD NPC: MONCHA.GLB #%d not there\n", id);
             return false;
         }
-        ch.ext[party::kExtFlags2] = sx[0];
-        ch.ext[party::kExtMagicRes] = sx[1];
         ch.n_items = ni;
         ch.n_affects = na;
     }
@@ -310,6 +308,19 @@ bool npc_join(int id)
     }
     ch.rec[0x126] = static_cast<uint8_t>(id);
     if (pool_files()) pool_npc_look(ch);
+    // The join works the class values out again when the file's own control byte is
+    // 0x80 or more (Curse's facts: load_npc's join; the Dark Queen in DOSBox, 2026-11-27:
+    // Grunschka - MONCHA 113, a 25th-level fighter, 1 attack in the file - joins with
+    // 2 a round, the saves and class flags the tables give). Not Pool's.
+    // (a record with no class level - a monster pure and simple - left as its file has it:
+    // the engine's tables have no row for it)
+    bool classed = false;
+    for (int cls = 0; cls < 8; ++cls) classed = classed || ch.level(cls) > 0;
+    if (!pool_files() && ch.rec[0xF7] >= 0x80 && classed) {
+        MagicRules* m = nullptr;
+        if (load_rules(m)) classes::class_bonuses(ch, m->tables);
+        delete m;
+    }
     // Darkness / Treasures: the loader works out the class flags (its 0x17B,
     // the classes a character's items may be of) from the levels - Treasures
     // GAME.OVR 0x17899's end, DOSBox: the demo's Lorac 8 (the files' 0); with

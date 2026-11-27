@@ -661,7 +661,7 @@ bool q_save(char slot, const savegame::Header& h, const char* path);
 
 // (play_queen_late.inc: its fights)
 bool q_load_monster(int id, uint8_t* rec, uint8_t* sx, uint8_t* items, int* n_items, int items_cap, uint8_t* aff,
-                    int* n_aff, int aff_cap);
+                    int* n_aff, int aff_cap, uint8_t* ext = nullptr);
 uint8_t* q_load_pic4(const char* file, int id, int* w, int* h);
 void q_load_tiles();
 void q_draw_fight_frame(pic::Canvas& c);

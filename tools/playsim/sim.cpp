@@ -2097,6 +2097,12 @@ int main(int argc, char** argv)
         };
         static int auto_take = 0;
         const int scr = (int)play::screen;
+        {   // (SCRLOG=1: each change of the engine's screen as the auto tokens go - 2026-11-27, a fight's menu waited
+            // under the party menu's screen number)
+            static int last_scr = -1;
+            if (getenv("SCRLOG") && scr != last_scr) printf("  SCRLOG %d -> %d (menu [%s])\n", last_scr, scr, play::menu.s);
+            last_scr = scr;
+        }
         const char* t = nullptr;
         if (scr == 24 || scr == 0) auto_take = 0;
         static int auto_money = 0;
@@ -2893,35 +2899,37 @@ int main(int argc, char** argv)
         // MAPREACH=1: every square the party can walk to from where it stands (MAPPATH's rules - one-way sides
         // count; MAPLOCKED / MAPSECRET as there), with each square's event number (flags & 0x7F) when not 0
         const geo::Map& mp = play::d->map;
-        bool seen[16 * 16] = {};
-        std::vector<int> q{play::d->gs.y * 16 + play::d->gs.x};
+        // (the map's own size - the Dark Queen's 28 x 28; until 2026-11-27 16 x 16)
+        const int W = mp.w > 0 ? mp.w : 16, H = mp.h > 0 ? mp.h : 16;
+        std::vector<char> seen(W * H, 0);
+        std::vector<int> q{play::d->gs.y * W + play::d->gs.x};
         seen[q[0]] = true;
         for (size_t k = 0; k < q.size(); ++k)
             for (int dir = 0; dir < 8; dir += 2) {
-                int x = q[k] % 16, y = q[k] / 16;
+                int x = q[k] % W, y = q[k] / W;
                 const int ox = x, oy = y;
                 const int pg = geo::passage(mp, x, y, dir);
                 if ((pg != 1 && !(pg == 2 && getenv("MAPLOCKED")) && !(pg >= 3 && getenv("MAPSECRET"))) || !geo::step(mp, x, y, dir)) continue;
                 // (MAPWRAP=1: a step off an edge comes in at the other - the Red Tower's floors; the scripts decide)
-                if ((abs(x - ox) + abs(y - oy) != 1 && !getenv("MAPWRAP")) || seen[y * 16 + x]) continue;
-                seen[y * 16 + x] = true;
-                q.push_back(y * 16 + x);
+                if ((abs(x - ox) + abs(y - oy) != 1 && !getenv("MAPWRAP")) || seen[y * W + x]) continue;
+                seen[y * W + x] = true;
+                q.push_back(y * W + x);
             }
         printf("  MAPREACH %zu squares:", q.size());
         for (int kk : q)
-            if (geo::flags(mp, kk % 16, kk / 16) & 0x7F) printf(" %d,%d=%X", kk % 16, kk / 16, geo::flags(mp, kk % 16, kk / 16) & 0x7F);
+            if (geo::flags(mp, kk % W, kk / W) & 0x7F) printf(" %d,%d=%X", kk % W, kk / W, geo::flags(mp, kk % W, kk / W) & 0x7F);
         // (the reached squares whose outer side on the map's edge is open - where a script's step off the
         // edge may lead on: Champions' catacombs, as "x,y:dir")
         printf("\n  MAPREACH edges:");
         for (int kk : q)
             for (int dir = 0; dir < 8; dir += 2) {
-                const int x = kk % 16, y = kk / 16;
-                const bool edge = (dir == 0 && y == 0) || (dir == 2 && x == 15) || (dir == 4 && y == 15) || (dir == 6 && x == 0);
+                const int x = kk % W, y = kk / W;
+                const bool edge = (dir == 0 && y == 0) || (dir == 2 && x == W - 1) || (dir == 4 && y == H - 1) || (dir == 6 && x == 0);
                 if (edge && geo::passage(mp, x, y, dir) == 1) printf(" %d,%d:%c", x, y, "N?E?S?W"[dir]);
             }
         printf("\n  not reached:");
-        for (int kk = 0; kk < 256; ++kk)
-            if (!seen[kk]) printf(" %d,%d=%X", kk % 16, kk / 16, geo::flags(mp, kk % 16, kk / 16) & 0x7F);
+        for (int kk = 0; kk < W * H; ++kk)
+            if (!seen[kk]) printf(" %d,%d=%X", kk % W, kk / W, geo::flags(mp, kk % W, kk / W) & 0x7F);
         printf("\n");
     }
     if (getenv("MAPPATH") && play::d->map.loaded) {

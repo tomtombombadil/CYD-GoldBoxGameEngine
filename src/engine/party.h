@@ -87,6 +87,9 @@ enum Ext : uint8_t {
     // group of slots (1-8) and the knight's best level of its own
     kExtDkThird = 50,                   // the spell part's 0xCC-0xD3 (8)
     kExtDkBestKnight = 58,              // its record's 0x54
+    // The Dark Queen: its record's 0x5E (not known yet; MONCHA's Grunschka 0x11, kept by
+    // the original's ADD NPC - DOSBox, 2026-11-27)
+    kExtQ5E = 120,
 };
 
 struct Character {
