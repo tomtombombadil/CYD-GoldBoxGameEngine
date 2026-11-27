@@ -1928,6 +1928,26 @@ static void test_field_big_map()
     for (int y = 2; y < 15; ++y)
         for (int x = 18; x < 32; ++x) walls += b.ground[y][x] != 23;      // (23 = plain floor + 1)
     CHECK(walls == 0);
+    // The Dark Queen's doors (DQK.EXE 0x2BD62): a walled side with its low door bit is a door, state 2 a wall
+    // - the party square's east side and its neighbour's west side
+    m.low_bit_doors = true;
+    const int n = 28 * 28, at = 21 * 28 + 24;
+    planes[at] = 0x01;                      // (plane 0: N << 4 | E)
+    planes[n + at + 1] = 0x01;              // (plane 1: S << 4 | W)
+    auto field = [&](uint8_t st, std::vector<uint8_t>& out) {
+        planes[3 * n + at] = static_cast<uint8_t>(st << 2);
+        planes[3 * n + at + 1] = static_cast<uint8_t>(st << 6);
+        b = combat::Battle{};
+        create::Dice d2(5);
+        combat::build_indoors(b, t, m, 24, 21, d2, false);
+        out.assign(&b.ground[0][0], &b.ground[0][0] + sizeof b.ground);
+    };
+    std::vector<uint8_t> f0, f2, f3;
+    field(0, f0);
+    field(2, f2);
+    field(3, f3);
+    CHECK(f2 == f0);                        // (shut: drawn as the plain wall)
+    CHECK(f3 != f0);                        // (open: a door)
     m.big = nullptr;
 }
 

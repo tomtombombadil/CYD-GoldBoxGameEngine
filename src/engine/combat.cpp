@@ -137,6 +137,9 @@ struct Sides {
         if (x < 0 || y < 0 || x >= m->w || y >= m->h)
             return ends || (y == py && (dir == 2 || dir == 6)) ? 0 : 1;
         if (geo::wall(*m, x, y, dir) == 0) return 0;
+        // (the Dark Queen's maps: a walled side with its low door bit is a door, 0 / 2 a wall - DQK.EXE
+        // 0x2BD62 asks the step's own test, overlay 0x4A4; until 2026-11-27 its state 2 was a door here)
+        if (m->low_bit_doors) return geo::door(*m, x, y, dir) & 1 ? 3 : 1;
         return geo::door(*m, x, y, dir) == 0 ? 1 : 3;
     }
     // Both sides of the edge
