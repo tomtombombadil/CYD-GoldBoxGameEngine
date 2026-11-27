@@ -1,4 +1,5 @@
 #include "journal.h"
+#include "journal_fixes.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -797,6 +798,7 @@ bool make_gbc(dax::ByteSource& dat, GbcPictures& pics, const char* id, Output& o
     char* text = static_cast<char*>(malloc(16384));
     uint8_t* pool = static_cast<uint8_t*>(malloc(jpeg::kPoolSize));
     const int n = es && dat.size() ? gbc_entries(dat, es, kMaxGbcEntries) : 0;
+    const uint32_t fix = fix_key(dat);     // (the corrections this Game.dat's journal has - journal_fixes.cpp)
     // The PDF's sections Game.dat doesn't have (its tavern tales,
     // proclamations ...; a journal entry only when Game.dat lacks it)
     uint8_t* use = nullptr;
@@ -868,6 +870,7 @@ bool make_gbc(dax::ByteSource& dat, GbcPictures& pics, const char* id, Output& o
             put16(er + 6, 1);
             size_t len = x.len < 16383 ? x.len : 16383;
             ok = xs && xs->read_at(x.at, reinterpret_cast<uint8_t*>(text), len) == len;
+            if (ok) len = fix_text(fix, x.kind, x.number, text, len, 16383);
             size_t f = 0, t = len;
             if (ok && !gbc_trim(text, &f, &t)) f = t = 0;
             ok = ok && put_text(text + f, t - f);
@@ -882,7 +885,7 @@ bool make_gbc(dax::ByteSource& dat, GbcPictures& pics, const char* id, Output& o
         put16(er + 2, static_cast<unsigned>(e.number));
         put16(er + 4, static_cast<unsigned>(pi));
         const int first = pi;
-        const size_t len = gbc_text(dat, e, text, 16384);
+        const size_t len = fix_text(fix, 'J', e.number, text, gbc_text(dat, e, text, 16384), 16383);
         size_t ma = 0, mb = 0;
         if (plan[i] && gbc_marker(text, len, &ma, &mb)) {
             size_t f0 = 0, t0 = ma, f1 = mb, t1 = len;
