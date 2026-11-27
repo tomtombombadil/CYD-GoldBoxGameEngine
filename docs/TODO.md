@@ -1,5 +1,8 @@
 # Open tasks (Tom and Claude)
 
+- [x] v0.221.10 (the Dark Queen, Kristophan's dragonstrike): **a DAMAGE's lines had no words** - "NAME5" for
+      "  NAME is hit FOR 5 points of Damage." (the Queen's profile had no DAMAGE words; DQK.EXE 0x4184B-0x41888 prints
+      "  %s%s" + " dies. " / "  %s%s%s%s" + " is hit FOR " / " points of Damage." - DS 0x7759 / 0x776C / 0x7779).
 - [x] v0.221.8 (the Dark Queen, Kristophan - Eshalla's cloak; DOSBox beside the engine): **a script's treasure
       was lost** - TREASURE's items read Darkness's ITEM0.DAX rows, which the Queen hasn't: now ITEM.DAT's row n - 1
       (`q_treasure_row`); and **the treasure menu was "Exit" alone after every fight and reward** (its View Take Pool
