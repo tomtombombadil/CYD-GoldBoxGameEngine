@@ -1062,6 +1062,9 @@ the Project as claude/TODO.md.
         map with no party list, so View / Drop act on the first member only - the player can't pick anyone
         else there. DOSBox: does the original's travel camp show the party list (as Death Knights' PROGRAM 9
         camp does, v0.210.1)? Then the same for Curse.
+  - [ ] (2026-11-27, the PortMaster session) fightfuzz Curse seed 11, fight 0 (FUZZONE=0; two salamanders): "!! RULE R10"
+        - past round 120, no attack since 65, LEDERA and a fleeing SALAMANDER left; the same before v0.221.12 (not the
+        aim change). Why no 15 rounds' end there?
   - [ ] Add Character lists 48 entries at most (a save folder with many slots hides some).
   - [x] v0.221.12 (the fight's aim below). (2026-11-26, the PortMaster session, the original in DOSBox with the engine's save - the playsim's GIVE: in camp,
         Use on a Dust NOT readied does nothing one can see, the list stays; readied, Use takes it - gone from the
