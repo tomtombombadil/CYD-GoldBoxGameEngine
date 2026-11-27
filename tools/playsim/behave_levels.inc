@@ -94,6 +94,7 @@ bool train(party::Character& c, int cls)
     return true;
 }
 
+void paladin_phb();
 void classes_up()
 {
     static party::Character c, was;
@@ -123,6 +124,42 @@ void classes_up()
     }
     snprintf(w, sizeof w, "every class trained to its last level (%d classes, %d levels): L1-L5", classes_done, levels_done);
     expect(P, w, classes_done > 0 && levels_done > classes_done);
+    paladin_phb();
+}
+
+// L6 (Tom, 2026-11-27: "Paladins start getting Cleric spells at Paladin level 9. Adhere to the spell level table
+// found in the PHB p 24"): a paladin's cleric slots, levels 1-4, at each paladin level it trains to - PHB p.24's
+// Paladins Table II (Wisdom gives a paladin none). A game whose class 3 isn't a paladin (Krynn's knights) skips.
+void paladin_phb()
+{
+    static const uint8_t kPhb[12][4] = {{1, 0, 0, 0}, {2, 0, 0, 0}, {2, 1, 0, 0}, {2, 2, 0, 0}, {2, 2, 1, 0},
+                                        {3, 2, 1, 0}, {3, 2, 1, 1}, {3, 3, 1, 1}, {3, 3, 2, 1}, {3, 3, 3, 1},
+                                        {3, 3, 3, 2}, {3, 3, 3, 3}};   // (levels 9 ... 20)
+    if (!m->tables.u8(static_cast<uint16_t>(m->tables.lay.class_masks + classes::Paladin)))
+        return (void)printf("  (levels: L6 - no paladin class)\n");
+    static party::Character c;
+    fresh(c, classes::Paladin);
+    int levels = 0, wrong = 0, top = 0;
+    char row[600] = "";
+    for (int step = 0; step < 45 && train(c, classes::Paladin); ++step) {
+        const int L = c.level(classes::Paladin);
+        top = L;
+        ++levels;
+        const int at = L < 9 ? -1 : L > 20 ? 11 : L - 9;
+        char cell[40];
+        snprintf(cell, sizeof cell, " %d:%d%d%d%d", L, slot(c, 0, 0), slot(c, 0, 1), slot(c, 0, 2), slot(c, 0, 3));
+        if (strlen(row) + strlen(cell) < sizeof row) strcat(row, cell);
+        for (int l = 0; l < 4; ++l)
+            if (slot(c, 0, l) != (at < 0 ? 0 : kPhb[at][l])) {
+                ++wrong;
+                bad("L6 paladin slots (PHB p.24)", classes::Paladin, L, "cleric level %d: %d, the book %d", l + 1,
+                    slot(c, 0, l), at < 0 ? 0 : kPhb[at][l]);
+            }
+    }
+    printf("  paladin slots (level:1234):%s\n", row);
+    if (!levels) return (void)printf("  (levels: L6 - no paladin trains - PoolRad has none)\n");
+    snprintf(w, sizeof w, "L6 a paladin's cleric slots as PHB p.24's table, levels 1-%d (%d trained)", top, levels);
+    expect(P, w, levels > 0 && wrong == 0, "%d slots differ", wrong);
 }
 
 // The Wisdom bonus: a class trained to level L with Wisdom 12 and with

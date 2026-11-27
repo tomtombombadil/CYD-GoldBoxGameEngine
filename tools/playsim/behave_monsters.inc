@@ -154,6 +154,8 @@ Values expected(const uint8_t* r, const uint8_t (*it)[items::kRecordSize], int n
         if (ti.flags & 0x04) {
             v.hit += sh;
             v.b1 += sd;
+        } else if ((ti.flags & 0x10) && !(ti.flags & 0x04) && rules::enh(rules::kEnhThrownStr)) {
+            v.b1 += sd;   // (Thrown Strength, an Enhancement)
         }
         int plus = sb(weapon[0x32]);
         if ((ti.flags & 0x80) && quarrels) plus += sb(quarrels[0x32]);

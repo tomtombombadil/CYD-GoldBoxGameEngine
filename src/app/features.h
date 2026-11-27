@@ -368,3 +368,11 @@
 #ifndef CYD_OIL_BURNS
 #define CYD_OIL_BURNS 1
 #endif
+
+// Thrown Strength (Tom, 2026-11-27 - an Enhancement: the AD&D 1E books give a
+// thrown weapon no Strength, DMG p.64): a hurled weapon adds Strength's damage
+// bonus - darts and javelins, and a dagger, hand axe or spear thrown. Settings
+// key, on by default.
+#ifndef CYD_THROWN_STRENGTH
+#define CYD_THROWN_STRENGTH 1
+#endif

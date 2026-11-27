@@ -379,7 +379,7 @@ stay in the session's scratch space, never in the repo.
     never touched.
   - Enhancements: Game Font, Show Rolls, Companion Views, Savegame Info,
     Auto Join Items, Keep Memorizing, Camp Fix, Coin Exchange, Flasks of
-    Oil, More Characters, Icon Portrait, Icon Gallery, Large Icon (320x240).
+    Oil, Thrown Strength, More Characters, Icon Portrait, Icon Gallery, Large Icon (320x240).
     (Coin Exchange and Flasks of Oil - Tom, 2026-11-17: additions of ours,
     not 1E rules; the engine's `rules::enh` bits.)
   - AD&D 1E Rules (section 12): Magic Missile, Multi-Class Hit Points,
@@ -3404,7 +3404,10 @@ the game's Settings (As Original: all of them).
     hand axe, spear: flags 4 and 0x10) keeps Strength to hit and damage in
     melee; thrown at one not next to the thrower its to-hit takes
     Dexterity's missile bonus in place of Strength's, and its damage no
-    Strength (the originals keep Strength) (`combat::attack`,
+    Strength (the originals keep Strength) unless **Thrown Strength** (an
+    Enhancement, Tom 2026-11-27, `rules::kEnhThrownStr`, Settings key, on by
+    default) is on: then every thrown weapon adds Strength's damage - darts
+    and javelins too (`combat::attack`,
     `rules::thrown_hit_shift`; the party's members - monsters' records are
     their own). Darts throw 3 a round in every game (the ITEMS file's 6 half
     attacks - as the originals).
@@ -3421,17 +3424,13 @@ the game's Settings (As Original: all of them).
     originals' routines (checked against them run in Unicorn). Checks: sweep `behave levels` ONLY=adnd (A1-A8
     against the books, 1500 characters a game; fails in all seven games with ADNDOFF=200), fight_check R21 (the
     rule in fuzzed fights: the book's lines against the levels and hit points lost).
-  - **Raising the Dead** (corrected 2026-11-27 against PHB p.12: "each such
-    revivification reduces the character's constitution score by 1" - the
-    rule had made raising free since 2026-11-17): every raising - Raise
-    Dead or Resurrection, spell, temple, Darkness's Repair, Treasures'
-    PROGRAM 5 - takes one point of Constitution (its own and the one in
-    use) and nothing else; the generic temples' hit-point cut below is not
-    taken. Not done: the book's Resurrection Survival roll (PHB p.12 - a
-    failed roll is dead forever) and its limit of raisings by the starting
-    Constitution (Tom: TODO). The originals take a point for Raise Dead
-    (spell and temple: Secret's, the Darkness-type temples), none for
-    Resurrection / Repair / PROGRAM 5 - kept with the rule off. The generic temples since v0.210.1 as their
+  - **Raising the Dead**: Raise Dead and Resurrection always work and take
+    nothing - no Constitution, no hit points, no limit (Tom, 2026-11-27: "due
+    to the nature of the game" - PHB p.12's point of Constitution, its limit
+    of raisings by the starting Constitution and its Resurrection Survival
+    roll are left out on purpose). The originals take a point for Raise
+    Dead (spell and temple: Secret's, the Darkness-type temples) - kept with
+    the rule off. The generic temples since v0.210.1 as their
     GAME.OVR routines (Curse 0x51AA, Champions 0x5880, PoolRad 0x4B22,
     Gateway 0x607E; `CureFacts::temple_raise`): a point of Constitution -
     PoolRad its one Constitution, the others only the one IN USE (back at

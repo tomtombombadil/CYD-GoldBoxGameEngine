@@ -3432,7 +3432,7 @@ void tap_sounds(const ui::Tap& t)
 // One set for all games (settings.h comforts_off), on the one Settings
 // screen (below); a comfort compiled out (app/features.h) isn't listed.
 enum Comfort { kCFont, kCGallery, kCBigIcon, kCMoreGuys, kCPortrait, kCRolls, kCCampFix, kCCompanion, kCMaxHp, kCQuick,
-               kCJoin, kCSaveInfo, kCKeepMem, kCCoins, kCOil, kCAddInfo, kCNoRaceLimits, kComforts };
+               kCJoin, kCSaveInfo, kCKeepMem, kCCoins, kCOil, kCAddInfo, kCNoRaceLimits, kCThrownStr, kComforts };
 
 bool comfort_built(int c)
 {
@@ -3454,6 +3454,7 @@ bool comfort_built(int c)
     case kCCoins: return CYD_COIN_EXCHANGE;
     case kCOil: return CYD_OIL_BURNS;
     case kCAddInfo: return CYD_ADD_INFO;
+    case kCThrownStr: return CYD_THROWN_STRENGTH;
     default: return true;
     }
 }
@@ -3463,7 +3464,8 @@ uint32_t comfort_bit(int c)
     static const uint32_t kBits[kComforts] = {0, kOffGallery, kOffBigIcon, kOffMoreGuys, kOffPortrait, kOffRolls,
                                               kOff2CampFix << 8, kOff2Companion << 8, 0, kOff2Quick << 8,
                                               kOff2AutoJoin << 8, kOff2SaveInfo << 8, kOff2KeepMem << 8, kOffCoins,
-                                              kOffOil, static_cast<uint32_t>(kOff3AddInfo) << 16};
+                                              kOffOil, static_cast<uint32_t>(kOff3AddInfo) << 16, 0,
+                                              static_cast<uint32_t>(kOff3ThrownStr) << 16};
     return kBits[c];
 }
 uint32_t comforts_off()
@@ -3513,6 +3515,7 @@ void apply_options()
     o.keep_mem = comfort_on(kCKeepMem);
     o.coin_exchange = comfort_on(kCCoins);
     o.oil_burns = comfort_on(kCOil);
+    o.thrown_str = comfort_on(kCThrownStr);
     o.adnd = adnd_on();
     play::set_side_panel(ui::large() && comfort_on(kCCompanion));     // (Save Slot Info: the party in the panel)
     o.font = comfort_on(kCFont) ? cfg->game_font : kFontGame;
@@ -3523,7 +3526,7 @@ void apply_options()
 int comfort_list(int* out)
 {
     static const uint8_t kOrder[] = {kCFont, kCRolls, kCCompanion, kCSaveInfo, kCAddInfo, kCJoin, kCKeepMem,
-                                     kCCampFix, kCCoins, kCOil, kCMoreGuys, kCPortrait, kCGallery, kCBigIcon};
+                                     kCCampFix, kCCoins, kCOil, kCThrownStr, kCMoreGuys, kCPortrait, kCGallery, kCBigIcon};
     int n = 0;
     for (uint8_t c : kOrder)
         if (comfort_built(c)) out[n++] = c;
@@ -3550,7 +3553,7 @@ const char* const kComfortNames[kComforts] = {"Game Font",       "Icon Gallery",
                                               "Icon Portrait",   "Show Rolls",      "Camp Fix",       "Companion Views",
                                               "Max Hit Points",  "Quick Actions",   "Auto Join Items", "Savegame Info",
                                               "Keep Memorizing", "Coin Exchange",   "Flasks of Oil",
-                                              "Character Info",  "No Race Limits"};
+                                              "Character Info",  "No Race Limits",  "Thrown Strength"};
 
 // What each option does (sentence case; Tom, v0.84.0)
 const char* comfort_help_text(int c)
@@ -3631,6 +3634,11 @@ const char* comfort_help_text(int c)
                "highlighted one as the game's View Character does: name, race, class and levels, the six "
                "ability scores, armour class, hit points, THAC0, the readied weapon and armour, and the "
                "combat icon. Off: as the original.";
+    case kCThrownStr:
+        return "A thrown weapon adds its thrower's Strength bonus to its damage - darts and javelins, and a "
+               "dagger, hand axe or spear when thrown. The AD&D 1st edition books give missiles no Strength (DMG "
+               "p.64). Off: darts and javelins get none, and with the AD&D 1E Rules' Thrown Weapons neither does a "
+               "thrown dagger, axe or spear (the originals give those their Strength).";
     case kCOil:
         return "A thrown flask of oil bursts into flames: fire damage, as an ordinary firebomb would - a troll it "
                "brings down stays down. Off: as the originals, a plain blow.";

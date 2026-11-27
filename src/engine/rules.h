@@ -403,7 +403,7 @@ enum Adnd : uint16_t {
     kAdndThrown   = 1,      // Thrown Weapons: a hurled weapon takes Dexterity's missile bonus to hit and
                             // no Strength (DMG p.64); a weapon both melee and thrown (dagger, hand axe,
                             // spear) Strength in melee, Dexterity to hit and no Strength when thrown
-    kAdndRaise    = 2,      // Raising the Dead: every raising a point of Constitution and nothing more (PHB p.12)
+    kAdndRaise    = 2,      // Raising the Dead: Raise Dead / Resurrection cost nothing (Tom: PHB p.12's point left out)
     kAdndMissile  = 4,      // Magic Missile: (level + 1) / 2 missiles (PoolRad's own: level / 2)
     kAdndMultiHp  = 8,      // Multi-Class Hit Points: each class's, added up and divided by the classes
     kAdndItems    = 0x10,   // Magic Items: PoolRad's Flame Tongue as AD&D's
@@ -432,7 +432,8 @@ enum Enh : uint8_t {
     kEnhCoins = 1,          // Coin Exchange: any coins pay, the change, the pooled and the shared money in the
                             // highest coins (the five-coin games)
     kEnhOil   = 2,          // Flasks of Oil: a thrown flask burns (fire damage - ordinary, not magic)
-    kEnhAll   = 3,
+    kEnhThrownStr = 4,      // Thrown Strength: a hurled weapon adds Strength's damage bonus (Tom, 2026-11-27)
+    kEnhAll   = 7,
 };
 void set_enh(uint8_t bits);
 bool enh(uint8_t e);

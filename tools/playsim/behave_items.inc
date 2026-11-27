@@ -228,6 +228,8 @@ static BVals b_expect(const party::Character& c)
         if (t.flags & 0x04) {
             v.hit += shit;
             v.dmg += sdmg;
+        } else if ((t.flags & 0x10) && !(t.flags & 0x04) && rules::enh(rules::kEnhThrownStr)) {
+            v.dmg += sdmg;   // (Thrown Strength, an Enhancement)
         }
         int plus = static_cast<int8_t>(weapon[0x32]);
         if ((t.flags & 0x80) && quarrels) plus += static_cast<int8_t>(quarrels[0x32]);

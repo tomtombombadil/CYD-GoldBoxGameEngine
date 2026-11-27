@@ -649,26 +649,23 @@ int cast(party::Party& p, int caster, int target, const CampSpell& cs, const cla
             cure(c, cures.poisoned);
             c.rec[kHealth] = party::Okay;
             c.rec[kInCombat] = 1;
-            // (a point of Constitution - the originals' and AD&D 1E's, PHB p.12)
-            if (c.rec[kConFull] == c.rec[kConNow]) --c.rec[kConFull];    // (no item raising it)
-            --c.rec[kConNow];
-            if (t.lay.dk) create::dk_con_recompute(c, t);          // (Darkness: the Constitution's hit points again)
+            // (the originals take a point of Constitution; Raising the Dead: none -
+            // Tom, 2026-11-27: not for this game, though PHB p.12 has it)
+            if (!rules::adnd(rules::kAdndRaise)) {
+                if (c.rec[kConFull] == c.rec[kConNow]) --c.rec[kConFull];    // (no item raising it)
+                --c.rec[kConNow];
+                if (t.lay.dk) create::dk_con_recompute(c, t);          // (Darkness: the Constitution's hit points again)
+            }
             c.rec[kHp] = 1;
             o.say(who[k], Said::Raised);
         }
         break;
     case Does::Resurrect:
         // Darkness (GAME.OVR 0x2EF05): the dead only, no Constitution lost,
-        // no survival roll. AD&D 1E Rules' Raising the Dead: a point of
-        // Constitution as every raising (PHB p.12)
+        // no survival roll (as Raising the Dead wants it - Tom, 2026-11-27)
         for (int k = 0; k < n; ++k) {
             party::Character& c = p.m[who[k]];
             if (c.health() != party::Dead || c.rec[kConNow] == 0 || c.race() == f.elf_race) continue;
-            if (rules::adnd(rules::kAdndRaise)) {
-                if (c.rec[kConFull] == c.rec[kConNow]) --c.rec[kConFull];
-                --c.rec[kConNow];
-                if (t.lay.dk) create::dk_con_recompute(c, t);
-            }
             cure(c, cures.poisoned);
             c.rec[kHealth] = party::Okay;
             c.rec[kInCombat] = 1;

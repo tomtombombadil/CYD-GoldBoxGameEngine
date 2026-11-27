@@ -605,10 +605,20 @@ the Project as claude/TODO.md.
       Treasures' PROGRAM 5 too) and no temple hit-point cut. The one Game Fix that said "as AD&D says", Paladins'
       Casting (paladin level - 8): not in the 1E books (PHB p.24's table only) - its help now says Curse's and
       PoolRad's code. Not checked: the other Game Fixes (they follow the originals' own code, not the books).
-- [ ] Tom: Raising the Dead (AD&D 1E Rules, corrected 2026-11-27 to PHB p.12): the book also has the Resurrection
-      Survival roll (Constitution's percentage - a failed roll is dead forever) and a limit of raisings equal to the
-      starting Constitution. Add them to the rule? (Left out until you say.) And if you liked free raising, it can
-      come back as an Enhancement.
+- [x] (v0.222.1, Tom 2026-11-27: "we're not implementing the constitution point loss ... or the # of times
+      limit ... ignore the Constitution resurrection survival roll") Raising the Dead: back to free - no
+      Constitution, no hit points, no limit, always works.
+- [x] v0.222.1 (Tom, 2026-11-27): **Thrown Strength** - the Strength damage on thrown weapons is an Enhancement
+      now (Settings key, on by default; `rules::kEnhThrownStr`, `Options::thrown_str`), AD&D 1E's Thrown Weapons
+      only Dexterity (DMG p.64). Checks: behave matrix PoolRad / Curse (darts, a thrown dagger).
+- [ ] For the PortMaster session (v0.222.1): `play::Options::thrown_str` (Thrown Strength, an Enhancement) is new -
+      a line on its Enhancements page; `play::overland_dir` (v0.222.0) optional.
+- [x] v0.222.1 (Tom, 2026-11-27: "Paladins start getting Cleric spells at Paladin level 9. Adhere to the spell level
+      table found in the PHB p 24"): checked in every game - sweep `behave levels` L6 trains a paladin to its last
+      level and compares its cleric slots 1-4 with PHB p.24's Paladins Table II: Curse (to 11), Secret (15),
+      Darkness (40), Gateway (8), Treasures (11), Champions (8), Death Knights (12), the Dark Queen (12) all match
+      already (none before 9th, 1 at 9th, 2 at 10th, 2/1 at 11th ...); PoolRad has no paladins. No change. Its
+      casting level stays paladin level - 8 (9th casts as a 1st-level cleric).
 - [ ] v0.210.5 (Tom, 2026-11-18 12:57, Death Knights' camp, Cinder): (1) memorizing Magic Missiles
       past the 1st-level slots dropped the 2nd / 3rd-level counts - the moon's extra spells (Cinder's
       robe's moon full: 2, shared by levels 1-5) were added into every level's count. The original

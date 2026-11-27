@@ -489,15 +489,20 @@ void recalc_values(party::Character& c, const items::Names& names, const ItemFac
         // hit and damage don't apply to missiles; "Dexterity Penalty And
         // Bonus Considerations": the missile's to-hit; PHB p.9: Strength's
         // adjustments are for melee. PoolRad's darts get no Dexterity in the
-        // original (thrown-only: flags 0x10 without melee's 4). A weapon both
-        // melee and thrown keeps the melee figure here (Strength to hit and
-        // damage) - the attack changes it for a throw: thrown_hit_shift /
-        // strength_damage, combat::attack. SPEC 12)
-        const bool thrown_1e = (t.flags & 0x10) && !(t.flags & 0x04) && adnd(kAdndThrown);
+        // original (thrown-only: flags 0x10 without melee's 4). Thrown
+        // Strength - an Enhancement, Tom 2026-11-27: a thrown-only weapon
+        // adds Strength's damage. A weapon both melee and thrown keeps the
+        // melee figure here (Strength to hit and damage) - the attack changes
+        // it for a throw: thrown_hit_shift / strength_damage, combat::attack.
+        // SPEC 12)
+        const bool thrown_only = (t.flags & 0x10) && !(t.flags & 0x04);
+        const bool thrown_1e = thrown_only && adnd(kAdndThrown);
         if ((t.flags & 0x02) || thrown_1e) hit += dex_missile(c);
         dmg = t.bonus;
         if (t.flags & 0x04) {
             hit += str_hit(c);
+            dmg += str_damage(c.rec);
+        } else if (thrown_only && enh(kEnhThrownStr)) {
             dmg += str_damage(c.rec);
         }
         int plus = it.plus();
@@ -1502,12 +1507,9 @@ void apply_cure(party::Character& c, Cure cure, const CureFacts& f, create::Dice
         c.rec[kHealth] = party::Okay;
         c.rec[kInCombat] = 1;
         // The original's price: a point of Constitution and a cut of the
-        // maximum hit points. AD&D 1E Rules (PHB p.12, 2026-11-27): a point of
-        // Constitution for every raising, and no hit points
-        if (f.temple_raise && adnd(kAdndRaise)) {
-            if (c.rec[0x18] > 0) --c.rec[0x18];
-            if (c.rec[0x19] > 0) --c.rec[0x19];
-        } else if (f.temple_raise) {
+        // maximum hit points. Raising the Dead (Tom, 2026-11-17 / 11-27): none -
+        // for the game's sake, though PHB p.12 takes a point
+        if (f.temple_raise && !adnd(kAdndRaise)) {
             uint8_t* r = c.rec;
             if (f.temple_raise == 2 && r[0x18] > 0) --r[0x18];       // (PoolRad's one Constitution)
             if (r[0x19] > 0) --r[0x19];
@@ -1733,9 +1735,10 @@ const AdndInfo kAdnd[kAdndCount] = {
      "one sum: PoolRad, Curse and Gateway add the Constitution bonus for every class held and never give a "
      "multi-class fighter its 17+ bonus; the later games split the dice and the bonus separately."},
     {kAdndThrown, "Thrown Weapons", kAll,
-     "A thrown weapon gets Dexterity's missile bonus to hit and no Strength bonus (DMG p.64, PHB p.9). "
-     "PoolRad's darts get no Dexterity in the original. A dagger, hand axe or spear uses Strength to hit "
-     "and to damage in melee; thrown, Dexterity to hit and no Strength - the originals keep Strength."},
+     "A thrown weapon gets Dexterity's missile bonus to hit and no Strength bonus (DMG p.64, PHB p.9) - "
+     "Strength's damage only with the Thrown Strength enhancement. PoolRad's darts get no Dexterity in the "
+     "original. A dagger, hand axe or spear uses Strength to hit and to damage in melee; thrown, Dexterity to "
+     "hit in place of Strength's."},
     {kAdndItems, "Magic Items", kPool,
      "Magic items as AD&D 1st edition has them: PoolRad's Flame Tongue is the AD&D sword - +1, +2 against "
      "regenerating creatures, +3 against cold-using and +4 against undead. The original's is a plain +1 "
@@ -1758,9 +1761,10 @@ const AdndInfo kAdnd[kAdndCount] = {
      "by the engine (LEVELS.TXT) from now on; older characters use their average a level. The originals "
      "differ game by game (which class, how many hit points, the experience)."},
     {kAdndRaise, "Raising the Dead", kAll,
-     "Every raising from the dead - Raise Dead or Resurrection, by spell or at a temple - takes one point of "
-     "Constitution and nothing else (PHB p.12). The originals take the point for Raise Dead but not for "
-     "Resurrection, and PoolRad's, Curse's, Champions' and Gateway's temples cut the maximum hit points too."},
+     "Raise Dead and Resurrection always work and cost the one raised nothing - no Constitution, no hit "
+     "points, no limit on how often. (The 1st edition books take a point of Constitution and allow a survival "
+     "roll; left out for the game's sake.) The originals take a point for Raise Dead, by spell or at a temple, "
+     "and some temples cut the maximum hit points too."},
 };
 } // namespace
 

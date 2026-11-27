@@ -8745,9 +8745,11 @@ void secret_cure(int i, pic::Canvas& c)
             // maximum hit points stay - DOSBox, Guy 95 at Con 18 -> 17
             // keeps 95), then 1 HP
             rules::remove_affects(ch, f.poisoned);
-            // (the originals' and AD&D 1E's, PHB p.12)
-            if (ch.rec[0x18] > 0) --ch.rec[0x18];
-            if (ch.rec[0x19] > 0) --ch.rec[0x19];
+            // (Raising the Dead: no Constitution lost - Tom, 2026-11-17 / 11-27)
+            if (!rules::adnd(rules::kAdndRaise)) {
+                if (ch.rec[0x18] > 0) --ch.rec[0x18];
+                if (ch.rec[0x19] > 0) --ch.rec[0x19];
+            }
             rules::recalc(ch, *names, d->facts);
             ch.rec[0x1A4] = 1;
             ch.rec[0x195] = party::Okay;
@@ -8947,7 +8949,7 @@ void dk_cure(int i, pic::Canvas& c)
         if (ch.rec[0x18] == 0) break;
         rules::remove_affects(ch, f.poisoned);
         okay();
-        --ch.rec[0x18];                                 // (the original's and AD&D 1E's, PHB p.12)
+        if (!rules::adnd(rules::kAdndRaise)) --ch.rec[0x18];     // (Raising the Dead: no Constitution lost)
         rules::recalc(ch, *names, d->facts);
         ch.rec[0x1A4] = 1;
         say = profile::kDkRaised;
@@ -9006,10 +9008,6 @@ void dk_repair()
         }
         if (ch.health() == party::Dead && ch.rec[0x74] != 2 && ch.rec[0x18] > 0) {
             rules::remove_affects(ch, f.poisoned);         // (Resurrection, spell 105)
-            if (rules::adnd(rules::kAdndRaise)) {          // (AD&D 1E: a point of Constitution, PHB p.12)
-                --ch.rec[0x18];
-                if (ch.rec[0x19] > 0) --ch.rec[0x19];
-            }
             ch.rec[0x195] = party::Okay;
             ch.rec[0x196] = 1;
             ch.rec[0x1A4] = ch.rec[0x78];
@@ -11408,10 +11406,6 @@ void program_heal()
         }
         if (ch.health() == party::Dead && r[0x18] && ch.race() != d->prof->magic.facts.elf_race) {
             rules::remove_affects(ch, cf.poisoned);
-            if (rules::adnd(rules::kAdndRaise)) {           // (AD&D 1E: a point of Constitution, PHB p.12)
-                --r[0x18];
-                if (r[0x19] > 0) --r[0x19];
-            }
             r[0x195] = party::Okay;
             r[0x196] = 1;
         }
@@ -13998,7 +13992,8 @@ __attribute__((noinline)) void load_party_text(dax::ByteSource& exe, const exepa
         rules::set_no_heal(d->prof->fight.facts.q.no_heal);
         items::set_passive(pi.passive);
         rules::set_fixes_off(CYD_ITEM_FIXES && opts.item_fixes ? opts.fixes_off : ~0ull);
-        rules::set_enh(static_cast<uint8_t>((opts.coin_exchange ? rules::kEnhCoins : 0) | (opts.oil_burns ? rules::kEnhOil : 0)));
+        rules::set_enh(static_cast<uint8_t>((opts.coin_exchange ? rules::kEnhCoins : 0) | (opts.oil_burns ? rules::kEnhOil : 0) |
+                                            (opts.thrown_str ? rules::kEnhThrownStr : 0)));
         items::set_flame_fix(&pi.flame, CYD_ADND_RULES && (opts.adnd & rules::kAdndItems));
         rules::set_adnd(CYD_ADND_RULES ? opts.adnd : 0);
         rules::set_worn_facts(pi.effect_data, pi.stat_fx[1]);
@@ -19137,7 +19132,8 @@ void set_options(const Options& o)
     // The items the originals got wrong: as now wanted, the party's too (mid-game)
     items::set_flame_fix(&d->prof->items.flame, CYD_ADND_RULES && (opts.adnd & rules::kAdndItems));
     rules::set_fixes_off(CYD_ITEM_FIXES && opts.item_fixes ? opts.fixes_off : ~0ull);
-    rules::set_enh(static_cast<uint8_t>((opts.coin_exchange ? rules::kEnhCoins : 0) | (opts.oil_burns ? rules::kEnhOil : 0)));
+    rules::set_enh(static_cast<uint8_t>((opts.coin_exchange ? rules::kEnhCoins : 0) | (opts.oil_burns ? rules::kEnhOil : 0) |
+                                            (opts.thrown_str ? rules::kEnhThrownStr : 0)));
     static uint16_t adnd_was = 0xFFFF;
     const uint16_t adnd_now = CYD_ADND_RULES ? opts.adnd : 0;
     rules::set_adnd(adnd_now);

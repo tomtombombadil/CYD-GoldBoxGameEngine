@@ -473,9 +473,12 @@ their headers; update `THIRD_PARTY_NOTICES.md` when anything is brought in.
   `Adnd` bits, `rules::adnd_info` - name, games, help): Magic Missile,
   Multi-Class Hit Points, Thrown Weapons, Magic Items (PoolRad's Flame
   Tongue only), Age with Time, Power Word Kill, Protection from Evil,
-  Raising the Dead. An addition of ours the engine applies is an
-  Enhancement (`rules::enh`, `Enh` bits; Tom, 2026-11-17): Coin Exchange,
-  Flasks of Oil (oil is no magic item). A
+  Raising the Dead (Tom, 2026-11-27: free, always works - PHB p.12's
+  Constitution point, limit and survival roll left out on purpose). An
+  addition of ours the engine applies is an Enhancement (`rules::enh`,
+  `Enh` bits; Tom, 2026-11-17): Coin Exchange, Flasks of Oil (oil is no
+  magic item), Thrown Strength (Tom, 2026-11-27: Strength's damage on a
+  thrown weapon - the 1E Thrown Weapons rule is Dexterity only, DMG p.64). A
   mistake in an original's code is a Game Fix, each its own switch
   (`rules::fix(rules::kFix...)`, `rules::fix_info` - name, the games it
   touches, help). Engine code never asks "the fixes" as one: a new fix gets

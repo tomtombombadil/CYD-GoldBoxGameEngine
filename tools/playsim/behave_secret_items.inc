@@ -192,6 +192,8 @@ SVals s_expect(const party::Character& c)
         if (t.flags & 4) {
             v.hit += r[0x125] ? s_str(g, 1) : 0;
             v.dmg += r[0x125] ? s_str(g, 2) : 0;
+        } else if ((t.flags & 0x10) && !(t.flags & 0x04) && rules::enh(rules::kEnhThrownStr)) {
+            v.dmg += r[0x125] ? s_str(g, 2) : 0;   // (Thrown Strength, an Enhancement)
         }
         int plus = static_cast<int8_t>(weapon[0x32]);
         if ((t.flags & 0x80) && quarrels) plus += static_cast<int8_t>(quarrels[0x32]);

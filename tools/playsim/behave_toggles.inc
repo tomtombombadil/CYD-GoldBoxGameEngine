@@ -613,8 +613,8 @@ void wis13()
            w[1] >= 13 && w[0] < 13, "least on %d, off %d", w[1], w[0]);
 }
 
-// X2 Raising the Dead (1E rule): Raise Dead in camp on a dead member - a point
-// of Constitution either way (PHB p.12; the originals' own)
+// X2 Raising the Dead (1E rule): Raise Dead in camp on a dead member - no
+// Constitution lost with the rule, a point without
 void raise_dead()
 {
     if (!boot() || !load_magic() || pt->count < 2) return;
@@ -640,13 +640,13 @@ void raise_dead()
         con[on] = c.health() == party::Dead ? -1 : c.rec[0x19];
     });
     pt->m[1] = keep;
-    expect(P, "X2 Raising the Dead: raised with one point of Constitution less, the rule on (PHB p.12) or off (the original)",
-           con[1] == 14 && con[0] == 14, "on Con %d, off Con %d (-1: not raised)", con[1], con[0]);
+    expect(P, "X2 Raising the Dead: raised with Constitution kept (on), one point less (off - the original)",
+           con[1] == 15 && con[0] == 14, "on Con %d, off Con %d (-1: not raised)", con[1], con[0]);
 }
 
 // X18 Raising the Dead at the temple (1E rule; the Cheats' Healer = the
 // game's own temple, free): a dead human magic-user 4, Constitution 16, max
-// 28 of 20 rolled. On: Constitution 15, max 28 (PHB p.12). Off, each original's temple:
+// 28 of 20 rolled. On: Constitution 16, max 28. Off, each original's temple:
 // Constitution in use 15; the generic temples (Curse / Champions / PoolRad /
 // Gateway - GAME.OVR 0x51AA / 0x5880 / 0x4B22 / 0x607E) also cut the maximum
 // by (max - rolled) / (levels) = 8 / 4 -> 26; the others' hit points follow
@@ -690,9 +690,9 @@ void temple_raise()
     });
     pt->m[0] = keep;
     const bool generic = d->prof->cures.temple_raise != 0;
-    expect(P, "X18 Raising the Dead at the temple: one point of Constitution less, the generic temples' max kept (1E on - "
-              "PHB p.12); one point less, their hit point cut (off); the own temples the same both ways",
-           !dead[0] && !dead[1] && con[1] == 15 && con[0] == 15 && (generic ? mx[1] == 28 && mx[0] == 26 : mx[1] == mx[0]),
+    expect(P, "X18 Raising the Dead at the temple: Constitution kept, max kept (on); one point less, the original's hit "
+              "point cut (off)",
+           !dead[0] && !dead[1] && con[1] == 16 && mx[1] == 28 && con[0] == 15 && (!generic || mx[0] == 26),
            "on Con %d max %d, off Con %d max %d (%s temple; dead %d %d)", con[1], mx[1], con[0], mx[0],
            generic ? "generic" : "own", dead[1], dead[0]);
 }
