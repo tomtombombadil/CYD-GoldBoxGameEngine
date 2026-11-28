@@ -298,6 +298,8 @@ bool map_secret(int x, int y, int dir);
 // That side is an archway: passable, its wall's picture see-through in the middle (Tom, 2026-11-27: drawn as an
 // archway, not a door) - the loaded wall sets' pictures, worked out once a map and walls
 bool map_arch(int x, int y, int dir);
+// That square of the 3D map leads to another map or area (its step script would load one - a dry run of it)
+bool map_exit(int x, int y);
 void describe(char* line1, char* line2, int cap);
 
 // ---- The Companion panel's Party and Battle views (CYD_COMPANION_VIEWS;

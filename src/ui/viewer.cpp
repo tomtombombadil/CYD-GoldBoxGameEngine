@@ -2923,11 +2923,12 @@ struct MapSource {
     bool (*place)(int, int);    // a place on that square (null: none)
     bool (*walked)(int, int, int);  // that side is a secret door (play::map_secret; null: none)
     bool (*arch)(int, int, int) = nullptr;     // that side is an archway (play::map_arch; null: none)
+    bool (*exit)(int, int) = nullptr;          // that square leads to another map or area (play::map_exit)
 };
 bool walk_any_side(int, int, int) { return true; }    // (the Walk Test: every secret door shown, as before)
 const MapSource kWalkMap{walk::map, walk::pos_x, walk::pos_y, walk::dir, walk::describe, true, nullptr, walk_any_side};
 const MapSource kPlayMap{play::map, play::pos_x, play::pos_y, play::dir, play::describe, false, play::map_place,
-                         play::map_secret, play::map_arch};
+                         play::map_secret, play::map_arch, play::map_exit};
 
 // Any place on the map now shown (the legend's "Place")
 bool map_has_places(const MapSource& ms)
@@ -3020,6 +3021,11 @@ void draw_map_grid(lgfx::LovyanGFX& g, const geo::Map& map, const MapSource& ms,
         if (ry + rh > my + span) rh = my + span - ry;
         if (rw > 0 && rh > 0) g.fillRect(rx, ry, rw, rh, col);
     };
+    // The squares that lead to another map or area: shaded (Tom, 2026-11-27, from the mock-ups)
+    if (ms.exit)
+        for (int y = 0; y < geo::kSize; ++y)
+            for (int x = 0; x < geo::kSize; ++x)
+                if (ms.exit(x, y)) g.fillRect(mx + x * cell + 1, my + y * cell + 1, cell - 1, cell - 1, style::kExit);
     for (int pass = 0; pass < 2; ++pass)
         for (int y = 0; y < geo::kSize; ++y)
             for (int x = 0; x < geo::kSize; ++x) {

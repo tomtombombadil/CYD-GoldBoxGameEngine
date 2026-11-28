@@ -22,6 +22,7 @@ constexpr uint16_t kKeyLit     = rgb(150, 112, 30);    // selected / on
 constexpr uint16_t kText       = rgb(240, 230, 200);   // cream
 constexpr uint16_t kTextMuted  = rgb(150, 145, 130);
 constexpr uint16_t kGold       = rgb(232, 184, 64);
+constexpr uint16_t kExit       = rgb(90, 26, 90);      // (the map's exits: a dark magenta square)
 constexpr uint16_t kWarn       = rgb(220, 90, 70);
 constexpr uint16_t kHeader     = rgb(16, 24, 56);
 constexpr uint16_t kParty      = rgb(40, 255, 40);     // the map's party arrow (Tom: bright green)

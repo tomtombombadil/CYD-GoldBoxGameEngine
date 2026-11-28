@@ -1261,6 +1261,49 @@ int Vm::probe(uint16_t address)
     return -1;                                       // (it never ended)
 }
 
+int Vm::probe_exit(uint16_t address)
+{
+    if (!probe_ || address < kBase) return -1;
+    pc_ = address - kBase;
+    sp_ = 0;
+    stop_ = false;
+    probe_bad_ = false;
+    const uint16_t here = get(0x4BC5);
+    for (int n = 0; n < 2000; ++n) {
+        if (pc_ >= s_.code_len) return -1;
+        const uint8_t op = code_of(s_)[pc_];
+        if (op == 0x00 || (op == 0x13 && sp_ == 0) || (set_.byte_map && op == 0x23))
+            return (get(0x7EC9) & 0xFF) == 0xFF ? 1 : 0;
+        Op o[3];
+        arena_used_ = 0;
+        n_slots_ = 0;
+        if (op == 0x20) return 2;                           // NEWECL: another area's script
+        if (op == 0x21) {                                   // LOAD FILES: another map?
+            if (!operands(3, o)) return -1;
+            const int a = value(o[0]) & 0xFF;
+            if (a != 0xFF && a != 0x7F && a != (here & 0xFF) && get(0x4BE6)) return 2;
+            continue;                                       // (operands() has moved past it)
+        }
+        if (op == 0x0E) {                                   // PICTURE: passed over
+            if (!operands(1, o)) return -1;
+            continue;
+        }
+        if (op == 0x3A || op == 0x3D) {                     // DELAY, CLEAR BOX
+            ++pc_;
+            continue;
+        }
+        const bool words = op == 0x11 || op == 0x12 || op == 0x33;     // PRINT, PRINTCLEAR, PRINT RETURN
+        if (!words && !probe_safe(op)) return -1;
+        const Stop r = step();
+        if (words && r == Stop::Waiting) {
+            wait_ = Wait::None;
+            continue;
+        }
+        if (probe_bad_ || r != Stop::Running) return -1;
+    }
+    return -1;
+}
+
 Stop Vm::answer(int v)
 {
     if (enc_phase_ == EncPhase::Menu) {

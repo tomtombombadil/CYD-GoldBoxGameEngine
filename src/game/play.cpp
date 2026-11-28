@@ -135,6 +135,8 @@ struct Data {
     view3d::World& world;
     geo::Map       map;
     char           map_file[16] = "";     // (map_source: the GEO file and block it came from)
+    uint8_t        exit_sq[geo::kMaxSquares / 8] = {};   // (map_exit: a bit a square)
+    int            exit_at = -1;
     int            map_block = -1;
     // The map's sides the party has walked through (a bit a side, 4 a square: N E S W) - a plain-looking wall
     // it crossed is a secret door on the Companion map (Tom, 2026-11-22: the kobold caves' rock sides the
@@ -21907,6 +21909,55 @@ __attribute__((noinline)) void secrets_work_out()
             }
     if (probing) vm->end_probe();
     plat::log("[play] secret doors: %d (refused by the step script %d, unfollowed %d)\n", n_open + n_unk, n_ref, n_unk);
+}
+
+// The squares of the 3D map whose step script, run dry with its words, pictures and pauses passed over, would
+// load another area's script or another map (Tom, 2026-11-27: "entrances to a different map/area" drawn
+// differently) - worked out once a map, as the secret doors
+__attribute__((noinline)) void exits_work_out()
+{
+    memset(d->exit_sq, 0, sizeof d->exit_sq);
+    d->exit_at = map_epoch;
+    const geo::Map& m = d->map;
+    const uint16_t at = vm->entry(0);
+    if (at < 0x8000 || !vm->begin_probe()) return;
+    ecl::GameState& g = d->gs;
+    int n = 0;
+    for (int y = 0; y < m.h; ++y)
+        for (int x = 0; x < m.w; ++x)
+            for (int dir = 0; dir < 8; dir += 2) {
+                g.x = x;
+                g.y = y;
+                g.dir = dir;
+                g.wall_ahead = static_cast<uint8_t>(geo::wall(m, x, y, dir));
+                g.roof = geo::flags(m, x, y);
+                g.sq_bits = geo::queen_bits(m, x, y);
+                vm->set(0x7ED5, 0);
+                vm->set(0x7EC9, 0);
+                gw_way_ahead();
+                const int r = vm->probe_exit(at);
+                vm->probe_restore();
+                if (r == 2) {
+                    const int i = y * m.w + x;
+                    d->exit_sq[i / 8] |= static_cast<uint8_t>(1u << (i & 7));
+                    ++n;
+                    break;
+                }
+            }
+    vm->end_probe();
+    plat::log("[play] exits: %d squares\n", n);
+}
+
+bool map_exit(int x, int y)
+{
+    if (peek_on() || !d || !vm || !d->map.loaded || pool_overland() || map() != &d->map) return false;
+    const int w = d->map.w ? d->map.w : geo::kSize;
+    const int i = y * w + x;
+    if (x < 0 || y < 0 || x >= w || i >= geo::kMaxSquares) return false;
+    if (d->exit_at != map_epoch && screen == Screen::Game && !waiting && then == Then::Idle &&
+        vm->wait() == ecl::Wait::None)
+        exits_work_out();
+    return d->exit_sq[i / 8] >> (i & 7) & 1;
 }
 
 // A side of the 3D map shown as a secret door

@@ -262,6 +262,10 @@ public:
     // end_probe the same and lets the saved copy go. Only while no script is running or waiting.
     bool begin_probe();
     int  probe(uint16_t address);
+    // The same for the Companion map's exits (Tom, 2026-11-27: "entrances to a different map/area"): the words a
+    // script prints, its pictures, pauses and boxes are passed over, and it ends - 2 - where it would load another
+    // script (NEWECL) or another map (LOAD FILES with a map other than this one); else as probe
+    int  probe_exit(uint16_t address);
     void probe_restore();
     void end_probe();
     Stop answer(int value);
