@@ -5251,6 +5251,43 @@ bool save_game_now(char slot)
     return ok;
 }
 
+bool snapshot_now(const char* dir)
+{
+    if (!d || !pt || pt->count == 0 || in_demo || screen == Screen::Title || !dir || !dir[0]) return false;
+    // (the save's own steps with its folders pointed at dir; the vault - its file in the save folder - copied in
+    // first so the save's copy of it is the game's)
+    char save_was[sizeof d->save_dir], cache_was[sizeof d->cache_dir];
+    memcpy(save_was, d->save_dir, sizeof save_was);
+    memcpy(cache_was, d->cache_dir, sizeof cache_was);
+    if (!plat::exists(dir)) plat::mkdir(dir);
+    const auto& v = d->prof->vault;
+    if (v.slot_file) {
+        char from[200], to[200], name[16];
+        snprintf(from, sizeof from, "%s/%s", save_was, v.file);
+        if (!plat::exists(from)) {
+            snprintf(name, sizeof name, v.slot_file, vault_slot);
+            snprintf(from, sizeof from, "%s/%s", save_was, name);
+        }
+        snprintf(to, sizeof to, "%s/%s", dir, v.file);
+        plat::File in = plat::open(from, "r");
+        if (in) {
+            plat::File out = plat::open(to, "w");
+            uint8_t buf[256];
+            int n;
+            while (out && (n = in.read(buf, sizeof buf)) > 0) out.write(buf, static_cast<size_t>(n));
+            if (out) out.close();
+            in.close();
+        }
+    }
+    snprintf(d->save_dir, sizeof d->save_dir, "%s", dir);
+    snprintf(d->cache_dir, sizeof d->cache_dir, "%s", dir);
+    const bool ok = save_game('A');
+    memcpy(d->save_dir, save_was, sizeof save_was);
+    memcpy(d->cache_dir, cache_was, sizeof cache_was);
+    plat::log("[play] snapshot for a report in %s: %s\n", dir, ok ? "ok" : "FAILED");
+    return ok;
+}
+
 void load_journal_list(char slot)
 {
     n_seen = 0;
@@ -22054,6 +22091,8 @@ void describe(char* line1, char* line2, int cap)
 
 // ---- Continue (Tom, 2026-11-24: the Android app's game chooser - "Continue
 // (the last save) first") ------------------------------------------------------
+bool snapshot(const char* dir) { return snapshot_now(dir); }
+
 char newest_save()
 {
     if (!d) return 0;

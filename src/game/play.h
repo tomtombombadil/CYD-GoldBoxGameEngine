@@ -65,6 +65,13 @@ void tick(uint32_t now_ms, pic::Canvas& c);
 char newest_save();
 bool continue_game(char slot, pic::Canvas& c, const char** why = nullptr);
 
+// A save of the game as it is, for a problem report alone (Tom, 2026-11-28 - the Android app's Report a Problem:
+// "it would just be at that moment and wouldn't take any of their save slots or overwrite anything"): the files a
+// save to slot A writes (the game's own format; the vault, the journal's list), written into `dir` instead of the
+// save folder - nothing of the game's own touched. False: no party in play (the titles, a demo, none yet) or it
+// couldn't be written.
+bool snapshot(const char* dir);
+
 // Esc: back out of a question the Play Test asked (Load Which Game);
 // false if there is none (the viewer leaves the Play Test).
 bool back(pic::Canvas& c);
