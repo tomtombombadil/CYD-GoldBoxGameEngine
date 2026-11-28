@@ -2034,6 +2034,15 @@ the Project as claude/TODO.md.
       screens, the whole party dying, importing Pool (.WHO) characters -
       not checked yet; the unsure points in secret_facts_2.md 29.items.3
       / 29.situations.0b.
+      Reviewed 2026-11-27: Buy / Id / Share / Take / Pool / Appraise - behave economy (round 3, all nine games);
+      training - the play-through and v0.211.10; the whole party dying - playsim (save A against 20 of monster
+      69, HP 1: the rejoicing page, then the party menu); characters from Curse (PoolRad's among them) - the
+      play-through's party came that way; the effects lost at the roll (invisibility, blink, displacement, Dispel
+      Evil) - behind Game Fixes (kFixSOwn). LEFT: scroll bundles; the 29.items.3 unsure points (Boots of Speed's
+      AC growing, the fire ring twice / its byte wrap, giant slaying's natural 1, the Ring of Wizardry put away,
+      potions of speed / invisibility lasting, a cleric's 6th-level slots); Malachite's saves; approaching
+      monsters against DOSBox; the outdoor field's flags (below); old-age death (not in the engine);
+      New Verdigris's shops after the end; rest's "Whole Party Is Healed" wording.
 - [ ] **Pools of Darkness** (started 2026-10-17; facts: the Project's
       claude/darkness_facts.md; SPEC 6d). Done: the survey (program and
       overlay layout, files, saves, the scripts' operand counts);
@@ -2323,7 +2332,7 @@ the Project as claude/TODO.md.
       Gateway, Champions have no Barkskin (no such spell / name).
 - [ ] Tom: try the new library page (v0.103.0) on a board - the art,
       the header keys, the thirds and the triangles.
-- [ ] Tom: when you have a moment, Secret's Screen Test and Walk Test
+- [x] (closed 2026-11-27: the Dev Tools are gone since v0.209.0) Tom: when you have a moment, Secret's Screen Test and Walk Test
       (Settings - Dev Tools on its page) on a board - the frame, title,
       credits and maps should look like the original's.
 
