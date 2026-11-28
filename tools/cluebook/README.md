@@ -31,3 +31,9 @@ counts the engine's codes against them. The game's own pictures: `mapload.cpp` (
 sets - ecl::find_map_load), `looks.cpp` (each map's 15 wall types' pictures, hashed: alike = the same look),
 `wallpic.cpp` (a wall block's five pieces drawn head-on, PPM). The last two #include engine/view3d.cpp (its piece()
 is file-local) - a developer's tool's licence, never the engine's way.
+
+Straightening and markers (2026-11-27, Tom: the scans curve near the binding): `warp.py <game> <pdf>` fits each
+read map's grid as drawn - X(u, v) from the up-and-down walls, Y(u, v) from the across ones, degree-3 polynomials in
+the grid's own coordinates - from read_<game>.json (rms under 1 px at 200 dpi; the bend up to 6.5 px, a sixth of a
+square, in Champions); `markers.py <game> <pdf> [maps]` reads the numbers in the squares of the straightened
+picture (digit-sized ink, tesseract) - not reliable enough yet (about two thirds right on Champions' map 80).
