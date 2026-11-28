@@ -120,6 +120,12 @@ enum class Scribe : uint8_t { Ok, Known, Already, Cannot };
 Scribe scribe(party::Character& c, const classes::Tables& t, const Scrolls& sc, int spell);
 bool scribing(const party::Character& c, const Scrolls& sc);
 void cancel_scribes(party::Character& c, const Scrolls& sc);
+// A spell on the scroll (or one of the bundle's scrolls) being scribed
+bool scribing_from(const uint8_t* item);
+// Secret's parting test (GAME.OVR 0x28222): a scroll with a spell being
+// scribed asks "is it Okay to lose it?"; a bundle never (the original looks
+// at the bundle's own bytes) - with Bundle Scribe Warning as a scroll
+bool parting_asks(const Scrolls& sc, const uint8_t* item);
 // The spell scribed: into the spell book, off the scroll (used up: gone)
 void scribed(party::Character& c, const Scrolls& sc, int item, int slot);
 

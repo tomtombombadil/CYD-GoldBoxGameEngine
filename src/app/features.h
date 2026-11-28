@@ -376,3 +376,11 @@
 #ifndef CYD_THROWN_STRENGTH
 #define CYD_THROWN_STRENGTH 1
 #endif
+
+// Scroll Bundles (Tom, 2026-11-28 - an Enhancement): Join on a scroll ties the
+// character's scrolls into a "Bundle of N Scrolls" (up to 10) in every game,
+// as Secret of the Silver Blades does (its own always; engine/bundle.h).
+// Settings key, on by default.
+#ifndef CYD_SCROLL_BUNDLES
+#define CYD_SCROLL_BUNDLES 1
+#endif

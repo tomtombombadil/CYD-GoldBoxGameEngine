@@ -6204,7 +6204,10 @@ bool old_age_begin(pic::Canvas& c)
     for (int i = 0; i < b.party_size && i < pt->count; ++i) {
         party::Character& ch = pt->m[i];
         if (ch.health() >= party::Dead) continue;
-        const int race = party::darkness_byte(ch.rec, ch.ext, ch.n_items, 0xAD);
+        // (the game's own race number - Darkness's / Treasures' record 0xAD, Secret's 0x6B)
+        const int race = secret_files() ? (party::race_from_secret(ch.ext[party::kExtRace]) == ch.rec[0x74]
+                                               ? ch.ext[party::kExtRace] : party::race_to_secret(ch.rec[0x74]))
+                                        : party::darkness_byte(ch.rec, ch.ext, ch.n_items, 0xAD);
         const int most = race >= 0 && race < 8 ? d->tr_max_age[race] : 0;
         const int age = ch.rec[0x76] | ch.rec[0x77] << 8;
         if (most && age > most) {
@@ -6254,7 +6257,7 @@ void old_age_next(pic::Canvas& c)
         break;
     case 2: {
         const party::Character& ch = pt->m[o[1]];
-        word(party::darkness_byte(ch.rec, ch.ext, ch.n_items, 0x166) ? 4 : 3, b2, sizeof b2);
+        word((secret_files() ? ch.sex() : party::darkness_byte(ch.rec, ch.ext, ch.n_items, 0x166)) ? 4 : 3, b2, sizeof b2);
         word(5, a, sizeof a);
         snprintf(t, sizeof t, "%s%s", b2, a);
         // status 8, "dies from age" (ovl 0xFB +0x25)
@@ -6295,7 +6298,7 @@ void end_fight(pic::Canvas& c)
             plat::log("[play] member %d's weapon back from the stone\n", fg->lost_who[k]);
         }
     fg->n_lost = 0;
-    if (d->prof->variant.tr_max_age && age_check && !in_demo) {
+    if ((d->prof->variant.tr_max_age || d->prof->variant.sv_old_age[0]) && age_check && !in_demo) {
         age_check = false;
         if (old_age_begin(c)) return;
     }
@@ -8356,6 +8359,18 @@ void open_treasure(pic::Canvas& c)
 // puts coins or an item in it, Take takes them out, Pool puts the party's
 // coins in; leaving writes the file. The engine keeps up to kMaxGround
 // items there (the original: as many as its memory takes).
+// A bundle's scrolls after its record in a vault file (bundle.h): kept with
+// the bundle (none kept when there's no room for them - read past)
+void vault_bundle(uint8_t* r, plat::File& f, size_t stride, int n)
+{
+    const bool keep = bundle::start(r);
+    for (int k = 0; k < n; ++k) {
+        uint8_t s[party::kSecretItemSize];
+        if (f.read(s, stride) != static_cast<int>(stride)) break;
+        if (keep) bundle::add(r, s);
+    }
+}
+
 void vault_read_dk()
 {
     const auto& v = d->prof->vault;
@@ -8377,6 +8392,8 @@ void vault_read_dk()
         }
     while (ground->n < items::kMaxGround && f.read(b, 63) == 63) {
         memcpy(ground->item[ground->n], b, items::kRecordSize);
+        // (a bundle of scrolls - the Enhancement's: its scrolls follow)
+        if (bundle::marked(b)) vault_bundle(ground->item[ground->n], f, 63, b[0x39]);
         ++ground->n;
     }
     f.close();
@@ -8406,18 +8423,21 @@ void vault_read()
             ground->money[m] = v > 0x7FFFFFFF ? 0x7FFFFFFF : static_cast<int>(v);
         }
     while (f.read(b, sizeof b) == static_cast<int>(sizeof b)) {
-        // (an item of type 0x49 is followed by as many records as its
-        // count, 0x39 - the original's loader reads them; none in the game)
-        if (b[0x2E] == 0x49)
-            for (int k = 0; k < b[0x39]; ++k) {
-                uint8_t skip[party::kSecretItemSize];
-                f.read(skip, sizeof skip);
-            }
-        if (ground->n >= items::kMaxGround) continue;
-        memcpy(ground->item[ground->n], b, items::kRecordSize);
-        items::fix_item(ground->item[ground->n]);
-        name_from_words(ground->item[ground->n]);
-        ++ground->n;
+        // (a bundle of scrolls, type 0x49, is followed by as many records as
+        // its count, 0x39 - its scrolls; the original's loader reads them)
+        const bool bundled = b[0x2E] == bundle::kSecretType;
+        uint8_t* r = ground->n < items::kMaxGround ? ground->item[ground->n] : nullptr;
+        if (r) {
+            memcpy(r, b, items::kRecordSize);
+            items::fix_item(r);
+            if (!bundled) name_from_words(r);
+            ++ground->n;
+        }
+        if (bundled) {
+            uint8_t scratch[items::kRecordSize];
+            if (!r) memcpy(r = scratch, b, items::kRecordSize);
+            vault_bundle(r, f, sizeof b, b[0x39]);
+        }
     }
     f.close();
     // The file's first item is the list's first line: the ground's last
@@ -8446,10 +8466,15 @@ bool vault_write()
     bool ok = f.write(b, vf.coins * 4u) == vf.coins * 4u;
     const size_t isz = vf.item_size ? vf.item_size : sizeof b;
     for (int i = ground->n - 1; ok && i >= 0; --i) {        // (the list's order)
-        memset(b, 0, sizeof b);
-        memcpy(b, ground->item[i], items::kRecordSize);
+        bundle::file_record(ground->item[i], b, sizeof b);
         items::fix_item(b, true);                   // (the original's bytes in the files)
         ok = f.write(b, isz) == isz;
+        // (a bundle: its scrolls after it)
+        for (int k = 0; ok && k < bundle::file_records(ground->item[i]) - 1; ++k) {
+            memset(b, 0, sizeof b);
+            memcpy(b, bundle::scroll(ground->item[i], k), items::kRecordSize);
+            ok = f.write(b, isz) == isz;
+        }
     }
     f.close();
     return ok;
@@ -8463,7 +8488,7 @@ void open_vault(pic::Canvas& c)
     open_treasure(c);
 }
 
-bool can_part_with(int i, pic::Canvas& c);
+bool can_part_with(int i, pic::Canvas& c, char act);
 void back_to_items(pic::Canvas& c);
 
 // Secret's vault: an item put in it (View - Items - Deposit, the item put
@@ -8471,7 +8496,7 @@ void back_to_items(pic::Canvas& c);
 void deposit_item(int i, pic::Canvas& c)
 {
     party::Character& ch = *pt->sel();
-    if (!can_part_with(i, c)) return;
+    if (!can_part_with(i, c, 'P')) return;
     if (ground->n >= items::kMaxGround) {
         note(c, d->w_over);
         return;

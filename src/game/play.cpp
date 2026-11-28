@@ -27,6 +27,7 @@
 #include "engine/qimport.h"
 #include "engine/levelbook.h"
 #include "engine/items.h"
+#include "engine/bundle.h"
 #include "engine/magic.h"
 #include "engine/layout.h"
 #include "engine/party.h"
@@ -268,6 +269,7 @@ struct Data {
 
 Data* d = nullptr;
 party::Party* pt = nullptr;
+Options opts;                   // the engine comforts switched on (Settings)
 items::Names* names = nullptr;     // item name words and types
 items::Ground* ground = nullptr;   // treasure / a shop's goods (own block: RAM is tight)
 // The Cheats tab's screen on now (Tom, 2026-11-01; features.h CYD_CHEATS):
@@ -2843,6 +2845,43 @@ void present_now()
 
 // A character's three files: the record, the items, the effects (Pool's
 // Strength and Charisma as its files keep them: rules::pool_stats_out)
+// The Enhancements as the options have them; the scroll bundles' kind
+// (Secret's own always; the other games' by Scroll Bundles - not the Dark
+// Queen's, whose own bundles are another record's)
+void apply_enh()
+{
+    rules::set_enh(static_cast<uint8_t>((opts.coin_exchange ? rules::kEnhCoins : 0) | (opts.oil_burns ? rules::kEnhOil : 0) |
+                                        (opts.thrown_str ? rules::kEnhThrownStr : 0) |
+                                        (opts.scroll_bundles ? rules::kEnhBundles : 0)));
+    bundle::configure(secret_files(), rules::enh(rules::kEnhBundles) && d->prof->game != games::Game::DarkQueenOfKrynn);
+}
+
+// A character's items file: Secret's .STF 67 bytes an item (the 4 after
+// Curse's 63 zero), the others' 63; a bundle of scrolls its record then its
+// scrolls' (bundle.h)
+bool write_items_file(const char* dir, const char* items_fn, const party::Character& ch)
+{
+    const uint32_t stride = item_stride();
+    int recs = 0;
+    for (int i = 0; i < ch.n_items; ++i) recs += bundle::file_records(ch.items[i]);
+    const size_t len = static_cast<size_t>(recs) * stride;
+    if (recs == ch.n_items && stride == party::kItemSize) return write_file(dir, items_fn, ch.items[0], len);
+    uint8_t* ib = len ? new (std::nothrow) uint8_t[len] : nullptr;
+    if (len && !ib) return false;
+    size_t at = 0;
+    for (int i = 0; i < ch.n_items; ++i) {
+        bundle::file_record(ch.items[i], ib + at, stride);
+        at += stride;
+        for (int k = 0; k < bundle::file_records(ch.items[i]) - 1; ++k, at += stride) {
+            memset(ib + at, 0, stride);
+            memcpy(ib + at, bundle::scroll(ch.items[i], k), party::kItemSize);
+        }
+    }
+    const bool ok = write_file(dir, items_fn, ib, len);
+    delete[] ib;
+    return ok;
+}
+
 bool write_character_files(const char* dir, const char* rec_fn, const char* items_fn, const char* fx_fn,
                            const party::Character& who)
 {
@@ -2878,20 +2917,7 @@ bool write_character_files(const char* dir, const char* rec_fn, const char* item
         dkk_wiz_name(rec_fn, wz, sizeof wz);
         ok = ok && write_file(dir, wz, buf + party::kDkkRecordSize, party::kDkkSpellSize);
     }
-    if (item_stride() != party::kItemSize) {
-        // Secret's .STF: 67 bytes an item, the 4 after Curse's 63 zero
-        const size_t len = static_cast<size_t>(ch.n_items) * item_stride();
-        uint8_t* ib = len ? new (std::nothrow) uint8_t[len] : nullptr;
-        if (len && !ib) ok = false;
-        if (ib) {
-            memset(ib, 0, len);
-            for (int i = 0; i < ch.n_items; ++i) memcpy(ib + i * item_stride(), ch.items[i], party::kItemSize);
-        }
-        ok = ok && write_file(dir, items_fn, ib, len);
-        delete[] ib;
-    } else {
-        ok = ok && write_file(dir, items_fn, ch.items[0], static_cast<size_t>(ch.n_items) * party::kItemSize);
-    }
+    ok = ok && write_items_file(dir, items_fn, ch);
     ok = ok && write_file(dir, fx_fn, f, static_cast<size_t>(ch.n_affects) * party::kAffectSize);
     delete copy;
     return ok;
@@ -4185,7 +4211,8 @@ void draw_list(pic::Canvas& c, const char* prompt, const char* what)
 
 enum class Ask : uint8_t { None, Overwrite, Drop, DropSure, Reroll, SaveNew, OverwriteNew, DropItem, SellDeal, IdDeal,
                           LeaveCoins, CureAnyway, PayCure, Train, MemorizeThese, StopRest, LoseIt, AlterDrop, QuitDos,
-                          ScribeThese, ScribeThese2, UseIt, PaladinCure, AlterSure, Knight, CampLoad, QDelete, QDeleteSure };
+                          ScribeThese, ScribeThese2, UseIt, PaladinCure, AlterSure, Knight, CampLoad, QDelete, QDeleteSure,
+                          PartScroll };
 void ask_yes_no(pic::Canvas& c, Ask what, const char* prompt);
 void ask_create(pic::Canvas& c, Ask what, const char* prompt);
 bool view_yes_no(Ask what, char k, pic::Canvas& c);
@@ -4386,18 +4413,84 @@ void ready_item(int i, pic::Canvas& c)
 }
 
 // Drop / Trade / Sell need the item put away first (and not readied)
-bool can_part_with(int i, pic::Canvas& c)
+magic::Scrolls scroll_facts();
+void bundle_gc();
+// Secret's scroll bundles' words (profile items.bundle_words; the other
+// games: the engine's own English)
+enum BundleWord { kBwLimit, kBwScrolls, kBwNoSimilar, kBwCantJoin, kBwFool, kBwScribeScroll, kBwLoseIt, kBwScribeBundle };
+void bundle_word(int k, char* out, size_t cap)
 {
-    if (items::Item{pt->sel()->items[i]}.readied()) {
+    static const char* const kEnglish[] = {"Bundles are limited to ", " scrolls.", "There are no similar items to join with.",
+                                           "That cannot be joined with other items.",
+                                           "Fool! You must remove them from the bundle first!",
+                                           " was going to scribe from that scroll", "is it Okay to lose it? ",
+                                           " was going to scribe from that bundle"};
+    ow(d->prof->items.bundle_words[k], out, cap);
+    if (!out[0]) snprintf(out, cap, "%s", kEnglish[k]);
+}
+
+// Parting with an item (Trade, Drop / Deposit, Sell - Secret's GAME.OVR
+// 0x28222): readied - "Must be unreadied"; a scroll with a spell picked for
+// scribing - "NAME was going to scribe from that scroll", "is it Okay to
+// lose it? " (Yes goes on with what was asked). A bundle's scrolls: the
+// original's test looks at the bundle's own bytes (always clear) - with
+// Bundle Scribe Warning the same question for them
+char part_act = 0;                  // the action waiting on that question (T D S P)
+int  part_ok = -1;                  // the item it allowed (the action again: no question)
+void trade_item(int i, pic::Canvas& c);
+void sell_item(int i, pic::Canvas& c);
+void drop_item(int i, pic::Canvas& c);
+void deposit_item(int i, pic::Canvas& c);
+bool can_part_with(int i, pic::Canvas& c, char act = 0)
+{
+    const uint8_t* it = pt->sel()->items[i];
+    if (items::Item{it}.readied()) {
         note(c, iw(profile::kMustUnready));
         return false;
     }
+    if (part_ok == i) {
+        part_ok = -1;
+        return true;
+    }
+    part_ok = -1;
+    if (!act || !secret_files()) return true;
+    if (!magic::parting_asks(scroll_facts(), it)) return true;
+    const bool bun = bundle::is(it);
+    char nm[20], w[48], t[80];
+    pt->sel()->name(nm, sizeof nm);
+    bundle_word(bun ? kBwScribeBundle : kBwScribeScroll, w, sizeof w);
+    snprintf(t, sizeof t, "%s%s", nm, w);
+    say_item(c, t);
+    item_at = i;
+    part_act = act;
+    bundle_word(kBwLoseIt, w, sizeof w);
+    ask_yes_no(c, Ask::PartScroll, w);
+    return false;
+}
+
+// The answer to "is it Okay to lose it?": Yes - the action asked for
+bool part_yes_no(char k, pic::Canvas& c)
+{
+    const int i = item_at;
+    const char act = part_act;
+    item_at = -1;
+    part_act = 0;
+    screen = Screen::Items;
+    if (k != 'Y' || i < 0 || i >= pt->sel()->n_items) {
+        back_to_items(c);
+        return true;
+    }
+    part_ok = i;
+    if (act == 'T') trade_item(i, c);
+    else if (act == 'D') drop_item(i, c);
+    else if (act == 'S') sell_item(i, c);
+    else if (act == 'P') deposit_item(i, c);
     return true;
 }
 
 void drop_item(int i, pic::Canvas& c)
 {
-    if (!can_part_with(i, c)) return;
+    if (!can_part_with(i, c, 'D')) return;
     char nm[48], t[96];
     item_name(i, nm, sizeof nm);
     snprintf(t, sizeof t, "%s%s %s", iw(profile::kYour), nm, iw(profile::kGoneForever));
@@ -4445,7 +4538,7 @@ void draw_trade(pic::Canvas& c)
 
 void trade_item(int i, pic::Canvas& c)
 {
-    if (!can_part_with(i, c)) return;
+    if (!can_part_with(i, c, 'T')) return;
     item_at = i;
     trade_from = pt->selected;
     screen = Screen::TradeWho;
@@ -4522,8 +4615,53 @@ void halve_item(int i, pic::Canvas& c)
     draw_items(c);
 }
 
+// Join on a scroll or a bundle (Secret's GAME.OVR 0x29391; every game with
+// Scroll Bundles): a bundle already of 10 - "Bundles are limited to 10
+// scrolls."; fewer than two scrolls / bundles under 10 (the item itself
+// counted) - "There are no similar items to join with."; else the item
+// becomes a bundle (a scroll: a bundle of itself) and takes in the
+// character's other scrolls and the bundles that fit, in the list's order,
+// until it holds 10 - each one's value added, its count; Secret's count
+// word 0x30 and weight word 0x37 set to the count after each
+void join_scrolls(int i, pic::Canvas& c)
+{
+    party::Character& ch = *pt->sel();
+    const magic::Scrolls sc = scroll_facts();
+    char t[64], a[32], b[24];
+    switch (rules::join_scrolls(ch, i, [](const uint8_t* x, const void* p) {
+        return magic::is_scroll(*static_cast<const magic::Scrolls*>(p), x);
+    }, &sc)) {
+    case rules::BundleJoin::Limit:
+        bundle_word(kBwLimit, a, sizeof a);
+        bundle_word(kBwScrolls, b, sizeof b);
+        snprintf(t, sizeof t, "%s%d%s", a, bundle::kMax, b);
+        note(c, t);
+        return;
+    case rules::BundleJoin::None:
+        bundle_word(kBwNoSimilar, t, sizeof t);
+        note(c, t);
+        return;
+    case rules::BundleJoin::Joined: break;
+    }
+    bundle_gc();
+    rules::recalc(ch, *names, d->facts);
+    draw_items(c);
+}
+
 void join_item(int i, pic::Canvas& c)
 {
+    const uint8_t* it = pt->sel()->items[i];
+    if (bundle::on() && (bundle::is(it) || magic::is_scroll(scroll_facts(), it))) {
+        join_scrolls(i, c);
+        return;
+    }
+    if (secret_files() && it[0x39] == 0) {
+        // (Secret: "That cannot be joined with other items." - GAME.OVR 0x2971B)
+        char t[48];
+        bundle_word(kBwCantJoin, t, sizeof t);
+        note(c, t);
+        return;
+    }
     rules::join(*pt->sel(), i, secret_files());
     rules::recalc(*pt->sel(), *names, d->facts);
     draw_items(c);
@@ -4577,7 +4715,7 @@ void sell_dk(int i, pic::Canvas& c)
 
 void sell_item(int i, pic::Canvas& c)
 {
-    if (!can_part_with(i, c)) return;
+    if (!can_part_with(i, c, 'S')) return;
     if (dk_ui()) {
         // (the Dark Queen's too: "I'll give you %u steel pieces for your %s"
         // - the price in its one coin, as Darkness's)
@@ -4599,6 +4737,13 @@ void sell_item(int i, pic::Canvas& c)
 void identify_item(int i, pic::Canvas& c)
 {
     char nm[48], t[120];
+    if (bundle::is(pt->sel()->items[i])) {
+        // (a bundle: "Fool! You must remove them from the bundle first!" -
+        // GAME.OVR 0x2A1A5)
+        bundle_word(kBwFool, t, sizeof t);
+        note(c, t);
+        return;
+    }
     item_name(i, nm, sizeof nm);
     const char* says = iw(profile::kIdentify);
     if (cheat == Cheat::Merchant) {
@@ -4728,6 +4873,7 @@ bool shop_pay(party::Character& ch, int cost)
 // The answers to Drop It? / Is It a Deal?
 bool items_yes_no(Ask what, char k, pic::Canvas& c)
 {
+    if (what == Ask::PartScroll) return part_yes_no(k, c);
     if (what != Ask::DropItem && what != Ask::SellDeal && what != Ask::IdDeal) return false;
     party::Character& ch = *pt->sel();
     screen = Screen::Items;
@@ -6484,7 +6630,7 @@ void yes_no_key(char k, pic::Canvas& c)
 // Curse's Pool, Secret's Curse; "" if none)
 char import_dir[128] = {};
 char darkness_dir[128] = {};    // the player's Pools of Darkness folder ("" if none): its font
-Options opts;                   // the engine comforts switched on (Settings)
+// (opts: declared with the game's state, above)
 bool camp_fix_on() { return CYD_CAMP_FIX && opts.camp_fix; }
 bool keep_memorizing() { return CYD_KEEP_MEMORIZING && opts.keep_mem; }
 // Quick Actions (play_quick.inc; features.h CYD_QUICK_ACTIONS): the switches
@@ -6895,8 +7041,10 @@ bool guys_alloc()
     if (!d->gy) memlog::note("Add Character: not enough memory for the list");
     return d->gy != nullptr;
 }
+void bundle_gc();
 void guys_free()
 {
+    bundle_gc();                    // (a loaded party's: what the files read for others let go)
     delete d->gy;
     d->gy = nullptr;
     d->guys = 0;
@@ -8396,12 +8544,27 @@ void ask_leave(pic::Canvas& c)
 
 void treasure_off();
 
+// The bundles' scrolls no item holds any more let go (bundle.h): the
+// party's items and the ground's are all that hold them
+bool bundle_live(uint16_t id, void*)
+{
+    auto holds = [id](const uint8_t* r) { return bundle::stored(r) && bundle::id_of(r) == id; };
+    for (int i = 0; pt && i < pt->count; ++i)
+        for (int k = 0; k < pt->m[i].n_items; ++k)
+            if (holds(pt->m[i].items[k])) return true;
+    for (int k = 0; ground && k < ground->n; ++k)
+        if (holds(ground->item[k])) return true;
+    return false;
+}
+void bundle_gc() { bundle::gc(bundle_live, nullptr); }
+
 void leave_shop(pic::Canvas& c, bool asked)
 {
     if (vault_on()) {
         // Secret's vault: what's in it kept in its file
         if (!vault_write()) plat::log("[play] the vault: %s not written\n", d->prof->vault.file);
         ground->clear();
+        bundle_gc();
         treasure_off();
         asked = true;
     }
@@ -8415,6 +8578,7 @@ void leave_shop(pic::Canvas& c, bool asked)
     if (treasure_on()) {
         treasure_off();
         ground->clear();            // what's left behind is lost
+        bundle_gc();
         // (Secret: its treasure picture gives way to the script's, or the 3D view)
         if (prof_treasure_pic()) {
             if (last_pic_id >= 0) host_picture(last_pic_id, last_pic_head);
@@ -10596,7 +10760,12 @@ void draw_spells(pic::Canvas& c)
     put(c, t, 1, 1, hl() ? (sl.casting ? 13 : 7) : pt->sel()->npc() ? 10 : 11);     // (its caster's name pink - DOSBox)
     mw(profile::kSpellsWord, a, sizeof a);
     if (sl.choosing) cw(profile::kToChoose, b, sizeof b);
-    else if (sl.reading >= 0) cw(profile::kOnScroll, b, sizeof b);
+    else if (sl.reading >= 0) {
+        // (a bundle's: "in Bundle" - Secret's list mode 7, GAME.OVR 0x2AD13)
+        const bool bun = sl.reading < pt->sel()->n_items && bundle::is(pt->sel()->items[sl.reading]);
+        cw(bun ? profile::kInBundle : profile::kOnScroll, b, sizeof b);
+        if (bun && !b[0]) snprintf(b, sizeof b, "in Bundle");
+    }
     else if (sl.scrolls) cw(sl.learning ? profile::kToScribe : profile::kOnScrolls, b, sizeof b);
     else mw(sl.learning ? profile::kToMemorize : sl.casting || sl.viewing ? profile::kInMemory : profile::kInGrimoire, b,
             sizeof b);
@@ -12264,7 +12433,7 @@ void use_item(int i, pic::Canvas& c)
         return;
     }
     const magic::Scrolls sc = scroll_facts();
-    const bool scroll = magic::is_scroll(sc, it);
+    const bool scroll = magic::is_scroll(sc, it) || bundle::is(it);
     if (d->prof->variant.tr && !scroll && it[0x3D] && it[0x3E] >= 0x0F && it[0x3E] <= 0x11) {
         tr_own_item(i, c);
         return;
@@ -12287,8 +12456,8 @@ void use_item(int i, pic::Canvas& c)
         use_spell(i, magic::item_spell(it, pool_files()), false, c);
         return;
     }
-    uint8_t ids[3];
-    const int n = magic::scroll_list(ch, mrules->tables, sc, i, ids, 3);
+    uint8_t ids[3 * bundle::kMax];
+    const int n = magic::scroll_list(ch, mrules->tables, sc, i, ids, static_cast<int>(sizeof ids));
     if (!n) {                                       // (can't read it: nothing)
         if (!in_fight() && view_from == Screen::Game) end_magic();
         return;
@@ -14018,8 +14187,8 @@ __attribute__((noinline)) void load_party_text(dax::ByteSource& exe, const exepa
         rules::set_no_heal(d->prof->fight.facts.q.no_heal);
         items::set_passive(pi.passive);
         rules::set_fixes_off(CYD_ITEM_FIXES && opts.item_fixes ? opts.fixes_off : ~0ull);
-        rules::set_enh(static_cast<uint8_t>((opts.coin_exchange ? rules::kEnhCoins : 0) | (opts.oil_burns ? rules::kEnhOil : 0) |
-                                            (opts.thrown_str ? rules::kEnhThrownStr : 0)));
+        bundle::clear();
+        apply_enh();
         items::set_flame_fix(&pi.flame, CYD_ADND_RULES && (opts.adnd & rules::kAdndItems));
         rules::set_adnd(CYD_ADND_RULES ? opts.adnd : 0);
         rules::set_worn_facts(pi.effect_data, pi.stat_fx[1]);
@@ -14343,6 +14512,17 @@ __attribute__((noinline)) void load_party_text(dax::ByteSource& exe, const exepa
         if (exepack::read(exe, info, d->prof->create.ds_image + d->prof->variant.tr_max_age, ages, sizeof ages) ==
             exepack::Status::Ok)
             for (int k = 0; k < 8; ++k) d->tr_max_age[k] = static_cast<uint16_t>(ages[2 * k] | ages[2 * k + 1] << 8);
+    }
+    if (d->prof->variant.sv_old_age[0]) {
+        // Secret: each race's greatest age from its old-age routine's compares
+        // (cmp word es:[di+0x6E], imm16 / imm8 - races 1-6)
+        OvrWords src;
+        if (src.open())
+            for (int k = 0; k < 6; ++k) {
+                uint8_t b[6];
+                if (src.read_at(d->prof->variant.sv_old_age[k], b, 6) != 6 || b[0] != 0x26 || b[3] != 0x6E) continue;
+                d->tr_max_age[k + 1] = b[1] == 0x81 ? static_cast<uint16_t>(b[4] | b[5] << 8) : b[1] == 0x83 ? b[4] : 0;
+            }
     }
     if (d->prof->variant.tr) {
         // Treasures: its menus show only the words their callers enable (its
@@ -19159,8 +19339,7 @@ void set_options(const Options& o)
     // The items the originals got wrong: as now wanted, the party's too (mid-game)
     items::set_flame_fix(&d->prof->items.flame, CYD_ADND_RULES && (opts.adnd & rules::kAdndItems));
     rules::set_fixes_off(CYD_ITEM_FIXES && opts.item_fixes ? opts.fixes_off : ~0ull);
-    rules::set_enh(static_cast<uint8_t>((opts.coin_exchange ? rules::kEnhCoins : 0) | (opts.oil_burns ? rules::kEnhOil : 0) |
-                                            (opts.thrown_str ? rules::kEnhThrownStr : 0)));
+    apply_enh();
     static uint16_t adnd_was = 0xFFFF;
     const uint16_t adnd_now = CYD_ADND_RULES ? opts.adnd : 0;
     rules::set_adnd(adnd_now);
@@ -19784,6 +19963,7 @@ void reset_session()
 void close()
 {
     levelbook::set_store(nullptr);
+    bundle::clear();
     for (auto& r : ready_look) r = ReadyLook{};
     // (a fight first: its end reads the script's parked code back into the
     // machine - host and vm still there)

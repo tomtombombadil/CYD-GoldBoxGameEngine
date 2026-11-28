@@ -156,6 +156,9 @@ void share(party::Party& p, int money[7]);
 
 // True if the character can't take the item (16 items, or too heavy).
 bool too_heavy(party::Character& c, const uint8_t* item, const items::Names& names, const ItemFacts& f, bool slots = true);
+// What an item adds to the weight carried (a pile: weight x count; a bundle
+// of scrolls: bundle.h's rule)
+int carried_weight(const uint8_t* item);
 // Adds an item to a character (false: no room); an item the original got
 // wrong comes in fixed when that's wanted (items::fix_item)
 bool add_item(party::Character& c, const uint8_t* item);
@@ -206,6 +209,17 @@ bool halve(party::Character& c, int i);
 // Join: the same items in other piles go onto pile i (255 a pile at most);
 // how many piles were joined in
 int join(party::Character& c, int i, bool secret = false);
+// Join on a scroll or a bundle of scrolls (bundle.h; Secret's GAME.OVR
+// 0x29391, every game with Scroll Bundles): a bundle already of 10 - Limit
+// ("Bundles are limited to 10 scrolls."); fewer than two scrolls / bundles
+// under 10 (the item itself counted) - None ("There are no similar items to
+// join with."); else the item becomes a bundle (a scroll: a bundle of itself)
+// and takes in the character's other scrolls and the bundles that fit, in
+// the list's order, until it holds 10 - each one's value added; Secret's
+// count word 0x30 and weight word 0x37 set to the count after each.
+// is_scroll(record, ctx): the game's scroll test
+enum class BundleJoin : uint8_t { Joined, Limit, None };
+BundleJoin join_scrolls(party::Character& c, int i, bool (*is_scroll)(const uint8_t*, const void*), const void* ctx);
 // Auto Join (CYD_AUTO_JOIN): the item added onto a pile of c's that Join would make one of it with -
 // true when it went there whole (nothing new in the item list)
 bool pile_onto(party::Character& c, const uint8_t* item, bool secret = false);
@@ -377,6 +391,8 @@ enum Fix : uint8_t {
     kFixHp255,          // Hit Points Past 255: training's maximum stops at 255 (Darkness, Treasures)
     kFixImportHp,       // Imported Hit Points: a PoolRad character's Constitution hit points survive a Constitution change (Curse)
     kFixPoisonSave,     // Poison Save Bonus: the Constitution bonus lowers the poison number (the originals raise it; all but PoolRad)
+    kFixBundleWeight,   // Bundle Weight: a bundle of scrolls weighs one a scroll (Secret: its weight word times its count)
+    kFixBundleScribe,   // Bundle Scribe Warning: parting with a bundle whose spells are being scribed asks first (Secret)
     kFixCount
 };
 static_assert(kFixCount <= 64, "the fixes' bits");
@@ -433,7 +449,8 @@ enum Enh : uint8_t {
                             // highest coins (the five-coin games)
     kEnhOil   = 2,          // Flasks of Oil: a thrown flask burns (fire damage - ordinary, not magic)
     kEnhThrownStr = 4,      // Thrown Strength: a hurled weapon adds Strength's damage bonus (Tom, 2026-11-27)
-    kEnhAll   = 7,
+    kEnhBundles = 8,        // Scroll Bundles: Join ties scrolls into a bundle in every game, as Secret's (Tom, 2026-11-28)
+    kEnhAll   = 15,
 };
 void set_enh(uint8_t bits);
 bool enh(uint8_t e);

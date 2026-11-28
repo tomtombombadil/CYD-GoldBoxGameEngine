@@ -379,7 +379,12 @@ stay in the session's scratch space, never in the repo.
     never touched.
   - Enhancements: Game Font, Show Rolls, Companion Views, Savegame Info,
     Auto Join Items, Keep Memorizing, Camp Fix, Coin Exchange, Flasks of
-    Oil, Thrown Strength, More Characters, Icon Portrait, Icon Gallery, Large Icon (320x240).
+    Oil, Thrown Strength, Scroll Bundles, More Characters, Icon Portrait, Icon Gallery, Large Icon (320x240).
+    (Scroll Bundles - Tom, 2026-11-28, `rules::kEnhBundles`: Secret's bundles
+    in every other DAX game but the Dark Queen's; there a bundle is its first
+    scroll's record marked in its name bytes, saved as the record then its
+    scrolls' - an original reading the file sees an empty scroll and the
+    scrolls; off: kept, shown as that scroll.)
     (Coin Exchange and Flasks of Oil - Tom, 2026-11-17: additions of ours,
     not 1E rules; the engine's `rules::enh` bits.)
   - AD&D 1E Rules (section 12): Magic Missile, Multi-Class Hit Points,
@@ -3880,8 +3885,28 @@ the game's Settings (As Original: all of them).
   ovl 0xB +0x380E, has the same two - the same fix since 2026-11-01,
   `create::queen_hp`); Sell's overload test
   weighs the coins it pays (Secret's weighs the price in gold); a pile
-  with no count joins nothing (Secret's swallows it). Not in the engine
-  yet: Secret's scroll bundles (Join on scrolls, up to 10).
+  with no count joins nothing (Secret's swallows it).
+- **Secret's scroll bundles** (v0.223.0; `engine/bundle.*`, GAME.OVR read
+  2026-11-28): Join on a scroll ties the character's scrolls into a
+  "Bundle of N Scrolls" (type 0x49, up to 10; "Bundles are limited to 10
+  scrolls.", "There are no similar items to join with."); Use lists every
+  spell of its scrolls ("in Bundle"), a cast takes the spell off the first
+  scroll holding it, a used-up scroll leaves, the last two left become one
+  scroll; Halve gives its first half to a new item after it (one: that
+  scroll); Id refuses ("Fool! You must remove them from the bundle
+  first!"); Sell pays half its value; Scribe, rest time and cancel walk
+  its scrolls; saved (.STF, VAULT.DAT) as the bundle's record followed by
+  its scrolls'. Another game reading Secret's files leaves bundles out,
+  scrolls too (Darkness's import). Kept as the original: its weight is its
+  weight word (the count at its last Join / Halve) x the count - **Bundle
+  Weight** (Game Fix): one a scroll; parting with a bundle whose scroll is
+  being scribed asks nothing (its test reads the bundle's own bytes) -
+  **Bundle Scribe Warning** (Game Fix): "is it Okay to lose it?" as a
+  scroll does. A plain scroll being scribed asks before Trade / Drop /
+  Deposit / Sell (GAME.OVR 0x28222 - the engine didn't ask before).
+  Secret's Join on an uncounted item: "That cannot be joined with other
+  items." Old age after a fight (GAME.OVR 0xB772, when someone aged - haste):
+  each race's greatest age from that routine's compares, Treasures' screens.
 - **Darkness's race adjustments at creation** (`rules::fixes()`): its
   program tests the race list's last line (human) instead of the race
   picked, so dwarves' Con +1 Cha -1, elves' Dex +1 Con -1 and halflings'

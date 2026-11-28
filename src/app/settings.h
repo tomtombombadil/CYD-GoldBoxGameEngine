@@ -91,7 +91,8 @@ constexpr uint8_t kOff2CampFix = 1, kOff2Cheats = 2, kOff2Companion = 4, kOff2Qu
                   kOff2KeepMem = 128;   // (Keep Memorizing, CYD_KEEP_MEMORIZING - a Settings key since v0.209.0)
 // comforts_off3 bits
 constexpr uint8_t kOff3AddInfo = 1,     // (Character Info on Add Character, CYD_ADD_INFO - Tom, 2026-11-18)
-                  kOff3ThrownStr = 2;   // (Thrown Strength, CYD_THROWN_STRENGTH - Tom, 2026-11-27)
+                  kOff3ThrownStr = 2,   // (Thrown Strength, CYD_THROWN_STRENGTH - Tom, 2026-11-27)
+                  kOff3Bundles = 4;     // (Scroll Bundles, CYD_SCROLL_BUNDLES - Tom, 2026-11-28)
 // The AD&D 1E Rules' and the Game Fixes' switched-off sets, as one number
 inline uint16_t settings_rules_off(const Settings& s) { return static_cast<uint16_t>(s.rules_off | s.rules_off2 << 8); }
 inline void settings_set_rules_off(Settings& s, uint16_t v)

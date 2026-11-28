@@ -1,4 +1,6 @@
 #include "party.h"
+
+#include "bundle.h"
 #include "rules.h"
 
 #include <cstring>
@@ -835,9 +837,31 @@ void read_items(dax::ByteSource& src, Character& out, uint32_t stride)
 {
     out.n_items = 0;
     if (stride < kItemSize) return;
-    const uint32_t n = src.size() / stride;
-    for (uint32_t i = 0; i < n && out.n_items < kMaxItems; ++i)
-        if (src.read_at(i * stride, out.items[out.n_items], kItemSize) == kItemSize) ++out.n_items;
+    const uint32_t size = src.size();
+    for (uint32_t at = 0; at + stride <= size && out.n_items < kMaxItems;) {
+        uint8_t* r = out.items[out.n_items];
+        if (src.read_at(at, r, kItemSize) != kItemSize) break;
+        at += stride;
+        // A bundle of scrolls (bundle.h): its record, then its scrolls'.
+        // Secret's own (.STF, type 0x49) in Secret; another game reading
+        // Secret's files leaves them out, scrolls and all (Darkness's import,
+        // GAME.OVR 0x11F06); the Enhancement's marked ones
+        if (stride == kSecretItemSize && r[0x2E] == bundle::kSecretType) {
+            if (!bundle::secret()) {
+                at += static_cast<uint32_t>(r[0x39]) * stride;
+                memset(r, 0, kItemSize);
+                continue;
+            }
+            at += bundle::read_scrolls(r, src, at, stride);
+        } else if (stride != kSecretItemSize && bundle::marked(r)) {
+            if (bundle::secret()) {             // (another game's into Secret: its scrolls as they are)
+                memset(r, 0, kItemSize);
+                continue;
+            }
+            at += bundle::read_scrolls(r, src, at, stride);
+        }
+        ++out.n_items;
+    }
 }
 
 void read_affects(dax::ByteSource& src, Character& out)

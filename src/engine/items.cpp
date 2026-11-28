@@ -1,4 +1,6 @@
 #include "items.h"
+
+#include "bundle.h"
 #ifdef CYD_TEST_HOOKS
 #include "rules.h"
 #endif
@@ -60,6 +62,22 @@ void Names::name(const Item& it, char* out, size_t cap, bool all_words) const
     out[0] = 0;
     if (detect && (static_cast<int8_t>(it.r[0x32]) > 0 || static_cast<int8_t>(it.r[0x33]) > 0 || it.r[0x36]))
         add("* ");
+    if (bundle::is(it.r)) {
+        // A bundle of scrolls: Secret's words 3 and 1 round its count
+        // ("Bundle of 3 Scrolls" - GAME.OVR 0x38742: the number from 0x39,
+        // no count in front, the s on "Scroll" from two on); the
+        // Enhancement's in the other games the same in English
+        char n[8];
+        snprintf(n, sizeof n, "%d", it.count());
+        const bool secret = bundle::kind() == bundle::Kind::Secret;
+        add(secret && word(it.word(3))[0] ? word(it.word(3)) : "Bundle of");
+        add(" ");
+        add(n);
+        add(" ");
+        add(secret && word(it.word(1))[0] ? word(it.word(1)) : "Scroll");
+        if (it.count() >= 2) add("s");
+        return;
+    }
     if (stored_names) {
         const int n = it.r[0] < 0x2D ? it.r[0] : 0x2D;
         for (int i = 0; i < n && o + 1 < cap; ++i) out[o++] = static_cast<char>(it.r[1 + i]);

@@ -3150,7 +3150,9 @@ const Profile kProfiles[] = {
                // items::kSecretPassive; the Boots of Speed's 0x4A)
                .stat_fx = {0x26, 0x71, 0x0C, 0x0E, 0x44, 0x3E},
                .passive = items::kSecretPassive,
-               .light_magic_armour = true, .speed_fx = 0x4A, .sell_secret = true, .sell_keep = 0x49},
+               .light_magic_armour = true, .speed_fx = 0x4A, .sell_secret = true, .sell_keep = 0x49,
+               // (its Join 0x29391, Id 0x2A19B, the parting test 0x28222)
+               .bundle_words = {0x2931E, 0x29336, 0x29340, 0x29369, 0x2A0DF, 0x281BE, 0x281E4, 0x281FC}},
      // Character rules (secret_facts.md 9): the tables in Secret's shapes
      // (classes::Layout secret: 7 classes, levels to 18, 119 spells, its
      // own race order), the rest of character making not known yet
@@ -3220,7 +3222,7 @@ const Profile kProfiles[] = {
                .cast_words = {0x1A8CE, 0x1AA1E, 0x2C7E6, 0x2DA2C, 0x2D9C0, 0x2D9D6, 0x2D88B, 0x3ABA2, 0x3ABB2, kJ | 35,
                               0x37EA2, 0x2F808, kJ | 37, kJ | 26, kJ | 20, 0x2FDA0, 0x1B5DB, 0x2C7F4, 0x2AC88, 0x2ACA9, 0x1B095, 0x1B0AD,
                               0x1B0C9, 0x1B0ED, 0, 0, 0x1A8EE, 0x2C024, 0x2AC93, 0x2C7FB, 0x2D9E0, 0x2DA0A,
-                              0x2DA23, 0x298FE, 0x2990B, 0x29911, 0x2AC74, 0},
+                              0x2DA23, 0x298FE, 0x2990B, 0x29911, 0x2AC74, 0, 0x2AC7E},
                .camp = kSecretCamp, .n_camp = sizeof kSecretCamp / sizeof kSecretCamp[0],
                .facts = {2, 0x2A, {0x22, 0x2B, 0}, {{0, 0}, {0x2C, 0x1F}, {0, 0}}, 0x0C, 0x17, 0x32, 0x36, 0x70, 0x71,
                          // (its time routine GAME.OVR 0x2D5E2: Slow Poison 3780 minutes; no
@@ -3332,7 +3334,9 @@ const Profile kProfiles[] = {
      // it at the Black Circle HQ's door at 8,7)
      .door = {0x19C6E, 0x19C73, 0x19C79, 0x19C80, 0x19C86, 0x1F},
      .variant = {.program_words = true, .tile_window = 40, .bars = {55, 52, 53, 54, 59, 56, 57, 58}, .secret_files = true,
-                 .bigpic_from = 0x70, .treasure_pic = 60, .camp_pic = 59, .appraise_div = 2, .fight_unswapped = true},
+                 .bigpic_from = 0x70, .treasure_pic = 60, .camp_pic = 59, .appraise_div = 2, .fight_unswapped = true,
+                 .tr_age_words = {0xB60A, 0xB61E, 0xB652, 0xB656, 0xB659, 0xB65D, 0xB6A6, 0xB6E4, 0xB716, 0xB75B},
+                 .sv_old_age = {0xB7C1, 0xB7EA, 0xB813, 0xB83B, 0xB863, 0xB88B}},
      .overland = nullptr,
      .font_file = "8X8D5.DAX",
      .joined = kSecretJoined, .n_joined = sizeof kSecretJoined / sizeof kSecretJoined[0],

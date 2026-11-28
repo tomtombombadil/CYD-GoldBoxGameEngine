@@ -2043,6 +2043,18 @@ the Project as claude/TODO.md.
       potions of speed / invisibility lasting, a cleric's 6th-level slots); Malachite's saves; approaching
       monsters against DOSBox; the outdoor field's flags (below); old-age death (not in the engine);
       New Verdigris's shops after the end; rest's "Whole Party Is Healed" wording.
+      v0.223.0 (Tom, 2026-11-28): scroll bundles done (SPEC 12; Bundle Weight / Bundle Scribe Warning Game
+      Fixes; the Scroll Bundles Enhancement for the other games); a scroll being scribed now asks before it's
+      parted with; old age after a fight (GAME.OVR 0xB772); rest's "The Whole Party Is Healed" checked (every
+      288 steps, whether hurt or not, row 19 colour 10 - GAME.OVR 0x2BEB3: as the engine). New Verdigris after
+      the end: its scripts test 4CD9 ("RATHER BARREN SHOP") - the engine runs them; not walked.
+- [ ] The Dark Queen's own scroll bundles (DQK.EXE: "Too many Bundles!", "in Bundle", "Scroll Bundle won't
+      fit into Vault!") - not in the engine; the Scroll Bundles Enhancement leaves the Queen out until then.
+- [ ] Secret's years: its clock ages everyone a year at 100 years (DS 0x4C0A, GAME.OVR 0x2B912); the
+      engine's Secret clock carries years at 256 - never reached in play.
+- [ ] Halve's new pile: Secret's original puts it right after the item (GAME.OVR 0x292E8); the engine's
+      plain Halve appends it at the end (bundles: after it). Check the other games' Halve and match.
+- [ ] PortMaster session: `play::Options::scroll_bundles` (new, v0.223.0) needs its Enhancements line.
 - [ ] **Pools of Darkness** (started 2026-10-17; facts: the Project's
       claude/darkness_facts.md; SPEC 6d). Done: the survey (program and
       overlay layout, files, saves, the scripts' operand counts);

@@ -3497,7 +3497,7 @@ void tap_sounds(const ui::Tap& t)
 // One set for all games (settings.h comforts_off), on the one Settings
 // screen (below); a comfort compiled out (app/features.h) isn't listed.
 enum Comfort { kCFont, kCGallery, kCBigIcon, kCMoreGuys, kCPortrait, kCRolls, kCCampFix, kCCompanion, kCMaxHp, kCQuick,
-               kCJoin, kCSaveInfo, kCKeepMem, kCCoins, kCOil, kCAddInfo, kCNoRaceLimits, kCThrownStr, kComforts };
+               kCJoin, kCSaveInfo, kCKeepMem, kCCoins, kCOil, kCAddInfo, kCNoRaceLimits, kCThrownStr, kCBundles, kComforts };
 
 bool comfort_built(int c)
 {
@@ -3520,6 +3520,7 @@ bool comfort_built(int c)
     case kCOil: return CYD_OIL_BURNS;
     case kCAddInfo: return CYD_ADD_INFO;
     case kCThrownStr: return CYD_THROWN_STRENGTH;
+    case kCBundles: return CYD_SCROLL_BUNDLES;
     default: return true;
     }
 }
@@ -3530,7 +3531,8 @@ uint32_t comfort_bit(int c)
                                               kOff2CampFix << 8, kOff2Companion << 8, 0, kOff2Quick << 8,
                                               kOff2AutoJoin << 8, kOff2SaveInfo << 8, kOff2KeepMem << 8, kOffCoins,
                                               kOffOil, static_cast<uint32_t>(kOff3AddInfo) << 16, 0,
-                                              static_cast<uint32_t>(kOff3ThrownStr) << 16};
+                                              static_cast<uint32_t>(kOff3ThrownStr) << 16,
+                                              static_cast<uint32_t>(kOff3Bundles) << 16};
     return kBits[c];
 }
 uint32_t comforts_off()
@@ -3581,6 +3583,7 @@ void apply_options()
     o.coin_exchange = comfort_on(kCCoins);
     o.oil_burns = comfort_on(kCOil);
     o.thrown_str = comfort_on(kCThrownStr);
+    o.scroll_bundles = comfort_on(kCBundles);
     o.adnd = adnd_on();
     play::set_side_panel(ui::large() && comfort_on(kCCompanion));     // (Save Slot Info: the party in the panel)
     o.font = comfort_on(kCFont) ? cfg->game_font : kFontGame;
@@ -3591,7 +3594,7 @@ void apply_options()
 int comfort_list(int* out)
 {
     static const uint8_t kOrder[] = {kCFont, kCRolls, kCCompanion, kCSaveInfo, kCAddInfo, kCJoin, kCKeepMem,
-                                     kCCampFix, kCCoins, kCOil, kCThrownStr, kCMoreGuys, kCPortrait, kCGallery, kCBigIcon};
+                                     kCCampFix, kCCoins, kCOil, kCThrownStr, kCBundles, kCMoreGuys, kCPortrait, kCGallery, kCBigIcon};
     int n = 0;
     for (uint8_t c : kOrder)
         if (comfort_built(c)) out[n++] = c;
@@ -3618,7 +3621,7 @@ const char* const kComfortNames[kComforts] = {"Game Font",       "Icon Gallery",
                                               "Icon Portrait",   "Show Rolls",      "Camp Fix",       "Companion Views",
                                               "Max Hit Points",  "Quick Actions",   "Auto Join Items", "Savegame Info",
                                               "Keep Memorizing", "Coin Exchange",   "Flasks of Oil",
-                                              "Character Info",  "No Race Limits",  "Thrown Strength"};
+                                              "Character Info",  "No Race Limits",  "Thrown Strength", "Scroll Bundles"};
 
 // What each option does (sentence case; Tom, v0.84.0)
 const char* comfort_help_text(int c)
@@ -3704,6 +3707,11 @@ const char* comfort_help_text(int c)
                "dagger, hand axe or spear when thrown. The AD&D 1st edition books give missiles no Strength (DMG "
                "p.64). Off: darts and javelins get none, and with the AD&D 1E Rules' Thrown Weapons neither does a "
                "thrown dagger, axe or spear (the originals give those their Strength).";
+    case kCBundles:
+        return "Join on a scroll ties the character's scrolls into one item, a Bundle of Scrolls (up to 10), as "
+               "Secret of the Silver Blades does in every game: one slot for them all, Use lists every spell in it, "
+               "Halve splits it, Id won't look inside. Secret always has them. Off: the other games' Join leaves "
+               "scrolls alone; a bundle made before stays one, shown as its first scroll, until it's on again.";
     case kCOil:
         return "A thrown flask of oil bursts into flames: fire damage, as an ordinary firebomb would - a troll it "
                "brings down stays down. Off: as the originals, a plain blow.";

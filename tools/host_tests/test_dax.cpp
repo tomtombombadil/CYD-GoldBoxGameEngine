@@ -11,6 +11,7 @@
 #include <tuple>
 #include <vector>
 
+#include "engine/bundle.h"
 #include "engine/classes.h"
 #include "engine/create.h"
 #include "engine/dax.h"
@@ -10196,6 +10197,176 @@ static void test_fix_switches()
     CHECK(rules::all_fixes() && rules::adnd(rules::kAdndAll) == true && rules::fixes_off() == 0);
 }
 
+// Scroll bundles (bundle.h): Secret's - made, added to, halved (the first
+// half to the new item, one left = that scroll), a spell off the first scroll
+// holding it, a used-up scroll out, the last two back to one scroll; saved as
+// the bundle's record and its scrolls' (67 bytes) and read back; the weight
+// (the original's weight word x count, Bundle Weight one a scroll), price,
+// name; the Enhancement's marked bundles in a 63-byte file
+static void secret_scroll(uint8_t* r, uint8_t a, uint8_t b, uint8_t c, int value)
+{
+    memset(r, 0, items::kRecordSize);
+    r[0x2E] = 0x27;
+    r[0x3C] = a;
+    r[0x3D] = b;
+    r[0x3E] = c;
+    r[0x2F] = static_cast<uint8_t>(99 + (a != 0) + (b != 0) + (c != 0));     // "N Spells"
+    r[0x31] = 39;
+    r[0x32] = 1;
+    r[0x37] = 1;
+    r[0x3A] = static_cast<uint8_t>(value);
+    r[0x3B] = static_cast<uint8_t>(value >> 8);
+}
+static void test_bundles()
+{
+    bundle::clear();
+    bundle::configure(true, false);
+    CHECK(bundle::on() && bundle::kind() == bundle::Kind::Secret);
+    party::Character ch;
+    secret_scroll(ch.items[0], 9, 10, 0, 300);
+    secret_scroll(ch.items[1], 11, 0, 0, 200);
+    secret_scroll(ch.items[2], 9, 0, 0, 100);
+    ch.n_items = 3;
+    uint8_t* b = ch.items[0];
+    CHECK(bundle::make(b));
+    CHECK(bundle::is(b) && b[0x2E] == 0x49 && b[0x31] == 0x4D && b[0x2F] == 0x27 && b[0x39] == 1 && b[0x3C] == 0);
+    CHECK(bundle::count(b) == 1 && bundle::scroll(b, 0)[0x3C] == 9);
+    CHECK(bundle::add(b, ch.items[1]) && bundle::add(b, ch.items[2]) && b[0x39] == 3);
+    b[0x3A] = static_cast<uint8_t>(600 & 0xFF);
+    b[0x3B] = static_cast<uint8_t>(600 >> 8);
+    b[0x37] = 3;
+    rules::remove_item(ch, 2);
+    rules::remove_item(ch, 1);
+    // The weight: 3 x 3 (the original's), 3 with Bundle Weight
+    rules::set_fixes(false);
+    CHECK(rules::carried_weight(b) == 9);
+    rules::set_fixes(true);
+    CHECK(rules::carried_weight(b) == 3);
+    rules::ItemFacts f{};
+    f.sell_secret = true;
+    f.sell_keep = 0x49;
+    CHECK(rules::sell_value(b, f) == 300);
+    items::Names names;
+    char nm[48];
+    names.name(items::Item{b}, nm, sizeof nm);
+    CHECK(strcmp(nm, "Bundle of 3 Scrolls") == 0);
+    // Saved and read back: the bundle's record (no id, count 3), its scrolls
+    uint8_t file[4 * party::kSecretItemSize];
+    CHECK(bundle::file_records(b) == 4);
+    bundle::file_record(b, file, party::kSecretItemSize);
+    CHECK(file[0x08] == 0 && file[0x09] == 0 && file[0x39] == 3 && file[0x2E] == 0x49);
+    for (int k = 0; k < 3; ++k) {
+        memset(file + (k + 1) * party::kSecretItemSize, 0, party::kSecretItemSize);
+        memcpy(file + (k + 1) * party::kSecretItemSize, bundle::scroll(b, k), items::kRecordSize);
+    }
+    party::Character back;
+    dax::MemorySource src(file, sizeof file);
+    party::read_items(src, back, party::kSecretItemSize);
+    CHECK(back.n_items == 1 && bundle::is(back.items[0]) && bundle::count(back.items[0]) == 3);
+    CHECK(bundle::id_of(back.items[0]) != bundle::id_of(b) && bundle::scroll(back.items[0], 1)[0x3C] == 11);
+    // Another game reading Secret's files leaves the bundle out, its scrolls too (Darkness's import)
+    bundle::configure(false, true);
+    party::Character dk;
+    party::read_items(src, dk, party::kSecretItemSize);
+    CHECK(dk.n_items == 0);
+    bundle::configure(true, false);
+    // A spell off the first scroll with it: Sleep (9) from the first, then
+    // the third's (used up - out); Halve the two left: one each
+    CHECK(!bundle::remove_spell(b, 9, 0x2F, 100) && bundle::scroll(b, 0)[0x3C] == 0 && bundle::count(b) == 3);
+    CHECK(!bundle::remove_spell(b, 9, 0x2F, 100) && bundle::count(b) == 2 && b[0x39] == 2);
+    CHECK(b[0x37] == 3);                    // (the weight word as it was - the original's)
+    CHECK(rules::halve(ch, 0) && ch.n_items == 2);
+    CHECK(!bundle::is(ch.items[0]) && !bundle::is(ch.items[1]));
+    CHECK(ch.items[1][0x3D] == 10 && ch.items[0][0x3C] == 11);      // (the first half the new item, after it)
+    // A bundle of 5 halved: 2 go (a bundle), 3 stay
+    secret_scroll(ch.items[0], 1, 0, 0, 10);
+    CHECK(bundle::make(ch.items[0]));
+    for (int k = 2; k <= 5; ++k) {
+        uint8_t s5[items::kRecordSize];
+        secret_scroll(s5, static_cast<uint8_t>(k), 0, 0, 10);
+        CHECK(bundle::add(ch.items[0], s5));
+    }
+    ch.items[0][0x3A] = 50;
+    ch.n_items = 1;
+    CHECK(rules::halve(ch, 0) && ch.n_items == 2);
+    CHECK(bundle::count(ch.items[0]) == 3 && bundle::count(ch.items[1]) == 2 && ch.items[1][0x39] == 2);
+    CHECK(bundle::scroll(ch.items[1], 0)[0x3C] == 1 && bundle::scroll(ch.items[0], 0)[0x3C] == 3);
+    CHECK(ch.items[0][0x3A] == 30 && ch.items[1][0x3A] == 20 && ch.items[0][0x30] == 3 && ch.items[1][0x30] == 2);
+    // The last two scrolls' spells used: the bundle becomes the scroll left
+    CHECK(bundle::remove_spell(ch.items[1], 1, 0x2F, 100));
+    CHECK(!bundle::is(ch.items[1]) && ch.items[1][0x3C] == 2);
+    // Join (GAME.OVR 0x29391): a sword stays, the scrolls go into the second
+    // one's bundle in the list's order; value summed, count word and weight word
+    {
+        party::Character j;
+        memset(j.items[0], 0, items::kRecordSize);
+        j.items[0][0x2E] = 0x12;
+        secret_scroll(j.items[1], 1, 0, 0, 100);
+        secret_scroll(j.items[2], 2, 0, 0, 200);
+        secret_scroll(j.items[3], 3, 4, 0, 300);
+        j.n_items = 4;
+        auto scr = [](const uint8_t* x, const void*) { return x[0x2E] == 0x27 || x[0x2E] == 0x28; };
+        CHECK(rules::join_scrolls(j, 0, scr, nullptr) == rules::BundleJoin::None);
+        CHECK(rules::join_scrolls(j, 2, scr, nullptr) == rules::BundleJoin::Joined);
+        CHECK(j.n_items == 2 && bundle::is(j.items[1]) && j.items[1][0x39] == 3 && j.items[1][0x30] == 3);
+        CHECK(j.items[1][0x37] == 3 && (j.items[1][0x3A] | j.items[1][0x3B] << 8) == 600);
+        CHECK(bundle::scroll(j.items[1], 0)[0x3C] == 2 && bundle::scroll(j.items[1], 1)[0x3C] == 1 &&
+              bundle::scroll(j.items[1], 2)[0x3C] == 3);
+        CHECK(rules::join_scrolls(j, 1, scr, nullptr) == rules::BundleJoin::None);    // (nothing else)
+        for (int k = 3; k < 10; ++k) CHECK(bundle::add(j.items[1], bundle::scroll(j.items[1], 0)));
+        CHECK(rules::join_scrolls(j, 1, scr, nullptr) == rules::BundleJoin::Limit);
+    }
+    // Garbage: only what the party holds stays
+    auto live = [](uint16_t id, void* ctx) {
+        const party::Character* c = static_cast<const party::Character*>(ctx);
+        for (int k = 0; k < c->n_items; ++k)
+            if (bundle::stored(c->items[k]) && bundle::id_of(c->items[k]) == id) return true;
+        return false;
+    };
+    bundle::gc(live, &ch);
+    CHECK(bundle::count(ch.items[0]) == 3 && bundle::count(back.items[0]) == 0);
+    // Parting with a bundle whose scroll is being scribed: no question (the
+    // original's), with Bundle Scribe Warning asked; a plain scroll always asks
+    {
+        magic::Scrolls sc;
+        sc.types[0] = 0x27;
+        sc.types[1] = 0x28;
+        bundle::scroll(ch.items[0], 1)[0x3C] |= 0x80;
+        CHECK(magic::parting_asks(sc, ch.items[0]));
+        rules::set_fixes(false);
+        CHECK(!magic::parting_asks(sc, ch.items[0]));
+        rules::set_fixes(true);
+        uint8_t one[items::kRecordSize];
+        secret_scroll(one, 0x89, 0, 0, 10);
+        CHECK(magic::parting_asks(sc, one));
+        one[0x3C] = 9;
+        CHECK(!magic::parting_asks(sc, one));
+    }
+    // The Enhancement's: a marked first scroll, saved in 63-byte records; off - kept, not working
+    bundle::clear();
+    bundle::configure(false, rules::enh(rules::kEnhBundles));
+    CHECK(bundle::on());
+    uint8_t m[items::kRecordSize], s2[items::kRecordSize];
+    secret_scroll(m, 5, 0, 0, 100);
+    secret_scroll(s2, 6, 7, 0, 100);
+    CHECK(bundle::make(m) && bundle::add(m, s2) && bundle::marked(m) && m[0x2E] == 0x27 && m[0x3C] == 0);
+    CHECK(rules::carried_weight(m) == 2);
+    names.name(items::Item{m}, nm, sizeof nm);
+    CHECK(strcmp(nm, "Bundle of 2 Scrolls") == 0);
+    uint8_t f63[3 * items::kRecordSize];
+    bundle::file_record(m, f63, items::kRecordSize);
+    memcpy(f63 + 63, bundle::scroll(m, 0), 63);
+    memcpy(f63 + 126, bundle::scroll(m, 1), 63);
+    party::Character mk;
+    dax::MemorySource s63(f63, sizeof f63);
+    party::read_items(s63, mk, items::kRecordSize);
+    CHECK(mk.n_items == 1 && bundle::count(mk.items[0]) == 2);
+    bundle::configure(false, false);
+    CHECK(!bundle::is(mk.items[0]) && bundle::stored(mk.items[0]) && bundle::count(mk.items[0]) == 2);
+    bundle::clear();
+    bundle::configure(false, false);
+}
+
 // The level book (the AD&D 1E drain rule's memory): hit points a level, the
 // drains a name, the latest one that fits taken first, other names untouched
 static std::string g_lb;
@@ -10243,6 +10414,7 @@ int main()
     if (!rules::test::off_fix && !rules::test::off_adnd && !rules::test::off_enh)   // (it checks the switches themselves)
 #endif
     test_fix_switches();
+    test_bundles();
     test_levelbook();
     test_vace();
     test_pool_spell_fix();

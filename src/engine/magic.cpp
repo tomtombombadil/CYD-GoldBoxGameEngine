@@ -2,6 +2,7 @@
 
 #include <cstring>
 
+#include "bundle.h"
 #include "rules.h"
 
 namespace magic {
@@ -407,23 +408,53 @@ bool is_scroll(const Scrolls& sc, const uint8_t* it)
     return slot >= 11 && slot <= 13;
 }
 
+namespace {
+// Every scroll the character holds in the list's order, a bundle's scrolls
+// in its place (Secret's Scribe list, marks, rest time and cancel walk them
+// so - GAME.OVR 0x2D0AD, 0x1B10C, 0x1A088, 0x1A671): fn(record, item, k)
+// with k the bundle's scroll (-1: the item itself); true from fn stops
+template <class F>
+bool each_scroll(const party::Character& c, const Scrolls& sc, F fn)
+{
+    for (int i = 0; i < c.n_items; ++i) {
+        uint8_t* it = const_cast<uint8_t*>(c.items[i]);
+        if (bundle::is(it)) {
+            for (int k = 0; k < bundle::count(it); ++k)
+                if (fn(bundle::scroll(it, k), i, k)) return true;
+        } else if (is_scroll(sc, it) && fn(it, i, -1)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// A scroll's spells as its reader may list them (identified, Read Magic on
+// them, or a cleric with a clerics' scroll - which makes them known)
+int list_scroll(party::Character& c, const classes::Tables& t, const Scrolls& sc, uint8_t* it, bool scribing,
+                bool any, uint8_t* ids, int cap)
+{
+    const bool cleric = classes::skill_level(c, classes::Cleric) > 0;
+    if ((sc.read_magic && c.has_affect(sc.read_magic)) || (cleric && sc.names->type(it[0x2E]).slot == 12))
+        it[0x35] = 0;                       // read: its spells are known
+    if (it[0x35]) return 0;
+    int n = 0;
+    for (int k = 0; k < 3 && n < cap; ++k) {
+        const uint8_t v = it[kScrollAt + k];
+        if (!(v & 0x7F) || (sc.readers && !reads_spell(c, t, v & 0x7F))) continue;
+        if (any || (scribing ? v > 0x80 : v > 0)) ids[n++] = v & 0x7F;
+    }
+    return n;
+}
+}  // namespace
+
 int scroll_spells(party::Character& c, const classes::Tables& t, const Scrolls& sc, bool scribing, uint8_t* ids,
                   int cap)
 {
     int n = 0;
-    const bool cleric = classes::skill_level(c, classes::Cleric) > 0;
-    for (int i = 0; i < c.n_items; ++i) {
-        uint8_t* it = c.items[i];
-        if (!is_scroll(sc, it)) continue;
-        if ((sc.read_magic && c.has_affect(sc.read_magic)) || (cleric && sc.names->type(it[0x2E]).slot == 12))
-            it[0x35] = 0;                   // read: its spells are known
-        if (it[0x35]) continue;
-        for (int k = 0; k < 3 && n < cap; ++k) {
-            const uint8_t v = it[kScrollAt + k];
-            if (sc.readers && !reads_spell(c, t, v & 0x7F)) continue;
-            if (scribing ? v > 0x80 : v > 0) ids[n++] = v & 0x7F;
-        }
-    }
+    each_scroll(c, sc, [&](uint8_t* it, int, int) {
+        n += list_scroll(c, t, sc, it, scribing, false, ids + n, cap - n);
+        return n >= cap;
+    });
     if (!sc.unsorted) sort_by_level(t, ids, n);
     return n;
 }
@@ -431,35 +462,59 @@ int scroll_spells(party::Character& c, const classes::Tables& t, const Scrolls& 
 Scribe scribe(party::Character& c, const classes::Tables& t, const Scrolls& sc, int s)
 {
     if (classes::in_book(c, s)) return Scribe::Known;
-    for (int i = 0; i < c.n_items; ++i)
-        if (is_scroll(sc, c.items[i]))
+    if (each_scroll(c, sc, [&](uint8_t* it, int, int) {
             for (int k = 0; k < 3; ++k)
-                if (c.items[i][kScrollAt + k] == (s | 0x80)) return Scribe::Already;
+                if (it[kScrollAt + k] == (s | 0x80)) return true;
+            return false;
+        }))
+        return Scribe::Already;
     if (cast_count(c, t, t.spell_class(s), t.spell_level(s)) <= 0) return Scribe::Cannot;
-    for (int i = 0; i < c.n_items; ++i)
-        if (is_scroll(sc, c.items[i]))
+    if (each_scroll(c, sc, [&](uint8_t* it, int, int) {
             for (int k = 0; k < 3; ++k)
-                if (c.items[i][kScrollAt + k] == s) {
-                    c.items[i][kScrollAt + k] = static_cast<uint8_t>(s | 0x80);
-                    return Scribe::Ok;
+                if (it[kScrollAt + k] == s) {
+                    it[kScrollAt + k] = static_cast<uint8_t>(s | 0x80);
+                    return true;
                 }
+            return false;
+        }))
+        return Scribe::Ok;
     return Scribe::Cannot;
 }
 
 bool scribing(const party::Character& c, const Scrolls& sc)
 {
-    for (int i = 0; i < c.n_items; ++i)
-        if (is_scroll(sc, c.items[i]))
-            for (int k = 0; k < 3; ++k)
-                if (c.items[i][kScrollAt + k] > 0x80) return true;
+    return each_scroll(c, sc, [](uint8_t* it, int, int) {
+        for (int k = 0; k < 3; ++k)
+            if (it[kScrollAt + k] > 0x80) return true;
+        return false;
+    });
+}
+
+bool scribing_from(const uint8_t* item)
+{
+    if (!bundle::is(item)) {
+        for (int k = 0; k < 3; ++k)
+            if (item[kScrollAt + k] > 0x7F) return true;
+        return false;
+    }
+    for (int j = 0; j < bundle::count(item); ++j)
+        for (int k = 0; k < 3; ++k)
+            if (bundle::scroll(item, j)[kScrollAt + k] > 0x7F) return true;
     return false;
+}
+
+bool parting_asks(const Scrolls& sc, const uint8_t* item)
+{
+    if (bundle::is(item)) return rules::fix(rules::kFixBundleScribe) && scribing_from(item);
+    return is_scroll(sc, item) && scribing_from(item);
 }
 
 void cancel_scribes(party::Character& c, const Scrolls& sc)
 {
-    for (int i = 0; i < c.n_items; ++i)
-        if (is_scroll(sc, c.items[i]))
-            for (int k = 0; k < 3; ++k) c.items[i][kScrollAt + k] &= 0x7F;
+    each_scroll(c, sc, [](uint8_t* it, int, int) {
+        for (int k = 0; k < 3; ++k) it[kScrollAt + k] &= 0x7F;
+        return false;
+    });
 }
 
 void scribed(party::Character& c, const Scrolls& sc, int i, int k)
@@ -510,16 +565,17 @@ void used(party::Character& c, int i)
 
 int scroll_list(party::Character& c, const classes::Tables& t, const Scrolls& sc, int i, uint8_t* ids, int cap)
 {
-    if (i < 0 || i >= c.n_items || !is_scroll(sc, c.items[i])) return 0;
+    if (i < 0 || i >= c.n_items) return 0;
     uint8_t* it = c.items[i];
-    const bool cleric = classes::skill_level(c, classes::Cleric) > 0;
-    if ((sc.read_magic && c.has_affect(sc.read_magic)) || (cleric && sc.names->type(it[0x2E]).slot == 12))
-        it[0x35] = 0;
-    if (it[0x35]) return 0;
     int n = 0;
-    for (int k = 0; k < 3 && n < cap; ++k)
-        if ((it[kScrollAt + k] & 0x7F) && (!sc.readers || reads_spell(c, t, it[kScrollAt + k] & 0x7F)))
-            ids[n++] = it[kScrollAt + k] & 0x7F;
+    if (bundle::is(it)) {
+        // A bundle: each of its scrolls' spells, as one scroll's ("in
+        // Bundle" - GAME.OVR 0x2D040)
+        for (int k = 0; k < bundle::count(it) && n < cap; ++k)
+            n += list_scroll(c, t, sc, bundle::scroll(it, k), false, true, ids + n, cap - n);
+    } else if (is_scroll(sc, it)) {
+        n = list_scroll(c, t, sc, it, false, true, ids, cap);
+    }
     sort_by_level(t, ids, n);
     return n;
 }
@@ -552,6 +608,11 @@ void scroll_used(party::Character& c, const Scrolls& sc, int i, int spell)
 {
     if (i < 0 || i >= c.n_items) return;
     uint8_t* it = c.items[i];
+    if (bundle::is(it)) {
+        // (off the first of its scrolls with it - GAME.OVR 0x32ACA)
+        bundle::remove_spell(it, spell, sc.count_at, sc.one_spell);
+        return;
+    }
     int line = -1;
     for (int k = 0; k < 3; ++k)
         if ((it[kScrollAt + k] & 0x7F) == spell) line = k;
@@ -561,18 +622,26 @@ void scroll_used(party::Character& c, const Scrolls& sc, int i, int spell)
     if (it[sc.count_at] < sc.one_spell) remove_at(c, i);
 }
 
-// The next spell to scribe (item, slot) in the games' order, or false
-static bool next_scribe(const party::Character& c, const Scrolls& sc, int* item, int* slot)
+// The next spell to scribe (item, the bundle's scroll or -1, slot) in the
+// games' order, or false
+static bool next_scribe(const party::Character& c, const Scrolls& sc, int* item, int* slot, int* in = nullptr)
 {
-    for (int i = 0; i < c.n_items; ++i)
-        if (is_scroll(sc, c.items[i]))
-            for (int k = 0; k < 3; ++k)
-                if (c.items[i][kScrollAt + k] > 0x80) {
-                    *item = i;
-                    *slot = k;
-                    return true;
-                }
-    return false;
+    return each_scroll(c, sc, [&](uint8_t* it, int i, int j) {
+        for (int k = 0; k < 3; ++k)
+            if (it[kScrollAt + k] > 0x80) {
+                *item = i;
+                *slot = k;
+                if (in) *in = j;
+                return true;
+            }
+        return false;
+    });
+}
+// That spell's byte
+static uint8_t scribe_byte(const party::Character& c, int item, int in, int slot)
+{
+    const uint8_t* it = in >= 0 ? bundle::scroll(c.items[item], in) : c.items[item];
+    return it ? it[kScrollAt + slot] : 0;
 }
 
 // A memorized spell's level for the rest's time (a level-0 spell - the
@@ -597,15 +666,16 @@ int rest_minutes(party::Character& c, const classes::Tables& t, const Scrolls& s
         if (lv > max_level) max_level = lv;
         total += lv;
     }
-    for (int i = 0; i < c.n_items; ++i)
-        if (is_scroll(sc, c.items[i]))
-            for (int k = 0; k < 3; ++k) {
-                const uint8_t v = c.items[i][kScrollAt + k];
-                if (v <= 0x80) continue;
-                const int lv = t.spell_level(v & 0x7F);
-                if (lv > max_level) max_level = lv;
-                total += lv;
-            }
+    each_scroll(c, sc, [&](uint8_t* it, int, int) {
+        for (int k = 0; k < 3; ++k) {
+            const uint8_t v = it[kScrollAt + k];
+            if (v <= 0x80) continue;
+            const int lv = t.spell_level(v & 0x7F);
+            if (lv > max_level) max_level = lv;
+            total += lv;
+        }
+        return false;
+    });
     int hours = 0;
     if (total > 0) hours = 4;
     if (max_level > 2) hours = 6;
@@ -646,8 +716,8 @@ int tick_affects(party::Character& c, int minutes, uint8_t paladin_cure)
 // memorize), 0: nothing
 static int next_level(const party::Character& c, const classes::Tables& t, const Scrolls& sc)
 {
-    int i, k;
-    if (next_scribe(c, sc, &i, &k)) return t.spell_level(c.items[i][kScrollAt + k] & 0x7F);
+    int i, k, j;
+    if (next_scribe(c, sc, &i, &k, &j)) return t.spell_level(scribe_byte(c, i, j, k) & 0x7F);
     const int next = first_learning(c);
     return next >= 0 ? rest_level(t, c.rec[kListAt + next] & 0x7F) : 0;
 }
@@ -669,11 +739,18 @@ Step step(Rest& r, party::Party& p, const classes::Tables& t, const Scrolls& sc,
         party::Character& c = p.m[i];
         if (r.wait[i] > 0) --r.wait[i];
         if (r.wait[i] == 0 && c.rec[kToLearnAt] == 0) {
-            int item, slot;
+            int item, slot, in;
             const int at = first_learning(c);
-            if (next_scribe(c, sc, &item, &slot)) {
-                st.scribed[i] = c.items[item][kScrollAt + slot] & 0x7F;
-                scribed(c, sc, item, slot);
+            if (next_scribe(c, sc, &item, &slot, &in)) {
+                st.scribed[i] = scribe_byte(c, item, in, slot) & 0x7F;
+                if (in >= 0) {
+                    // A bundle's scroll: into the book, the spell off the first
+                    // of its scrolls with it (GAME.OVR 0x2C11E / 0x32ACA)
+                    classes::to_book(c, st.scribed[i]);
+                    bundle::remove_spell(c.items[item], st.scribed[i], sc.count_at, sc.one_spell);
+                } else {
+                    scribed(c, sc, item, slot);
+                }
                 r.wait[i] = next_level(c, t, sc) * 3;
             } else if (at >= 0) {
                 const int s = c.rec[kListAt + at] & 0x7F;

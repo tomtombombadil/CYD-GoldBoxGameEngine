@@ -1,4 +1,5 @@
 #include "rules.h"
+#include "bundle.h"
 #include "games.h"
 
 #include <cstring>
@@ -427,6 +428,25 @@ void recalc(party::Character& c, const items::Names& names, const ItemFacts& f)
     c.rec[0x14C] = static_cast<uint8_t>(c.n_items);     // (the record's item count, as the saves write it)
 }
 
+int carried_weight(const uint8_t* item)
+{
+    const items::Item it{item};
+    if (bundle::is(item)) {
+        // Secret's bundle: its weight word (the count at its last Join /
+        // Halve) times the count, as every pile (GAME.OVR 0x3A30B) - a bundle
+        // of 10 weighs 100; Bundle Weight: one a scroll. The Enhancement's:
+        // its scrolls' weights
+        if (bundle::kind() == bundle::Kind::Secret)
+            return fix(kFixBundleWeight) ? it.count() : it.weight() * (it.count() > 0 ? it.count() : 1);
+        int w = 0;
+        for (int k = 0; k < bundle::count(item); ++k) w += carried_weight(bundle::scroll(item, k));
+        return w;
+    }
+    int w = it.weight();
+    if (it.count() > 0) w *= it.count();
+    return w;
+}
+
 void recalc_values(party::Character& c, const items::Names& names, const ItemFacts& f)
 {
     uint8_t* r = c.rec;
@@ -438,9 +458,7 @@ void recalc_values(party::Character& c, const items::Names& names, const ItemFac
     int weight = 0, hands = 0;
     for (int i = 0; i < c.n_items; ++i) {
         const items::Item it{c.items[i]};
-        int w = it.weight();
-        if (it.count() > 0) w *= it.count();
-        weight += w;
+        weight += carried_weight(c.items[i]);
         if (!it.readied()) continue;
         const items::TypeInfo& t = names.type(it.type());
         if (t.slot <= 8) slot[t.slot] = c.items[i];
@@ -796,10 +814,7 @@ bool too_heavy(party::Character& c, const uint8_t* item, const items::Names& nam
 {
     recalc(c, names, f);
     if (slots && c.n_items >= party::kMaxItems) return true;
-    const items::Item it{item};
-    int w = it.weight();
-    if (it.count() > 0) w *= it.count();
-    return u16(c.rec, kWeight) + w > max_encumbrance(c) + 1500;
+    return u16(c.rec, kWeight) + carried_weight(item) > max_encumbrance(c) + 1500;
 }
 
 bool add_item(party::Character& c, const uint8_t* item)
@@ -1054,6 +1069,17 @@ bool halve(party::Character& c, int i)
 {
     if (i < 0 || i >= c.n_items || c.n_items >= party::kMaxItems) return false;
     uint8_t* r = c.items[i];
+    if (bundle::is(r)) {
+        // A bundle (GAME.OVR 0x29089): its first count / 2 scrolls the new
+        // item, after it in the list; one scroll can't be halved
+        const int half = bundle::count(r) / 2;
+        uint8_t n[items::kRecordSize];
+        if (half <= 0 || !bundle::split(r, half, n)) return false;
+        memmove(c.items[i + 2], c.items[i + 1], static_cast<size_t>(c.n_items - i - 1) * items::kRecordSize);
+        memcpy(c.items[i + 1], n, items::kRecordSize);
+        ++c.n_items;
+        return true;
+    }
     const int half = r[0x39] / 2;
     if (half <= 0) return false;
     uint8_t* n = c.items[c.n_items++];
@@ -1069,7 +1095,7 @@ namespace {
 // Items that go together in one pile: the same in every way, counted
 bool same_pile(const uint8_t* a, const uint8_t* b)
 {
-    if (a[0x39] == 0 || b[0x39] == 0) return false;
+    if (a[0x39] == 0 || b[0x39] == 0 || bundle::is(a) || bundle::is(b)) return false;
     static const int kSame[] = {0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33, 0x36, 0x37, 0x3C, 0x3D, 0x3E};
     for (int o : kSame)
         if (a[o] != b[o]) return false;
@@ -1085,7 +1111,7 @@ bool same_pile(const uint8_t* a, const uint8_t* b)
 // (nothing added, the item gone - with rules::fixes() it's left be)
 static bool secret_pile(const uint8_t* a, const uint8_t* b)
 {
-    if (a[0x39] == 0 || (b[0x39] == 0 && fix(kFixSOwn))) return false;
+    if (a[0x39] == 0 || (b[0x39] == 0 && fix(kFixSOwn)) || bundle::is(a) || bundle::is(b)) return false;
     static const int kSame[] = {0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33, 0x36};
     for (int o : kSame)
         if (a[o] != b[o]) return false;
@@ -1117,6 +1143,45 @@ int join(party::Character& c, int i, bool secret)
     return joined;
 }
 
+BundleJoin join_scrolls(party::Character& c, int i, bool (*is_scroll)(const uint8_t*, const void*), const void* ctx)
+{
+    if (i < 0 || i >= c.n_items) return BundleJoin::None;
+    auto plain = [&](const uint8_t* x) { return is_scroll(x, ctx) && !bundle::stored(x); };
+    if (!bundle::is(c.items[i]) && !plain(c.items[i])) return BundleJoin::None;
+    if (c.items[i][0x39] >= bundle::kMax) return BundleJoin::Limit;
+    int cand = 0;
+    for (int k = 0; k < c.n_items; ++k)
+        if ((bundle::is(c.items[k]) && c.items[k][0x39] < bundle::kMax) || plain(c.items[k])) ++cand;
+    if (cand < 2 || (!bundle::is(c.items[i]) && !bundle::make(c.items[i]))) return BundleJoin::None;
+    auto value = [](const uint8_t* x) { return x[0x3A] | x[0x3B] << 8; };
+    for (int k = 0; k < c.n_items;) {
+        uint8_t* sel = c.items[i];
+        if (sel[0x39] >= bundle::kMax) break;
+        uint8_t* x = c.items[k];
+        if (k == i) {
+            ++k;
+            continue;
+        }
+        if (bundle::is(x) && x[0x39] < bundle::kMax && sel[0x39] + x[0x39] <= bundle::kMax) {
+            for (int j = 0; j < bundle::count(x); ++j) bundle::add(sel, bundle::scroll(x, j));
+        } else if (!plain(x) || !bundle::add(sel, x)) {
+            ++k;
+            continue;
+        }
+        const int v = (value(sel) + value(x)) & 0xFFFF;
+        sel[0x3A] = static_cast<uint8_t>(v);
+        sel[0x3B] = static_cast<uint8_t>(v >> 8);
+        if (bundle::kind() == bundle::Kind::Secret) {
+            sel[0x30] = sel[0x39];
+            sel[0x37] = sel[0x39];
+            sel[0x38] = 0;
+        }
+        remove_item(c, k);
+        if (k < i) --i;
+    }
+    return BundleJoin::Joined;
+}
+
 bool pile_onto(party::Character& c, const uint8_t* item, bool secret)
 {
     for (int k = 0; k < c.n_items; ++k) {
@@ -1133,6 +1198,7 @@ int sell_value(const uint8_t* item, const ItemFacts& f)
 {
     const items::Item it{item};
     int v = it.value() > 0 ? it.value() / 2 : 0;
+    if (bundle::is(item)) return v;     // (a bundle: its value, the scrolls' sum - GAME.OVR 0x29D6E)
     if (it.count() > 1 && f.sell_secret) {
         // Secret (GAME.OVR 0x29D61), Darkness (0x25A98), Treasures: arrows
         // and quarrels the count / 20, the other piles the count; Secret's
@@ -1722,7 +1788,15 @@ const FixInfo kFixes[kFixCount] = {
     {kFixPoisonSave, "Poison Save Bonus", kAll & ~kPool,
      "Dwarves and halflings save against poison better for their Constitution, +1 to +5 (Players Handbook "
      "pp. 15, 17), and so does a Constitution of 19 or more. The originals add that bonus to the number the "
-     "roll must reach, which makes the save harder instead."}
+     "roll must reach, which makes the save harder instead."},
+    {kFixBundleWeight, "Bundle Weight", kSecret,
+     "A bundle of scrolls weighs one for each scroll in it. The original multiplies the bundle's weight by "
+     "its count again, so a bundle of 10 weighs 100 - and after a scroll is used up the weight still counts "
+     "the scrolls it held at the last Join or Halve."},
+    {kFixBundleScribe, "Bundle Scribe Warning", kSecret,
+     "Dropping, selling or depositing a bundle with a spell on one of its scrolls picked for scribing asks "
+     "\"Okay to lose it?\" first, as a single scroll does. The original's test looks at the bundle itself, "
+     "never at its scrolls, so the bundle goes without a word."}
 };
 
 const AdndInfo kAdnd[kAdndCount] = {

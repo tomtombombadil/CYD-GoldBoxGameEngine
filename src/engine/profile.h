@@ -151,6 +151,7 @@ enum CastWord {
     kThatItem, kCombatOnly, kUseIt,                                               // "That Item", "is a combat-only item...", "Use it? "
     kUsesItem, kItemColon, kOops, kOnScroll,                                      // "uses an item", "Item:", "oops!", "on Scroll"
     kMiscasts,                                                                    // "miscasts" (the Robe of Vermin)
+    kInBundle,                                                                    // "in Bundle" (Secret's scroll bundles)
     kCastWords
 };
 
@@ -486,6 +487,13 @@ struct Profile {
         // `flask` - a game whose flask has no name rule of Curse's (Treasures
         // 87 - its shops' "flask of oil"); 0: `flask`
         uint8_t     oil = 0;
+        // Secret's scroll bundles (bundle.h; GAME.OVR Pascal strings): "Bundles
+        // are limited to " " scrolls.", "There are no similar items to join
+        // with.", "That cannot be joined with other items.", "Fool! You must
+        // remove them from the bundle first!", " was going to scribe from
+        // that scroll", "is it Okay to lose it? ", " was going to scribe from
+        // that bundle" (0: the engine's own English, the other games')
+        uint32_t    bundle_words[8] = {};
     } items;
 
     // Character rules (making and training characters): the rule tables in
@@ -841,6 +849,11 @@ struct Profile {
         // loss ...", " The remaining party members ...", "'s body for valuables."
         uint16_t tr_max_age = 0;
         uint32_t tr_age_words[10] = {};
+        // Secret's old age (GAME.OVR 0xB772, after a fight when someone aged -
+        // its [0x7D44]): no table - each race's greatest age is the compare in
+        // that routine (its races 1-6: GAME.OVR offsets of the cmp's on the
+        // age, record 0x6E; "is looking very old" ten under); words as above
+        uint32_t sv_old_age[6] = {};
         // Champions of Krynn (champions_facts.md): its characters (409-byte
         // records .SAV / .WHO, items .STF of 63 bytes, effects .SFX; races,
         // knight order, god, robe - party::from_krynn) and the three moons
