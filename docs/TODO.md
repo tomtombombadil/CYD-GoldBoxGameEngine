@@ -2083,6 +2083,9 @@ the Project as claude/TODO.md.
 - [x] Secret's New Verdigris after the end (4CD9 = 1): the shops' scripts show "SHOP KEEPER AND MOST OF THE
       TOWNSMEN ARE OUT DANCING IN THE STREET" (ECL1 block 16 0x8783) - the engine follows (playsim, 2026-11-28).
 - [ ] PortMaster session: `play::Options::scroll_bundles` (new, v0.224.0) needs its Enhancements line.
+- [ ] PortMaster session (v0.226.3): Darkness now opens on its intro movie (Screen::Movie before the titles) -
+      the port's no-Companion-on-the-titles rule (`play::titles()` is false then) should cover it too; the new
+      Game Fix Monsters' Items needs nothing there (fix_info).
 - [ ] **Pools of Darkness** (started 2026-10-17; facts: the Project's
       claude/darkness_facts.md; SPEC 6d). Done: the survey (program and
       overlay layout, files, saves, the scripts' operand counts);
