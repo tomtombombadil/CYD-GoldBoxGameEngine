@@ -3696,7 +3696,7 @@ the Project as claude/TODO.md.
       Treasures 28 (Steam and GOG - the same scans).
 - [ ] Cluebook gaps: Gateway's Steam pages are pieced from several pictures (strips) - put together; GOG Gateway
       (96 dpi, 1-bit Flate, no text layer) and GOG Secret (two parts here, 300 dpi, no text) their own tables;
-      Steam Secret's original (Tom's upload is a compressed copy - the GOG parts came again); Curse's other 9 maps,
+      Curse's other 9 maps,
       PoolRad's 12, Darkness's quarters, Knights' 5, the Dark Queen's (HLIB) maps.
 - [ ] Exits (Tom 20:14: a shaded square, key word "Exit"): the squares whose step leaves for another map - a dry-run
       probe as map_secret's.
