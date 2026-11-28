@@ -6,6 +6,7 @@
 #include <cstring>
 #include <new>
 
+#include "inflate.h"
 #include "jpeg.h"
 #include "pdf.h"
 #include "pdf_text.h"
@@ -70,6 +71,62 @@ struct NameSink : pdf::TextSink {
         return true;
     }
 };
+
+// The picture the book's maps are in on that page: its whole picture, or (picture 1) its largest
+bool map_picture(dax::ByteSource& src, const pdf::Doc& doc, int page_obj, int which, pdf::Image& img)
+{
+    if (which == 0) return pdf::page_image(src, doc, page_obj, img);
+    pdf::Picture pics[pdf::kMaxPictures];
+    const int n = pdf::page_pictures(src, doc, page_obj, pics, pdf::kMaxPictures);
+    int best = -1;
+    for (int i = 0; i < n; ++i)
+        if (best < 0 || pics[i].width * pics[i].height > pics[best].width * pics[best].height) best = i;
+    return best >= 0 && pdf::page_image(src, doc, page_obj, img, pics[best].index);
+}
+
+// A Flate picture of one 8-bit channel (grey) into the page's RGB
+struct In : inflate::Input {
+    dax::ByteSource& src;
+    uint32_t at, end;
+    uint8_t buf[512];
+    uint32_t b0 = 0, b1 = 0;
+    In(dax::ByteSource& s, uint32_t a, uint32_t e) : src(s), at(a), end(e) {}
+    int byte() override
+    {
+        if (b0 == b1) {
+            if (at >= end) return -1;
+            const uint32_t k = end - at < sizeof buf ? end - at : sizeof buf;
+            b1 = static_cast<uint32_t>(src.read_at(at, buf, k));
+            b0 = 0;
+            at += k;
+            if (!b1) return -1;
+        }
+        return buf[b0++];
+    }
+};
+struct Out : inflate::Output {
+    Page* p;
+    size_t i = 0, n;
+    bool put(uint8_t b) override
+    {
+        if (i >= n) return false;
+        uint8_t* d = p->rgb + i * 3;
+        d[0] = d[1] = d[2] = b;
+        return ++i < n;
+    }
+};
+bool decode_grey(dax::ByteSource& src, const pdf::Image& img, Page& pg)
+{
+    uint8_t* window = static_cast<uint8_t*>(malloc(inflate::kWindow));
+    if (!window) return false;
+    In in(src, img.data_at + 2, img.data_at + img.data_len);       // (past the zlib header)
+    Out out;
+    out.p = &pg;
+    out.n = static_cast<size_t>(pg.w) * pg.h;
+    inflate::raw(in, out, window);
+    free(window);
+    return out.i == out.n;
+}
 
 } // namespace
 
@@ -144,17 +201,18 @@ int make(dax::ByteSource& src, games::Game game, Sink& out)
     int made = -2;
     const Book* book = nullptr;
     int n_pages = 0;
+    uint32_t* more = nullptr;
     if (!doc || !pages || !pool || !text || !text->ok()) goto done;
     made = -1;
     doc->window = text->window();       // (object streams inflate in the reader's window)
-    if (!pdf::open(src, *doc)) goto done;
+    if (!pdf::open_large(src, *doc, &more)) goto done;      // (Steam Gateway's book has 6,370 objects)
     n_pages = pdf::pages(src, *doc, pages, pdf::kMaxPages);
     // (the edition: its page count, then the shape of the page its first map is on)
     for (int i = 0; i < kBookCount && !book; ++i) {
         const Book& b = kBooks[i];
         if (b.game != game || b.pages != n_pages || b.n == 0 || b.maps[0].page > n_pages) continue;
         pdf::Image im;
-        if (pdf::page_image(src, *doc, pages[b.maps[0].page - 1], im) && im.height > 0)
+        if (map_picture(src, *doc, pages[b.maps[0].page - 1], b.picture, im) && im.height > 0)
             book = find(game, n_pages, static_cast<float>(im.width) / im.height);
     }
     if (!book) goto done;
@@ -171,7 +229,7 @@ int make(dax::ByteSource& src, games::Game game, Sink& out)
                 pg = Page();
                 cur = m.page;
                 pdf::Image img;
-                if (!pdf::page_image(src, *doc, pages[m.page - 1], img) || !img.jpeg) continue;
+                if (!map_picture(src, *doc, pages[m.page - 1], book->picture, img)) continue;
                 pg.rgb = static_cast<uint8_t*>(malloc(static_cast<size_t>(img.width) * img.height * 3));
                 if (!pg.rgb) {
                     made = -2;
@@ -180,7 +238,8 @@ int make(dax::ByteSource& src, games::Game game, Sink& out)
                 pg.w = img.width;
                 pg.h = img.height;
                 memset(pg.rgb, 255, static_cast<size_t>(pg.w) * pg.h * 3);
-                if (!jpeg::decode(src, img.data_at, img.data_len, pool, nullptr, page_block, &pg)) {
+                if (img.jpeg ? !jpeg::decode(src, img.data_at, img.data_len, pool, nullptr, page_block, &pg)
+                             : !decode_grey(src, img, pg)) {
                     free(pg.rgb);
                     pg = Page();
                     continue;
@@ -241,6 +300,7 @@ int make(dax::ByteSource& src, games::Game game, Sink& out)
         out.progress(book->n, book->n);
     }
 done:
+    free(more);
     delete text;
     free(pool);
     delete[] pages;
