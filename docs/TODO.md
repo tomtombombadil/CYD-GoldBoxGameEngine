@@ -3713,8 +3713,12 @@ the Project as claude/TODO.md.
       (96 dpi, 1-bit Flate, no text layer) and GOG Secret (two parts here, 300 dpi, no text) their own tables;
       Curse's other 9 maps,
       PoolRad's 12, Darkness's quarters, Knights' 5, the Dark Queen's (HLIB) maps.
-- [ ] Exits (Tom 20:14: a shaded square, key word "Exit"): the squares whose step leaves for another map - a dry-run
-      probe as map_secret's.
+- [ ] Exits (Tom 20:14: a shaded square, key word "Exit"): the squares whose step leaves for another map. Tried
+      2026-11-27 (branch wip-exits: Vm::probe_exit - the arrival run (entry 1) and a step off the edge (entry 0, 0x7ED5),
+      words passed, menus' first answer, PARTYSTRENGTH / the surprise rolls followed; NEWECL / LOAD FILES of another
+      map = an exit): it finds none in PoolRad's Slums nor Curse's Tilverton - the way out there is something else
+      (PoolRad: the program's own edge handling, map.pool_edge; Curse: to trace which op a known gate runs). Next:
+      follow a known exit square's run op by op in the playsim.
 - [ ] The markers (numbers on the squares, the legend's words) at the scan, from the player's own cluebook.
 - [ ] Tom, 2026-11-27 20:14 (mock-ups): no legend under the map (Locked / Secret / One-way words gone - the symbols
       say it); an entrance to another area a shaded square, key word "Exit"; markers' numbers in their squares, the key
