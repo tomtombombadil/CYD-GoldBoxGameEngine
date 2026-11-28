@@ -21911,7 +21911,7 @@ __attribute__((noinline)) void secrets_work_out()
     plat::log("[play] secret doors: %d (refused by the step script %d, unfollowed %d)\n", n_open + n_unk, n_ref, n_unk);
 }
 
-// The squares of the 3D map whose step script, run dry with its words, pictures and pauses passed over, would
+// The squares of the 3D map whose arrival script (or a step off the map's edge), run dry with its words, pictures and pauses passed over, would
 // load another area's script or another map (Tom, 2026-11-27: "entrances to a different map/area" drawn
 // differently) - worked out once a map, as the secret doors
 __attribute__((noinline)) void exits_work_out()
@@ -21919,23 +21919,30 @@ __attribute__((noinline)) void exits_work_out()
     memset(d->exit_sq, 0, sizeof d->exit_sq);
     d->exit_at = map_epoch;
     const geo::Map& m = d->map;
-    const uint16_t at = vm->entry(0);
-    if (at < 0x8000 || !vm->begin_probe()) return;
+    // (the step run - a step off the map's edge is how many areas are left - and the arrival run: a square's events)
+    const uint16_t step_at = vm->entry(0), arrive_at = vm->entry(1);
+    if ((step_at < 0x8000 && arrive_at < 0x8000) || !vm->begin_probe()) return;
     ecl::GameState& g = d->gs;
     int n = 0;
     for (int y = 0; y < m.h; ++y)
         for (int x = 0; x < m.w; ++x)
-            for (int dir = 0; dir < 8; dir += 2) {
+            for (int k = 0; k < 8; ++k) {
+                const int dir = (k & 3) * 2;
+                const bool edge_run = k < 4;
+                const int nx = x + geo::dx(dir), ny = y + geo::dy(dir);
+                const bool off = nx < 0 || nx >= m.w || ny < 0 || ny >= m.h;
+                if (edge_run && (!off || step_at < 0x8000 || geo::wall(m, x, y, dir))) continue;
+                if (!edge_run && arrive_at < 0x8000) break;
                 g.x = x;
                 g.y = y;
                 g.dir = dir;
                 g.wall_ahead = static_cast<uint8_t>(geo::wall(m, x, y, dir));
                 g.roof = geo::flags(m, x, y);
                 g.sq_bits = geo::queen_bits(m, x, y);
-                vm->set(0x7ED5, 0);
+                vm->set(0x7ED5, edge_run ? 1 : 0);
                 vm->set(0x7EC9, 0);
                 gw_way_ahead();
-                const int r = vm->probe_exit(at);
+                const int r = vm->probe_exit(edge_run ? step_at : arrive_at);
                 vm->probe_restore();
                 if (r == 2) {
                     const int i = y * m.w + x;

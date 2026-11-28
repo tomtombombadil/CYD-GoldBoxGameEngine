@@ -1292,10 +1292,14 @@ int Vm::probe_exit(uint16_t address)
             ++pc_;
             continue;
         }
-        const bool words = op == 0x11 || op == 0x12 || op == 0x33;     // PRINT, PRINTCLEAR, PRINT RETURN
-        if (!words && !probe_safe(op)) return -1;
+        // (words, menus - their first answer, "Yes" / the way on as the games put them - PARTYSTRENGTH and the
+        // surprise rolls, which only set words: followed)
+        const bool more = op == 0x11 || op == 0x12 || op == 0x33 || op == 0x15 || op == 0x2B || op == 0x1D ||
+                          op == 0x22 || op == 0x23;
+        if (!more && !probe_safe(op)) return -1;
         const Stop r = step();
-        if (words && r == Stop::Waiting) {
+        if (r == Stop::Waiting && (wait_ == Wait::Print || wait_ == Wait::Menu)) {
+            if (wait_ == Wait::Menu) set(dest_, 0);
             wait_ = Wait::None;
             continue;
         }
