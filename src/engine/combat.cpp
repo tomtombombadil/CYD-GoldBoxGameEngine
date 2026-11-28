@@ -5258,6 +5258,18 @@ int cast(Battle& b, const classes::Tables& st, int caster, int spell, const Figh
     };
     switch (fs.does) {
     case SpellDoes::NotYet: return 0;
+    case SpellDoes::ProtFire:
+        for (int k = 0; k < m; ++k) {
+            Fighter& f = b.f[who[k]];
+            if (resisted(k, e.affect)) continue;
+            if (f.rec[0x109 + classes::Ranger] > 0 || f.rec[0x111 + classes::Ranger] > 0) {
+                if (e.affect) give_aff(f, e.affect, pw, 0, false);
+            } else if (b.fx && b.fx->mon.resist_fire) {
+                give_aff(f, b.fx->mon.resist_fire, minutes, 0, false);
+            }
+            if (fs.word) say(who[k], Did::Word, 0);
+        }
+        break;
     case SpellDoes::Affect:
     case SpellDoes::Ours:
     case SpellDoes::Theirs:

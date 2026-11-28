@@ -2127,6 +2127,22 @@ the Project as claude/TODO.md.
       gazes' pictures (COMSPR 0x2D / 0x32); Kalistes' weapon on row 23;
       the beholder's ray target (the original's picker, ovr 0x23130); an
       Energy Drain check.
+      Reviewed 2026-11-28 (v0.226.2): DONE before - the treasure-only result screen (v0.136.0, 127,966 as
+      DOSBox), Restoration's cheapest class / experience (v0.214.9, Unicorn), the Drop pick and the highlight's
+      place (v0.141.0), its own level drain, the gazes' pictures, Kalistes' weapon, the beholder's pick, Energy
+      Drain (behave darkness drain), the camp's picture while asking whom (darkness_left_facts L6, pixel for
+      pixel), turning by skill level and the computer's turning (01d8454), the random item (TREASURE / SHOP
+      row 0xFF: the 3-spell magic-user scroll - dk_add_rows), the sprite (VGA check 7,744 / 7,744). DONE now:
+      the temple's Remove Curse runs the spell's routine (its slip on 0x2B with Game Fixes off, the curse with
+      them; "is un-cursed" / "has an item un-cursed"); its Raise Dead recalculates the Constitution's hit points
+      as the spell (Clarissa 120 -> 1/113 with the 1E Rule off, as DOSBox); Vault Items' Exit back to the vault
+      at once, its highlight where it was; Protection from Fire in fights as in camp (a ranger the row's effect
+      for the caster's level, others Resist Fire's - Treasures' and the Dark Queen's fight tables too); the
+      training hall's "NOT ENOUGH EXPERIENCE" (DOSBox: Phlan's hall at 6,2, the menu line, then the screen
+      redrawn). LEFT: the arena's third south ogre - the original's rank widths are left over from the fight
+      before (stale memory, not reproducible); the temple Remove Curse of Treasures / Death Knights (their
+      temples' code not read - the cure as before); the "will become" page with a trainable member (not
+      compared).
 - [ ] Darkness 256 colours on the S3 / C5 (merged, branch darkness-vga):
       matches DOSBox's VGA mode. DONE 2026-11-15 (playsim, both depths):
       the overland arena fight - 6 against 1 on grass, the monster there,

@@ -7907,6 +7907,7 @@ static void test_combat()
     sp(2, 2, 1, 5, 0x09, 0, 0x35);       // sleep: an area, the sleep effect
     sp(3, 0, 1, 0, 0x04, 0, 0);          // wounds cured
     sp(4, 0, 1, 2, 0x0A, 0, 0x01);       // a blessing for 2 rounds
+    sp(5, 0, 1, 0, 0x04, 0, 0x77);       // Protection from Fire (Darkness's): the rangers' effect
     classes::Layout sl{};
     sl.lo = 0; sl.hi = 0x100; sl.spells = 0; sl.spell_count = 6;
     static classes::Tables st;
@@ -7969,6 +7970,19 @@ static void test_combat()
     CHECK(sb.f[0].has(0x01));
     combat::tick(sb);
     CHECK(!sb.f[0].has(0x01));
+    {
+        // Protection from Fire (Darkness GAME.OVR 0x2EFEC): a ranger the row's effect for the caster's
+        // level, anyone else Resist Fire's
+        fx.mon.resist_fire = 0x14;
+        mrec[1][0x109 + classes::Ranger] = 2;
+        const combat::FightSpell pf{5, combat::SpellDoes::ProtFire, 0, 0, 0, 0, 0, 0x1234};
+        int zero = 0, one = 1;
+        combat::cast(sb, st, 0, 5, pf, &one, 1, d, sline, 16);
+        combat::cast(sb, st, 0, 5, pf, &zero, 1, d, sline, 16);
+        CHECK(sb.f[1].has(0x77) && !sb.f[1].has(0x14) && sb.f[0].has(0x14) && !sb.f[0].has(0x77));
+        mrec[1][0x109 + classes::Ranger] = 0;
+        fx.mon.resist_fire = 0;
+    }
     // The area: fighters within 1 square of (11, 10)
     int in[8];
     CHECK(combat::in_area(sb, t, 11, 10, 1, in, 8) == 2);        // 0 and 1 (2 is down, 3 two squares off)

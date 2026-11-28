@@ -319,6 +319,15 @@ static void run_ops(const char* q)
             it = ch.items[ch.n_items++]; memset(it, 0, 63); it[0x2E] = 73; it[0x34] = 1; it[0x39] = 20; it[0x37] = 1; it[0x2F] = 0x49; }
         else if (*q == ']') { const party::Character& ch = *play::pt->sel(); printf("  items %d:", ch.n_items); for (int i = 0; i < ch.n_items; ++i) printf(" %02X(%02X %02X %02X w%02X)", ch.items[i][0x2E], ch.items[i][0x3C], ch.items[i][0x3D], ch.items[i][0x3E], ch.items[i][0x30]); printf("  book:"); for (int s2 = 1; s2 <= 100; ++s2) if (ch.rec[0x79 + s2 - 1]) printf(" %d", s2); printf("\n"); }
         else if (*q == '-') { ++q; play::pt->m[*q - '0'].rec[0x1A4] = 1; }
+        else if (*q == '`') {                   // '`': the selected's first item cursed and readied, its curse effect too (a test)
+            party::Character& ch = *play::pt->sel();
+            if (ch.n_items) { ch.items[0][0x36] = 1; ch.items[0][0x34] = 1; }
+            spells::add_affect(ch, play::d->prof->cures.curse, 1440, 0, false);
+            printf("  cursed: item 0 %02X, effects %d\n", ch.n_items ? ch.items[0][0x2E] : 0, ch.n_affects); }
+        else if (*q == '\\') {                  // '\\': the selected dead (a test)
+            party::Character& ch = *play::pt->sel();
+            ch.rec[0x195] = party::Dead; ch.rec[0x1A4] = 0;
+            printf("  dead: Con %d/%d HP max %d\n", ch.rec[0x18], ch.rec[0x19], ch.hp_max()); }
         else if (*q == 'Z') {                   // 'Z': every member's memorized spells forgotten (a memorize check's start)
             for (int i = 0; i < play::pt->count; ++i) { memset(play::pt->m[i].rec + 0x1E, 0, 84); play::pt->m[i].rec[0x72] = 0; }
             printf("  memorized spells cleared\n"); }
@@ -868,7 +877,11 @@ int main(int argc, char** argv)
 
     setvbuf(stdout, nullptr, _IOLBF, 0);       // (lines out at once: a hang or a crash keeps them)
     play::load_begins = getenv("LOADBEGINS") != nullptr;   // (Pool's load straight into the game: LOADBEGINS=1)
-    if (getenv("NOFIXES")) rules::set_all(false);    // NOFIXES=1: Game Fixes off (the originals' ways)
+    if (getenv("NOFIXES")) {                        // NOFIXES=1: Game Fixes and the 1E Rules off (the originals' ways)
+        rules::set_all(false);
+        play::opts.item_fixes = false;              // (Play's start sets the rules from its options)
+        play::opts.adnd = 0;
+    }
     if (getenv("PAGELOG")) play::log_pages = true;     // (every fight page's lines, any run)
     if (getenv("NOPORTRAIT")) play::opts.portrait = false;
     if (getenv("SIDEPANEL")) play::set_side_panel(true);       // SIDEPANEL=1: a Companion panel beside the game (480x320)     // NOPORTRAIT=1: Icon Portrait off (View as the original)

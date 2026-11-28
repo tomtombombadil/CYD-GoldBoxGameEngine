@@ -721,7 +721,7 @@ constexpr combat::FightSpell kDarknessFight[] = {
     // Darkness's new spells
     {0x6A, SpellDoes::Affect, 0, 0, 0, 0, 0, 0x2CC36},      // Cure Disease (the druids'): Cure Disease's handler
     {0x6C, SpellDoes::Hold, 0, 0, 0, 0, 0, 0x2EF9E},        // Hold Animal: "is held"
-    {0x6D, SpellDoes::Affect, 0, 0, 0, 0, 0, kJ | 4},       // Protection from Fire: "is Protected"
+    {0x6D, SpellDoes::ProtFire, 0, 0, 0, 0, 0, kJ | 4},     // Protection from Fire: "is Protected" (a ranger's own)
     {0x76, SpellDoes::Affect, 0, 0, 0, 0, 0, 0x2F6CD},      // Fire Touch: "is covered in flame"
     {0x77, SpellDoes::Affect, 0, 0, 0, 0, 0, 0x2F70E},      // Iron Skin: "is protected"
     {0x7A, SpellDoes::Affect, 0, 0, 0, 0, 0, 0x2BBB6},      // Mind Blank: the protections' handler
@@ -948,7 +948,7 @@ constexpr combat::FightSpell kTreasuresFight[] = {
     // (Darkness's spells)
     {0x6A, SpellDoes::Affect, 0, 0, 0, 0, 0, 0x35E26},      // Cure Disease (the druids'): Cure Disease's handler
     {0x6C, SpellDoes::Hold, 0, 0, 0, 0, 0, 0x38507},        // Hold Animal: "is held"
-    {0x6D, SpellDoes::Affect, 0, 0, 0, 0, 0, kJ | 4},       // Protection from Fire: "is Protected"
+    {0x6D, SpellDoes::ProtFire, 0, 0, 0, 0, 0, kJ | 4},     // Protection from Fire: "is Protected" (a ranger's own)
     {0x76, SpellDoes::Affect, 0, 0, 0, 0, 0, 0x38D6A},      // Fire Touch: "is covered in flame"
     {0x77, SpellDoes::Affect, 0, 0, 0, 0, 0, 0x38DB3},      // Iron Skin: "is protected"
     {0x7A, SpellDoes::Affect, 0, 0, 0, 0, 0, 0x34C4D},      // Mind Blank: the protections' handler
@@ -2513,7 +2513,7 @@ constexpr combat::FightSpell kQueenFightSpells[] = {
     // Darkness's new spells
     {0x6A, SpellDoes::Affect, 0, 0, 0, 0, 0, qw(0x011A)},   // Cure Disease (the druids'): Cure Disease's handler
     {0x6C, SpellDoes::Hold, 0, 0, 0, 0, 0, qw(0x8843)},   // Hold Animal: "is held"
-    {0x6D, SpellDoes::Affect, 0, 0, 0, 0, 0, qw(0x8A0A)},   // Protection from Fire: "is Protected"
+    {0x6D, SpellDoes::ProtFire, 0, 0, 0, 0, 0, qw(0x8A0A)}, // Protection from Fire: "is Protected" (a ranger's own)
     {0x76, SpellDoes::Affect, 0, 0, 0, 0, 0, qw(0x8AB3)},   // Fire Touch: "is covered in flame"
     {0x77, SpellDoes::Affect, 0, 0, 0, 0, 0, qw(0x87AA)},   // Iron Skin: "is protected"
     {0x7A, SpellDoes::Affect, 0, 0, 0, 0, 0, qw(0x87AA)},   // Mind Blank: the protections' handler

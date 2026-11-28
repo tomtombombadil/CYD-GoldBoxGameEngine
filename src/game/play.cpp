@@ -4548,6 +4548,7 @@ void trade_item(int i, pic::Canvas& c)
     draw_trade(c);
 }
 
+int  dk_vault_sel = 0;
 bool items_from_shop = false;       // Gateway: the items opened by the shop's Items (Exit: the shop)
 void draw_shop(pic::Canvas& c);
 
@@ -4562,6 +4563,7 @@ void back_to_items(pic::Canvas& c)
     } else if (items_from_shop) {
         items_from_shop = false;            // (Gateway: none left - the shop again, DOSBox)
         screen = Screen::Shop;
+        if (vault_on() && dk_ui()) menu.selected = dk_vault_sel;
         draw_shop(c);
     } else {
         screen = Screen::View;
@@ -8994,11 +8996,19 @@ void secret_cure(int i, pic::Canvas& c)
 // Darkness's temple says NAME (row 18; cyan, red when not okay, magenta
 // when able to train) and a word under it (row 19, green) - its overlay
 // 0xec ov+0x1B08; with ask, then "cast cure anyway? " (No first)
+void dk_temple_text(pic::Canvas& c, party::Character& ch, const char* w, bool ask_anyway);
+const spells::CampSpell* camp_spell(int s);
+void cw(int i, char* out, size_t cap);
 void dk_temple_say(pic::Canvas& c, party::Character& ch, int word, bool ask_anyway)
 {
-    char nm[20], w[48];
-    ch.name(nm, sizeof nm);
+    char w[48];
     sw(word, w, sizeof w);
+    dk_temple_text(c, ch, w, ask_anyway);
+}
+void dk_temple_text(pic::Canvas& c, party::Character& ch, const char* w, bool ask_anyway)
+{
+    char nm[20];
+    ch.name(nm, sizeof nm);
     c.fill(8, 17 * 8, 38 * 8, 6 * 8, 0);
     put(c, nm, 1, 18, ch.health() != party::Okay ? 12 : ch.ext[party::kExtTrain] ? 13 : 11);
     text::Writer ws;
@@ -9143,7 +9153,14 @@ void dk_cure(int i, pic::Canvas& c)
         if (ch.rec[0x18] == 0) break;
         rules::remove_affects(ch, f.poisoned);
         okay();
-        if (!rules::adnd(rules::kAdndRaise)) --ch.rec[0x18];     // (Raising the Dead: no Constitution lost)
+        if (!rules::adnd(rules::kAdndRaise)) {
+            --ch.rec[0x18];                                     // (Raising the Dead: no Constitution lost)
+            rules::recalc(ch, *names, d->facts);
+            // (the spell's routine 0x2DF05 recalculates: the Constitution's hit points again)
+            MagicRules* mr = nullptr;
+            if (load_rules(mr) && mr->tables.lay.dk) create::dk_con_recompute(ch, mr->tables);   // (as the spell: spells.cpp Raise)
+            delete mr;
+        }
         rules::recalc(ch, *names, d->facts);
         ch.rec[0x1A4] = 1;
         say = profile::kDkRaised;
@@ -9154,8 +9171,32 @@ void dk_cure(int i, pic::Canvas& c)
             say = profile::kNotCursed, ask = true;
             break;
         }
-        rules::apply_cure(ch, rules::kRemoveCurse, f, rng);
-        break;
+        {
+            // (the spell's routine - its temple's ov+0x4B0 calls 0xbb:0x4d: Darkness's
+            // slip (effect 0x2B, Game Fixes: the curse), a cursed item put away, and
+            // its words "is un-cursed" / "has an item un-cursed")
+            // (Darkness's - read; Treasures' / the Krynn games' temples not yet: their cure as before)
+            const spells::CampSpell* cs = d->prof->game == games::Game::PoolsOfDarkness ? camp_spell(0x2B) : nullptr;
+            MagicRules* mr = nullptr;
+            if (!cs || !load_rules(mr)) {
+                rules::apply_cure(ch, rules::kRemoveCurse, f, rng);
+                delete mr;
+                break;
+            }
+            spells::Line lines[4];
+            const int me = pt->selected;
+            const int n = spells::cast(*pt, me, me, *cs, mr->tables, f, d->prof->magic.facts, rng, lines, 4);
+            delete mr;
+            char w[48] = "";
+            for (int k = 0; k < n; ++k) {
+                if (lines[k].what == spells::Said::Uncursed) cw(profile::kUncursed, w, sizeof w);
+                else if (lines[k].what == spells::Said::ItemUncursed) cw(profile::kItemUncursed, w, sizeof w);
+            }
+            rules::recalc(ch, *names, d->facts);
+            draw_heal(c);
+            if (*w) dk_temple_text(c, ch, w, false);
+            return;
+        }
     case 9:                                         // Stone to Flesh
         if (h != party::Stoned) {
             say = profile::kNotStoned, ask = true;
@@ -9283,7 +9324,6 @@ bool secret_coin_panel() { return take_mode && (secret_files() || gateway()); }
 // Darkness's vault Money: the selected's coins listed in the text area
 // (row 17, the panel's 18-character lines), the screen kept (DOSBox)
 bool dk_vault_coins() { return take_mode == 2 && dk_ui() && vault_on(); }
-int  dk_vault_sel = 0;
 
 void list_coins()
 {
@@ -10011,6 +10051,8 @@ void shop_tap(int x, int y, pic::Canvas& c)
         case 'I':
             if (vault_on() && dk_ui() && strncmp(menu.prompt, "", 1) == 0) {
                 view_from = Screen::Shop;               // (Darkness's vault: Items - to put in it)
+                items_from_shop = true;                 // (its Exit: the vault at once - darkness_shop_facts 8)
+                dk_vault_sel = menu.selected;
                 open_items(c);
             } else if (treasure_on()) {
                 open_loot(c);
@@ -10219,6 +10261,7 @@ void list_tap(int x, int y, pic::Canvas& c)
         } else if (items_from_shop && screen == Screen::Items) {
             items_from_shop = false;
             screen = Screen::Shop;
+            if (vault_on() && dk_ui()) menu.selected = dk_vault_sel;   // (Darkness's vault: the highlight where it was)
             draw_shop(c);
         } else {
             screen = Screen::View;
