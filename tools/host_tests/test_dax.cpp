@@ -10232,6 +10232,31 @@ static void test_levelbook()
     levelbook::set_store(nullptr);
 }
 
+#include "engine/cluebook.h"
+// The cluebooks' maps: a name tidied as the Companion shows it; the editions told apart by page count and shape
+static void test_cluebook()
+{
+    char out[64];
+    cluebook::tidy_name("J . NERAKA CITY & BASE", out, sizeof out);
+    CHECK(strcmp(out, "Neraka City & Base") == 0);
+    cluebook::tidy_name("L. THE CAVE OF THE BEHOLDER:", out, sizeof out);
+    CHECK(strcmp(out, "The Cave of the Beholder") == 0);
+    cluebook::tidy_name("TEMPLE OF BANE :", out, sizeof out);
+    CHECK(strcmp(out, "Temple of Bane") == 0);
+    CHECK(cluebook::find(games::Game::ChampionsOfKrynn, 32) != nullptr);
+    CHECK(cluebook::find(games::Game::ChampionsOfKrynn, 31) == nullptr);
+    CHECK(cluebook::find(games::Game::UnlimitedAdventures, 32) == nullptr);
+    // (every map's grid: square, left to right and down the page)
+    for (int b = 0; b < cluebook::kBookCount; ++b)
+        for (int i = 0; i < cluebook::kBooks[b].n; ++i) {
+            const cluebook::Map& m = cluebook::kBooks[b].maps[i];
+            float x0, y0, x1, y1;
+            cluebook::grid_point(m, 0, 0, &x0, &y0);
+            cluebook::grid_point(m, 16, 16, &x1, &y1);
+            CHECK(x0 >= -0.05f && x1 <= 1.05f && x1 > x0 && y1 > y0 && m.page >= 1);
+        }
+}
+
 int main()
 {
 #ifdef CYD_TEST_HOOKS
@@ -10248,6 +10273,7 @@ int main()
     test_pool_spell_fix();
     test_drained();
     test_rle_known_bytes();
+    test_cluebook();
     test_quickacts();
     test_heal_target();
     test_thumb();

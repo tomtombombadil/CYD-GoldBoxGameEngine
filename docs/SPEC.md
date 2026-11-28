@@ -3571,6 +3571,12 @@ the game's Settings (As Original: all of them).
   square whose twin on the next is solid - from the map's own bytes): half a door on the side they open from, an arrow
   in the next square pointing away from the wall (legend "One-way"); locked codes 2 and 3 one red; the party's arrow
   fitted between the square's walls a pixel clear of each, a two-pixel tip where the room across is even.
+  v0.223.0 (Tom, 2026-11-27): **the cluebooks' maps** (`engine/cluebook.*`; the PortMaster port's and the Android
+  app's Companion - their switch): each known edition's maps (`cluebook_tables.cpp`, made by tools/cluebook/
+  maketable.py - pages, the grid as drawn (degree-3 polynomials: the scans curve near the binding), the name's box;
+  positions only, plus the names the books' OCR misread) cut from the player's own PDF at the scan, straightened,
+  with the area's name read from the PDF's text; `play::map_source` names the map shown. No legend words under the
+  map (Tom: the symbols say it).
 - **Secret's outdoor fights** (v0.210.0): Secret has no terrain table
   (our facts); the engine read its flags from leftover memory, so its
   outdoor fields varied with what was there before (found by the toggle

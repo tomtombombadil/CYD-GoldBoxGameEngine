@@ -275,6 +275,9 @@ void sound_test(int id, bool game = false);
 
 // For the companion panel
 const geo::Map* map();
+// Where map() came from: its GEO file's name ("GEO3.DAX") in file and the block, returned; -1 when map() is no
+// GEO block's map (none, an overland's, the Dark Queen's) - a front end's key to pictures made for that map
+int map_source(char* file, size_t cap);
 int pos_x();
 int pos_y();
 int dir();

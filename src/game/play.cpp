@@ -133,6 +133,8 @@ struct Data {
     bool           view_icon = false, view_action = false;
     view3d::World& world;
     geo::Map       map;
+    char           map_file[16] = "";     // (map_source: the GEO file and block it came from)
+    int            map_block = -1;
     // The map's sides the party has walked through (a bit a side, 4 a square: N E S W) - a plain-looking wall
     // it crossed is a secret door on the Companion map (Tom, 2026-11-22: the kobold caves' rock sides the
     // scripts refuse were marked); kept for one map (walked_map), cleared when another is loaded
@@ -2125,6 +2127,7 @@ struct SavePeek {
     // the Dark Queen (its maps are bigger) or the map's file isn't found.
     bool        map_ok = false;
     int         map_block = -1;
+    char        map_file[16] = "";
     geo::Map    map;
 };
 SavePeek* peek = nullptr;
@@ -6610,6 +6613,7 @@ void peek_read(SavePeek& p, char slot)
             geo::load(gsrc, d->idx, static_cast<uint8_t>(p.map_block), p.map);
             g.close();
             p.map_ok = p.map.loaded;
+            strlcpy(p.map_file, gname, sizeof p.map_file);
         }
         d->gs.game_area = keep_area;
     }
@@ -14581,6 +14585,8 @@ struct Host : ecl::Host {
             geo::load(src, d->idx, static_cast<uint8_t>(geo_block), d->map);
             f.close();
         }
+        strlcpy(d->map_file, d->map.loaded ? name : "", sizeof d->map_file);
+        d->map_block = d->map.loaded ? geo_block : -1;
         pool_map_edge();
         plat::log("[play] map %s #%d: %s\n", name, geo_block, d->map.loaded ? "ok" : "missing");
     }
@@ -21666,6 +21672,18 @@ int pos_y()
     return d ? d->gs.y : 0;
 }
 int dir() { return peek_on() ? peek->dir : d ? d->gs.dir : 0; }
+int map_source(char* file, size_t cap)
+{
+    if (cap) *file = 0;
+    if (peek_on()) {
+        if (!peek->map_ok) return -1;
+        strlcpy(file, peek->map_file, cap);
+        return peek->map_block;
+    }
+    if (!map() || ov_companion() || !d || d->map_block < 0) return -1;
+    strlcpy(file, d->map_file, cap);
+    return d->map_block;
+}
 
 // The secret doors of the 3D map: each passable side of the area's plain wall whose square's step script,
 // run dry as a step that way would run it, doesn't refuse the step (0x7EC9 = 0xFF) - Tom, 2026-11-22: the
