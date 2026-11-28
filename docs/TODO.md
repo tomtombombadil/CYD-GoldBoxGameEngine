@@ -2063,8 +2063,14 @@ the Project as claude/TODO.md.
       Malachite (DOSBox: fighter 8 / thief 9, exp 300000 -> 250000, saves unchanged after training; Unicorn
       run of 0x3C644): the saves routine reads a thief's former-class row 0 (10 7 5 9 6) - kept, **Thieves'
       Saves** (Game Fix): no row 0, a human's former classes count. Train asks Pick Character first (DOSBox:
-      Drop / Modify / Train / Human / View / Remove; the engine's party.pick since 2026-11-14). LEFT:
-      approaching monsters against DOSBox.
+      Drop / Modify / Train / Human / View / Remove; the engine's party.pick since 2026-11-14).
+      Approaching monsters (2026-11-28, DOSBox): New Verdigris's Black Circle attack (ECL1 block 16 0x8638:
+      SETUP MONSTER sprite 0x42 / 0x45, max 2, two APPROACHes; a save with 0x4C2D = 1, 15% a street step) -
+      the original shows the far frame, the near frame, the view redrawn, then the picture; the engine's
+      SPRITESHOT frames 2 / 1 at the same view: same pixels, same places, same colours. DELAY (op 0x3A) is
+      the speed x 100 ms (GAME.OVR 0x3961 -> START 0x540:0xBF7, DS 0x67D6 = the speed) as the engine;
+      DOSBox showed ~0.08 s a frame - Turbo Pascal's Delay runs short there, not the game's rule. Secret's
+      29 list: done.
 - [ ] The Dark Queen's own scroll bundles (DQK.EXE: "Too many Bundles!", "in Bundle", "Scroll Bundle won't
       fit into Vault!") - not in the engine; the Scroll Bundles Enhancement leaves the Queen out until then.
 - [ ] Secret's years: its clock ages everyone a year at 100 years (DS 0x4C0A, GAME.OVR 0x2B912); the
