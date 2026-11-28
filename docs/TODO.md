@@ -3672,6 +3672,10 @@ the Project as claude/TODO.md.
       counted in this - the game runs them.
 - [ ] Door code 2 (red, "Locked" in the Companion): an ordinary door in the cluebooks (no lock symbol in them).
 - [ ] The markers (numbers on the squares, the legend's words) at the scan, from the player's own cluebook.
+- [ ] Tom, 2026-11-27 20:14 (mock-ups): no legend under the map (Locked / Secret / One-way words gone - the symbols
+      say it); an entrance to another area a shaded square, key word "Exit"; markers' numbers in their squares, the key
+      a Companion view of its own on a handheld (Map > Key > Party), on Android a tap on a marker its text, elsewhere the
+      whole key; the cluebook pictures straightened (the scans curve near the binding), the arrow by that grid.
 - [x] (v0.222.3) One-way doors (Tom, 2026-11-27 18:05: NOT "concealed doors" - he misspoke. 19:46: a concealed door is an
       ordinary door hidden by something - a tapestry, a curtain; a secret door is built to blend in. The cluebooks name
       none; the map data can't tell one from a secret door.
