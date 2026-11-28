@@ -3683,6 +3683,15 @@ the Project as claude/TODO.md.
       plain walls, two on the map's outer edge), Champions 4 of 6 (2 ordinary doors). The script's own refusals not
       counted in this - the game runs them.
 - [ ] Door code 2 (red, "Locked" in the Companion): an ordinary door in the cluebooks (no lock symbol in them).
+- [x] (v0.223.0; PM 0.20.0, app 0.10.0) The cluebooks' own map pictures, straightened, the party's arrow on them,
+      the areas' names (Cluebook Maps). Maps in the tables: PoolRad 17, Curse 7, Darkness 2, Champions 10, Knights 14,
+      Treasures 28 (Steam and GOG - the same scans).
+- [ ] Cluebook gaps: Gateway's Steam pages are pieced from several pictures (strips) - put together; GOG Gateway
+      (96 dpi, 1-bit Flate, no text layer) and GOG Secret (two parts here, 300 dpi, no text) their own tables;
+      Steam Secret's original (Tom's upload is a compressed copy - the GOG parts came again); Curse's other 9 maps,
+      PoolRad's 12, Darkness's quarters, Knights' 5, the Dark Queen's (HLIB) maps.
+- [ ] Exits (Tom 20:14: a shaded square, key word "Exit"): the squares whose step leaves for another map - a dry-run
+      probe as map_secret's.
 - [ ] The markers (numbers on the squares, the legend's words) at the scan, from the player's own cluebook.
 - [ ] Tom, 2026-11-27 20:14 (mock-ups): no legend under the map (Locked / Secret / One-way words gone - the symbols
       say it); an entrance to another area a shaded square, key word "Exit"; markers' numbers in their squares, the key
