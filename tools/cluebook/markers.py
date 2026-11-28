@@ -58,41 +58,80 @@ def read_digits(patch, pieces=1):
     return int(got[0]) if got and pieces == 1 else None
 
 
-def find(st):
-    """Digit-sized pieces of ink (a wall or a door symbol is longer or a box), side by side ones joined into a
-    number, each read; its square: where the number's middle is."""
+def pieces(st):
+    """Digit-sized pieces of ink: (y0, y1, x0, x1, label) and the labelled ink."""
     from scipy import ndimage
     m = ink_mask(st)
-    grey = st.min(-1)
     lab, n = ndimage.label(m)
-    objs = ndimage.find_objects(lab)
-    cand = []
-    for i, sl in enumerate(objs):
+    out = []
+    for i, sl in enumerate(ndimage.find_objects(lab)):
         h = sl[0].stop - sl[0].start
         w = sl[1].stop - sl[1].start
         if not (0.2 * S <= h <= 0.55 * S and 0.02 * S <= w <= 0.45 * S): continue
         piece = lab[sl] == i + 1
-        fill = piece.mean()
-        if fill > 0.75 and w > 0.2 * S: continue        # (a door's box)
-        cand.append([sl[0].start, sl[0].stop, sl[1].start, sl[1].stop, i + 1])
-    cand.sort(key=lambda c: (c[0] // (S // 3), c[2]))
+        if piece.mean() > 0.75 and w > 0.2 * S: continue        # (a door's box)
+        out.append((sl[0].start, sl[0].stop, sl[1].start, sl[1].stop, i + 1))
+    return out, lab
+
+
+def glyph(lab, p, size=(20, 14)):
+    """A piece as a fixed-size picture for matching (its own ink only)."""
+    y0, y1, x0, x1, i = p
+    g = (lab[y0:y1, x0:x1] == i).astype(np.uint8) * 255
+    return np.asarray(Image.fromarray(g).resize((size[1], size[0]), Image.BILINEAR)).astype(float) / 255
+
+
+def group(ps):
+    """Pieces side by side on one line: a number's digits."""
     groups = []
-    for c in sorted(cand, key=lambda c: c[2]):
+    for c in sorted(ps, key=lambda c: c[2]):
         for gq in groups:
             t = gq[-1]
             if abs((c[0] + c[1]) / 2 - (t[0] + t[1]) / 2) < 0.15 * S and 0 <= c[2] - t[3] < 0.15 * S:
-                gq.append(c); break
+                gq.append(c)
+                break
         else:
             groups.append([c])
-    out = []
-    for gq in groups:
-        y0 = min(c[0] for c in gq); y1 = max(c[1] for c in gq)
-        x0 = min(c[2] for c in gq); x1 = max(c[3] for c in gq)
-        num = read_digits(grey[max(0, y0 - 2):y1 + 2, max(0, x0 - 2):x1 + 2], len(gq))
-        if num is None or num == 0: continue
-        cx, cy = (x0 + x1) / 2 / S - 0.5, (y0 + y1) / 2 / S - 0.5
-        if 0 <= cx < 16 and 0 <= cy < 16: out.append([int(cx), int(cy), num])
-    return sorted(out, key=lambda r: (r[1], r[0]))
+    return groups
+
+
+def find_all(sts):
+    """Every map of a book at once (sts: name -> straightened picture): the book's own digits learnt from the pieces
+    tesseract reads alone with one voice, then every piece matched against them - the book's numbers are all in one
+    hand, so a piece looks most like its own digit's mean."""
+    data = {}
+    votes = {}
+    for name, st in sts.items():
+        ps, lab = pieces(st)
+        grey = st.min(-1)
+        data[name] = (ps, lab, grey)
+        for p in ps:
+            y0, y1, x0, x1, i = p
+            d = read_digits(grey[max(0, y0 - 2):y1 + 2, max(0, x0 - 2):x1 + 2], 1)
+            if d is not None and 0 <= d <= 9: votes.setdefault(d, []).append(glyph(lab, p))
+    tmpl = {d: np.mean(v, 0) for d, v in votes.items() if len(v) >= 3}
+    res = {}
+    for name, (ps, lab, grey) in data.items():
+        out = []
+        for gq in group(ps):
+            digits = []
+            for p in gq:
+                g = glyph(lab, p)
+                best, bd = None, 1e9
+                for d, t in tmpl.items():
+                    e = ((g - t) ** 2).mean()
+                    if e < bd: best, bd = d, e
+                if best is None or bd > 0.08: digits = None; break
+                digits.append(str(best))
+            if not digits: continue
+            num = int(''.join(digits))
+            if num == 0: continue
+            y0 = min(c[0] for c in gq); y1 = max(c[1] for c in gq)
+            x0 = min(c[2] for c in gq); x1 = max(c[3] for c in gq)
+            cx, cy = (x0 + x1) / 2 / S - 0.5, (y0 + y1) / 2 / S - 0.5
+            if 0 <= cx < 16 and 0 <= cy < 16: out.append([int(cx), int(cy), num])
+        res[name] = sorted(out, key=lambda r: (r[1], r[0]))
+    return res, sorted(tmpl)
 
 
 if __name__ == '__main__':
@@ -108,7 +147,8 @@ if __name__ == '__main__':
             subprocess.run(['pdftoppm', '-f', str(p), '-l', str(p), '-r', '200', '-png', pdf, f'/tmp/mk_{p}'])
             f = [q for q in os.listdir('/tmp') if q.startswith(f'mk_{p}-') and q.endswith('.png')][0]
             pages[p] = np.asarray(Image.open('/tmp/' + f).convert('RGB')).astype(float)
-        st = straighten(pages[p], w)
-        res[name] = find(st)
-        print(name, p, len(res[name]), res[name][:12], flush=True)
-    json.dump(res, open(f'./markers_{g}.json', 'w'))
+        res[name] = straighten(pages[p], w)
+    found, digits = find_all(res)
+    print('digits learnt:', digits)
+    for name, r in found.items(): print(name, len(r), r, flush=True)
+    json.dump(found, open(f'./markers_{g}.json', 'w'))

@@ -3719,7 +3719,12 @@ the Project as claude/TODO.md.
       map = an exit): it finds none in PoolRad's Slums nor Curse's Tilverton - the way out there is something else
       (PoolRad: the program's own edge handling, map.pool_edge; Curse: to trace which op a known gate runs). Next:
       follow a known exit square's run op by op in the playsim.
-- [ ] The markers (numbers on the squares, the legend's words) at the scan, from the player's own cluebook.
+- [ ] The markers (Tom, 2026-11-28): a matrix of our own in this repo - game, map, area name, square, marker number
+      (no legend text: the scan reads each numbered entry's words from the player's PDF, as the names; our own short
+      wording only for the editions with no text layer). Positions: tools/cluebook/markers.py - the book's own digits
+      learnt from the pieces tesseract reads alone, every piece matched against them (Champions' map 80: 26 found,
+      about 4 in 5 right - a two-digit number whose second digit touches a line reads as its first); still to do:
+      check each map against its legend's numbers, then the matrix, the scan's legend reading, the key views.
 - [ ] Tom, 2026-11-27 20:14 (mock-ups): no legend under the map (Locked / Secret / One-way words gone - the symbols
       say it); an entrance to another area a shaded square, key word "Exit"; markers' numbers in their squares, the key
       a Companion view of its own on a handheld (Map > Key > Party), on Android a tap on a marker its text, elsewhere the
