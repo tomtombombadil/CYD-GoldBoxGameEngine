@@ -501,6 +501,25 @@ void saving_throws(party::Character& c, const Tables& t)
             const int v = t.save(Monk, c.old_level(Monk), kind);
             if (v < best) best = v;
         }
+        // Secret (GAME.OVR 0x3C768): the same slip with its last index, the
+        // thief - every thief (level over its former thief level, 0) takes the
+        // table's level-0 row, which isn't a save row (10 7 5 9 6 - checked by
+        // running 0x3C644; DOSBox: Malachite, F8/T9, kept them through a
+        // training). Game Fixes: a human's former classes at their levels
+        if (t.lay.secret) {
+            if (!rules::fix(rules::kFixSThiefSaves)) {
+                if (c.level(Thief) > c.old_level(Thief)) {
+                    const int v = t.save(Thief, c.old_level(Thief), kind);
+                    if (v < best) best = v;
+                }
+            } else {
+                for (int cls = 0; cls < kClasses; ++cls)
+                    if (c.old_level(cls) > 0) {
+                        const int v = t.save(cls, c.old_level(cls), kind);
+                        if (v < best) best = v;
+                    }
+            }
+        }
         c.rec[kSaves + kind] = static_cast<uint8_t>(best);
     }
     // Dwarves and halflings: a poison bonus by their constitution (added to

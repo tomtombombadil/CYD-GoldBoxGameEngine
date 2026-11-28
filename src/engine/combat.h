@@ -577,6 +577,10 @@ struct SpellFx {
 // (rules::fixes() on: as AD&D) - displacement's handler (0x1385F, only at
 // its wearer's own turn) never makes an attack miss, the Periapt of
 // Health's immunity to disease (0x4C) has an empty handler (0x131C2)
+// Secret's ring of fire resistance on magic fire's damage: 2 a die less, at
+// least 1 a die (the original's byte arithmetic without Fire Ring Damage: a
+// one-die fire of 1 point becomes 255)
+int fire_ring_damage(int dmg, int dice);
 struct ItemFx {
     uint8_t flame_tongue, dragon_slayer, frost_brand, displace, ring_invisible, vermin;
     uint8_t vs_undead, elvenkind;

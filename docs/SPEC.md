@@ -3913,6 +3913,12 @@ the game's Settings (As Original: all of them).
   Secret's Join on an uncounted item: "That cannot be joined with other
   items." Old age after a fight (GAME.OVR 0xB772, when someone aged - haste):
   each race's greatest age from that routine's compares, Treasures' screens.
+  Secret's ring of fire resistance takes 2 a die off fire damage a die at
+  a time in a byte (GAME.OVR 0x1266B), so 1 - 2 wraps to 255 - kept;
+  **Fire Ring Damage** (Game Fix): 2 a die off, at least 1 a die. Its saves
+  routine (0x3C644) reads a thief's row for its former level - 0, the
+  table's empty first row (10 7 5 9 6), for every thief - kept; **Thieves'
+  Saves** (Game Fix): no row 0, a human's former classes count.
 - **Darkness's race adjustments at creation** (`rules::fixes()`): its
   program tests the race list's last line (human) instead of the race
   picked, so dwarves' Con +1 Cha -1, elves' Dex +1 Con -1 and halflings'

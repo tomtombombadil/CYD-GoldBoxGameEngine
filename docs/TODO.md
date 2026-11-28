@@ -2056,6 +2056,15 @@ the Project as claude/TODO.md.
       the Ring of Wizardry put away (the original counts with an uninitialised local - not reproducible; the
       engine forgets those past the count), potions of speed / invisibility lasting, a cleric's 6th-level
       slots; Malachite's saves; approaching monsters against DOSBox.
+      v0.224.2: the rest of 29.items.3 read in GAME.OVR - Boots of Speed (the target's AC recalculated before
+      each attack: +2, not growing), potions of speed (5d4, 0x2D5E2) / invisibility (no limit) and a cleric's
+      6th-level slots (Wisdom 17) as the engine; the fire ring is applied once (spells never read [0x87D4])
+      but a die at a time in a byte, 1 - 2 = 255 - kept, **Fire Ring Damage** (Game Fix) the AD&D way.
+      Malachite (DOSBox: fighter 8 / thief 9, exp 300000 -> 250000, saves unchanged after training; Unicorn
+      run of 0x3C644): the saves routine reads a thief's former-class row 0 (10 7 5 9 6) - kept, **Thieves'
+      Saves** (Game Fix): no row 0, a human's former classes count. Train asks Pick Character first (DOSBox:
+      Drop / Modify / Train / Human / View / Remove; the engine's party.pick since 2026-11-14). LEFT:
+      approaching monsters against DOSBox.
 - [ ] The Dark Queen's own scroll bundles (DQK.EXE: "Too many Bundles!", "in Bundle", "Scroll Bundle won't
       fit into Vault!") - not in the engine; the Scroll Bundles Enhancement leaves the Queen out until then.
 - [ ] Secret's years: its clock ages everyone a year at 100 years (DS 0x4C0A, GAME.OVR 0x2B912); the

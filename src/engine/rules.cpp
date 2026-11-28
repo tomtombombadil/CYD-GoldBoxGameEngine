@@ -1796,7 +1796,15 @@ const FixInfo kFixes[kFixCount] = {
     {kFixBundleScribe, "Bundle Scribe Warning", kSecret,
      "Dropping, selling or depositing a bundle with a spell on one of its scrolls picked for scribing asks "
      "\"Okay to lose it?\" first, as a single scroll does. The original's test looks at the bundle itself, "
-     "never at its scrolls, so the bundle goes without a word."}
+     "never at its scrolls, so the bundle goes without a word."},
+    {kFixFireRing, "Fire Ring Damage", kSecret,
+     "A ring of fire resistance takes 2 a die off magic fire's damage, leaving at least 1 a die. The "
+     "original works it in a single byte, so a one-die fire that did 1 point comes out as 255 damage."},
+    {kFixSThiefSaves, "Thieves' Saves", kSecret,
+     "Saving throws come from the class tables, and a human who changed class keeps the saves of the class he "
+     "left at the level he left it. The original's check for that former class looks at the thief instead, "
+     "so every thief gets the table's empty first row - 10 7 5 9 6, far better than a thief's - and former "
+     "classes count for nothing."}
 };
 
 const AdndInfo kAdnd[kAdndCount] = {

@@ -393,6 +393,8 @@ enum Fix : uint8_t {
     kFixPoisonSave,     // Poison Save Bonus: the Constitution bonus lowers the poison number (the originals raise it; all but PoolRad)
     kFixBundleWeight,   // Bundle Weight: a bundle of scrolls weighs one a scroll (Secret: its weight word times its count)
     kFixBundleScribe,   // Bundle Scribe Warning: parting with a bundle whose spells are being scribed asks first (Secret)
+    kFixFireRing,       // Fire Ring Damage: the ring of fire resistance's 2 a die less never wraps (Secret)
+    kFixSThiefSaves,    // Thieves' Saves: no level-0 row for thieves; a human's former classes count (Secret)
     kFixCount
 };
 static_assert(kFixCount <= 64, "the fixes' bits");

@@ -6373,6 +6373,32 @@ static void test_secret_rules()
     CHECK(t.exp_needed(0, 1) == 1000 && t.exp_needed(0, 17) == 17000 && t.exp_needed(0, 18) == -1 &&
           t.exp_needed(1, 1) == -1 && t.slots_gained(0, 14, 6) == 1);
     CHECK(t.race_row(1) == 3 && t.race_row(7) == 6 && t.s8(static_cast<uint16_t>(l.thief_race + t.race_row(1) * 8 + 2)) == 10);
+    // Saves (GAME.OVR 0x3C644): a fighter 8 / thief 9 - the thief's level-0 row counts in the original
+    // (its former-class check with the loop's last index); Thieves' Saves: the tables at their levels
+    {
+        static classes::Tables ts;
+        std::vector<uint8_t> sb(b);
+        auto row = [&](int cls, int lv, std::initializer_list<int> v) {
+            int k = 0;
+            for (int x : v) sb[0xA00 + cls * 90 + lv * 5 + k++ - l.lo] = static_cast<uint8_t>(x);
+        };
+        for (int c2 = 0; c2 < 7; ++c2)
+            for (int lv = 0; lv < 19; ++lv) row(c2, lv, {20, 20, 20, 20, 20});
+        row(2, 8, {10, 11, 12, 12, 13});
+        row(6, 9, {11, 10, 10, 14, 11});
+        row(6, 0, {10, 7, 5, 9, 6});
+        CHECK(ts.set(l, sb.data(), sb.size()));
+        static party::Character m;
+        m.rec[0x109 + 2] = 8;
+        m.rec[0x109 + 6] = 9;
+        m.rec[0x19] = 15;
+        rules::set_fixes(false);
+        classes::saving_throws(m, ts);
+        CHECK(m.rec[0xDF] == 10 && m.rec[0xE0] == 7 && m.rec[0xE1] == 5 && m.rec[0xE2] == 9 && m.rec[0xE3] == 6);
+        rules::set_fixes(true);
+        classes::saving_throws(m, ts);
+        CHECK(m.rec[0xDF] == 10 && m.rec[0xE0] == 10 && m.rec[0xE1] == 10 && m.rec[0xE2] == 12 && m.rec[0xE3] == 11);
+    }
     // A copy keeps its own bytes
     classes::Tables t2 = t;
     CHECK(t2.thac0(2, 18) == 58 && t2.spell_class(9) == 2);
@@ -10316,6 +10342,13 @@ static void test_bundles()
         for (int k = 3; k < 10; ++k) CHECK(bundle::add(j.items[1], bundle::scroll(j.items[1], 0)));
         CHECK(rules::join_scrolls(j, 1, scr, nullptr) == rules::BundleJoin::Limit);
     }
+    // The ring of fire resistance's damage (GAME.OVR 0x1266B): 2 a die off, at least 1 a die; the
+    // original's byte turns a one-die 1 into 255 (Fire Ring Damage off)
+    CHECK(combat::fire_ring_damage(10, 2) == 6 && combat::fire_ring_damage(5, 2) == 2);
+    CHECK(combat::fire_ring_damage(1, 1) == 1);
+    rules::set_fixes(false);
+    CHECK(combat::fire_ring_damage(1, 1) == 255 && combat::fire_ring_damage(10, 2) == 6);
+    rules::set_fixes(true);
     // Garbage: only what the party holds stays
     auto live = [](uint16_t id, void* ctx) {
         const party::Character* c = static_cast<const party::Character*>(ctx);

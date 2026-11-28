@@ -527,6 +527,22 @@ void build_outdoors(Battle& b, const Tables& t, int city, create::Dice& d)
         }
 }
 
+int fire_ring_damage(int dmg, int dice)
+{
+    if (rules::fix(rules::kFixFireRing)) {
+        dmg -= 2 * dice;
+        return dmg < dice ? dice : dmg;
+    }
+    // (GAME.OVR 0x1266B: a die at a time in the damage byte [0x87D4] - 1 - 2 is 255, which is no less than the
+    // dice, so kept)
+    int v = dmg & 0xFF;
+    for (int k = 0; k < dice; ++k) {
+        v = (v - 2) & 0xFF;
+        if (v < dice) v = dice;
+    }
+    return v;
+}
+
 int pool_terrain(int t, bool special)
 {
     struct Range { uint8_t lo, hi, f; };
@@ -3790,11 +3806,7 @@ int harm(Battle& b, int c, int amount, const Harm& h, create::Dice& d, bool* dow
         const uint8_t ring = b.fx->items.fire_ring;
         if (ring && hasx(f, ring) && (h.kind & 1)) {
             if (!(h.kind & 8)) safe = true;
-            else {
-                const int n = h.dice > 0 ? h.dice : 1;
-                dmg -= 2 * n;
-                if (dmg < n) dmg = n;
-            }
+            else dmg = fire_ring_damage(dmg, h.dice > 0 ? h.dice : 1);
         }
         if (hasx(f, m.oil_bane) && (h.kind & 9)) dmg += h.dice;    // (Pool's mummy: a point more a die)
         auto chance = [&](uint8_t type, int base) {
