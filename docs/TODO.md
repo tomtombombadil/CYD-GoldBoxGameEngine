@@ -3672,7 +3672,9 @@ the Project as claude/TODO.md.
       counted in this - the game runs them.
 - [ ] Door code 2 (red, "Locked" in the Companion): an ordinary door in the cluebooks (no lock symbol in them).
 - [ ] The markers (numbers on the squares, the legend's words) at the scan, from the player's own cluebook.
-- [x] (v0.222.3) One-way doors (Tom, 2026-11-27 18:05: NOT "concealed doors" - he misspoke; what a concealed door is: asked.
+- [x] (v0.222.3) One-way doors (Tom, 2026-11-27 18:05: NOT "concealed doors" - he misspoke. 19:46: a concealed door is an
+      ordinary door hidden by something - a tapestry, a curtain; a secret door is built to blend in. The cluebooks name
+      none; the map data can't tell one from a secret door.
       They open from one side only, are often seen only from that side,
       and there is no way back): in the maps, a side passable from one square (door code 1, a few 2 / 3) whose twin
       on the next square is solid (door 0) - Pool 90, Curse 139, Secret 48, Darkness 111, Champions 58, Death
