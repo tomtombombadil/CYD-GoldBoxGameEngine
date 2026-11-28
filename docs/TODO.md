@@ -384,8 +384,10 @@
       cheat_menu_place() refused them; a script's menu there now counts as a menu town (as Curse's, v0.204.0) -
       the Trainer, Merchant, Healer and Sanctuary open at "WHERE DO YOU WISH TO GO?" and leave it as it was
       (playsim, Champions save B at the first outpost: Trainer to level 5, Merchant).
-- [ ] Darkness's intro movie (VACE INTRO, before the titles): the same player would play INTRO.ACF / INTRO.BMA -
-      for Tom: wanted? (The engine starts at the titles, as since v0.141.0.)
+- [x] Darkness's intro movie (VACE INTRO, before the titles) - Tom, 2026-11-28: "I want what the game does in
+      DOSBox": v0.226.3 plays it at every start as CONTROL.EXE does, then the titles; VACE's keys (record 13 / 14:
+      the intro skippable after its logo, the ending never - read in VACE.EXE, seen in DOSBox). Host test (keys);
+      playsim INTROPLAY=1 / INTROSHOTS=ms; the tools tap through it.
 - [x] 2026-11-22 (no engine fault): the Temple of Tyr's fire elementals - see the entry below; MAPLINK / MAPDOORS.
 - [x] v0.211.16 (the Darkness play-through, 2026-11-21 - played to the end): **the game never ended** - after
       Gothmenes, the fine ship's farewell ("Do you really want to leave us?" Yes, the ending's pages) ran PROGRAM 2,
@@ -3457,10 +3459,12 @@ the Project as claude/TODO.md.
       0x3E), its saved games' members are .GAM, and an added character's
       .WIZ spells were never read; Champions' list read Curse's 0xF7 (its
       NPC byte is 0xE7). make_saves: Knights B, Champions C.
-- [ ] Tom: Darkness's, Treasures', Death Knights' and the Dark Queen's
+- [x] Tom: Darkness's, Treasures', Death Knights' and the Dark Queen's
       computer never uses an item (their item routine is compiled out or
-      never keeps one - round 8 - kept as the originals; a Game Fix to
-      give monsters their wands back? not added: not an AD&D mistake).
+      never keeps one - round 8 - kept as the originals). Tom, 2026-11-28:
+      "Have that as a Game Fix" - v0.226.3 **Monsters' Items** (kFixAiItems):
+      the earlier games' item routine there; rules4 use (on: a wand used in
+      all four, off: never - FIXOFF), fightfuzz 25 fights each, 0 problems.
 - [x] (closed 2026-11-27: superseded by PoolRad's play-through to the end - the Project's claude/playthrough_poolrad.md) Pool's story beyond the nomads' camp: targeted differ runs only
       (scripted places), fights judged by the rule checks. 2026-11-07
       (part 17, claude/playtest_poolrad.md): every event square of

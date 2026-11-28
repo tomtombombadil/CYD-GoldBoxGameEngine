@@ -1885,9 +1885,19 @@ the BMA's chunks of line-coded frames; the step 261 / rate ticks of 72.82 Hz
 step, the colours on screen) on the 256-colour canvas; on the classic
 boards EGA.DRV's look - each colour a checkerboard of two EGA colours,
 the dissolve in a 17-bit register's order; song 3 (P3.SMS = MUSIC.DAX
-block 3); a tap ends it. Then the game's colours back, the screen drawn
+block 3). Keys as VACE's (v0.226.3): its key check answers only after an
+ACF record 13 (14 / the start: off) and a key pressed meanwhile waits in
+the BIOS and ends the movie once they're on - FINAL has only a 14, so
+nothing ends it (DOSBox). Then the game's colours back, the screen drawn
 again, the script on. Checked against VACE in DOSBox frame by frame, VGA
-and EGA (tools/devkit/vace). The intro (INTRO.ACF) is not played yet.
+and EGA (tools/devkit/vace).
+**The intro** (v0.226.3; Tom, 2026-11-28: "what the game does in DOSBox"):
+START.BAT's CONTROL.EXE runs "vace <mode> INTRO 1 <sound>" at every start,
+before GAME.EXE - so Play opens on INTRO.ACF / INTRO.BMA (song 1, 14
+sequences, ~89 s; the SSI logo, Bane's audience, "DO NOT FAIL ME!"), then
+the titles. Keys count after the logo's fade (its record 13): a tap during
+the logo ends it there (DOSBox: Escape at the logo - the logo, its fade,
+the titles). No intro files: straight to the titles.
 
 ## 6e. Gateway to the Savage Frontier (Tom, 2026-10-23: started after Darkness)
 
@@ -3915,6 +3925,12 @@ the game's Settings (As Original: all of them).
   Secret's Join on an uncounted item: "That cannot be joined with other
   items." Old age after a fight (GAME.OVR 0xB772, when someone aged - haste):
   each race's greatest age from that routine's compares, Treasures' screens.
+  **Monsters' Items** (Game Fix; Tom, 2026-11-28): Darkness's, Treasures',
+  Death Knights' and the Dark Queen's computer never uses a magic item -
+  their item routine is an empty body or never keeps its pick (round 8) -
+  kept; with the fix on the computer (monsters, NPCs, Quick characters with
+  Items ticked) uses them as the earlier games' does (the d7 of tries, the
+  readied items that cast a spell, the first with a use).
   Secret's ring of fire resistance takes 2 a die off fire damage a die at
   a time in a byte (GAME.OVR 0x1266B), so 1 - 2 wraps to 255 - kept;
   **Fire Ring Damage** (Game Fix): 2 a die off, at least 1 a die. Its saves

@@ -2577,7 +2577,8 @@ void ai_items()
         printf("  (ai items: no wand spell the chooser takes here)\n");
         return;
     }
-    const bool want = !d->prof->variant.darkness_files && !d->prof->variant.hlib;
+    // (Game Fixes' Monsters' Items: those four games' computer uses them too)
+    const bool want = (!d->prof->variant.darkness_files && !d->prof->variant.hlib) || rules::fix(rules::kFixAiItems);
     fg->cur = B;
     fg->ai_checked = false;
     fg->flee_told = true;
@@ -2591,7 +2592,7 @@ void ai_items()
         f.items = nullptr;
         f.n_items = 0;
     }
-    expect(P, "the computer's items: Darkness / Treasures / Death Knights never (no item kept), the others a wand", used == want,
+    expect(P, "the computer's items: Darkness / Treasures / Death Knights never (no item kept; Game Fixes: a wand), the others a wand", used == want,
            "game %d, wand spell %d: used %d, want %d", g, found, used, want);
 }
 

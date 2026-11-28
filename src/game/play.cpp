@@ -5862,7 +5862,7 @@ void qf_key() { qf.until = plat::now_ms(); }
 // PROGRAM 1); here it plays over the game screen, then the screen is drawn
 // again and the script goes on. 256 colours on a VGA canvas, else VACE's
 // EGA look (each colour a checkerboard of two, the dissolve); song P3 =
-// MUSIC.DAX block 3; a key or tap ends it (VACE's key check).
+// MUSIC.DAX block 3; a key or tap ends it only while VACE's keys count (vace.h).
 struct Movie {
     vace::Player p;
     uint8_t* acf = nullptr;
@@ -5872,9 +5872,12 @@ struct Movie {
     uint32_t next = 0;
     int y0 = kMovieRows, y1 = -1;       // (rows drawn since the last tick)
     bool colours = false;
+    bool intro = false;                 // (the intro before the titles: CONTROL.EXE's "vace INTRO", then GAME.EXE)
     static constexpr int kMovieRows = 200;
 };
 Movie* mv = nullptr;
+bool start_title(pic::Canvas& c, uint32_t timeout_ms);
+void draw_party_menu(pic::Canvas& c);
 
 class MovieScreen : public vace::Screen {
 public:
@@ -5921,7 +5924,21 @@ void mv_end(pic::Canvas& c)
         memcpy(vga->now, mv->pal_was, sizeof vga->now);
         vga->changed = true;
     }
+    const bool intro = mv && mv->intro;
     mv_free();
+    if (intro) {
+        // CONTROL.EXE: GAME.EXE after VACE - its titles, then the party menu
+        memlog::note("intro over");
+        plat::log("[play] the intro movie ended\n");
+        music_stop();
+        c.clear(0);
+        dirty(0, c.h);
+        if (!start_title(c, 30000)) {
+            screen = Screen::PartyMenu;
+            draw_party_menu(c);
+        }
+        return;
+    }
     memlog::note("movie over");
     plat::log("[play] the ending movie ended\n");
     screen = Screen::Game;
@@ -5949,12 +5966,13 @@ void mv_tick(uint32_t now, pic::Canvas& c)
     if (!on) mv_end(c);
 }
 
-void mv_start(pic::Canvas& c)
+bool mv_start(pic::Canvas& c, bool intro = false)
 {
     char name[16];
-    const char* base = "FINAL";
+    const char* base = intro ? "INTRO" : "FINAL";
     mv_free();
     mv = new (std::nothrow) Movie();
+    if (mv) mv->intro = intro;
     plat::File f;
     bool ok = mv != nullptr;
     if (ok) {
@@ -5977,17 +5995,20 @@ void mv_start(pic::Canvas& c)
         ok = mv->src && vace::open(mv->p, mv->acf, len, *mv->src, c.vga && vga != nullptr, snd_mode != 3);
     }
     if (!ok) {
-        plat::log("[play] the ending movie (%s.ACF / .BMA) isn't there or doesn't read - the script goes on\n", base);
+        plat::log("[play] the %s movie (%s.ACF / .BMA) isn't there or doesn't read - %s\n", intro ? "intro" : "ending",
+                  base, intro ? "the titles" : "the script goes on");
         mv_free();
+        if (intro) return false;
         waiting = false;
         handle(vm->resume());
-        return;
+        return true;
     }
     if (vga) {
         mv->pal_was = static_cast<pic::Rgb*>(malloc(sizeof vga->now));
         if (mv->pal_was) memcpy(mv->pal_was, vga->now, sizeof vga->now);
     }
-    plat::log("[play] the ending movie: %d sequences, %s\n", mv->p.chunks, mv->p.vga ? "256 colours" : "EGA");
+    plat::log("[play] the %s movie: %d sequences, %s\n", intro ? "intro" : "ending", mv->p.chunks,
+              mv->p.vga ? "256 colours" : "EGA");
     memlog::note("movie");
     anim_stop();
     cursor_hide();
@@ -6000,12 +6021,15 @@ void mv_start(pic::Canvas& c)
     screen = Screen::Movie;
     mv->next = plat::now_ms();
     mv_tick(mv->next, c);
+    return true;
 }
 
-// A key or tap: VACE ends at once
+// A key or tap: VACE ends at once when its keys count (else it's kept until they do - the
+// intro's first picture; never in FINAL - vace.h)
 void mv_key(pic::Canvas& c)
 {
     if (!mv) return;
+    if (!vace::press(mv->p)) return;
     MovieScreen scr(c);
     vace::stop(mv->p, scr);
     mv_end(c);
@@ -19978,6 +20002,9 @@ const char* open(const char* data_dir, games::Game g, pic::Canvas& c, const char
     idle_cycles = 0;
     exit_wanted = false;
     w = text::Writer{};
+    // Darkness: its intro movie first - START.BAT's CONTROL.EXE runs "vace <mode> INTRO 1 <sound>" at every
+    // start before GAME.EXE (the Project's claude/vace_facts.md 1; a key ends it, DOSBox) - then the titles
+    if (d->prof->game == games::Game::PoolsOfDarkness && mv_start(c, true)) return nullptr;
     // The title sequence first, as the games begin; then the party menu
     if (!start_title(c, 30000)) {
         screen = Screen::PartyMenu;

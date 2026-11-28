@@ -372,7 +372,12 @@ bool open_game()
     static std::string folder;
     folder = game_dir.substr(sl + 1);
     if (play::open(folder.c_str(), games::Game::ChampionsOfKrynn, C, nullptr)) return false;
-    for (int guard = 0; play::screen == play::Screen::Title && guard < 40; ++guard) {
+    for (int guard = 0; (play::screen == play::Screen::Title || play::screen == play::Screen::Movie) && guard < 40; ++guard) {
+        if (play::screen == play::Screen::Movie) {          // (Darkness's intro: a tap, held until its keys count)
+            play::tap(2, 2, C);
+            for (int t = 0; t < 120000 && play::screen == play::Screen::Movie; t += 50) { g_now += 50; play::tick(g_now, C); }
+            continue;
+        }
         if (play::title_run && play::title_run->prompt) {
             tap_word('P');
             continue;

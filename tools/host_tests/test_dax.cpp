@@ -10196,6 +10196,28 @@ static void test_vace()
     // A key: the end, the song stopped
     vace::stop(p, s);
     CHECK(!vace::run(p, next, src, s, &next));
+    {
+        // Keys (VACE [0x89E]): off at the start; a press while off is held and ends the movie at record 13
+        // (INTRO: after its first picture); 14 turns them off again (FINAL: never on)
+        Bytes ak;
+        acf_rec(ak, 14, {});
+        acf_rec(ak, 0, {1, 0});
+        acf_rec(ak, 3, {});
+        acf_rec(ak, 3, {});
+        acf_rec(ak, 13, {});
+        acf_rec(ak, 3, {});
+        acf_rec(ak, 1, {});
+        static vace::Player q;
+        CHECK(vace::open(q, ak.data(), static_cast<uint32_t>(ak.size()), src, true, true));
+        uint32_t nx = 0;
+        CHECK(vace::run(q, 0, src, s, &nx) && !q.keys);
+        CHECK(!vace::press(q));                            // (held: the movie goes on)
+        CHECK(vace::run(q, nx - 1, src, s, &nx));
+        CHECK(!vace::run(q, nx, src, s, &nx) && q.ended && q.fr == 0 && q.seq == 1);   // (the 2nd frame, then 13: the end)
+        CHECK(vace::open(q, ak.data(), static_cast<uint32_t>(ak.size()), src, true, true));
+        CHECK(vace::run(q, 0, src, s, &nx) && vace::run(q, nx, src, s, &nx) && q.keys);  // (no key: on past 13)
+        CHECK(vace::press(q));                             // (now a key ends it at once)
+    }
     // EGA: two colours a pixel (x + y even: the lower), the dissolve
     uint8_t pal[256][3] = {}, pr[256][2];
     pal[1][0] = 63; pal[1][1] = 63; pal[1][2] = 63;     // (white: 15 / 15)

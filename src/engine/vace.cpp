@@ -272,6 +272,7 @@ bool run(Player& p, uint32_t now_ms, dax::ByteSource& bma, Screen& s, uint32_t* 
     g_epoch = p.epoch;
     const uint32_t now = (now_ms - p.epoch) * 1000u;
     while (!p.ended) {
+        if (p.keys && p.key) break;             // (a key, now that keys count: VACE ends)
         if (p.fading && !fade_run(p, s, now, next)) return true;
         if (p.pc + 2 > p.acf_len || p.acf[p.pc] < 2 || p.pc + p.acf[p.pc] > p.acf_len) break;
         const uint8_t* r = p.acf + p.pc;
@@ -339,6 +340,12 @@ bool run(Player& p, uint32_t now_ms, dax::ByteSource& bma, Screen& s, uint32_t* 
             break;
         case 10:
             if (p.sound) s.song(0);
+            break;
+        case 13:
+            p.keys = true;
+            break;
+        case 14:
+            p.keys = false;
             break;
         case 11:
             if (static_cast<int32_t>(now - at) < 0) {

@@ -395,6 +395,8 @@ enum Fix : uint8_t {
     kFixBundleScribe,   // Bundle Scribe Warning: parting with a bundle whose spells are being scribed asks first (Secret)
     kFixFireRing,       // Fire Ring Damage: the ring of fire resistance's 2 a die less never wraps (Secret)
     kFixSThiefSaves,    // Thieves' Saves: no level-0 row for thieves; a human's former classes count (Secret)
+    kFixAiItems,        // Monsters' Items: the computer uses its magic items as the earlier games' does (Darkness,
+                        // Treasures, Death Knights, the Dark Queen - their item routine never picks one)
     kFixCount
 };
 static_assert(kFixCount <= 64, "the fixes' bits");

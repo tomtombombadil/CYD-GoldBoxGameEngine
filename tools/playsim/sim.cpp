@@ -966,9 +966,25 @@ int main(int argc, char** argv)
         save_wav();
         return 0;
     }
+    // INTROPLAY=1: Darkness's intro movie played to its end (INTROSHOTS=ms: a snapshot that often); else a tap ends it
+    if (getenv("INTROPLAY")) {
+        const int every = getenv("INTROSHOTS") ? atoi(getenv("INTROSHOTS")) : 0;
+        int t = 0, next = 0;
+        for (; t < 200000 && play::screen == play::Screen::Movie; t += 10) {
+            g_now += 10;
+            play::tick(g_now, C);
+            if (every && t >= next) { char nm[32]; snprintf(nm, sizeof nm, "intro_%06d", t); shot(nm); next += every; }
+        }
+        printf("intro: %d ms, then screen %d\n", t, (int)play::screen);
+    }
     // The title sequence (v0.53.0): a tap through each step (TITLESHOTS:
     // a snapshot of each), then Play on the version line
-    for (int guard = 0; play::screen == play::Screen::Title && guard < 20; ++guard) {
+    for (int guard = 0; (play::screen == play::Screen::Title || play::screen == play::Screen::Movie) && guard < 20; ++guard) {
+        if (play::screen == play::Screen::Movie) {          // (Darkness's intro: a tap, held until its keys count)
+            play::tap(2, 2, C);
+            for (int t = 0; t < 120000 && play::screen == play::Screen::Movie; t += 50) { g_now += 50; play::tick(g_now, C); }
+            continue;
+        }
         if (play::title_run && play::title_run->prompt) {
             printf("title prompt [%s%s]\n", play::menu.prompt, play::menu.s);
             if (getenv("TITLESHOTS")) shot("title_prompt");

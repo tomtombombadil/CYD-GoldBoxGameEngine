@@ -5444,8 +5444,9 @@ void ai_step(pic::Canvas& c)
         // rolls its d7 rounds and walks the items but never keeps one (its
         // chosen-item pointer [bp-0x14] is only ever set to 0): no item
         // either; the Dark Queen's (DQK.EXE 0x2E105) an empty body too
-        // (Quick Actions' Items unticked: none)
-        const bool ai_items = !darkness_files() && !hl() && (f.qa & quickacts::kItems);
+        // (Quick Actions' Items unticked: none). Game Fixes' Monsters' Items (Tom, 2026-11-28): there too,
+        // the earlier games' routine
+        const bool ai_items = ((!darkness_files() && !hl()) || rules::fix(rules::kFixAiItems)) && (f.qa & quickacts::kItems);
         const bool item_step = ai_items && f.n_items && f.can_use && combat::standing(b, f.team() ? 0 : 1) && load_magic();
         // (PoolRad's item routine rolls its d7 before it looks at anything -
         // GAME.OVR 0xAFBA: the dice go as the original's)

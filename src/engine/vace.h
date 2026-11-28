@@ -18,7 +18,7 @@
 //   11 waits until the frame before + the step, then the fade (VGA) or the
 //     dissolve (EGA) to colour 0, then the screen cleared to colour 0; the
 //     next colour sends the whole palette again first
-//   12, 13, 14: nothing that shows
+//   12: nothing; 13 / 14: keys on / off (VACE [0x89E])
 // BMA: chunks one after another, each u32 size, u16 frames, u32 offsets of
 //   the frames (from the chunk's start); a frame is u16 width, u16 height,
 //   then lines: u8 y (0xFF ends the frame), then pieces (u8 x, u8 flags -
@@ -75,6 +75,10 @@ struct Player {
     uint32_t epoch = 0;                   // (the first run's ms: the clock counts us from it)
     uint32_t last = 0, step_us = 0;       // the last frame's time (us), the frame step (us)
     int song = 0;
+    // Keys (VACE.EXE's check 0x14c:0x1369 answers only while [0x89E] is set: record 13 sets it, 14 clears
+    // it, cleared at the start): a key pressed while they're off waits (the BIOS keeps it) and ends the
+    // movie once they're on - INTRO turns them on after its first picture, FINAL never does
+    bool keys = false, key = false;
     uint8_t pal[256][3] = {};             // the ACF's colours
     uint8_t dac[256][3] = {};             // what the screen shows (VGA)
     uint8_t pair[256][2] = {};            // EGA: even / odd colours
@@ -97,6 +101,8 @@ bool open(Player& p, const uint8_t* acf, uint32_t acf_len, dax::ByteSource& bma,
 bool run(Player& p, uint32_t now, dax::ByteSource& bma, Screen& s, uint32_t* next);
 // A key: VACE ends at once (its key check)
 void stop(Player& p, Screen& s);
+// A key or tap: true when it ends the movie now (stop it); false: held until keys are on (run ends it then)
+inline bool press(Player& p) { p.key = true; return p.keys; }
 
 // Pieces, for the tests and the front end
 // Frame f of the chunk at chunk_pos: its pixels to the screen (EGA: through pair)

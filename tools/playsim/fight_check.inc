@@ -108,7 +108,7 @@ bool held(const combat::Battle& b, const combat::Fighter& f) { return combat::he
 bool stands(const combat::Fighter& f) { return f.status() == party::Okay || f.status() == party::Animated; }
 
 // The round each fighter last started a turn in (R7); the spell it had begun then (R5)
-std::vector<int> turn_round, pending;
+std::vector<int> turn_round, pending, item_cast;   // (item_cast: an item used this turn - its spell is the item's)
 // Each fighter's hit points when the checker first saw it: a record stored
 // over its maximum (the Dark Queen's lich, MONCHA.GLB #31: 104 of 81 - the
 // original's LOAD MONSTER copies the record as it is, DQK 0x356DC) may stay
@@ -219,6 +219,10 @@ void on_act(const combat::Battle& b, int i, combat::TestAct a, int t, int extra)
     // (a hold's bite at the turn's start - Pool's mantis, its own rule: not a blow of its choosing)
     if (own && f.fleeing && ((a == TestAct::Attack && f.moves > 0 && !in_bite) || a == TestAct::Special))
         bad("R5", std::string(act_name(a)) + " on its own turn while fleeing (moves left " + std::to_string(f.moves) + "): " + who(b, i));
+    if (a == TestAct::UseItem) {
+        if (item_cast.size() < static_cast<size_t>(b.n)) item_cast.resize(b.n, 0);
+        item_cast[i] = 1;
+    }
     // R14 a tap takes the party back from Quick (Tom, 2026-11-10): one of
     // the player's own characters off Quick is never played by the computer
     // on its own turn (an action while the fight is in its Ai state)
@@ -308,7 +312,8 @@ void on_act(const combat::Battle& b, int i, combat::TestAct a, int t, int extra)
                 }
             }
         }
-        if (a == TestAct::Cast && !(q & kSpells) && !(static_cast<size_t>(i) < pending.size() && pending[i])) broke = "a spell with Spells unticked";
+        if (a == TestAct::Cast && !(q & kSpells) && !(static_cast<size_t>(i) < pending.size() && pending[i]) &&
+            !(static_cast<size_t>(i) < item_cast.size() && item_cast[i])) broke = "a spell with Spells unticked";
         if (a == TestAct::UseItem && !(q & kItems)) broke = "an item with Items unticked";
         if (a == TestAct::TurnUndead && !(q & kTurn)) broke = "Turn Undead unticked";
         if (a == TestAct::Guard && !(q & kGuard)) broke = "a guard with Guard unticked";
@@ -332,6 +337,8 @@ void on_act(const combat::Battle& b, int i, combat::TestAct a, int t, int extra)
         if (turn_round.size() < static_cast<size_t>(b.n)) turn_round.resize(b.n, -1);
         if (pending.size() < static_cast<size_t>(b.n)) pending.resize(b.n, 0);
         pending[i] = f.spell;
+        if (item_cast.size() < static_cast<size_t>(b.n)) item_cast.resize(b.n, 0);
+        item_cast[i] = 0;
         if (turn_round[i] != b.round) {
             turn_round[i] = b.round;
             if (extra > 11 && extra != 20) bad("R7", "a round's first turn at delay " + std::to_string(extra) + ": " + who(b, i));
@@ -439,6 +446,7 @@ void tick()
         hp_round = 0;
         turn_round.assign(b.n, -1);
         pending.assign(b.n, 0);
+        item_cast.assign(b.n, 0);
         start_hp.assign(combat::kMaxFighters, -1);
         told.clear();
         ally_attacked = false;

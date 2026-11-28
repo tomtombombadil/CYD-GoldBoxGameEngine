@@ -1811,7 +1811,12 @@ const FixInfo kFixes[kFixCount] = {
      "Saving throws come from the class tables, and a human who changed class keeps the saves of the class he "
      "left at the level he left it. The original's check for that former class looks at the thief instead, "
      "so every thief gets the table's empty first row - 10 7 5 9 6, far better than a thief's - and former "
-     "classes count for nothing."}
+     "classes count for nothing."},
+    {kFixAiItems, "Monsters' Items", kDark | kTreas | kKnights | kQueen,
+     "Monsters, NPCs and Quick characters use their wands, rings and other magic items in a fight, as in "
+     "the earlier games: a d7 of tries, the readied items that cast a spell, the first one with a use. In "
+     "these games the original's item routine never picks one, so the computer carries its wands and never "
+     "uses them."}
 };
 
 const AdndInfo kAdnd[kAdndCount] = {
