@@ -88,6 +88,11 @@ struct OpSet {
     // Secret: COMBAT with no monsters and this area word 1 (cleared) opens
     // the vault (GAME.OVR 0x269D; its scripts' Deposit / Withdraw); 0: none
     uint16_t vault_word = 0;
+    // The clock's years (slot 6): reaching this ages every member a year and
+    // takes it off (each DAX game's clock routine and its limits table:
+    // Curse / PoolRad / Gateway / Champions 256, Secret 100 - GAME.OVR
+    // 0x2B912, DS 0x4BFE; Darkness / Treasures 100 by byte_map)
+    uint16_t year_limit = 256;
     // Secret: op 0x41 is an experience award (GAME.OVR ovr4 0x37F4 = file
     // 0x43FF): its 2nd operand's experience to everyone (1st operand not 0)
     // or the selected member (0), each its share by the classes held

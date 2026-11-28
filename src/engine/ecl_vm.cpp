@@ -154,15 +154,18 @@ void Vm::advance_clock(int slot, int amount)
 #endif
     }
     for (int carry = amount; slot >= 0 && slot < 7 && carry; ++slot) {
-        if (slot == 6 && set_.byte_map) {
-            // Darkness / Treasures (their ovl clock routine, Treasures' ovl
-            // 0xCB +0x1F6, Darkness's ovr 0x279E0): the years kept below
-            // 100 - reaching 100 ages every member a year (and the next
-            // fight's end looks at old age); so the clock never ages anyone
-            // in a game. Game Fixes: a year older each year that passes.
+        if (slot == 6) {
+            // The years (every DAX game's clock routine - Secret's GAME.OVR
+            // 0x2B912, Treasures' ovl 0xCB +0x1F6, Darkness's ovr 0x279E0):
+            // kept below the game's limit (100 in Secret / Darkness /
+            // Treasures, 256 the others) - reaching it ages every member a
+            // year (and the next fight's end looks at old age); so the clock
+            // never ages anyone in a game. Age with Time (AD&D 1E Rule): a
+            // year older each year that passes.
+            const int lim = set_.byte_map ? 100 : set_.year_limit ? set_.year_limit : 256;
             int v = get(0x4BCC) + carry;
-            const int ages = rules::adnd(rules::kAdndAge) ? carry : v / 100;
-            v %= 100;
+            const int ages = lim == 100 && rules::adnd(rules::kAdndAge) ? carry : v / lim;   // (the rule's games)
+            v %= lim;
             set(0x4BCC, static_cast<uint16_t>(v));
             if (ages) h_.age_party(ages);
             break;

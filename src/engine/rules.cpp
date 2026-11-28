@@ -1080,10 +1080,17 @@ bool halve(party::Character& c, int i)
         ++c.n_items;
         return true;
     }
+    // The new pile (count / 2, not readied) goes right after the item, the
+    // item keeps the rest - every game: the DAX games' GAME.OVR Halve links
+    // it in after the item (Curse 0x29298, PoolRad 0x2288D, Secret 0x292D4,
+    // Darkness 0x2544B, Champions 0x29005, Knights 0x2583C, Gateway 0x2F9BD,
+    // Treasures 0x2D8F1); the Dark Queen's the same (DOSBox, 2026-11-28)
     const int half = r[0x39] / 2;
     if (half <= 0) return false;
-    uint8_t* n = c.items[c.n_items++];
+    memmove(c.items[i + 2], c.items[i + 1], static_cast<size_t>(c.n_items - i - 1) * items::kRecordSize);
+    uint8_t* n = c.items[i + 1];
     memcpy(n, r, items::kRecordSize);
+    ++c.n_items;
     r[0x39] = static_cast<uint8_t>(r[0x39] - half);
     n[0x39] = static_cast<uint8_t>(half);
     n[0x34] = 0;                       // the new pile isn't readied
@@ -1825,7 +1832,7 @@ const AdndInfo kAdnd[kAdndCount] = {
      "Magic items as AD&D 1st edition has them: PoolRad's Flame Tongue is the AD&D sword - +1, +2 against "
      "regenerating creatures, +3 against cold-using and +4 against undead. The original's is a plain +1 "
      "sword."},
-    {kAdndAge, "Age with Time", kDark | kTreas,
+    {kAdndAge, "Age with Time", kSecret | kDark | kTreas,
      "Everyone grows a year older for each year of game time. The originals' clock ages nobody until a "
      "hundred years have passed."},
     {kAdndPwk, "Power Word Kill", kDark | kTreas,

@@ -1741,6 +1741,7 @@ constexpr ecl::OpSet kSecretEcl = [] {
     s.sizes[0x41] = 2;
     s.area_by_block = true;
     s.secret_fields = true;
+    s.year_limit = 100;            // (GAME.OVR 0x2B912: everyone a year older at 100)
     s.vault_word = 0x4CFC;          // (secret_facts_2.md 24)
     s.xp_award = true;              // (op 0x41: GAME.OVR 0x43FF)
     // CALL 2DCB follows the scripts' moves of the party (SAVE x, y, facing

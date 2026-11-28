@@ -6065,6 +6065,26 @@ static void test_items()
         vd.advance_clock(5, 24);
         CHECK(vd.get(0x4BCC) == 2 && hd.aged == 3);
     }
+    // Secret: the same at 100 years (GAME.OVR 0x2B912); Curse at 256
+    for (int g = 0; g < 2; ++g) {
+        const profile::Profile* pf = g ? profile::find(games::Game::CurseOfTheAzureBonds, 57789, 62432)
+                                       : profile::find(games::Game::SecretOfTheSilverBlades, 72097, 79824);
+        CHECK(pf && pf->ecl_ops);
+        if (!pf || !pf->ecl_ops) continue;
+        const int lim = g ? 256 : 100;
+        ecl::GameState gy;
+        TestHost hy;
+        ecl::Vm vy(gy, hy, *pf->ecl_ops);
+        rules::set_all(false);
+        vy.set(0x4BCC, static_cast<uint16_t>(lim - 2));
+        vy.advance_clock(5, 12);
+        CHECK(vy.get(0x4BCC) == lim - 1 && hy.aged == 0);
+        vy.advance_clock(5, 12);
+        CHECK(vy.get(0x4BCC) == 0 && hy.aged == 1);
+        rules::set_all(true);
+        vy.advance_clock(5, 24);
+        CHECK(vy.get(0x4BCC) == 2 && hy.aged == (g ? 1 : 3));   // (Age with Time: Secret's, not Curse's)
+    }
     // Champions: a day passing steps the moons - each counter up, or at
     // 8 / 1 / 6 back to 0 with the phase on (3 back to 0)
     const profile::Profile* ck = profile::find(games::Game::ChampionsOfKrynn, 61607, 65568);
@@ -7267,6 +7287,13 @@ static void test_item_piles()
     c.items[1][0x34] = 1;
     CHECK(rules::halve(c, 1) && c.n_items == 3 && c.items[1][0x39] == 11 && c.items[2][0x39] == 10 && c.items[2][0x34] == 0);
     CHECK(!rules::halve(c, 0));                                  // a sword: one of it
+    {
+        // the new pile right after the item, not at the end (every game's Halve)
+        party::Character m;
+        CHECK(rules::add_item(m, arrows) && rules::add_item(m, sword));
+        CHECK(rules::halve(m, 0) && m.n_items == 3 && m.items[0][0x39] == 11 && m.items[1][0x39] == 10 &&
+              m.items[1][0x2E] == 73 && m.items[2][0x2E] == 7);
+    }
     // Join them back (the sword stays as it is)
     CHECK(rules::join(c, 2) == 1 && c.n_items == 2 && c.items[1][0x39] == 21 && c.items[0][0x2E] == 7);
     // Join stops at 255 a pile
