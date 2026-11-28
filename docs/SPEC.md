@@ -1888,7 +1888,8 @@ the dissolve in a 17-bit register's order; song 3 (P3.SMS = MUSIC.DAX
 block 3). Keys as VACE's (v0.226.3): its key check answers only after an
 ACF record 13 (14 / the start: off) and a key pressed meanwhile waits in
 the BIOS and ends the movie once they're on - FINAL has only a 14, so
-nothing ends it (DOSBox). Then the game's colours back, the screen drawn
+nothing ends it in the original. Ours (Tom, 2026-11-28; SPEC 12): a second
+tap ends the ending, the first ignored so a stray tap doesn't lose it. Then the game's colours back, the screen drawn
 again, the script on. Checked against VACE in DOSBox frame by frame, VGA
 and EGA (tools/devkit/vace).
 **The intro** (v0.226.3; Tom, 2026-11-28: "what the game does in DOSBox"):
@@ -3925,6 +3926,10 @@ the game's Settings (As Original: all of them).
   Secret's Join on an uncounted item: "That cannot be joined with other
   items." Old age after a fight (GAME.OVR 0xB772, when someone aged - haste):
   each race's greatest age from that routine's compares, Treasures' screens.
+  **Darkness's ending movie** (Tom, 2026-11-28): the original's can't be
+  stopped (VACE's keys never come on in FINAL); the engine's ends at a
+  second tap - the first is ignored so a stray tap doesn't lose it. The
+  intro is as the original's.
   **Monsters' Items** (Game Fix; Tom, 2026-11-28): Darkness's, Treasures',
   Death Knights' and the Dark Queen's computer never uses a magic item -
   their item routine is an empty body or never keeps its pick (round 8) -

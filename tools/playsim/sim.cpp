@@ -433,7 +433,9 @@ static void settle(int choice = 0, int max_ms = 60000)
         }
         if (play::screen == play::Screen::Movie) {      // (Darkness's ending movie: a shot a second; MOVIEKEY=ms a tap then)
             if (t % 1000 == 0) shot("movie");
-            if (getenv("MOVIEKEY") && t == atoi(getenv("MOVIEKEY"))) play::tap(10, 10, C);
+            if (const char* mk = getenv("MOVIEKEY"))      // (MOVIEKEY=ms[,ms...]: a tap at each)
+                for (const char* q = mk; q && *q; q = strchr(q, ',') ? strchr(q, ',') + 1 : nullptr)
+                    if (t == atoi(q)) { play::tap(10, 10, C); printf("  movie tap at %d ms\n", t); }
             continue;
         }
         if (!waiting) return;

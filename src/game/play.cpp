@@ -5862,7 +5862,7 @@ void qf_key() { qf.until = plat::now_ms(); }
 // PROGRAM 1); here it plays over the game screen, then the screen is drawn
 // again and the script goes on. 256 colours on a VGA canvas, else VACE's
 // EGA look (each colour a checkerboard of two, the dissolve); song P3 =
-// MUSIC.DAX block 3; a key or tap ends it only while VACE's keys count (vace.h).
+// MUSIC.DAX block 3; a second tap ends it (ours: the original's never does - vace.h).
 struct Movie {
     vace::Player p;
     uint8_t* acf = nullptr;
@@ -5873,6 +5873,7 @@ struct Movie {
     int y0 = kMovieRows, y1 = -1;       // (rows drawn since the last tick)
     bool colours = false;
     bool intro = false;                 // (the intro before the titles: CONTROL.EXE's "vace INTRO", then GAME.EXE)
+    int taps = 0;                       // (the ending: taps so far - the second ends it)
     static constexpr int kMovieRows = 200;
 };
 Movie* mv = nullptr;
@@ -6029,6 +6030,12 @@ bool mv_start(pic::Canvas& c, bool intro = false)
 void mv_key(pic::Canvas& c)
 {
     if (!mv) return;
+    // The ending (Tom, 2026-11-28; ours - the original can't be stopped): a second tap ends it, the first
+    // ignored so a stray one doesn't lose the ending
+    if (!mv->intro) {
+        if (++mv->taps < 2) return;
+        mv->p.keys = true;
+    }
     if (!vace::press(mv->p)) return;
     MovieScreen scr(c);
     vace::stop(mv->p, scr);

@@ -386,7 +386,8 @@
       (playsim, Champions save B at the first outpost: Trainer to level 5, Merchant).
 - [x] Darkness's intro movie (VACE INTRO, before the titles) - Tom, 2026-11-28: "I want what the game does in
       DOSBox": v0.226.3 plays it at every start as CONTROL.EXE does, then the titles; VACE's keys (record 13 / 14:
-      the intro skippable after its logo, the ending never - read in VACE.EXE, seen in DOSBox). Host test (keys);
+      the intro skippable after its logo, the ending never - read in VACE.EXE, seen in DOSBox). Tom, 2026-11-28:
+      the ending ends at a SECOND tap (the first ignored) - v0.226.4. Host test (keys);
       playsim INTROPLAY=1 / INTROSHOTS=ms; the tools tap through it.
 - [x] 2026-11-22 (no engine fault): the Temple of Tyr's fire elementals - see the entry below; MAPLINK / MAPDOORS.
 - [x] v0.211.16 (the Darkness play-through, 2026-11-21 - played to the end): **the game never ended** - after
