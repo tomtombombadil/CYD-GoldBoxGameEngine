@@ -2908,12 +2908,7 @@ void draw_map_legend(lgfx::LovyanGFX& g, int x, int y, bool places = false)
         g.drawString("Place", x, y);
         return;
     }
-    g.setTextColor(style::kWarn);
-    g.drawString("Locked", x, y);
-    g.setTextColor(style::kCyan);
-    g.drawString("Secret", x + 8 * 6, y);
-    g.setTextColor(style::kGold);
-    g.drawString("One-way", x + 16 * 6, y);
+    // (no words for the doors - Tom, 2026-11-27: the symbols say it, gold is every door's colour)
 }
 int comp_map_x() { return pic::kScreenW + (ui::width() - pic::kScreenW - kCompCell * geo::kSize) / 2; }
 
