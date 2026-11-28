@@ -3250,6 +3250,12 @@ a PC, PortMaster handhelds):
     then BEGIN Adventuring (Darkness: its own saves, no "Load from where?").
     Checked through the port with the nine GOG releases: eight went into
     their game; Gateway's GOG copy has no saved game ("no save").
+    **Snapshot** (v0.226.5; Tom, 2026-11-28, the Android app's Report a Problem - "a save of their current
+    game state ... just at that moment and wouldn't take any of their save slots or overwrite anything"):
+    `play::snapshot(dir)` - the files a save to slot A writes (the game's format, the vault, the journal's
+    list) written into `dir` (its parent must exist) with the save and cache folders pointed there for the
+    call; false with no party in play. Checked through the port (PoolRad): the save loads where it was made,
+    no file of the game's changed.
 
 ## 12. Where the engine differs from the original games (Tom, 2026-10-10: keep this list up to date)
 
