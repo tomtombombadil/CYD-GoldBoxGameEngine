@@ -2073,10 +2073,10 @@ the Project as claude/TODO.md.
       29 list: done.
 - [ ] The Dark Queen's own scroll bundles (DQK.EXE: "Too many Bundles!", "in Bundle", "Scroll Bundle won't
       fit into Vault!") - not in the engine; the Scroll Bundles Enhancement leaves the Queen out until then.
-- [x] Secret's years: its clock ages everyone a year at 100 years (DS 0x4C0A, GAME.OVR 0x2B912) - v0.224.3:
+- [x] Secret's years: its clock ages everyone a year at 100 years (DS 0x4C0A, GAME.OVR 0x2B912) - v0.226.1:
       `OpSet::year_limit` (Secret 100; Curse / PoolRad / Gateway / Champions 256 from their limit tables -
       every DAX clock ages everyone at its limit), Age with Time covers Secret.
-- [x] Halve's new pile: right after the item in every game (v0.224.3; the eight DAX games' GAME.OVR Halve
+- [x] Halve's new pile: right after the item in every game (v0.226.1; the eight DAX games' GAME.OVR Halve
       links it in after the item, the Dark Queen's the same - DOSBox, 2 Javelins +2 -> 1 + 1 in place).
 - [x] Secret's New Verdigris after the end (4CD9 = 1): the shops' scripts show "SHOP KEEPER AND MOST OF THE
       TOWNSMEN ARE OUT DANCING IN THE STREET" (ECL1 block 16 0x8783) - the engine follows (playsim, 2026-11-28).

@@ -37,6 +37,9 @@ struct Book {
     float       aspect;             // its first map page's width / height (editions of a page count told apart)
     const Map*  maps;
     int         n;
+    // 0: the map is in the page's whole picture (a scanned page), its grid in fractions of that picture; 1: in the
+    // page's largest picture among its type and strips (Steam Gateway), the grid in fractions of that picture
+    uint8_t     picture;
 };
 
 extern const Book kBooks[];
@@ -49,8 +52,8 @@ const Book* find(games::Game game, int pages, float aspect = -1);
 // A point of the grid on the page picture (fractions of its width / height)
 void grid_point(const Map& m, float u, float v, float* x, float* y);
 
-// The straightened picture: kSquare(...) pixels a square, half a square round the grid
-constexpr float kMargin = 0.5f;
+// The straightened picture: its square pixels a square, kMargin squares round the grid
+constexpr float kMargin = 1.1f;     // (the row and column numbers round the map kept - Tom, 2026-11-28)
 
 // What the scan makes, handed out as it goes
 struct Sink {

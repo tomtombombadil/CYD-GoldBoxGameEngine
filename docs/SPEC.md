@@ -3392,7 +3392,7 @@ the game's Settings (As Original: all of them).
   v0.209.0 these entries below are AD&D 1E Rules, not Game Fixes: Magic
   Missile (PoolRad's own level / 2 off), A multi-class's hit points (Multi-
   Class Hit Points), Pool's Flame Tongue (Magic Items), Darkness's and
-  Treasures' (and since v0.224.3 Secret's) clock and age (Age with Time -
+  Treasures' (and since v0.226.1 Secret's) clock and age (Age with Time -
   the originals age everyone a year only when the clock's years reach 100;
   Curse / PoolRad / Gateway / Champions at 256), Darkness's Power Word Kill,
   Protection from Evil / Good against blows. Every other "Game Fixes" entry
