@@ -804,7 +804,10 @@ the Project as claude/TODO.md.
       off either, while the switch's help says the originals take a point at a temple too. Secret's and
       Darkness's temples do (their facts); read Curse's / PoolRad's temple routine in GAME.OVR and follow it.
       PoolRad has no camp Raise Dead (its clerics' spells stop below it).
-- [ ] Secret's outdoor fight field (v0.209.1): Secret has no terrain table in our facts, and the engine read
+- [x] (2026-11-28: Secret has NO outdoor builder - GAME.OVR 0xF411 loads DungCom and builds from the 3D map
+      when game word +0x1CC (0x4BE6) is set, else calls 0xF3FE, an empty routine; no WILDCOM.DAX in its files;
+      every fight of the play-through was indoors. The engine's plain grass stays for a field the original
+      leaves as the memory held.) Secret's outdoor fight field (v0.209.1): Secret has no terrain table in our facts, and the engine read
       its flags from leftover memory (behave secret failed when the run's folder path was longer - found by
       the toggle checks). Now no flags (plain grass, the default scatter). Check Secret's own outdoor
       builder in its GAME.OVR (Darkness's reads DS 0x097C[15]): which flags, if any, it uses.
@@ -2048,6 +2051,11 @@ the Project as claude/TODO.md.
       parted with; old age after a fight (GAME.OVR 0xB772); rest's "The Whole Party Is Healed" checked (every
       288 steps, whether hurt or not, row 19 colour 10 - GAME.OVR 0x2BEB3: as the engine). New Verdigris after
       the end: its scripts test 4CD9 ("RATHER BARREN SHOP") - the engine runs them; not walked.
+      Giant slaying's natural 1 (29.items.3): the attack roll (GAME.OVR 0x36E22) misses a natural 1 before
+      phase 0xA's +1 - a miss, as the engine; 20 counts as 100. LEFT: Boots of Speed's AC, the fire ring,
+      the Ring of Wizardry put away (the original counts with an uninitialised local - not reproducible; the
+      engine forgets those past the count), potions of speed / invisibility lasting, a cleric's 6th-level
+      slots; Malachite's saves; approaching monsters against DOSBox.
 - [ ] The Dark Queen's own scroll bundles (DQK.EXE: "Too many Bundles!", "in Bundle", "Scroll Bundle won't
       fit into Vault!") - not in the engine; the Scroll Bundles Enhancement leaves the Queen out until then.
 - [ ] Secret's years: its clock ages everyone a year at 100 years (DS 0x4C0A, GAME.OVR 0x2B912); the
