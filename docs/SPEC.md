@@ -3892,7 +3892,7 @@ the game's Settings (As Original: all of them).
   `create::queen_hp`); Sell's overload test
   weighs the coins it pays (Secret's weighs the price in gold); a pile
   with no count joins nothing (Secret's swallows it).
-- **Secret's scroll bundles** (v0.223.0; `engine/bundle.*`, GAME.OVR read
+- **Secret's scroll bundles** (v0.224.0; `engine/bundle.*`, GAME.OVR read
   2026-11-28): Join on a scroll ties the character's scrolls into a
   "Bundle of N Scrolls" (type 0x49, up to 10; "Bundles are limited to 10
   scrolls.", "There are no similar items to join with."); Use lists every
